@@ -1,0 +1,59 @@
+{
+  "name": "crowfun-experience",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "next": "16.1.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "next-auth": "^4.24.11",
+    "@prisma/client": "^6.9.0",
+    "bcrypt": "^5.1.1",
+    "jose": "^6.0.11",
+    "react-hook-form": "^7.56.4",
+    "@hookform/resolvers": "^5.0.1",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/bcrypt": "^5.0.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "prettier": "^3.4.2",
+    "prisma": "^6.9.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "ts-jest": "^29.2.6",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "ignoreScripts": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "trustedDependencies": [
+    "sharp",
+    "unrs-resolver"
+  ]
+}
