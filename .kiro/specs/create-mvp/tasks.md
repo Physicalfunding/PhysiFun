@@ -18,7 +18,7 @@
   - 各テーブルのインデックス設定（email, hostId, status, category など）
   - _Requirements: NFR-パフォーマンス_
 
-- [ ] 1.3 ドメイン層の基盤実装（値オブジェクトとエンティティ）
+- [x] 1.3 ドメイン層の基盤実装（値オブジェクトとエンティティ）
   - Email、Password、UserId などの値オブジェクト実装（バリデーション含む）
   - User エンティティと UserType 列挙型の実装
   - Project エンティティと ProjectStatus、Category の実装
