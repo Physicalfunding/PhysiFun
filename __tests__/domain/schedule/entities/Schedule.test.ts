@@ -1,6 +1,6 @@
-import { Schedule } from "./Schedule";
-import { ScheduleId } from "../value-objects/ScheduleId";
-import { ProjectId } from "../../project/value-objects/ProjectId";
+import { Schedule } from "@/domain/schedule/entities/Schedule";
+import { ScheduleId } from "@/domain/schedule/value-objects/ScheduleId";
+import { ProjectId } from "@/domain/project/value-objects/ProjectId";
 
 describe("Schedule", () => {
   const createValidProjectId = () => ProjectId.generate();

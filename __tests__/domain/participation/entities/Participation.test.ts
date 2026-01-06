@@ -1,7 +1,7 @@
-import { Participation, ParticipationStatus } from "./Participation";
-import { ParticipationId } from "../value-objects/ParticipationId";
-import { UserId } from "../../account/value-objects/UserId";
-import { ScheduleId } from "../../schedule/value-objects/ScheduleId";
+import { Participation, ParticipationStatus } from "@/domain/participation/entities/Participation";
+import { ParticipationId } from "@/domain/participation/value-objects/ParticipationId";
+import { UserId } from "@/domain/account/value-objects/UserId";
+import { ScheduleId } from "@/domain/schedule/value-objects/ScheduleId";
 
 describe("Participation", () => {
   const createValidGuestId = () => UserId.generate();

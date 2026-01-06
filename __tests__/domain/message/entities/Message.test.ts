@@ -1,6 +1,6 @@
-import { Message } from "./Message";
-import { MessageId } from "../value-objects/MessageId";
-import { UserId } from "../../account/value-objects/UserId";
+import { Message } from "@/domain/message/entities/Message";
+import { MessageId } from "@/domain/message/value-objects/MessageId";
+import { UserId } from "@/domain/account/value-objects/UserId";
 
 describe("Message", () => {
   const createValidSenderId = () => UserId.generate();

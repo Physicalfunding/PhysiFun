@@ -1,4 +1,4 @@
-import { GetProfileUseCase, GetProfileInput, GetProfileOutput } from "./GetProfileUseCase";
+import { GetProfileUseCase, GetProfileInput, GetProfileOutput } from "@/application/use-cases/profile/GetProfileUseCase";
 import { UserRepository } from "@/domain/account/repositories/UserRepository";
 import { User, UserType } from "@/domain/account/entities/User";
 import { UserId } from "@/domain/account/value-objects/UserId";

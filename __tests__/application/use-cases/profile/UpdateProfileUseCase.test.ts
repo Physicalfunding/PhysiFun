@@ -1,4 +1,4 @@
-import { UpdateProfileUseCase, UpdateProfileInput, UpdateProfileOutput } from "./UpdateProfileUseCase";
+import { UpdateProfileUseCase, UpdateProfileInput, UpdateProfileOutput } from "@/application/use-cases/profile/UpdateProfileUseCase";
 import { UserRepository } from "@/domain/account/repositories/UserRepository";
 import { User, UserType } from "@/domain/account/entities/User";
 import { UserId } from "@/domain/account/value-objects/UserId";
