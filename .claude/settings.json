@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "defaultMode": "acceptEdits",
     "allow": [
       "Bash(ls:*)",
       "Bash(cat:*)",
@@ -11,6 +10,14 @@
       "Write",
       "Bash"
     ],
-    "deny": ["Bash(rm -rf:*)", "Bash(sudo:*)", "Read(.env)"]
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)",
+      "Read(.env)"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-code-plugins": true
   }
 }
