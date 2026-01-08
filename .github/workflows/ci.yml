@@ -66,6 +66,8 @@ jobs:
 
       - name: Generate Prisma Client
         run: bunx prisma generate
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Run TypeScript type check
         run: bunx tsc --noEmit
@@ -106,6 +108,10 @@ jobs:
 
       - name: Generate Prisma Client
         run: bunx prisma generate
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Build
         run: bun run build
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
