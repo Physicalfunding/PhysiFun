@@ -1,4 +1,4 @@
-import { UserId } from "./UserId";
+import { UserId } from "@/domain/account/value-objects/UserId";
 
 describe("UserId", () => {
   describe("create", () => {

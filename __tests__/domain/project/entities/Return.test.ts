@@ -1,6 +1,6 @@
-import { Return } from "./Return";
-import { ReturnId } from "../value-objects/ReturnId";
-import { ProjectId } from "../value-objects/ProjectId";
+import { Return } from "@/domain/project/entities/Return";
+import { ReturnId } from "@/domain/project/value-objects/ReturnId";
+import { ProjectId } from "@/domain/project/value-objects/ProjectId";
 
 describe("Return", () => {
   const createValidProjectId = () => ProjectId.generate();

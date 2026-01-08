@@ -1,4 +1,4 @@
-import { GetPublishedProjectsUseCase } from "./GetPublishedProjectsUseCase";
+import { GetPublishedProjectsUseCase } from "@/application/use-cases/project/GetPublishedProjectsUseCase";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { Project, ProjectStatus, Category } from "@/domain/project/entities/Project";
 import { ProjectId } from "@/domain/project/value-objects/ProjectId";

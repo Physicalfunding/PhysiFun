@@ -1,6 +1,6 @@
-import { Project, ProjectStatus, Category } from "./Project";
-import { ProjectId } from "../value-objects/ProjectId";
-import { UserId } from "../../account/value-objects/UserId";
+import { Project, ProjectStatus, Category } from "@/domain/project/entities/Project";
+import { ProjectId } from "@/domain/project/value-objects/ProjectId";
+import { UserId } from "@/domain/account/value-objects/UserId";
 
 describe("Project", () => {
   const createValidHostId = () => UserId.generate();

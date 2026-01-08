@@ -9,7 +9,7 @@ import {
   internalError,
   type Result,
   type AppError,
-} from "./result";
+} from "@/domain/shared/result";
 
 describe("Result type", () => {
   describe("ok", () => {

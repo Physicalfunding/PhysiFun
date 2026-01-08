@@ -1,7 +1,7 @@
-import { User, UserType } from "./User";
-import { Email } from "../value-objects/Email";
-import { HashedPassword } from "../value-objects/Password";
-import { UserId } from "../value-objects/UserId";
+import { User, UserType } from "@/domain/account/entities/User";
+import { Email } from "@/domain/account/value-objects/Email";
+import { HashedPassword } from "@/domain/account/value-objects/Password";
+import { UserId } from "@/domain/account/value-objects/UserId";
 
 describe("User", () => {
   const createValidEmail = () => {
