@@ -63,11 +63,7 @@ export class UpdateAvatarUseCase {
 
     // 2. ファイルタイプのバリデーション
     if (!ALLOWED_IMAGE_TYPES.includes(input.file.type)) {
-      return err(
-        validationError(
-          "画像ファイル（JPEG、PNG、WebP）のみアップロードできます"
-        )
-      );
+      return err(validationError("画像ファイル（JPEG、PNG、WebP）のみアップロードできます"));
     }
 
     // 3. ファイルサイズのバリデーション

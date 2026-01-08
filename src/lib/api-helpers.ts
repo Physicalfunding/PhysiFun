@@ -51,9 +51,7 @@ export function internalServerError(
  * @param message - エラーメッセージ（デフォルト: "認証が必要です"）
  * @returns 401ステータスのNextResponse
  */
-export function unauthorizedResponse(
-  message: string = "認証が必要です"
-): NextResponse {
+export function unauthorizedResponse(message: string = "認証が必要です"): NextResponse {
   return NextResponse.json(
     {
       error: {

@@ -267,7 +267,8 @@ export class Project {
   update(input: UpdateProjectInput): Result<Project, AppError> {
     const title = input.title !== undefined ? input.title.trim() : this._title;
     const summary = input.summary !== undefined ? input.summary.trim() : this._summary;
-    const description = input.description !== undefined ? input.description.trim() : this._description;
+    const description =
+      input.description !== undefined ? input.description.trim() : this._description;
 
     if (!title) {
       return err(validationError("タイトルを入力してください"));

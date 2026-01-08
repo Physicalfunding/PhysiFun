@@ -156,7 +156,8 @@ export class Schedule {
    */
   update(input: UpdateScheduleInput): Result<Schedule, AppError> {
     const title = input.title !== undefined ? input.title.trim() : this._title;
-    const description = input.description !== undefined ? input.description.trim() : this._description;
+    const description =
+      input.description !== undefined ? input.description.trim() : this._description;
     const startDateTime = input.startDateTime ?? this._startDateTime;
     const capacity = input.capacity ?? this._capacity;
 

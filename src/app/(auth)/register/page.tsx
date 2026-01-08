@@ -31,19 +31,14 @@ export default function RegisterPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-gray-500">
-                  または
-                </span>
+                <span className="bg-white px-2 text-gray-500">または</span>
               </div>
             </div>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 すでにアカウントをお持ちの方は{" "}
-                <Link
-                  href="/login"
-                  className="font-medium text-orange-600 hover:text-orange-500"
-                >
+                <Link href="/login" className="font-medium text-orange-600 hover:text-orange-500">
                   ログイン
                 </Link>
               </p>

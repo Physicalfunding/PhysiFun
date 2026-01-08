@@ -1,4 +1,7 @@
-import { RegisterUserUseCase, RegisterUserInput } from "@/application/use-cases/auth/RegisterUserUseCase";
+import {
+  RegisterUserUseCase,
+  RegisterUserInput,
+} from "@/application/use-cases/auth/RegisterUserUseCase";
 import { UserRepository } from "@/domain/account/repositories/UserRepository";
 import { User, UserType } from "@/domain/account/entities/User";
 import { Email } from "@/domain/account/value-objects/Email";

@@ -32,11 +32,7 @@ interface AvatarUploadProps {
  * - ファイル形式・サイズのバリデーション
  * - アップロード進捗表示
  */
-export function AvatarUpload({
-  currentAvatarUrl,
-  userName,
-  onUploadSuccess,
-}: AvatarUploadProps) {
+export function AvatarUpload({ currentAvatarUrl, userName, onUploadSuccess }: AvatarUploadProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -166,9 +162,7 @@ export function AvatarUpload({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`relative mx-auto h-32 w-32 cursor-pointer overflow-hidden rounded-full border-4 transition-all ${
-          isDragging
-            ? "border-orange-500 bg-orange-50"
-            : "border-gray-200 hover:border-orange-400"
+          isDragging ? "border-orange-500 bg-orange-50" : "border-gray-200 hover:border-orange-400"
         } ${isUploading ? "pointer-events-none opacity-50" : ""}`}
         role="button"
         tabIndex={0}
@@ -177,11 +171,7 @@ export function AvatarUpload({
       >
         {displayUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={displayUrl}
-            alt={userName}
-            className="h-full w-full object-cover"
-          />
+          <img src={displayUrl} alt={userName} className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gray-200">
             <span className="text-3xl font-semibold text-gray-500">
