@@ -7,11 +7,7 @@ import { Header } from "@/components/common/Header";
  * 認証が必要なページ群のラッパー
  * ログインしていない場合はログインページへリダイレクト
  */
-export default async function MyPageLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function MyPageLayout({ children }: { children: React.ReactNode }) {
   // 認証チェック（Server Componentで実行）
   const session = await getSession();
 

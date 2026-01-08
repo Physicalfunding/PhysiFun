@@ -15,13 +15,8 @@ const registerSchema = z.object({
     .string()
     .min(1, "メールアドレスを入力してください")
     .email("無効なメールアドレス形式です"),
-  password: z
-    .string()
-    .min(8, "パスワードは8文字以上で入力してください"),
-  name: z
-    .string()
-    .min(1, "名前を入力してください")
-    .max(100, "名前は100文字以内で入力してください"),
+  password: z.string().min(8, "パスワードは8文字以上で入力してください"),
+  name: z.string().min(1, "名前を入力してください").max(100, "名前は100文字以内で入力してください"),
   userType: z.enum(["HOST", "GUEST", "BOTH"], {
     errorMap: () => ({ message: "ユーザータイプを選択してください" }),
   }),
@@ -113,34 +108,16 @@ export async function POST(request: NextRequest) {
 function handleAppError(error: AppError): NextResponse {
   switch (error.code) {
     case "VALIDATION_ERROR":
-      return NextResponse.json(
-        { error },
-        { status: 400 }
-      );
+      return NextResponse.json({ error }, { status: 400 });
     case "CONFLICT":
-      return NextResponse.json(
-        { error },
-        { status: 409 }
-      );
+      return NextResponse.json({ error }, { status: 409 });
     case "UNAUTHORIZED":
-      return NextResponse.json(
-        { error },
-        { status: 401 }
-      );
+      return NextResponse.json({ error }, { status: 401 });
     case "FORBIDDEN":
-      return NextResponse.json(
-        { error },
-        { status: 403 }
-      );
+      return NextResponse.json({ error }, { status: 403 });
     case "NOT_FOUND":
-      return NextResponse.json(
-        { error },
-        { status: 404 }
-      );
+      return NextResponse.json({ error }, { status: 404 });
     default:
-      return NextResponse.json(
-        { error },
-        { status: 500 }
-      );
+      return NextResponse.json({ error }, { status: 500 });
   }
 }

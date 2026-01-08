@@ -10,11 +10,7 @@
       "Write",
       "Bash"
     ],
-    "deny": [
-      "Bash(rm -rf:*)",
-      "Bash(sudo:*)",
-      "Read(.env)"
-    ],
+    "deny": ["Bash(rm -rf:*)", "Bash(sudo:*)", "Read(.env)"],
     "defaultMode": "acceptEdits"
   },
   "enabledPlugins": {

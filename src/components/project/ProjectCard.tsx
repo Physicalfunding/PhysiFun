@@ -114,12 +114,7 @@ export function ProjectCard({
 
         {/* 開催場所 */}
         <div className="mt-3 flex items-center text-sm text-gray-500">
-          <svg
-            className="w-4 h-4 mr-1"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

@@ -55,12 +55,8 @@ export default async function Home() {
       {/* プロジェクト一覧セクション */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            公開中のプロジェクト
-          </h2>
-          <p className="mt-2 text-gray-600">
-            参加できる体験を探してみましょう
-          </p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">公開中のプロジェクト</h2>
+          <p className="mt-2 text-gray-600">参加できる体験を探してみましょう</p>
         </div>
 
         {projects.length > 0 ? (

@@ -52,9 +52,7 @@ export default async function ProfilePage() {
         {/* ページヘッダー */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">プロフィール編集</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            プロフィール情報を更新できます
-          </p>
+          <p className="mt-1 text-sm text-gray-600">プロフィール情報を更新できます</p>
         </div>
 
         {/* プロフィールカード */}
@@ -64,10 +62,7 @@ export default async function ProfilePage() {
             <div className="flex flex-col items-center sm:flex-row sm:items-start sm:space-x-6">
               {/* アバター画像アップロード */}
               <div className="mb-4 sm:mb-0">
-                <AvatarUpload
-                  currentAvatarUrl={profile.avatarUrl}
-                  userName={profile.name}
-                />
+                <AvatarUpload currentAvatarUrl={profile.avatarUrl} userName={profile.name} />
               </div>
               <div className="text-center text-white sm:text-left">
                 <h2 className="text-xl font-semibold">{profile.name}</h2>

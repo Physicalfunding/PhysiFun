@@ -130,7 +130,8 @@ export class Return {
    */
   update(input: UpdateReturnInput): Result<Return, AppError> {
     const name = input.name !== undefined ? input.name.trim() : this._name;
-    const description = input.description !== undefined ? input.description.trim() : this._description;
+    const description =
+      input.description !== undefined ? input.description.trim() : this._description;
 
     if (!name) {
       return err(validationError("リターン名を入力してください"));
@@ -146,7 +147,9 @@ export class Return {
         this._projectId,
         name,
         description,
-        input.estimatedDeliveryDate !== undefined ? input.estimatedDeliveryDate : this._estimatedDeliveryDate,
+        input.estimatedDeliveryDate !== undefined
+          ? input.estimatedDeliveryDate
+          : this._estimatedDeliveryDate,
         input.quantityLimit !== undefined ? input.quantityLimit : this._quantityLimit,
         input.order !== undefined ? input.order : this._order,
         this._createdAt

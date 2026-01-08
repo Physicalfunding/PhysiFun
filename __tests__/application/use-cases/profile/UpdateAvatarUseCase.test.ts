@@ -1,4 +1,7 @@
-import { UpdateAvatarUseCase, UpdateAvatarInput } from "@/application/use-cases/profile/UpdateAvatarUseCase";
+import {
+  UpdateAvatarUseCase,
+  UpdateAvatarInput,
+} from "@/application/use-cases/profile/UpdateAvatarUseCase";
 import { UserRepository } from "@/domain/account/repositories/UserRepository";
 import { ImageUploadService } from "@/infrastructure/storage/ImageUploadService";
 import { User, UserType } from "@/domain/account/entities/User";

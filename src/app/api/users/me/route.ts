@@ -18,11 +18,7 @@ const updateProfileSchema = z.object({
     .min(1, "名前を入力してください")
     .max(100, "名前は100文字以内で入力してください")
     .optional(),
-  bio: z
-    .string()
-    .max(500, "自己紹介は500文字以内で入力してください")
-    .nullable()
-    .optional(),
+  bio: z.string().max(500, "自己紹介は500文字以内で入力してください").nullable().optional(),
   userType: z
     .enum(["HOST", "GUEST", "BOTH"], {
       errorMap: () => ({ message: "ユーザータイプを選択してください" }),

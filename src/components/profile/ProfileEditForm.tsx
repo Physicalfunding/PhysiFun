@@ -10,15 +10,8 @@ import { useRouter } from "next/navigation";
  * プロフィール編集フォームのバリデーションスキーマ
  */
 const profileEditSchema = z.object({
-  name: z
-    .string()
-    .min(1, "名前を入力してください")
-    .max(100, "名前は100文字以内で入力してください"),
-  bio: z
-    .string()
-    .max(500, "自己紹介は500文字以内で入力してください")
-    .nullable()
-    .optional(),
+  name: z.string().min(1, "名前を入力してください").max(100, "名前は100文字以内で入力してください"),
+  bio: z.string().max(500, "自己紹介は500文字以内で入力してください").nullable().optional(),
   userType: z.enum(["HOST", "GUEST", "BOTH"], {
     errorMap: () => ({ message: "ユーザータイプを選択してください" }),
   }),
@@ -216,9 +209,7 @@ export function ProfileEditForm({ initialData, onSuccess }: ProfileEditFormProps
               {...register("userType")}
               className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
             />
-            <span className="ml-2 text-sm text-gray-700">
-              体験に参加したい（ゲスト）
-            </span>
+            <span className="ml-2 text-sm text-gray-700">体験に参加したい（ゲスト）</span>
           </label>
           <label className="flex items-center">
             <input
@@ -227,9 +218,7 @@ export function ProfileEditForm({ initialData, onSuccess }: ProfileEditFormProps
               {...register("userType")}
               className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
             />
-            <span className="ml-2 text-sm text-gray-700">
-              体験を提供したい（ホスト）
-            </span>
+            <span className="ml-2 text-sm text-gray-700">体験を提供したい（ホスト）</span>
           </label>
           <label className="flex items-center">
             <input
@@ -238,16 +227,10 @@ export function ProfileEditForm({ initialData, onSuccess }: ProfileEditFormProps
               {...register("userType")}
               className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
             />
-            <span className="ml-2 text-sm text-gray-700">
-              両方
-            </span>
+            <span className="ml-2 text-sm text-gray-700">両方</span>
           </label>
         </div>
-        {errors.userType && (
-          <p className="mt-1 text-sm text-red-600">
-            {errors.userType.message}
-          </p>
-        )}
+        {errors.userType && <p className="mt-1 text-sm text-red-600">{errors.userType.message}</p>}
       </div>
 
       {/* 送信ボタン */}

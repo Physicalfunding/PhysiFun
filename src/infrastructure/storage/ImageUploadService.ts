@@ -19,7 +19,10 @@ export interface ImageUploadService {
    * @param folder 保存先フォルダ名
    * @returns アップロード結果（パスと公開URL）
    */
-  uploadImage(file: { buffer: Buffer; name: string; type: string }, folder: string): Promise<UploadResult>;
+  uploadImage(
+    file: { buffer: Buffer; name: string; type: string },
+    folder: string
+  ): Promise<UploadResult>;
 
   /**
    * 画像を削除
@@ -96,9 +99,7 @@ export class SupabaseImageUploadService implements ImageUploadService {
    * Supabase Storageから画像を削除
    */
   async deleteImage(path: string): Promise<void> {
-    const { error } = await this.supabase.storage
-      .from(this.bucketName)
-      .remove([path]);
+    const { error } = await this.supabase.storage.from(this.bucketName).remove([path]);
 
     if (error) {
       console.error(`Failed to delete image: ${error.message}`);
@@ -110,9 +111,7 @@ export class SupabaseImageUploadService implements ImageUploadService {
    * 公開URLを生成
    */
   getPublicUrl(path: string): string {
-    const { data } = this.supabase.storage
-      .from(this.bucketName)
-      .getPublicUrl(path);
+    const { data } = this.supabase.storage.from(this.bucketName).getPublicUrl(path);
 
     return data.publicUrl;
   }
