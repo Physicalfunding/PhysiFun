@@ -36,12 +36,7 @@ export default async function MessageDetailPage({ params }: Props) {
         className="inline-flex items-center text-gray-600 hover:text-orange-600 mb-6"
       >
         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 19l-7-7 7-7"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>
         メッセージ一覧に戻る
       </Link>
@@ -51,10 +46,7 @@ export default async function MessageDetailPage({ params }: Props) {
 
       {/* 返信フォーム */}
       <div className="mt-6">
-        <MessageReplyForm
-          parentMessageId={messageId}
-          currentUserId={session.user.id}
-        />
+        <MessageReplyForm parentMessageId={messageId} currentUserId={session.user.id} />
       </div>
     </div>
   );

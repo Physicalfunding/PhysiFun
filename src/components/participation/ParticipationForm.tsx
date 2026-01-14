@@ -91,9 +91,7 @@ export function ParticipationForm({
   if (isFullyBooked) {
     return (
       <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
-        <p className="text-center text-gray-600">
-          この体験は定員に達しました
-        </p>
+        <p className="text-center text-gray-600">この体験は定員に達しました</p>
       </div>
     );
   }
@@ -103,17 +101,13 @@ export function ParticipationForm({
       {/* 体験情報の表示 */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-900">{scheduleTitle}</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          {formatDateTime(startDateTime)}
-        </p>
+        <p className="text-sm text-gray-600 mt-1">{formatDateTime(startDateTime)}</p>
         <div className="mt-2 flex items-center gap-4 text-sm">
           <span className="text-gray-600">
             残り枠: <span className="font-medium text-orange-600">{remainingCapacity}名</span>
           </span>
           <span className="text-gray-400">|</span>
-          <span className="text-gray-600">
-            定員: {capacity}名
-          </span>
+          <span className="text-gray-600">定員: {capacity}名</span>
         </div>
       </div>
 
@@ -126,10 +120,7 @@ export function ParticipationForm({
 
       {/* 参加人数選択 */}
       <div className="mb-6">
-        <label
-          htmlFor="participantCount"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
+        <label htmlFor="participantCount" className="block text-sm font-medium text-gray-700 mb-2">
           参加人数
         </label>
         <select

@@ -11,12 +11,7 @@ interface GridProps {
  * Grid
  * レスポンシブ対応のグリッドコンポーネント
  */
-export function Grid({
-  children,
-  className = "",
-  cols = 3,
-  gap = "md",
-}: GridProps) {
+export function Grid({ children, className = "", cols = 3, gap = "md" }: GridProps) {
   const colsStyles = {
     1: "grid-cols-1",
     2: "grid-cols-1 sm:grid-cols-2",
@@ -31,9 +26,7 @@ export function Grid({
   };
 
   return (
-    <div className={`grid ${colsStyles[cols]} ${gapStyles[gap]} ${className}`}>
-      {children}
-    </div>
+    <div className={`grid ${colsStyles[cols]} ${gapStyles[gap]} ${className}`}>{children}</div>
   );
 }
 
@@ -75,9 +68,7 @@ export function TwoColumnLayout({
 
       {/* メインコンテンツ */}
       <main
-        className={`flex-1 min-w-0 ${
-          sidebarPosition === "right" ? "lg:order-1" : "lg:order-2"
-        }`}
+        className={`flex-1 min-w-0 ${sidebarPosition === "right" ? "lg:order-1" : "lg:order-2"}`}
       >
         {children}
       </main>
@@ -95,11 +86,7 @@ interface StackProps {
   gap?: "xs" | "sm" | "md" | "lg" | "xl";
 }
 
-export function Stack({
-  children,
-  className = "",
-  gap = "md",
-}: StackProps) {
+export function Stack({ children, className = "", gap = "md" }: StackProps) {
   const gapStyles = {
     xs: "space-y-1",
     sm: "space-y-2",
@@ -108,11 +95,7 @@ export function Stack({
     xl: "space-y-8",
   };
 
-  return (
-    <div className={`${gapStyles[gap]} ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`${gapStyles[gap]} ${className}`}>{children}</div>;
 }
 
 /**

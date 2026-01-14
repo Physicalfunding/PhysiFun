@@ -131,9 +131,7 @@ export function ParticipationCard({
             >
               {statusDisplay.label}
             </span>
-            <span className="text-sm text-gray-600">
-              参加人数: {participantCount}名
-            </span>
+            <span className="text-sm text-gray-600">参加人数: {participantCount}名</span>
           </div>
 
           {/* プロジェクトタイトル */}
@@ -145,9 +143,7 @@ export function ParticipationCard({
           </Link>
 
           {/* 体験タイトル */}
-          <h3 className="text-lg font-semibold text-gray-900 mt-1">
-            {schedule.title}
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900 mt-1">{schedule.title}</h3>
 
           {/* 開催日時 */}
           <div className="flex items-center text-sm text-gray-600 mt-2">

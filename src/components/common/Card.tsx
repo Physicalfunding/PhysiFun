@@ -55,11 +55,7 @@ export function CardHeader({
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <div className={`border-b border-gray-200 pb-3 mb-3 ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`border-b border-gray-200 pb-3 mb-3 ${className}`}>{children}</div>;
 }
 
 /**
@@ -73,11 +69,7 @@ export function CardTitle({
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>
-      {children}
-    </h3>
-  );
+  return <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>{children}</h3>;
 }
 
 /**
@@ -105,9 +97,5 @@ export function CardFooter({
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <div className={`border-t border-gray-200 pt-3 mt-3 ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`border-t border-gray-200 pt-3 mt-3 ${className}`}>{children}</div>;
 }

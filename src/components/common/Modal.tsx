@@ -76,10 +76,7 @@ export function Modal({
       aria-modal="true"
       aria-labelledby={title ? "modal-title" : undefined}
     >
-      <div
-        ref={contentRef}
-        className={`w-full ${sizeStyles[size]} rounded-lg bg-white shadow-xl`}
-      >
+      <div ref={contentRef} className={`w-full ${sizeStyles[size]} rounded-lg bg-white shadow-xl`}>
         {/* ヘッダー */}
         {(title || showCloseButton) && (
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
@@ -94,12 +91,7 @@ export function Modal({
                 className="ml-auto rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
                 aria-label="閉じる"
               >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

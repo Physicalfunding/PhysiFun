@@ -10,11 +10,7 @@ interface LoadingSpinnerProps {
  * LoadingSpinner
  * ローディング表示用スピナーコンポーネント
  */
-export function LoadingSpinner({
-  size = "md",
-  className = "",
-  message,
-}: LoadingSpinnerProps) {
+export function LoadingSpinner({ size = "md", className = "", message }: LoadingSpinnerProps) {
   const sizeClasses = {
     sm: "h-4 w-4 border-2",
     md: "h-8 w-8 border-2",
@@ -28,9 +24,7 @@ export function LoadingSpinner({
         role="status"
         aria-label="読み込み中"
       />
-      {message && (
-        <p className="mt-2 text-sm text-gray-500">{message}</p>
-      )}
+      {message && <p className="mt-2 text-sm text-gray-500">{message}</p>}
     </div>
   );
 }

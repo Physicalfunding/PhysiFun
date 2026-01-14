@@ -15,10 +15,7 @@ export function Footer() {
         <div className="md:flex md:items-center md:justify-between">
           {/* ロゴとコピーライト */}
           <div className="flex justify-center md:order-2">
-            <Link
-              href="/"
-              className="text-gray-600 hover:text-orange-600 transition-colors"
-            >
+            <Link href="/" className="text-gray-600 hover:text-orange-600 transition-colors">
               <span className="font-bold text-lg">Campfire Experience</span>
             </Link>
           </div>
@@ -26,28 +23,16 @@ export function Footer() {
           {/* フッターナビゲーション */}
           <div className="mt-4 md:mt-0 md:order-1">
             <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-              <Link
-                href="/projects"
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
+              <Link href="/projects" className="text-sm text-gray-500 hover:text-gray-700">
                 プロジェクトを探す
               </Link>
-              <Link
-                href="/about"
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
+              <Link href="/about" className="text-sm text-gray-500 hover:text-gray-700">
                 サービスについて
               </Link>
-              <Link
-                href="/terms"
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
+              <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-700">
                 利用規約
               </Link>
-              <Link
-                href="/privacy"
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
+              <Link href="/privacy" className="text-sm text-gray-500 hover:text-gray-700">
                 プライバシーポリシー
               </Link>
             </nav>

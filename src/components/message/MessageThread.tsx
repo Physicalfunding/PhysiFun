@@ -90,9 +90,7 @@ export function MessageThread({ messageId, currentUserId }: MessageThreadProps) 
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-        {error}
-      </div>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">{error}</div>
     );
   }
 
@@ -110,9 +108,7 @@ export function MessageThread({ messageId, currentUserId }: MessageThreadProps) 
     <div className="bg-white rounded-lg shadow">
       {/* 件名 */}
       <div className="border-b border-gray-200 p-4">
-        <h2 className="text-lg font-semibold text-gray-900">
-          {firstMessage.subject}
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900">{firstMessage.subject}</h2>
       </div>
 
       {/* メッセージスレッド */}
@@ -121,10 +117,7 @@ export function MessageThread({ messageId, currentUserId }: MessageThreadProps) 
           const isCurrentUserSender = message.senderId === currentUserId;
 
           return (
-            <div
-              key={message.id}
-              className={`p-4 ${index === 0 ? "" : "bg-gray-50"}`}
-            >
+            <div key={message.id} className={`p-4 ${index === 0 ? "" : "bg-gray-50"}`}>
               <div className="flex items-start gap-3">
                 {/* アバター */}
                 <div className="flex-shrink-0">
@@ -150,18 +143,14 @@ export function MessageThread({ messageId, currentUserId }: MessageThreadProps) 
                       <span className="font-medium text-gray-900">
                         {message.sender.name || "名前未設定"}
                       </span>
-                      {isCurrentUserSender && (
-                        <span className="text-xs text-gray-500">(自分)</span>
-                      )}
+                      {isCurrentUserSender && <span className="text-xs text-gray-500">(自分)</span>}
                     </div>
                     <span className="text-xs text-gray-500">
                       {formatDateTime(message.createdAt)}
                     </span>
                   </div>
 
-                  <div className="text-gray-700 whitespace-pre-wrap">
-                    {message.body}
-                  </div>
+                  <div className="text-gray-700 whitespace-pre-wrap">{message.body}</div>
 
                   {/* 既読表示 */}
                   {isCurrentUserSender && message.readAt && (

@@ -79,11 +79,7 @@ describe("SendMessageUseCase", () => {
       countByHostId: jest.fn(),
     };
 
-    useCase = new SendMessageUseCase(
-      messageRepository,
-      participationRepository,
-      projectRepository
-    );
+    useCase = new SendMessageUseCase(messageRepository, participationRepository, projectRepository);
   });
 
   describe("execute", () => {

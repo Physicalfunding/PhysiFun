@@ -79,9 +79,7 @@ export function MessageCard({
             />
           ) : (
             <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-              <span className="text-gray-600 text-sm">
-                {sender.name?.charAt(0) || "?"}
-              </span>
+              <span className="text-gray-600 text-sm">{sender.name?.charAt(0) || "?"}</span>
             </div>
           )}
         </div>
@@ -100,18 +98,16 @@ export function MessageCard({
                 </span>
               )}
             </div>
-            <span className="text-xs text-gray-500 flex-shrink-0">
-              {formatDate(createdAt)}
-            </span>
+            <span className="text-xs text-gray-500 flex-shrink-0">{formatDate(createdAt)}</span>
           </div>
 
-          <h3 className={`text-sm ${!isRead && !isCurrentUserSender ? "font-bold text-gray-900" : "text-gray-800"} mb-1 truncate`}>
+          <h3
+            className={`text-sm ${!isRead && !isCurrentUserSender ? "font-bold text-gray-900" : "text-gray-800"} mb-1 truncate`}
+          >
             {subject}
           </h3>
 
-          <p className="text-xs text-gray-500 truncate">
-            {truncateBody(body)}
-          </p>
+          <p className="text-xs text-gray-500 truncate">{truncateBody(body)}</p>
         </div>
       </div>
     </Link>

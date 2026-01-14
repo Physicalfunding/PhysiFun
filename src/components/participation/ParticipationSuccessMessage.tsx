@@ -30,19 +30,12 @@ export function ParticipationSuccessMessage({
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M5 13l4 4L19 7"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       </div>
 
       {/* メッセージ */}
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        参加申し込みが完了しました
-      </h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">参加申し込みが完了しました</h3>
       <p className="text-sm text-gray-600 mb-1">
         <span className="font-medium">{projectTitle}</span>
       </p>

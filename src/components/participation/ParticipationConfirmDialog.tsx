@@ -125,7 +125,9 @@ export function ParticipationConfirmDialog({
             </div>
             <div>
               <p className="text-xs text-gray-500">残り枠</p>
-              <p className="font-medium text-orange-600">{remainingCapacity}名 / 定員{capacity}名</p>
+              <p className="font-medium text-orange-600">
+                {remainingCapacity}名 / 定員{capacity}名
+              </p>
             </div>
           </div>
 

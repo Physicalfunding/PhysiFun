@@ -10,11 +10,7 @@ interface ContainerProps {
  * Container
  * レスポンシブ対応のコンテナコンポーネント
  */
-export function Container({
-  children,
-  className = "",
-  size = "lg",
-}: ContainerProps) {
+export function Container({ children, className = "", size = "lg" }: ContainerProps) {
   const sizeStyles = {
     sm: "max-w-2xl",
     md: "max-w-4xl",
@@ -34,11 +30,7 @@ export function Container({
  * PageContainer
  * ページ用コンテナ（デフォルトパディング付き）
  */
-export function PageContainer({
-  children,
-  className = "",
-  size = "lg",
-}: ContainerProps) {
+export function PageContainer({ children, className = "", size = "lg" }: ContainerProps) {
   return (
     <Container size={size} className={`py-6 sm:py-8 lg:py-12 ${className}`}>
       {children}
@@ -67,16 +59,8 @@ export function SectionContainer({
       <Container size={size}>
         {(title || description) && (
           <div className="mb-6 sm:mb-8 lg:mb-10 text-center">
-            {title && (
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                {title}
-              </h2>
-            )}
-            {description && (
-              <p className="mt-2 text-gray-600 max-w-2xl mx-auto">
-                {description}
-              </p>
-            )}
+            {title && <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{title}</h2>}
+            {description && <p className="mt-2 text-gray-600 max-w-2xl mx-auto">{description}</p>}
           </div>
         )}
         {children}

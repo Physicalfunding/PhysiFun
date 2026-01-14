@@ -32,10 +32,7 @@ export function ErrorDisplay({
   };
 
   return (
-    <div
-      className={`rounded-lg border p-4 ${variantStyles[variant]} ${className}`}
-      role="alert"
-    >
+    <div className={`rounded-lg border p-4 ${variantStyles[variant]} ${className}`} role="alert">
       <div className="flex items-start">
         <div className="flex-shrink-0">
           {variant === "error" && (
@@ -85,9 +82,7 @@ export function ErrorDisplay({
           )}
         </div>
         <div className="ml-3 flex-1">
-          {title && (
-            <h3 className="text-sm font-medium">{title}</h3>
-          )}
+          {title && <h3 className="text-sm font-medium">{title}</h3>}
           <p className={`text-sm ${title ? "mt-1" : ""}`}>{message}</p>
           {onRetry && (
             <button

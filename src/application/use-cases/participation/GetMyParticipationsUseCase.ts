@@ -37,9 +37,7 @@ export class GetMyParticipationsUseCase {
 
     // 3. キャンセル済みを除外（オプション）
     if (input.excludeCancelled) {
-      participations = participations.filter(
-        (p) => p.status !== ParticipationStatus.CANCELLED
-      );
+      participations = participations.filter((p) => p.status !== ParticipationStatus.CANCELLED);
     }
 
     return ok(participations);

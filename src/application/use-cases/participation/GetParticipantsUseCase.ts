@@ -91,10 +91,7 @@ export class GetParticipantsUseCase {
     const participants = await this.participationRepository.findByScheduleId(scheduleId);
 
     // 5. 現在の参加人数を集計
-    const currentParticipantCount = participants.reduce(
-      (sum, p) => sum + p.participantCount,
-      0
-    );
+    const currentParticipantCount = participants.reduce((sum, p) => sum + p.participantCount, 0);
 
     return ok({
       schedule: {

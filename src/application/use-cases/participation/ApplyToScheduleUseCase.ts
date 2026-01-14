@@ -83,11 +83,7 @@ export class ApplyToScheduleUseCase {
     const remainingCapacity = schedule.capacity - currentParticipantCount;
 
     if (input.participantCount > remainingCapacity) {
-      return err(
-        validationError(
-          `定員を超えています。現在の残り枠: ${remainingCapacity}名`
-        )
-      );
+      return err(validationError(`定員を超えています。現在の残り枠: ${remainingCapacity}名`));
     }
 
     // 6. 参加申し込みエンティティの作成

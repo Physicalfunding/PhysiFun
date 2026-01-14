@@ -132,41 +132,29 @@ export function ParticipantsList({ scheduleId }: ParticipantsListProps) {
         >
           {data.project.title}
         </Link>
-        <h3 className="text-lg font-semibold text-gray-900 mt-1">
-          {data.schedule.title}
-        </h3>
-        <p className="text-sm text-gray-600 mt-1">
-          {formatDateTime(data.schedule.startDateTime)}
-        </p>
+        <h3 className="text-lg font-semibold text-gray-900 mt-1">{data.schedule.title}</h3>
+        <p className="text-sm text-gray-600 mt-1">{formatDateTime(data.schedule.startDateTime)}</p>
       </div>
 
       {/* 統計情報 */}
       <div className="p-4 flex gap-6 border-b bg-orange-50">
         <div>
           <span className="text-sm text-gray-600">現在の参加者</span>
-          <p className="text-2xl font-bold text-orange-600">
-            {data.currentParticipantCount}名
-          </p>
+          <p className="text-2xl font-bold text-orange-600">{data.currentParticipantCount}名</p>
         </div>
         <div>
           <span className="text-sm text-gray-600">定員</span>
-          <p className="text-2xl font-bold text-gray-700">
-            {data.schedule.capacity}名
-          </p>
+          <p className="text-2xl font-bold text-gray-700">{data.schedule.capacity}名</p>
         </div>
         <div>
           <span className="text-sm text-gray-600">残り枠</span>
-          <p className="text-2xl font-bold text-green-600">
-            {data.remainingCapacity}名
-          </p>
+          <p className="text-2xl font-bold text-green-600">{data.remainingCapacity}名</p>
         </div>
       </div>
 
       {/* 参加者リスト */}
       {data.participants.length === 0 ? (
-        <div className="p-8 text-center text-gray-500">
-          まだ参加者はいません
-        </div>
+        <div className="p-8 text-center text-gray-500">まだ参加者はいません</div>
       ) : (
         <div className="divide-y">
           {data.participants.map((participant) => {
@@ -192,9 +180,7 @@ export function ParticipantsList({ scheduleId }: ParticipantsListProps) {
 
                 {/* ゲスト情報 */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
-                    {participant.guest.name}
-                  </p>
+                  <p className="font-medium text-gray-900 truncate">{participant.guest.name}</p>
                   <p className="text-sm text-gray-500">
                     申込日: {formatDateTime(participant.appliedAt)}
                   </p>

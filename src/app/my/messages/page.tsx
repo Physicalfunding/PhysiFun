@@ -34,10 +34,7 @@ export default async function MessagesPage() {
 
       {/* 戻るリンク */}
       <div className="mt-6">
-        <Link
-          href="/my"
-          className="inline-flex items-center text-gray-600 hover:text-orange-600"
-        >
+        <Link href="/my" className="inline-flex items-center text-gray-600 hover:text-orange-600">
           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"

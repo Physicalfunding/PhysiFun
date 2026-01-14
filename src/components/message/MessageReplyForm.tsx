@@ -66,9 +66,7 @@ export function MessageReplyForm({ parentMessageId, currentUserId }: MessageRepl
 
     // 返信先を決定（自分が送信者なら相手へ、自分が受信者なら送信者へ）
     const receiverId =
-      parentMessage.senderId === currentUserId
-        ? parentMessage.receiverId
-        : parentMessage.senderId;
+      parentMessage.senderId === currentUserId ? parentMessage.receiverId : parentMessage.senderId;
 
     try {
       const response = await fetch("/api/messages/reply", {
@@ -114,9 +112,7 @@ export function MessageReplyForm({ parentMessageId, currentUserId }: MessageRepl
   }
 
   const replyTo =
-    parentMessage.senderId === currentUserId
-      ? parentMessage.receiver
-      : parentMessage.sender;
+    parentMessage.senderId === currentUserId ? parentMessage.receiver : parentMessage.sender;
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
@@ -125,9 +121,7 @@ export function MessageReplyForm({ parentMessageId, currentUserId }: MessageRepl
       <form onSubmit={handleSubmit}>
         {/* 返信先表示 */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            返信先
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">返信先</label>
           <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
             {replyTo.avatarUrl ? (
               <img
@@ -137,23 +131,16 @@ export function MessageReplyForm({ parentMessageId, currentUserId }: MessageRepl
               />
             ) : (
               <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
-                <span className="text-gray-600 text-xs">
-                  {replyTo.name?.charAt(0) || "?"}
-                </span>
+                <span className="text-gray-600 text-xs">{replyTo.name?.charAt(0) || "?"}</span>
               </div>
             )}
-            <span className="text-sm text-gray-700">
-              {replyTo.name || "名前未設定"}
-            </span>
+            <span className="text-sm text-gray-700">{replyTo.name || "名前未設定"}</span>
           </div>
         </div>
 
         {/* 本文入力 */}
         <div className="mb-4">
-          <label
-            htmlFor="reply-body"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
+          <label htmlFor="reply-body" className="block text-sm font-medium text-gray-700 mb-1">
             メッセージ
           </label>
           <textarea
