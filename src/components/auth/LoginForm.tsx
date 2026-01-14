@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useToast } from "@/components/common/Toast";
 
 /**
  * ログインフォームのバリデーションスキーマ
@@ -33,6 +34,7 @@ type LoginFormData = z.infer<typeof loginFormSchema>;
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -63,16 +65,21 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        setServerError("メールアドレスまたはパスワードが正しくありません");
+        const errorMessage = "メールアドレスまたはパスワードが正しくありません";
+        setServerError(errorMessage);
+        showToast(errorMessage, "error");
         return;
       }
 
       // ログイン成功後、リダイレクト
+      showToast("ログインしました", "success");
       const callbackUrl = searchParams.get("callbackUrl") || "/";
       router.push(callbackUrl);
       router.refresh(); // セッション状態を更新
-    } catch (error) {
-      setServerError("ログインに失敗しました");
+    } catch {
+      const errorMessage = "ログインに失敗しました";
+      setServerError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setIsLoading(false);
     }

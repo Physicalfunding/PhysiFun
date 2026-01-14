@@ -4,6 +4,18 @@ import { GetPublishedProjectsUseCase } from "@/application/use-cases/project/Get
 import { ProjectCard, ProjectCardProps } from "@/components/project/ProjectCard";
 
 /**
+ * ISR（Incremental Static Regeneration）設定
+ * ページを60秒間キャッシュし、バックグラウンドで再生成
+ *
+ * パフォーマンス最適化:
+ * - 初回アクセス時は静的にプリレンダリングされたページを即座に返却
+ * - 60秒後のアクセスで最新データを取得し、バックグラウンドで再生成
+ *
+ * @see https://nextjs.org/docs/app/building-your-application/data-fetching/incremental-static-regeneration
+ */
+export const revalidate = 60;
+
+/**
  * ホームページ（トップページ）
  *
  * Campfire Experience のメインページ
@@ -61,9 +73,10 @@ export default async function Home() {
 
         {projects.length > 0 ? (
           // プロジェクトがある場合：カードグリッド表示
+          // 最初の3枚の画像にはpriorityを設定してLCPを最適化
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <ProjectCard key={project.id} {...project} />
+            {projects.map((project, index) => (
+              <ProjectCard key={project.id} {...project} priority={index < 3} />
             ))}
           </div>
         ) : (

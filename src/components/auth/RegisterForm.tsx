@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/common/Toast";
 
 /**
  * ユーザー登録フォームのバリデーションスキーマ
@@ -45,6 +46,7 @@ type RegisterFormData = z.infer<typeof registerFormSchema>;
  */
 export function RegisterForm() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -97,7 +99,9 @@ export function RegisterForm() {
             }
           });
         } else {
-          setServerError(result.error?.message || "登録に失敗しました");
+          const errorMessage = result.error?.message || "登録に失敗しました";
+          setServerError(errorMessage);
+          showToast(errorMessage, "error");
         }
         return;
       }
@@ -111,15 +115,19 @@ export function RegisterForm() {
 
       if (signInResult?.error) {
         // 自動ログイン失敗時はログインページへリダイレクト
+        showToast("アカウントを作成しました。ログインしてください", "info");
         router.push("/login?registered=true");
         return;
       }
 
       // ログイン成功後、ホームへリダイレクト
+      showToast("アカウントを作成してログインしました", "success");
       router.push("/");
       router.refresh();
-    } catch (error) {
-      setServerError("ネットワークエラーが発生しました");
+    } catch {
+      const errorMessage = "ネットワークエラーが発生しました";
+      setServerError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setIsLoading(false);
     }
