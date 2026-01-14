@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Category } from "@/domain/project/entities/Project";
+import { useToast } from "@/components/common/Toast";
 
 /**
  * プロジェクト編集フォームの入力データ型
@@ -50,6 +51,7 @@ interface ProjectEditFormProps {
  */
 export function ProjectEditForm({ project }: ProjectEditFormProps) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -88,14 +90,19 @@ export function ProjectEditForm({ project }: ProjectEditFormProps) {
       const result = await response.json();
 
       if (!response.ok) {
-        setServerError(result.error?.message || "プロジェクトの更新に失敗しました");
+        const errorMessage = result.error?.message || "プロジェクトの更新に失敗しました";
+        setServerError(errorMessage);
+        showToast(errorMessage, "error");
         return;
       }
 
       setSuccessMessage("プロジェクトを更新しました");
+      showToast("プロジェクトを更新しました", "success");
       router.refresh();
-    } catch (error) {
-      setServerError("通信エラーが発生しました。もう一度お試しください。");
+    } catch {
+      const errorMessage = "通信エラーが発生しました。もう一度お試しください。";
+      setServerError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setIsSubmitting(false);
     }

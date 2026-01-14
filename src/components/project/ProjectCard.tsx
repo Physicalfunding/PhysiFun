@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Category } from "@/domain/project/entities/Project";
 
 /**
@@ -14,6 +15,8 @@ export interface ProjectCardProps {
   category: Category;
   location: string;
   imageUrl: string | null;
+  /** 画像を優先読み込みするか（LCP最適化用、最初の数枚の画像に適用） */
+  priority?: boolean;
 }
 
 /**
@@ -62,9 +65,13 @@ export function ProjectCard({
   category,
   location,
   imageUrl,
+  priority = false,
 }: ProjectCardProps) {
   return (
-    <div className="group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <Link
+      href={`/projects/${id}`}
+      className="group block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+    >
       {/* プロジェクト画像 */}
       <div className="relative h-48 w-full bg-gray-200">
         {imageUrl ? (
@@ -74,6 +81,7 @@ export function ProjectCard({
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={priority}
           />
         ) : (
           // 画像がない場合のプレースホルダー
@@ -131,6 +139,6 @@ export function ProjectCard({
           <span>{location}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

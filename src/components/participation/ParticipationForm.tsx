@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/common/Toast";
 
 /**
  * ParticipationFormProps - 参加申し込みフォームのプロパティ
@@ -33,6 +34,7 @@ export function ParticipationForm({
   onSuccess,
   onCancel,
 }: ParticipationFormProps) {
+  const { showToast } = useToast();
   const [participantCount, setParticipantCount] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,13 +77,19 @@ export function ParticipationForm({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error?.message || "申し込みに失敗しました");
+        const errorMessage = data.error?.message || "申し込みに失敗しました";
+        setError(errorMessage);
+        showToast(errorMessage, "error");
+        return;
       }
 
-      // 成功コールバック
+      // 成功通知とコールバック
+      showToast("参加申し込みを送信しました", "success");
       onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "申し込みに失敗しました");
+      const errorMessage = err instanceof Error ? err.message : "申し込みに失敗しました";
+      setError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setIsSubmitting(false);
     }

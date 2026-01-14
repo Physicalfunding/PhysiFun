@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Category } from "@/domain/project/entities/Project";
+import { useToast } from "@/components/common/Toast";
 
 /**
  * プロジェクト作成フォームの入力データ型
@@ -38,6 +39,7 @@ const CATEGORY_OPTIONS: { value: Category; label: string }[] = [
  */
 export function ProjectCreateForm() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -76,15 +78,20 @@ export function ProjectCreateForm() {
 
       if (!response.ok) {
         // APIエラーの場合
-        setServerError(result.error?.message || "プロジェクトの作成に失敗しました");
+        const errorMessage = result.error?.message || "プロジェクトの作成に失敗しました";
+        setServerError(errorMessage);
+        showToast(errorMessage, "error");
         return;
       }
 
-      // 成功時、マイプロジェクトページへ遷移
+      // 成功時、トースト表示してマイプロジェクトページへ遷移
+      showToast("プロジェクトを作成しました", "success");
       router.push("/my/project");
       router.refresh();
-    } catch (error) {
-      setServerError("通信エラーが発生しました。もう一度お試しください。");
+    } catch {
+      const errorMessage = "通信エラーが発生しました。もう一度お試しください。";
+      setServerError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setIsSubmitting(false);
     }
