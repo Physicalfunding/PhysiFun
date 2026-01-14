@@ -24,7 +24,11 @@ describe("api-helpers", () => {
     });
 
     it("NOT_FOUNDを404で返す", () => {
-      const error: AppError = { code: "NOT_FOUND", resource: "プロジェクト" };
+      const error: AppError = {
+        code: "NOT_FOUND",
+        resource: "プロジェクト",
+        message: "プロジェクトが見つかりません",
+      };
       const response = handleAppError(error);
       expect(response.status).toBe(404);
     });
