@@ -11,10 +11,7 @@ import { getCurrentUserId, isHost } from "@/lib/session";
  *
  * 公開中のプロジェクトを下書き状態に戻す
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 

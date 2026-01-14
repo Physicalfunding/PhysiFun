@@ -74,7 +74,9 @@ describe("UploadProjectImagesUseCase", () => {
         path: "projects/test-project/12345.jpg",
         publicUrl: "https://storage.example.com/projects/test-project/12345.jpg",
       });
-      mockProjectRepository.update.mockImplementation((project: Project) => Promise.resolve(project));
+      mockProjectRepository.update.mockImplementation((project: Project) =>
+        Promise.resolve(project)
+      );
 
       // Act
       const result = await useCase.execute({
@@ -132,7 +134,9 @@ describe("UploadProjectImagesUseCase", () => {
           path: "projects/test/3.webp",
           publicUrl: "https://storage.example.com/projects/test/3.webp",
         });
-      mockProjectRepository.update.mockImplementation((project: Project) => Promise.resolve(project));
+      mockProjectRepository.update.mockImplementation((project: Project) =>
+        Promise.resolve(project)
+      );
 
       // Act
       const result = await useCase.execute({
@@ -165,7 +169,9 @@ describe("UploadProjectImagesUseCase", () => {
         path: "projects/test/new.jpg",
         publicUrl: "https://storage.example.com/projects/test/new.jpg",
       });
-      mockProjectRepository.update.mockImplementation((project: Project) => Promise.resolve(project));
+      mockProjectRepository.update.mockImplementation((project: Project) =>
+        Promise.resolve(project)
+      );
 
       // Act
       const result = await useCase.execute({

@@ -6,7 +6,15 @@
  * - プロジェクトの所有者確認
  * - プロジェクト情報の更新
  */
-import { Result, AppError, ok, err, notFoundError, forbiddenError, internalError } from "@/domain/shared/result";
+import {
+  Result,
+  AppError,
+  ok,
+  err,
+  notFoundError,
+  forbiddenError,
+  internalError,
+} from "@/domain/shared/result";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { Category } from "@/domain/project/entities/Project";
 import { ProjectId } from "@/domain/project/value-objects/ProjectId";

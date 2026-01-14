@@ -138,7 +138,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
  * - 404: プロジェクトが見つからない
  * - 500: サーバーエラー
  */
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     // 1. 認証チェック
     const userId = await getCurrentUserId();

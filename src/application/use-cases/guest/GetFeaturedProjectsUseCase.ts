@@ -39,16 +39,16 @@ export interface GetFeaturedProjectsOutput {
 }
 
 export class GetFeaturedProjectsUseCase {
-  constructor(
-    private readonly projectRepository: ProjectRepository
-  ) {}
+  constructor(private readonly projectRepository: ProjectRepository) {}
 
   /**
    * ホームページ用のプロジェクトを取得
    * @param input 取得条件
    * @returns 取得結果
    */
-  async execute(input: GetFeaturedProjectsInput): Promise<Result<GetFeaturedProjectsOutput, AppError>> {
+  async execute(
+    input: GetFeaturedProjectsInput
+  ): Promise<Result<GetFeaturedProjectsOutput, AppError>> {
     try {
       const limit = input.limit ?? 10;
 

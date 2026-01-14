@@ -25,10 +25,7 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { returnId } = await params;
@@ -40,9 +37,12 @@ export async function PUT(
       hostId: session.user.id,
       name: body.name,
       description: body.description,
-      estimatedDeliveryDate: body.estimatedDeliveryDate !== undefined
-        ? (body.estimatedDeliveryDate ? new Date(body.estimatedDeliveryDate) : null)
-        : undefined,
+      estimatedDeliveryDate:
+        body.estimatedDeliveryDate !== undefined
+          ? body.estimatedDeliveryDate
+            ? new Date(body.estimatedDeliveryDate)
+            : null
+          : undefined,
       quantityLimit: body.quantityLimit,
     });
 
@@ -56,10 +56,7 @@ export async function PUT(
     return NextResponse.json(result.data);
   } catch (error) {
     console.error("PUT /api/projects/[id]/returns/[returnId] error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -73,10 +70,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { returnId } = await params;
@@ -97,10 +91,7 @@ export async function DELETE(
     return NextResponse.json({ deleted: true });
   } catch (error) {
     console.error("DELETE /api/projects/[id]/returns/[returnId] error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 

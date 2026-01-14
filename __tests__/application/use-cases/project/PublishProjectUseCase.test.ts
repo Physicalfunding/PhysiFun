@@ -1,17 +1,22 @@
 /**
  * PublishProjectUseCase テスト
  */
-import { PublishProjectUseCase, PublishProjectInput } from "@/application/use-cases/project/PublishProjectUseCase";
+import {
+  PublishProjectUseCase,
+  PublishProjectInput,
+} from "@/application/use-cases/project/PublishProjectUseCase";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { Project, Category, ProjectStatus } from "@/domain/project/entities/Project";
 import { ProjectId } from "@/domain/project/value-objects/ProjectId";
 import { UserId } from "@/domain/account/value-objects/UserId";
 
 // テスト用プロジェクトの作成ヘルパー
-const createTestProject = (overrides: Partial<{
-  hostId: UserId;
-  status: ProjectStatus;
-}> = {}): Project => {
+const createTestProject = (
+  overrides: Partial<{
+    hostId: UserId;
+    status: ProjectStatus;
+  }> = {}
+): Project => {
   const projectId = ProjectId.generate();
   const hostId = overrides.hostId ?? UserId.generate();
   const status = overrides.status ?? ProjectStatus.DRAFT;
@@ -41,7 +46,9 @@ const createMockProjectRepository = (
   findById: jest.fn().mockResolvedValue(null),
   findBySlug: jest.fn().mockResolvedValue(null),
   findByHostId: jest.fn().mockResolvedValue([]),
-  findPublished: jest.fn().mockResolvedValue({ items: [], total: 0, page: 1, limit: 10, hasNext: false }),
+  findPublished: jest
+    .fn()
+    .mockResolvedValue({ items: [], total: 0, page: 1, limit: 10, hasNext: false }),
   findAllPublished: jest.fn().mockResolvedValue([]),
   findFeatured: jest.fn().mockResolvedValue([]),
   create: jest.fn().mockImplementation(async (project: Project) => project),

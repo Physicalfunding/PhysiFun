@@ -57,9 +57,7 @@ export function ProjectStatusToggle({ projectId, status }: ProjectStatusTogglePr
         <span className="text-sm text-gray-600">ステータス:</span>
         <span
           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            isPublished
-              ? "bg-green-100 text-green-800"
-              : "bg-yellow-100 text-yellow-800"
+            isPublished ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
           }`}
         >
           {isPublished ? "公開中" : "下書き"}

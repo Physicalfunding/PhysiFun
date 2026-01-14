@@ -37,21 +37,18 @@ export async function GET(request: NextRequest) {
     });
 
     if (!result.success) {
-      const status = result.error.code === "NOT_FOUND" ? 404
-        : result.error.code === "VALIDATION_ERROR" ? 400
-        : 500;
-      return NextResponse.json(
-        { error: result.error.message },
-        { status }
-      );
+      const status =
+        result.error.code === "NOT_FOUND"
+          ? 404
+          : result.error.code === "VALIDATION_ERROR"
+            ? 400
+            : 500;
+      return NextResponse.json({ error: result.error.message }, { status });
     }
 
     return NextResponse.json(result.data);
   } catch (error) {
     console.error("GET /api/projects/detail error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

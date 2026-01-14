@@ -2,7 +2,16 @@
  * DeleteScheduleUseCase
  * 体験スケジュールを削除するユースケース
  */
-import { Result, AppError, ok, err, notFoundError, forbiddenError, conflictError, internalError } from "@/domain/shared/result";
+import {
+  Result,
+  AppError,
+  ok,
+  err,
+  notFoundError,
+  forbiddenError,
+  conflictError,
+  internalError,
+} from "@/domain/shared/result";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { ScheduleRepository } from "@/domain/schedule/repositories/ScheduleRepository";
 import { ParticipationRepository } from "@/domain/participation/repositories/ParticipationRepository";

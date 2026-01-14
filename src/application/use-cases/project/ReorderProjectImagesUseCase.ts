@@ -2,7 +2,16 @@
  * ReorderProjectImagesUseCase
  * プロジェクト画像の順序を変更するユースケース
  */
-import { Result, AppError, ok, err, validationError, notFoundError, forbiddenError, internalError } from "@/domain/shared/result";
+import {
+  Result,
+  AppError,
+  ok,
+  err,
+  validationError,
+  notFoundError,
+  forbiddenError,
+  internalError,
+} from "@/domain/shared/result";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { ProjectId } from "@/domain/project/value-objects/ProjectId";
 
@@ -30,7 +39,9 @@ export class ReorderProjectImagesUseCase {
    * @param input 並び替え入力データ
    * @returns 並び替え結果
    */
-  async execute(input: ReorderProjectImagesInput): Promise<Result<ReorderProjectImagesOutput, AppError>> {
+  async execute(
+    input: ReorderProjectImagesInput
+  ): Promise<Result<ReorderProjectImagesOutput, AppError>> {
     try {
       // 1. プロジェクトIDのバリデーション
       const projectIdResult = ProjectId.create(input.projectId);

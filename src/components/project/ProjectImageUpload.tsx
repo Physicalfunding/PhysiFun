@@ -242,11 +242,7 @@ export function ProjectImageUpload({ projectId, initialImages }: ProjectImageUpl
           >
             {isUploading ? (
               <>
-                <svg
-                  className="animate-spin h-8 w-8 mb-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="animate-spin h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
                     cx="12"
@@ -292,9 +288,7 @@ export function ProjectImageUpload({ projectId, initialImages }: ProjectImageUpl
 
       {/* ヘルプテキスト */}
       <div className="text-sm text-gray-500 space-y-1">
-        <p>
-          • 最大{MAX_IMAGES}枚まで、1枚あたり5MB以下のJPEG、PNG、WebP形式に対応
-        </p>
+        <p>• 最大{MAX_IMAGES}枚まで、1枚あたり5MB以下のJPEG、PNG、WebP形式に対応</p>
         <p>• ドラッグ&ドロップで画像の順序を変更できます</p>
         <p>• 最初の画像がメイン画像として表示されます</p>
       </div>

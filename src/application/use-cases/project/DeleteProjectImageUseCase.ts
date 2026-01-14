@@ -2,7 +2,16 @@
  * DeleteProjectImageUseCase
  * プロジェクト画像を削除するユースケース
  */
-import { Result, AppError, ok, err, validationError, notFoundError, forbiddenError, internalError } from "@/domain/shared/result";
+import {
+  Result,
+  AppError,
+  ok,
+  err,
+  validationError,
+  notFoundError,
+  forbiddenError,
+  internalError,
+} from "@/domain/shared/result";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { ProjectId } from "@/domain/project/value-objects/ProjectId";
 import { ImageUploadService } from "@/infrastructure/storage/ImageUploadService";
@@ -34,7 +43,9 @@ export class DeleteProjectImageUseCase {
    * @param input 削除入力データ
    * @returns 削除結果
    */
-  async execute(input: DeleteProjectImageInput): Promise<Result<DeleteProjectImageOutput, AppError>> {
+  async execute(
+    input: DeleteProjectImageInput
+  ): Promise<Result<DeleteProjectImageOutput, AppError>> {
     try {
       // 1. プロジェクトIDのバリデーション
       const projectIdResult = ProjectId.create(input.projectId);

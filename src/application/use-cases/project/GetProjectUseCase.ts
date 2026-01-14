@@ -3,7 +3,15 @@
  * プロジェクトの詳細情報を取得するユースケース
  * ホストが自分のプロジェクトを取得する場合に使用
  */
-import { Result, AppError, ok, err, notFoundError, forbiddenError, internalError } from "@/domain/shared/result";
+import {
+  Result,
+  AppError,
+  ok,
+  err,
+  notFoundError,
+  forbiddenError,
+  internalError,
+} from "@/domain/shared/result";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { Category } from "@/domain/project/entities/Project";
 import { ProjectId } from "@/domain/project/value-objects/ProjectId";

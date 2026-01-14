@@ -64,7 +64,9 @@ describe("DeleteProjectImageUseCase", () => {
     it("指定したインデックスの画像を削除できる", async () => {
       // Arrange
       mockProjectRepository.findById.mockResolvedValue(mockProject);
-      mockProjectRepository.update.mockImplementation((project: Project) => Promise.resolve(project));
+      mockProjectRepository.update.mockImplementation((project: Project) =>
+        Promise.resolve(project)
+      );
 
       // Act
       const result = await useCase.execute({
@@ -89,7 +91,9 @@ describe("DeleteProjectImageUseCase", () => {
     it("最初の画像を削除できる", async () => {
       // Arrange
       mockProjectRepository.findById.mockResolvedValue(mockProject);
-      mockProjectRepository.update.mockImplementation((project: Project) => Promise.resolve(project));
+      mockProjectRepository.update.mockImplementation((project: Project) =>
+        Promise.resolve(project)
+      );
 
       // Act
       const result = await useCase.execute({
@@ -109,7 +113,9 @@ describe("DeleteProjectImageUseCase", () => {
     it("最後の画像を削除できる", async () => {
       // Arrange
       mockProjectRepository.findById.mockResolvedValue(mockProject);
-      mockProjectRepository.update.mockImplementation((project: Project) => Promise.resolve(project));
+      mockProjectRepository.update.mockImplementation((project: Project) =>
+        Promise.resolve(project)
+      );
 
       // Act
       const result = await useCase.execute({

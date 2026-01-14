@@ -13,10 +13,7 @@ import { Category } from "@/domain/project/entities/Project";
  *
  * ホストが自分のプロジェクト詳細を取得
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
@@ -53,10 +50,7 @@ export async function GET(
  *
  * ホストが自分のプロジェクト情報を更新
  */
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 

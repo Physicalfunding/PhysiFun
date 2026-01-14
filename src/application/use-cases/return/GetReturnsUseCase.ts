@@ -35,9 +35,7 @@ export interface GetReturnsOutput {
 }
 
 export class GetReturnsUseCase {
-  constructor(
-    private readonly returnRepository: ReturnRepository
-  ) {}
+  constructor(private readonly returnRepository: ReturnRepository) {}
 
   /**
    * リターン一覧を取得

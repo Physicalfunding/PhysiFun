@@ -58,7 +58,9 @@ describe("ReorderProjectImagesUseCase", () => {
     it("画像の順序を変更できる", async () => {
       // Arrange
       mockProjectRepository.findById.mockResolvedValue(mockProject);
-      mockProjectRepository.update.mockImplementation((project: Project) => Promise.resolve(project));
+      mockProjectRepository.update.mockImplementation((project: Project) =>
+        Promise.resolve(project)
+      );
 
       const newOrder = [2, 0, 1]; // 3, 1, 2 の順に変更
 
@@ -83,7 +85,9 @@ describe("ReorderProjectImagesUseCase", () => {
     it("最初と最後の画像を入れ替えられる", async () => {
       // Arrange
       mockProjectRepository.findById.mockResolvedValue(mockProject);
-      mockProjectRepository.update.mockImplementation((project: Project) => Promise.resolve(project));
+      mockProjectRepository.update.mockImplementation((project: Project) =>
+        Promise.resolve(project)
+      );
 
       const newOrder = [2, 1, 0]; // 逆順に
 

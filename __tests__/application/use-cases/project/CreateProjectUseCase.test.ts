@@ -6,7 +6,10 @@
  * - プロジェクトの新規作成（下書き状態での保存）
  * - ホスト1アカウントにつき同時に1プロジェクトのみの制限
  */
-import { CreateProjectUseCase, CreateProjectInput } from "@/application/use-cases/project/CreateProjectUseCase";
+import {
+  CreateProjectUseCase,
+  CreateProjectInput,
+} from "@/application/use-cases/project/CreateProjectUseCase";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { Project, Category, ProjectStatus } from "@/domain/project/entities/Project";
 import { ProjectId } from "@/domain/project/value-objects/ProjectId";
@@ -19,7 +22,9 @@ const createMockProjectRepository = (
   findById: jest.fn().mockResolvedValue(null),
   findBySlug: jest.fn().mockResolvedValue(null),
   findByHostId: jest.fn().mockResolvedValue([]),
-  findPublished: jest.fn().mockResolvedValue({ items: [], total: 0, page: 1, limit: 10, hasNext: false }),
+  findPublished: jest
+    .fn()
+    .mockResolvedValue({ items: [], total: 0, page: 1, limit: 10, hasNext: false }),
   findAllPublished: jest.fn().mockResolvedValue([]),
   findFeatured: jest.fn().mockResolvedValue([]),
   create: jest.fn().mockImplementation(async (project: Project) => project),

@@ -44,9 +44,7 @@ export interface SearchProjectsOutput {
 }
 
 export class SearchProjectsUseCase {
-  constructor(
-    private readonly projectRepository: ProjectRepository
-  ) {}
+  constructor(private readonly projectRepository: ProjectRepository) {}
 
   /**
    * プロジェクトを検索

@@ -2,7 +2,15 @@
  * UpdateScheduleUseCase
  * 体験スケジュールを更新するユースケース
  */
-import { Result, AppError, ok, err, notFoundError, forbiddenError, internalError } from "@/domain/shared/result";
+import {
+  Result,
+  AppError,
+  ok,
+  err,
+  notFoundError,
+  forbiddenError,
+  internalError,
+} from "@/domain/shared/result";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { ScheduleRepository } from "@/domain/schedule/repositories/ScheduleRepository";
 import { ScheduleId } from "@/domain/schedule/value-objects/ScheduleId";

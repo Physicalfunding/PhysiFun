@@ -28,18 +28,12 @@ export async function GET(request: NextRequest) {
     });
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: result.error.message }, { status: 500 });
     }
 
     return NextResponse.json(result.data);
   } catch (error) {
     console.error("GET /api/home error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

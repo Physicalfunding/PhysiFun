@@ -2,7 +2,15 @@
  * GetProjectDetailUseCase
  * プロジェクト詳細取得ユースケース
  */
-import { Result, AppError, ok, err, notFoundError, validationError, internalError } from "@/domain/shared/result";
+import {
+  Result,
+  AppError,
+  ok,
+  err,
+  notFoundError,
+  validationError,
+  internalError,
+} from "@/domain/shared/result";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { ReturnRepository } from "@/domain/project/repositories/ReturnRepository";
 import { ScheduleRepository } from "@/domain/schedule/repositories/ScheduleRepository";

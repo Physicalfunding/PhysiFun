@@ -2,7 +2,16 @@
  * UploadProjectImagesUseCase
  * プロジェクト画像をアップロードするユースケース
  */
-import { Result, AppError, ok, err, validationError, notFoundError, forbiddenError, internalError } from "@/domain/shared/result";
+import {
+  Result,
+  AppError,
+  ok,
+  err,
+  validationError,
+  notFoundError,
+  forbiddenError,
+  internalError,
+} from "@/domain/shared/result";
 import { ProjectRepository } from "@/domain/project/repositories/ProjectRepository";
 import { ProjectId } from "@/domain/project/value-objects/ProjectId";
 import { ImageUploadService } from "@/infrastructure/storage/ImageUploadService";
@@ -51,7 +60,9 @@ export class UploadProjectImagesUseCase {
    * @param input アップロード入力データ
    * @returns アップロード結果
    */
-  async execute(input: UploadProjectImagesInput): Promise<Result<UploadProjectImagesOutput, AppError>> {
+  async execute(
+    input: UploadProjectImagesInput
+  ): Promise<Result<UploadProjectImagesOutput, AppError>> {
     try {
       // 1. ファイルの存在チェック
       if (input.files.length === 0) {

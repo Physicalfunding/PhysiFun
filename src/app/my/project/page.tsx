@@ -47,11 +47,10 @@ export default async function MyProjectPage() {
     return (
       <div className="max-w-4xl mx-auto py-8 px-4">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            プロジェクトがありません
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">プロジェクトがありません</h1>
           <p className="text-gray-600 mb-8">
-            まだプロジェクトを作成していません。<br />
+            まだプロジェクトを作成していません。
+            <br />
             新しいプロジェクトを作成して、体験を共有しましょう。
           </p>
           <Link
@@ -80,20 +79,13 @@ export default async function MyProjectPage() {
         <div className="lg:col-span-2 space-y-8">
           {/* プロジェクト画像 */}
           <div className="bg-white shadow-md rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              プロジェクト画像
-            </h2>
-            <ProjectImageUpload
-              projectId={project.id}
-              initialImages={project.imageUrls}
-            />
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">プロジェクト画像</h2>
+            <ProjectImageUpload projectId={project.id} initialImages={project.imageUrls} />
           </div>
 
           {/* プロジェクト情報 */}
           <div className="bg-white shadow-md rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              プロジェクト情報
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">プロジェクト情報</h2>
             <ProjectEditForm project={project} />
           </div>
         </div>
@@ -102,17 +94,13 @@ export default async function MyProjectPage() {
         <div className="space-y-6">
           {/* 公開ステータス */}
           <div className="bg-white shadow-md rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              公開設定
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">公開設定</h2>
             <ProjectStatusToggle projectId={project.id} status={project.status} />
           </div>
 
           {/* 関連リンク */}
           <div className="bg-white shadow-md rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              プロジェクト管理
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">プロジェクト管理</h2>
             <nav className="space-y-2">
               <Link
                 href="/my/project/schedules"
