@@ -116,7 +116,7 @@ describe("GetParticipantsUseCase", () => {
       projectRepository.findById.mockResolvedValue({
         id: mockProjectId,
         hostId: mockHostId,
-      } as any);
+      } as unknown as ReturnType<typeof projectRepository.findById>);
 
       // Act
       const result = await useCase.execute({
@@ -159,7 +159,7 @@ describe("GetParticipantsUseCase", () => {
       projectRepository.findById.mockResolvedValue({
         id: mockProjectId,
         hostId: otherHostId, // 異なるホストID
-      } as any);
+      } as unknown as ReturnType<typeof projectRepository.findById>);
 
       // Act
       const result = await useCase.execute({

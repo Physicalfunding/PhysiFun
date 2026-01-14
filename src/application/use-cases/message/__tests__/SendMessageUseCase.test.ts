@@ -100,14 +100,14 @@ describe("SendMessageUseCase", () => {
       projectRepository.findById.mockResolvedValue({
         id: mockProjectId,
         hostId: mockHostId,
-      } as any);
+      } as unknown as ReturnType<typeof projectRepository.findById>);
 
       // 受信者（ホスト）のプロジェクトが存在する
       projectRepository.findByHostId.mockResolvedValue([
         {
           id: mockProjectId,
           hostId: mockHostId,
-        } as any,
+        } as unknown as Awaited<ReturnType<typeof projectRepository.findByHostId>>[number],
       ]);
 
       messageRepository.create.mockImplementation(async (m) => m);
@@ -158,7 +158,7 @@ describe("SendMessageUseCase", () => {
       projectRepository.findById.mockResolvedValue({
         id: mockProjectId,
         hostId: mockHostId,
-      } as any);
+      } as unknown as ReturnType<typeof projectRepository.findById>);
 
       // Act
       const result = await useCase.execute(input);
@@ -184,7 +184,7 @@ describe("SendMessageUseCase", () => {
       projectRepository.findById.mockResolvedValue({
         id: mockProjectId,
         hostId: mockGuestId,
-      } as any);
+      } as unknown as ReturnType<typeof projectRepository.findById>);
 
       // Act
       const result = await useCase.execute(input);
