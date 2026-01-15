@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { Header } from "@/components/common/Header";
 
 /**
  * マイページ共通レイアウト
@@ -17,7 +16,6 @@ export default async function MyPageLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
       <main>{children}</main>
     </div>
   );
