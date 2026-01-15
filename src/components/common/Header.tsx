@@ -87,13 +87,16 @@ export function Header() {
                         マイプロジェクト
                       </Link>
                     )}
-                    <Link
-                      href="/my/participations"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      参加予定
-                    </Link>
+                    {/* ゲストまたは両方の場合のみ表示 */}
+                    {(session.user?.userType === "GUEST" || session.user?.userType === "BOTH") && (
+                      <Link
+                        href="/my/participations"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        参加予定
+                      </Link>
+                    )}
                     <Link
                       href="/my/messages"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -190,13 +193,16 @@ export function Header() {
                       マイプロジェクト
                     </Link>
                   )}
-                  <Link
-                    href="/my/participations"
-                    className="block px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    参加予定
-                  </Link>
+                  {/* ゲストまたは両方の場合のみ表示 */}
+                  {(session.user?.userType === "GUEST" || session.user?.userType === "BOTH") && (
+                    <Link
+                      href="/my/participations"
+                      className="block px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      参加予定
+                    </Link>
+                  )}
                   <Link
                     href="/my/messages"
                     className="block px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
