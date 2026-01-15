@@ -30,7 +30,7 @@ export async function getCurrentUserId(): Promise<string | null> {
 export async function isHost(): Promise<boolean> {
   const session = await getSession();
   const userType = session?.user?.userType;
-  return userType === "HOST" || userType === "BOTH";
+  return userType === "HOST";
 }
 
 /**
@@ -39,5 +39,5 @@ export async function isHost(): Promise<boolean> {
 export async function isGuest(): Promise<boolean> {
   const session = await getSession();
   const userType = session?.user?.userType;
-  return userType === "GUEST" || userType === "BOTH";
+  return userType === "GUEST";
 }
