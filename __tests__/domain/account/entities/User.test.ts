@@ -52,21 +52,6 @@ describe("User", () => {
       }
     });
 
-    it("should create a valid user with BOTH type", () => {
-      const result = User.create({
-        id: createValidUserId(),
-        email: createValidEmail(),
-        passwordHash: createHashedPassword(),
-        name: "両方ユーザー",
-        userType: UserType.BOTH,
-      });
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.userType).toBe(UserType.BOTH);
-      }
-    });
-
     it("should create user with optional bio and avatarUrl", () => {
       const result = User.create({
         id: createValidUserId(),
@@ -129,7 +114,7 @@ describe("User", () => {
         email,
         passwordHash,
         name: "再構築ユーザー",
-        userType: UserType.BOTH,
+        userType: UserType.HOST,
         bio: "bio",
         avatarUrl: "https://example.com/avatar.jpg",
         createdAt: now,
@@ -139,7 +124,7 @@ describe("User", () => {
       expect(user.id.value).toBe(id.value);
       expect(user.email.value).toBe(email.value);
       expect(user.name).toBe("再構築ユーザー");
-      expect(user.userType).toBe(UserType.BOTH);
+      expect(user.userType).toBe(UserType.HOST);
       expect(user.bio).toBe("bio");
       expect(user.avatarUrl).toBe("https://example.com/avatar.jpg");
       expect(user.createdAt).toBe(now);
@@ -197,11 +182,11 @@ describe("User", () => {
 
       if (!createResult.success) throw new Error("Failed to create user");
 
-      const updateResult = createResult.data.updateProfile({ userType: UserType.BOTH });
+      const updateResult = createResult.data.updateProfile({ userType: UserType.GUEST });
 
       expect(updateResult.success).toBe(true);
       if (updateResult.success) {
-        expect(updateResult.data.userType).toBe(UserType.BOTH);
+        expect(updateResult.data.userType).toBe(UserType.GUEST);
       }
     });
 
@@ -258,20 +243,6 @@ describe("User", () => {
       expect(createResult.data.isHost()).toBe(true);
     });
 
-    it("should return true for BOTH user", () => {
-      const createResult = User.create({
-        id: createValidUserId(),
-        email: createValidEmail(),
-        passwordHash: createHashedPassword(),
-        name: "テストユーザー",
-        userType: UserType.BOTH,
-      });
-
-      if (!createResult.success) throw new Error("Failed to create user");
-
-      expect(createResult.data.isHost()).toBe(true);
-    });
-
     it("should return false for GUEST user", () => {
       const createResult = User.create({
         id: createValidUserId(),
@@ -295,20 +266,6 @@ describe("User", () => {
         passwordHash: createHashedPassword(),
         name: "テストユーザー",
         userType: UserType.GUEST,
-      });
-
-      if (!createResult.success) throw new Error("Failed to create user");
-
-      expect(createResult.data.isGuest()).toBe(true);
-    });
-
-    it("should return true for BOTH user", () => {
-      const createResult = User.create({
-        id: createValidUserId(),
-        email: createValidEmail(),
-        passwordHash: createHashedPassword(),
-        name: "テストユーザー",
-        userType: UserType.BOTH,
       });
 
       if (!createResult.success) throw new Error("Failed to create user");

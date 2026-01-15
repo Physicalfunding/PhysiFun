@@ -44,7 +44,7 @@ describe("GetProfileUseCase", () => {
       email: emailResult.data,
       passwordHash: HashedPassword.fromHash("$2b$10$hashedpassword"),
       name: "テストユーザー",
-      userType: UserType.BOTH,
+      userType: UserType.HOST,
       bio: "自己紹介文",
       avatarUrl: "https://example.com/avatar.jpg",
     });
@@ -76,7 +76,7 @@ describe("GetProfileUseCase", () => {
         expect(result.data.name).toBe("テストユーザー");
         expect(result.data.bio).toBe("自己紹介文");
         expect(result.data.avatarUrl).toBe("https://example.com/avatar.jpg");
-        expect(result.data.userType).toBe(UserType.BOTH);
+        expect(result.data.userType).toBe(UserType.HOST);
       }
     });
 

@@ -65,7 +65,7 @@ describe("UpdateProfileUseCase", () => {
         userId: testUserId,
         name: "更新された名前",
         bio: "更新された自己紹介",
-        userType: UserType.BOTH,
+        userType: UserType.HOST,
       };
 
       mockUserRepository.findById.mockResolvedValue(testUser);
@@ -79,7 +79,7 @@ describe("UpdateProfileUseCase", () => {
       if (result.success) {
         expect(result.data.name).toBe("更新された名前");
         expect(result.data.bio).toBe("更新された自己紹介");
-        expect(result.data.userType).toBe(UserType.BOTH);
+        expect(result.data.userType).toBe(UserType.HOST);
       }
       expect(mockUserRepository.update).toHaveBeenCalledTimes(1);
     });
