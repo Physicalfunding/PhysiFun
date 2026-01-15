@@ -9,10 +9,16 @@ import type { NextConfig } from "next";
  *
  * @see https://nextjs.org/docs/app/api-reference/next-config-js
  */
+// 開発環境かどうかを判定
+const isDevelopment = process.env.NODE_ENV === "development";
+
 const nextConfig: NextConfig = {
   // 画像最適化の設定
   // Supabase Storage から画像を読み込む場合に必要
   images: {
+    // 開発環境ではNext.jsの画像最適化を無効化（プライベートIPへのアクセス制限を回避）
+    // 本番環境では最適化を有効にする
+    unoptimized: isDevelopment,
     remotePatterns: [
       {
         protocol: "https",
