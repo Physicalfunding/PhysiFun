@@ -46,7 +46,8 @@ export interface ImageUploadService {
  */
 export class SupabaseImageUploadService implements ImageUploadService {
   private supabase;
-  private bucketName = "campfire-images";
+  private bucketName: string;
+  private bucketInitialized = false;
 
   constructor() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -56,9 +57,53 @@ export class SupabaseImageUploadService implements ImageUploadService {
       throw new Error("Supabase environment variables are not set");
     }
 
+    // バケット名を環境変数から取得（デフォルト: crowfun-images）
+    this.bucketName = process.env.SUPABASE_STORAGE_BUCKET || "crowfun-images";
+
     // サービスロールキーを使用してSupabaseクライアントを作成
     // これによりストレージへの書き込み権限を持つ
     this.supabase = createClient(supabaseUrl, supabaseServiceKey);
+  }
+
+  /**
+   * バケットの存在を確認し、存在しない場合は作成を試みる
+   */
+  private async ensureBucketExists(): Promise<void> {
+    if (this.bucketInitialized) {
+      return;
+    }
+
+    // バケットの存在確認
+    const { data: buckets, error: listError } = await this.supabase.storage.listBuckets();
+
+    if (listError) {
+      console.error(`Failed to list buckets: ${listError.message}`);
+      // リスト取得に失敗しても、バケットは存在する可能性があるため続行
+      this.bucketInitialized = true;
+      return;
+    }
+
+    const bucketExists = buckets?.some((bucket) => bucket.name === this.bucketName);
+
+    if (!bucketExists) {
+      // バケットが存在しない場合は作成を試みる
+      const { error: createError } = await this.supabase.storage.createBucket(this.bucketName, {
+        public: true, // 画像は公開アクセス可能にする
+        fileSizeLimit: 52428800, // 50MiB
+        allowedMimeTypes: ["image/png", "image/jpeg", "image/gif", "image/webp"],
+      });
+
+      if (createError) {
+        console.error(`Failed to create bucket '${this.bucketName}': ${createError.message}`);
+        throw new Error(
+          `Storage bucket '${this.bucketName}' does not exist and could not be created: ${createError.message}`
+        );
+      }
+
+      console.log(`Created storage bucket: ${this.bucketName}`);
+    }
+
+    this.bucketInitialized = true;
   }
 
   /**
@@ -68,6 +113,9 @@ export class SupabaseImageUploadService implements ImageUploadService {
     file: { buffer: Buffer; name: string; type: string },
     folder: string
   ): Promise<UploadResult> {
+    // バケットの存在を確認（初回のみ）
+    await this.ensureBucketExists();
+
     // ユニークなファイル名を生成（タイムスタンプ + 元のファイル名）
     const timestamp = Date.now();
     const extension = file.name.split(".").pop() || "jpg";
