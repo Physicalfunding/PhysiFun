@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { Header } from "@/components/common/Header";
 
 /**
  * マイページ共通レイアウト
  * 認証が必要なページ群のラッパー
  * ログインしていない場合はログインページへリダイレクト
+ *
+ * 注: Headerはルートレイアウト（src/app/layout.tsx）で
+ * 既に提供されているため、ここでは含めない
  */
 export default async function MyPageLayout({ children }: { children: React.ReactNode }) {
   // 認証チェック（Server Componentで実行）
@@ -17,7 +19,6 @@ export default async function MyPageLayout({ children }: { children: React.React
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
       <main>{children}</main>
     </div>
   );
