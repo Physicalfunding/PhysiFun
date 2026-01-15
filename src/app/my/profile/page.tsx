@@ -43,7 +43,6 @@ export default async function ProfilePage() {
   const userTypeLabels = {
     HOST: "ホスト（体験を提供する）",
     GUEST: "ゲスト（体験に参加する）",
-    BOTH: "両方",
   };
 
   return (

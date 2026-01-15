@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 const profileEditSchema = z.object({
   name: z.string().min(1, "名前を入力してください").max(100, "名前は100文字以内で入力してください"),
   bio: z.string().max(500, "自己紹介は500文字以内で入力してください").nullable().optional(),
-  userType: z.enum(["HOST", "GUEST", "BOTH"], {
+  userType: z.enum(["HOST", "GUEST"], {
     errorMap: () => ({ message: "ユーザータイプを選択してください" }),
   }),
 });
@@ -28,7 +28,7 @@ interface ProfileData {
   name: string;
   bio: string | null;
   avatarUrl: string | null;
-  userType: "HOST" | "GUEST" | "BOTH";
+  userType: "HOST" | "GUEST";
 }
 
 interface ProfileEditFormProps {
@@ -219,15 +219,6 @@ export function ProfileEditForm({ initialData, onSuccess }: ProfileEditFormProps
               className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
             />
             <span className="ml-2 text-sm text-gray-700">体験を提供したい（ホスト）</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              value="BOTH"
-              {...register("userType")}
-              className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
-            />
-            <span className="ml-2 text-sm text-gray-700">両方</span>
           </label>
         </div>
         {errors.userType && <p className="mt-1 text-sm text-red-600">{errors.userType.message}</p>}
