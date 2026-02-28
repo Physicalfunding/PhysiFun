@@ -153,23 +153,6 @@ describe("RegisterUserUseCase", () => {
       }
     });
 
-    it("should accept BOTH user type", async () => {
-      // Arrange
-      mockUserRepository.findByEmail.mockResolvedValue(null);
-      mockUserRepository.create.mockImplementation(async (user) => user);
-
-      // Act
-      const result = await useCase.execute({
-        ...validInput,
-        userType: UserType.BOTH,
-      });
-
-      // Assert
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.userType).toBe(UserType.BOTH);
-      }
-    });
   });
 });
 

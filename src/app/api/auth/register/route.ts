@@ -17,7 +17,7 @@ const registerSchema = z.object({
     .email("無効なメールアドレス形式です"),
   password: z.string().min(8, "パスワードは8文字以上で入力してください"),
   name: z.string().min(1, "名前を入力してください").max(100, "名前は100文字以内で入力してください"),
-  userType: z.enum(["HOST", "GUEST", "BOTH"], {
+  userType: z.enum(["HOST", "GUEST"], {
     errorMap: () => ({ message: "ユーザータイプを選択してください" }),
   }),
 });
@@ -30,7 +30,7 @@ const registerSchema = z.object({
  * - email: メールアドレス
  * - password: パスワード (8文字以上)
  * - name: ユーザー名
- * - userType: HOST | GUEST | BOTH
+ * - userType: HOST | GUEST
  *
  * レスポンス:
  * - 201: ユーザー作成成功

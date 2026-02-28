@@ -9,7 +9,6 @@ import { UserId } from "../value-objects/UserId";
 export const UserType = {
   HOST: "HOST",
   GUEST: "GUEST",
-  BOTH: "BOTH",
 } as const;
 
 export type UserType = (typeof UserType)[keyof typeof UserType];
@@ -184,13 +183,13 @@ export class User {
    * Checks if the user can act as a host
    */
   isHost(): boolean {
-    return this._userType === UserType.HOST || this._userType === UserType.BOTH;
+    return this._userType === UserType.HOST;
   }
 
   /**
    * Checks if the user can act as a guest
    */
   isGuest(): boolean {
-    return this._userType === UserType.GUEST || this._userType === UserType.BOTH;
+    return this._userType === UserType.GUEST;
   }
 }

@@ -35,7 +35,6 @@ model User {
 enum UserType {
   HOST
   GUEST
-  BOTH
 }
 
 // ==================== Project ====================

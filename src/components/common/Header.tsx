@@ -77,8 +77,8 @@ export function Header() {
                     >
                       プロフィール
                     </Link>
-                    {/* ホストまたは両方の場合のみ表示 */}
-                    {(session.user?.userType === "HOST" || session.user?.userType === "BOTH") && (
+                    {/* ホストの場合のみ表示 */}
+                    {session.user?.userType === "HOST" && (
                       <Link
                         href="/my/project"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -87,8 +87,8 @@ export function Header() {
                         マイプロジェクト
                       </Link>
                     )}
-                    {/* ゲストまたは両方の場合のみ表示 */}
-                    {(session.user?.userType === "GUEST" || session.user?.userType === "BOTH") && (
+                    {/* ゲストの場合のみ表示 */}
+                    {session.user?.userType === "GUEST" && (
                       <Link
                         href="/my/participations"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -184,7 +184,8 @@ export function Header() {
                   >
                     プロフィール
                   </Link>
-                  {(session.user?.userType === "HOST" || session.user?.userType === "BOTH") && (
+                  {/* ホストの場合のみ表示 */}
+                  {session.user?.userType === "HOST" && (
                     <Link
                       href="/my/project"
                       className="block px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -193,8 +194,8 @@ export function Header() {
                       マイプロジェクト
                     </Link>
                   )}
-                  {/* ゲストまたは両方の場合のみ表示 */}
-                  {(session.user?.userType === "GUEST" || session.user?.userType === "BOTH") && (
+                  {/* ゲストの場合のみ表示 */}
+                  {session.user?.userType === "GUEST" && (
                     <Link
                       href="/my/participations"
                       className="block px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"

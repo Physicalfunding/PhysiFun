@@ -119,8 +119,6 @@ export class PrismaUserRepository implements UserRepository {
         return "HOST";
       case UserType.GUEST:
         return "GUEST";
-      case UserType.BOTH:
-        return "BOTH";
     }
   }
 
@@ -133,8 +131,6 @@ export class PrismaUserRepository implements UserRepository {
         return UserType.HOST;
       case "GUEST":
         return UserType.GUEST;
-      case "BOTH":
-        return UserType.BOTH;
     }
   }
 }

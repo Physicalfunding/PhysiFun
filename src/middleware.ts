@@ -17,7 +17,7 @@ export default withAuth(
 
     // ホスト専用ページへのアクセス制御
     if (pathname.startsWith("/my/project")) {
-      if (token?.userType !== "HOST" && token?.userType !== "BOTH") {
+      if (token?.userType !== "HOST") {
         // ホスト権限がない場合はホームへリダイレクト
         return NextResponse.redirect(new URL("/", req.url));
       }

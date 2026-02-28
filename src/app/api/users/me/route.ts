@@ -20,7 +20,7 @@ const updateProfileSchema = z.object({
     .optional(),
   bio: z.string().max(500, "自己紹介は500文字以内で入力してください").nullable().optional(),
   userType: z
-    .enum(["HOST", "GUEST", "BOTH"], {
+    .enum(["HOST", "GUEST"], {
       errorMap: () => ({ message: "ユーザータイプを選択してください" }),
     })
     .optional(),
@@ -72,7 +72,7 @@ export async function GET() {
  * リクエストボディ:
  * - name?: ユーザー名（オプション）
  * - bio?: 自己紹介文（オプション、null可）
- * - userType?: HOST | GUEST | BOTH（オプション）
+ * - userType?: HOST | GUEST（オプション）
  *
  * レスポンス:
  * - 200: プロフィール更新成功
