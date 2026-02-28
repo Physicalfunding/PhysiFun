@@ -18,7 +18,7 @@ export const revalidate = 60;
 /**
  * ホームページ（トップページ）
  *
- * Campfire Experience のメインページ
+ * フィジファン のメインページ
  * - アプリタイトルとキャッチコピー
  * - アプリ概要説明
  * - 公開プロジェクトのカード一覧
@@ -41,19 +41,20 @@ export default async function Home() {
           <div className="text-center">
             {/* アプリタイトル */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 tracking-tight">
-              <span className="text-orange-600">Campfire</span>{" "}
-              <span className="text-amber-600">Experience</span>
+              <span className="text-orange-600">フィジ</span>
+              <span className="text-amber-600">ファン</span>
             </h1>
+            <p className="mt-2 text-base text-gray-500 tracking-widest">フィジカルファンディング</p>
 
             {/* キャッチコピー */}
             <p className="mt-4 text-xl sm:text-2xl text-gray-700 font-medium">
-              焚き火を囲むように、みんなで温かく応援し合える場所
+              お金じゃなくて、スキルと時間でプロジェクトを応援しよう
             </p>
 
             {/* アプリ概要 */}
             <p className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-gray-600">
-              体験を提供したい人（ホスト）と体験を求める人（ゲスト）を繋ぐプラットフォーム。
-              古民家再生、米作り、DIYなど、日常では経験できない特別な体験に参加してみませんか？
+              プロジェクトオーナーとサポーターをつなぐマッチングプラットフォーム。
+              古民家再生、米作り、DIYなど、あなたのスキルと時間でプロジェクトを支援し、リターンを受け取りませんか？
             </p>
           </div>
         </div>
@@ -68,7 +69,7 @@ export default async function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="text-center mb-10">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">公開中のプロジェクト</h2>
-          <p className="mt-2 text-gray-600">参加できる体験を探してみましょう</p>
+          <p className="mt-2 text-gray-600">スキルと時間で応援できるプロジェクトを探してみましょう</p>
         </div>
 
         {projects.length > 0 ? (
@@ -101,8 +102,8 @@ export default async function Home() {
               公開中のプロジェクトはまだありません
             </h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              ホストがプロジェクトを公開するまでお待ちください。
-              自分で体験を提供したい方は、ぜひホストとして登録してください。
+              オーナーがプロジェクトを公開するまでお待ちください。
+              自分でプロジェクトを立ち上げたい方は、ぜひオーナーとして登録してください。
             </p>
           </div>
         )}
@@ -112,7 +113,7 @@ export default async function Home() {
       <footer className="border-t border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <p className="text-center text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} Campfire Experience. All rights reserved.
+            &copy; {new Date().getFullYear()} フィジファン. All rights reserved.
           </p>
         </div>
       </footer>

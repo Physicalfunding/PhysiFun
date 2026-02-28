@@ -10,7 +10,7 @@ import { prisma } from "@/infrastructure/database/prisma";
  * プロフィールページのメタデータ
  */
 export const metadata = {
-  title: "プロフィール編集 | Campfire Experience",
+  title: "プロフィール編集 | フィジファン",
   description: "プロフィール情報を編集します",
 };
 
