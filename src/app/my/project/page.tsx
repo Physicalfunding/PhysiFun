@@ -51,7 +51,7 @@ export default async function MyProjectPage() {
           <p className="text-gray-600 mb-8">
             まだプロジェクトを作成していません。
             <br />
-            新しいプロジェクトを作成して、体験を共有しましょう。
+            新しいプロジェクトを作成して、サポーターを募集しましょう。
           </p>
           <Link
             href="/my/project/new"
@@ -70,7 +70,7 @@ export default async function MyProjectPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">マイプロジェクト</h1>
         <p className="mt-2 text-gray-600">
-          プロジェクト情報を編集し、体験スケジュールやリターンを設定できます。
+          プロジェクト情報を編集し、スケジュールやリターンを設定できます。
         </p>
       </div>
 
@@ -106,7 +106,7 @@ export default async function MyProjectPage() {
                 href="/my/project/schedules"
                 className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                体験スケジュール管理
+                スケジュール管理
               </Link>
               <Link
                 href="/my/project/returns"

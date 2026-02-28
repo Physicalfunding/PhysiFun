@@ -11,7 +11,7 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* ロゴ/タイトル */}
         <h1 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-          Campfire Experience
+          フィジファン
         </h1>
         <h2 className="mt-6 text-center text-2xl font-semibold text-gray-900">ログイン</h2>
       </div>

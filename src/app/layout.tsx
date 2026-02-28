@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Campfire Experience",
-  description: "体験を提供したいホストと体験を求めるゲストを繋ぐプラットフォーム",
+  title: "フィジファン",
+  description: "スキルと時間でプロジェクトを支援する、フィジカルファンディングプラットフォーム",
 };
 
 export default function RootLayout({

@@ -12,7 +12,7 @@ import { MessageList } from "@/components/message/MessageList";
  * - 未読件数の表示
  */
 export const metadata = {
-  title: "メッセージ | Campfire Experience",
+  title: "メッセージ | フィジファン",
   description: "メッセージの送受信管理",
 };
 

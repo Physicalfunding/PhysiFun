@@ -10,7 +10,7 @@ import { prisma } from "@/infrastructure/database/prisma";
  * プロフィールページのメタデータ
  */
 export const metadata = {
-  title: "プロフィール編集 | Campfire Experience",
+  title: "プロフィール編集 | フィジファン",
   description: "プロフィール情報を編集します",
 };
 
@@ -41,8 +41,9 @@ export default async function ProfilePage() {
 
   // 3. ユーザータイプのラベル変換
   const userTypeLabels = {
-    HOST: "ホスト（体験を提供する）",
-    GUEST: "ゲスト（体験に参加する）",
+    HOST: "プロジェクトオーナー",
+    GUEST: "サポーター",
+    BOTH: "オーナー兼サポーター"
   };
 
   return (

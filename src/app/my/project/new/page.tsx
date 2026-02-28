@@ -13,8 +13,8 @@ export default function NewProjectPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">プロジェクトを作成</h1>
         <p className="mt-2 text-gray-600">
-          新しいプロジェクトを作成して、体験を共有しましょう。
-          作成後、体験スケジュールやリターンを設定できます。
+          新しいプロジェクトを作成して、サポーターを募集しましょう。
+          作成後、スケジュールやリターンを設定できます。
         </p>
       </div>
 
