@@ -114,8 +114,8 @@ export function ProjectStatusToggle({ projectId, status }: ProjectStatusTogglePr
       {/* 説明テキスト */}
       <p className="text-xs text-gray-500">
         {isPublished
-          ? "非公開にすると、ゲストにプロジェクトが表示されなくなります。"
-          : "公開すると、ゲストにプロジェクトが表示されるようになります。"}
+          ? "非公開にすると、サポーターにプロジェクトが表示されなくなります。"
+          : "公開すると、サポーターにプロジェクトが表示されるようになります。"}
       </p>
     </div>
   );
