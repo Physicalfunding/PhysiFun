@@ -17,7 +17,7 @@ interface Props {
  */
 export const metadata = {
   title: "参加者管理 | フィジファン",
-  description: "体験スケジュールの参加者を管理",
+  description: "スケジュールの参加者を管理",
 };
 
 export default async function ParticipantsPage({ params }: Props) {

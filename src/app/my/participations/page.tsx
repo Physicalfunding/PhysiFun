@@ -12,7 +12,7 @@ import { ParticipationList } from "@/components/participation/ParticipationList"
  */
 export const metadata = {
   title: "参加予定一覧 | フィジファン",
-  description: "参加申し込み中の体験一覧",
+  description: "参加予定のプロジェクト一覧",
 };
 
 export default async function MyParticipationsPage() {

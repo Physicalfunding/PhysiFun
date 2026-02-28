@@ -41,9 +41,9 @@ export default async function ProfilePage() {
 
   // 3. ユーザータイプのラベル変換
   const userTypeLabels = {
-    HOST: "ホスト（体験を提供する）",
-    GUEST: "ゲスト（体験に参加する）",
-    BOTH: "両方",
+    HOST: "プロジェクトオーナー",
+    GUEST: "サポーター",
+    BOTH: "オーナー兼サポーター",
   };
 
   return (
