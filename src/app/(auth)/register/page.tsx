@@ -10,13 +10,13 @@ export default function RegisterPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* ロゴ/タイトル */}
         <h1 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-          Campfire Experience
+          フィジファン
         </h1>
         <h2 className="mt-6 text-center text-2xl font-semibold text-gray-900">
           新規アカウント作成
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          焚き火を囲むように、みんなで温かく応援し合える場所へようこそ
+          スキルと時間で応援する、新しいファンディングへようこそ
         </p>
       </div>
 

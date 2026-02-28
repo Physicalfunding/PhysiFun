@@ -16,7 +16,7 @@ export function Footer() {
           {/* ロゴとコピーライト */}
           <div className="flex justify-center md:order-2">
             <Link href="/" className="text-gray-600 hover:text-orange-600 transition-colors">
-              <span className="font-bold text-lg">Campfire Experience</span>
+              <span className="font-bold text-lg">フィジファン</span>
             </Link>
           </div>
 
@@ -42,7 +42,7 @@ export function Footer() {
         {/* コピーライト */}
         <div className="mt-8 text-center">
           <p className="text-xs text-gray-400">
-            &copy; {currentYear} Campfire Experience. All rights reserved.
+            &copy; {currentYear} フィジファン. All rights reserved.
           </p>
         </div>
       </div>

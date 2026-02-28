@@ -16,7 +16,7 @@ interface Props {
  * - 返信フォームの表示
  */
 export const metadata = {
-  title: "メッセージ詳細 | Campfire Experience",
+  title: "メッセージ詳細 | フィジファン",
   description: "メッセージの詳細表示",
 };
 

@@ -27,7 +27,7 @@ export function Header() {
           {/* ロゴ */}
           <div className="flex-shrink-0">
             <Link href="/" className="text-xl font-bold text-orange-600">
-              Campfire Experience
+              フィジファン
             </Link>
           </div>
 

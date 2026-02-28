@@ -16,7 +16,7 @@ interface Props {
  * - 参加者情報（名前、申込日時、参加人数）の表示
  */
 export const metadata = {
-  title: "参加者管理 | Campfire Experience",
+  title: "参加者管理 | フィジファン",
   description: "体験スケジュールの参加者を管理",
 };
 
