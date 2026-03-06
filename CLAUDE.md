@@ -9,42 +9,101 @@
 
 ---
 
-## Spec-Driven Development (Kiro スタイル)
+## 開発ガイドライン
 
-### パス
-- Steering: `.kiro/steering/` — プロジェクト全体のルール・文脈
-- Specs: `.kiro/specs/` — 個別機能の開発プロセス
+- 思考は英語、出力（会話・ファイル）は **日本語**
+- ユーザーの指示に従い、不明点のみ質問して、それ以外は自律的に完遂する
 
-### Steering ファイル（必ず読み込む）
-| ファイル | 内容 |
-|---|---|
-| `product.md` | プロダクトビジョン・フェーズ計画 |
-| `tech.md` | 技術スタック・アーキテクチャ方針 |
-| `structure.md` | ディレクトリ構成・レイヤー責務 |
-| `dev-rule.md` | 開発フロー・PR ルール |
+---
 
-### ワークフロー早見表
+## 開発フロー
+
+### タスク開始時
+
+1. `main` ブランチから開発用ブランチを新規作成してチェックアウト
+2. タスクの内容・影響範囲を確認してから実装開始
+3. 既存コードを十分に読んでから変更を加える（推測で書かない）
+
+### タスク完了時
+
+1. 実装が完了したら**ユーザーに承認を求める**
+2. 承認後: 変更のコミット → push → PR 作成
+3. PR には対応する Issue を紐づける
+
+---
+
+## ブランチ・コミット規約
+
+### ブランチ名
 
 ```
-Phase 0 (任意):   /kiro:steering, /kiro:steering-custom
-Phase 1 (仕様):   /kiro:spec-init "説明"
-                  /kiro:spec-requirements {feature}
-                  /kiro:validate-gap {feature}       ← 既存コードとのギャップ確認
-                  /kiro:spec-design {feature} [-y]
-                  /kiro:validate-design {feature}
-                  /kiro:spec-tasks {feature} [-y]
-Phase 2 (実装):   /kiro:spec-impl {feature} [tasks]
-                  /kiro:validate-impl {feature}
-進捗確認:         /kiro:spec-status {feature}
+claude/<説明>-<セッションID>
+例: claude/add-owner-form-TwYML
+```
+
+### コミットメッセージ
+
+```
+<種別>: <変更内容の要約>
+
+例:
+feat: オーナー応募フォームを追加
+fix: 画像アップロード時のエラーハンドリングを修正
+refactor: ProjectRepository を Prisma 実装に移行
+docs: tech.md にAWS移行方針を追記
+```
+
+| 種別 | 用途 |
+|---|---|
+| `feat` | 新機能追加 |
+| `fix` | バグ修正 |
+| `refactor` | リファクタリング（機能変更なし） |
+| `docs` | ドキュメント変更 |
+| `test` | テスト追加・修正 |
+| `chore` | 設定ファイル・依存関係の変更 |
+
+---
+
+## PR 作成ルール
+
+ユーザー（エンジニア）は TypeScript / React / Next.js / Supabase / Vercel の初学者のため、以下を心がける。
+
+### コードコメント方針
+
+- **役割が分かりにくいオブジェクト・型**には何をするものか簡潔にコメントを残す
+- **処理の流れが分かりにくいロジック**には何をしているか簡潔にコメントを残す
+- **外部 API を利用する箇所**には参考ドキュメントの URL を記載する
+
+### PR 本文の構成
+
+```markdown
+## 概要
+<!-- 何をしたか（1〜3行） -->
+
+## 変更内容
+<!-- 変更したファイル・機能の箇条書き -->
+
+## 確認方法
+<!-- 動作確認の手順 -->
+
+## 関連 Issue
+<!-- Closes #番号 -->
 ```
 
 ---
 
-## 開発ガイドライン
+## 実装時の注意事項
 
-- 思考は英語、出力（会話・ファイル）は **日本語**
-- Markdown をプロジェクトファイルに書く際は spec.json の `language` に従う
-- 3 段階承認フロー（要件 → 設計 → タスク → 実装）を厳守
-- 各フェーズで人間のレビューを必須とする（`-y` は意図的な高速化のときのみ）
-- Steering を最新に保ち、実装との乖離を `/kiro:spec-status` で定期確認する
-- ユーザーの指示に従い、不明点のみ質問して、それ以外は自律的に完遂する
+### 禁止事項
+
+- `infrastructure/` 以外で Supabase SDK・Prisma を直接呼ばない
+- API Route Handler にビジネスロジックを書かない
+- `domain/` に外部ライブラリへの依存を持ち込まない
+- 不必要なファイル・関数・型を生成しない（過剰な抽象化をしない）
+
+### 推奨事項
+
+- 既存コードのパターンに合わせる（一貫性を保つ）
+- エラーハンドリングは `Result` 型（`src/domain/shared/result.ts`）を活用する
+- フォームバリデーションは Zod スキーマで定義する
+- セキュリティ: SQL インジェクション・XSS・認証バイパスに注意する
