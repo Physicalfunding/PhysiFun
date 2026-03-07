@@ -1,9 +1,6 @@
-# 開発ルール
+# 開発ルール（詳細版）
 
-## ルール適用条件
-
-- ClaudeCode を使った Spec 駆動開発を行っていること
-- `.kiro/specs/` 配下の `tasks.md` のタスクを実行すること
+> **Note:** 基本ルールは `CLAUDE.md` を参照。このファイルは人間向けの詳細ドキュメント。
 
 ---
 
@@ -23,35 +20,14 @@
 
 ---
 
-## ブランチ・コミット規約
-
-### ブランチ名
+## コミットメッセージ例
 
 ```
-claude/<説明>-<セッションID>
-例: claude/add-owner-form-TwYML
-```
-
-### コミットメッセージ
-
-```
-<種別>: <変更内容の要約>
-
-例:
 feat: オーナー応募フォームを追加
 fix: 画像アップロード時のエラーハンドリングを修正
 refactor: ProjectRepository を Prisma 実装に移行
 docs: tech.md にAWS移行方針を追記
 ```
-
-| 種別 | 用途 |
-|---|---|
-| `feat` | 新機能追加 |
-| `fix` | バグ修正 |
-| `refactor` | リファクタリング（機能変更なし） |
-| `docs` | ドキュメント変更 |
-| `test` | テスト追加・修正 |
-| `chore` | 設定ファイル・依存関係の変更 |
 
 ---
 
@@ -95,24 +71,6 @@ const { error } = await supabase.storage.from(bucket).upload(path, file);
 
 ---
 
-## 実装時の注意事項
-
-### 禁止事項
-
-- `infrastructure/` 以外で Supabase SDK・Prisma を直接呼ばない
-- API Route Handler にビジネスロジックを書かない
-- `domain/` に外部ライブラリへの依存を持ち込まない
-- 不必要なファイル・関数・型を生成しない（過剰な抽象化をしない）
-
-### 推奨事項
-
-- 既存コードのパターンに合わせる（一貫性を保つ）
-- エラーハンドリングは `Result` 型（`src/domain/shared/result.ts`）を活用する
-- フォームバリデーションは Zod スキーマで定義する
-- セキュリティ: SQL インジェクション・XSS・認証バイパスに注意する
-
----
-
 ## 4 段階承認フロー
 
 ```
@@ -131,9 +89,9 @@ const { error } = await supabase.storage.from(bucket).upload(path, file);
 
 ---
 
-## Steering の更新タイミング
+## ドキュメント更新タイミング
 
-以下の決定が変わったら、該当する steering ファイルを更新する。
+以下の決定が変わったら、該当するファイルを更新する。
 
 | 変更内容 | 更新するファイル |
 |---|---|
@@ -141,3 +99,4 @@ const { error } = await supabase.storage.from(bucket).upload(path, file);
 | 技術スタック・インフラの変更 | `tech.md` |
 | ディレクトリ構成・命名規則の変更 | `structure.md` |
 | 開発フロー・PR ルールの変更 | `dev-rule.md` |
+| Claude 向け基本ルールの変更 | `CLAUDE.md` |
