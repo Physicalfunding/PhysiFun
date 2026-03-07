@@ -67,7 +67,8 @@ export class CreateOwnerEntryUseCase {
           projectStory: input.projectStory,
         });
       } catch (error) {
-        console.error("メール通知の送信に失敗しました:", error);
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error("メール通知の送信に失敗しました:", message);
       }
     }
 
