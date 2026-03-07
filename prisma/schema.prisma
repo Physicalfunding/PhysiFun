@@ -164,3 +164,29 @@ model Message {
   @@index([isRead])
   @@map("messages")
 }
+
+// ==================== OwnerApplication ====================
+// オーナー応募（Phase 1 で使用）
+// 運営専用アプリから同じDBを参照してステータス管理を行う
+model OwnerApplication {
+  id             String            @id @default(uuid())
+  name           String // 応募者名
+  email          String // 連絡先メールアドレス
+  projectTitle   String // プロジェクトタイトル
+  projectSummary String            @db.Text // プロジェクト概要
+  projectStory   String            @db.Text // プロジェクト説明（ストーリー・想い）
+  status         ApplicationStatus @default(PENDING)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("owner_applications")
+}
+
+enum ApplicationStatus {
+  PENDING // 審査待ち
+  REVIEWING // 審査中
+  APPROVED // 承認
+  REJECTED // 却下
+}
