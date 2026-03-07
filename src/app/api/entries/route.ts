@@ -4,6 +4,7 @@ import { CreateOwnerEntryUseCase } from "@/application/use-cases/entry/CreateOwn
 import { PrismaOwnerEntryRepository } from "@/infrastructure/database/repositories/PrismaOwnerEntryRepository";
 import { prisma } from "@/infrastructure/database/prisma";
 import { AppError } from "@/domain/shared/result";
+import { ResendEmailNotificationService } from "@/infrastructure/email/EmailNotificationService";
 
 /**
  * オーナー応募リクエストのバリデーションスキーマ
@@ -71,7 +72,10 @@ export async function POST(request: NextRequest) {
 
     // 3. ユースケースの実行
     const repository = new PrismaOwnerEntryRepository(prisma);
-    const useCase = new CreateOwnerEntryUseCase(repository);
+    const emailService = process.env.RESEND_API_KEY
+      ? new ResendEmailNotificationService()
+      : undefined;
+    const useCase = new CreateOwnerEntryUseCase(repository, emailService);
 
     const result = await useCase.execute({
       name: validationResult.data.name,

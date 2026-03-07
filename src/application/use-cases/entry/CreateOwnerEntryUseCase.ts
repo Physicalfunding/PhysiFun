@@ -2,6 +2,7 @@ import { OwnerEntry } from "@/domain/entry/entities/OwnerEntry";
 import { OwnerEntryRepository } from "@/domain/entry/repositories/OwnerEntryRepository";
 import { EntryId } from "@/domain/entry/value-objects/EntryId";
 import { type Result, type AppError, ok } from "@/domain/shared/result";
+import { type EmailNotificationService } from "@/infrastructure/email/EmailNotificationService";
 
 /**
  * オーナー応募作成ユースケースの入力データ
@@ -24,7 +25,8 @@ export interface CreateOwnerEntryInput {
  */
 export class CreateOwnerEntryUseCase {
   constructor(
-    private readonly ownerEntryRepository: OwnerEntryRepository
+    private readonly ownerEntryRepository: OwnerEntryRepository,
+    private readonly emailNotificationService?: EmailNotificationService
   ) {}
 
   /**
@@ -53,6 +55,22 @@ export class CreateOwnerEntryUseCase {
     const createdEntry = await this.ownerEntryRepository.create(
       entryResult.data
     );
+
+    // 3. 運営チームへメール通知（失敗しても応募自体は成功とする）
+    if (this.emailNotificationService) {
+      try {
+        await this.emailNotificationService.notifyNewEntry({
+          name: input.name,
+          email: input.email,
+          projectTitle: input.projectTitle,
+          projectSummary: input.projectSummary,
+          projectStory: input.projectStory,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        console.error("メール通知の送信に失敗しました:", message);
+      }
+    }
 
     return ok(createdEntry);
   }
