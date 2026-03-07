@@ -32,13 +32,7 @@ function isPathAllowedInPhase(pathname: string, phase: ReleasePhase): boolean {
   const phase1Paths = ["/", "/apply"];
 
   // Phase 2: Phase 1 + 認証 + オーナー機能
-  const phase2Paths = [
-    ...phase1Paths,
-    "/login",
-    "/register",
-    "/my/project",
-    "/my/profile",
-  ];
+  const phase2Paths = [...phase1Paths, "/login", "/register", "/my/project", "/my/profile"];
 
   // Phase 3: 全ページ許可
   if (phase >= 3) {
@@ -46,24 +40,16 @@ function isPathAllowedInPhase(pathname: string, phase: ReleasePhase): boolean {
   }
 
   // 静的ファイル、API、_next は常に許可
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname.includes(".")
-  ) {
+  if (pathname.startsWith("/_next") || pathname.startsWith("/api") || pathname.includes(".")) {
     return true;
   }
 
   if (phase === 1) {
-    return phase1Paths.some(
-      (p) => pathname === p || (p !== "/" && pathname.startsWith(p + "/"))
-    );
+    return phase1Paths.some((p) => pathname === p || (p !== "/" && pathname.startsWith(p + "/")));
   }
 
   if (phase === 2) {
-    return phase2Paths.some(
-      (p) => pathname === p || (p !== "/" && pathname.startsWith(p + "/"))
-    );
+    return phase2Paths.some((p) => pathname === p || (p !== "/" && pathname.startsWith(p + "/")));
   }
 
   return false;

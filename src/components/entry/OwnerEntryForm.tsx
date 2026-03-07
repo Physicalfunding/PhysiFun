@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Link from "next/link";
 import { useToast } from "@/components/common/Toast";
 
 /**
@@ -136,12 +137,12 @@ export function OwnerEntryForm() {
           <br />
           追ってご連絡いたします。
         </p>
-        <a
+        <Link
           href="/"
           className="mt-6 inline-block rounded-md bg-orange-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500"
         >
           トップページに戻る
-        </a>
+        </Link>
       </div>
     );
   }

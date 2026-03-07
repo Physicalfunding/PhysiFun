@@ -254,7 +254,9 @@ export function RegisterForm() {
               {...register("userType")}
               className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
             />
-            <span className="ml-2 text-sm text-gray-700">スキルと時間でプロジェクトを応援したい（サポーター）</span>
+            <span className="ml-2 text-sm text-gray-700">
+              スキルと時間でプロジェクトを応援したい（サポーター）
+            </span>
           </label>
           <label className="flex items-center">
             <input
@@ -263,7 +265,9 @@ export function RegisterForm() {
               {...register("userType")}
               className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
             />
-            <span className="ml-2 text-sm text-gray-700">プロジェクトを立ち上げたい（オーナー）</span>
+            <span className="ml-2 text-sm text-gray-700">
+              プロジェクトを立ち上げたい（オーナー）
+            </span>
           </label>
         </div>
         {errors.userType && <p className="mt-1 text-sm text-red-600">{errors.userType.message}</p>}

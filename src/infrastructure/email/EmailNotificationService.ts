@@ -39,7 +39,10 @@ export class ResendEmailNotificationService implements EmailNotificationService 
     if (!emailList) {
       throw new Error("ADMIN_EMAIL_LIST が設定されていません");
     }
-    this.adminEmails = emailList.split(",").map((e) => e.trim()).filter(Boolean);
+    this.adminEmails = emailList
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean);
     if (this.adminEmails.length === 0) {
       throw new Error("ADMIN_EMAIL_LIST に有効なメールアドレスがありません");
     }

@@ -34,9 +34,7 @@ export class CreateOwnerEntryUseCase {
    * @param input 応募情報
    * @returns 作成された応募、またはエラー
    */
-  async execute(
-    input: CreateOwnerEntryInput
-  ): Promise<Result<OwnerEntry, AppError>> {
+  async execute(input: CreateOwnerEntryInput): Promise<Result<OwnerEntry, AppError>> {
     // 1. エンティティの作成（バリデーション含む）
     const entryResult = OwnerEntry.create({
       id: EntryId.generate(),
@@ -52,9 +50,7 @@ export class CreateOwnerEntryUseCase {
     }
 
     // 2. 応募の永続化
-    const createdEntry = await this.ownerEntryRepository.create(
-      entryResult.data
-    );
+    const createdEntry = await this.ownerEntryRepository.create(entryResult.data);
 
     // 3. 運営チームへメール通知（失敗しても応募自体は成功とする）
     if (this.emailNotificationService) {

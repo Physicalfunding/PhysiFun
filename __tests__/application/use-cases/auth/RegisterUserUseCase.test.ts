@@ -152,7 +152,6 @@ describe("RegisterUserUseCase", () => {
         expect(result.data.userType).toBe(UserType.HOST);
       }
     });
-
   });
 });
 

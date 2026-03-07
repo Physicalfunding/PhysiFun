@@ -3,10 +3,7 @@ import {
   OwnerEntry as PrismaOwnerEntry,
   EntryStatus as PrismaEntryStatus,
 } from "@prisma/client";
-import {
-  OwnerEntry,
-  EntryStatus,
-} from "@/domain/entry/entities/OwnerEntry";
+import { OwnerEntry, EntryStatus } from "@/domain/entry/entities/OwnerEntry";
 import { OwnerEntryRepository } from "@/domain/entry/repositories/OwnerEntryRepository";
 import { EntryId } from "@/domain/entry/value-objects/EntryId";
 
