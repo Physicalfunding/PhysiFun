@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { CreateOwnerApplicationUseCase } from "@/application/use-cases/application/CreateOwnerApplicationUseCase";
-import { PrismaOwnerApplicationRepository } from "@/infrastructure/database/repositories/PrismaOwnerApplicationRepository";
+import { CreateOwnerEntryUseCase } from "@/application/use-cases/entry/CreateOwnerEntryUseCase";
+import { PrismaOwnerEntryRepository } from "@/infrastructure/database/repositories/PrismaOwnerEntryRepository";
 import { prisma } from "@/infrastructure/database/prisma";
 import { AppError } from "@/domain/shared/result";
 
@@ -9,7 +9,7 @@ import { AppError } from "@/domain/shared/result";
  * オーナー応募リクエストのバリデーションスキーマ
  * @see https://zod.dev
  */
-const applicationSchema = z.object({
+const entrySchema = z.object({
   name: z
     .string()
     .min(1, "お名前を入力してください")
@@ -33,7 +33,7 @@ const applicationSchema = z.object({
 });
 
 /**
- * POST /api/applications
+ * POST /api/entries
  * オーナー応募エンドポイント
  *
  * リクエストボディ:
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // 2. バリデーション
-    const validationResult = applicationSchema.safeParse(body);
+    const validationResult = entrySchema.safeParse(body);
     if (!validationResult.success) {
       const errors = validationResult.error.flatten();
       return NextResponse.json(
@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. ユースケースの実行
-    const repository = new PrismaOwnerApplicationRepository(prisma);
-    const useCase = new CreateOwnerApplicationUseCase(repository);
+    const repository = new PrismaOwnerEntryRepository(prisma);
+    const useCase = new CreateOwnerEntryUseCase(repository);
 
     const result = await useCase.execute({
       name: validationResult.data.name,
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     // 5. 成功レスポンス
     return NextResponse.json(
       {
-        application: {
+        entry: {
           id: result.data.id.toString(),
           name: result.data.name,
           email: result.data.email,
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Application error:", error);
+    console.error("Entry error:", error);
     return NextResponse.json(
       {
         error: {

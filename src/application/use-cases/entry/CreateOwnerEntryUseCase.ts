@@ -1,12 +1,12 @@
-import { OwnerApplication } from "@/domain/application/entities/OwnerApplication";
-import { OwnerApplicationRepository } from "@/domain/application/repositories/OwnerApplicationRepository";
-import { ApplicationId } from "@/domain/application/value-objects/ApplicationId";
+import { OwnerEntry } from "@/domain/entry/entities/OwnerEntry";
+import { OwnerEntryRepository } from "@/domain/entry/repositories/OwnerEntryRepository";
+import { EntryId } from "@/domain/entry/value-objects/EntryId";
 import { type Result, type AppError, ok } from "@/domain/shared/result";
 
 /**
  * オーナー応募作成ユースケースの入力データ
  */
-export interface CreateOwnerApplicationInput {
+export interface CreateOwnerEntryInput {
   name: string;
   email: string;
   projectTitle: string;
@@ -15,16 +15,16 @@ export interface CreateOwnerApplicationInput {
 }
 
 /**
- * CreateOwnerApplicationUseCase
+ * CreateOwnerEntryUseCase
  * 新規オーナー応募を処理するユースケース
  *
  * 責務:
  * - 応募データのバリデーション（エンティティで実施）
  * - 応募の永続化
  */
-export class CreateOwnerApplicationUseCase {
+export class CreateOwnerEntryUseCase {
   constructor(
-    private readonly ownerApplicationRepository: OwnerApplicationRepository
+    private readonly ownerEntryRepository: OwnerEntryRepository
   ) {}
 
   /**
@@ -33,11 +33,11 @@ export class CreateOwnerApplicationUseCase {
    * @returns 作成された応募、またはエラー
    */
   async execute(
-    input: CreateOwnerApplicationInput
-  ): Promise<Result<OwnerApplication, AppError>> {
+    input: CreateOwnerEntryInput
+  ): Promise<Result<OwnerEntry, AppError>> {
     // 1. エンティティの作成（バリデーション含む）
-    const applicationResult = OwnerApplication.create({
-      id: ApplicationId.generate(),
+    const entryResult = OwnerEntry.create({
+      id: EntryId.generate(),
       name: input.name,
       email: input.email,
       projectTitle: input.projectTitle,
@@ -45,15 +45,15 @@ export class CreateOwnerApplicationUseCase {
       projectStory: input.projectStory,
     });
 
-    if (!applicationResult.success) {
-      return applicationResult;
+    if (!entryResult.success) {
+      return entryResult;
     }
 
     // 2. 応募の永続化
-    const createdApplication = await this.ownerApplicationRepository.create(
-      applicationResult.data
+    const createdEntry = await this.ownerEntryRepository.create(
+      entryResult.data
     );
 
-    return ok(createdApplication);
+    return ok(createdEntry);
   }
 }

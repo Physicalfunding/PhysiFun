@@ -9,7 +9,7 @@ import { useToast } from "@/components/common/Toast";
 /**
  * オーナー応募フォームのバリデーションスキーマ
  */
-const applicationFormSchema = z.object({
+const entryFormSchema = z.object({
   name: z
     .string()
     .min(1, "お名前を入力してください")
@@ -32,10 +32,10 @@ const applicationFormSchema = z.object({
     .max(5000, "プロジェクト説明は5000文字以内で入力してください"),
 });
 
-type ApplicationFormData = z.infer<typeof applicationFormSchema>;
+type EntryFormData = z.infer<typeof entryFormSchema>;
 
 /**
- * OwnerApplicationForm
+ * OwnerEntryForm
  * オーナー応募フォームコンポーネント
  *
  * 機能:
@@ -44,7 +44,7 @@ type ApplicationFormData = z.infer<typeof applicationFormSchema>;
  * - エラーメッセージの表示
  * - 送信完了後の完了画面表示
  */
-export function OwnerApplicationForm() {
+export function OwnerEntryForm() {
   const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -56,8 +56,8 @@ export function OwnerApplicationForm() {
     formState: { errors },
     setError,
     watch,
-  } = useForm<ApplicationFormData>({
-    resolver: zodResolver(applicationFormSchema),
+  } = useForm<EntryFormData>({
+    resolver: zodResolver(entryFormSchema),
   });
 
   // 文字数カウント用
@@ -67,12 +67,12 @@ export function OwnerApplicationForm() {
   /**
    * フォーム送信ハンドラ
    */
-  const onSubmit = async (data: ApplicationFormData) => {
+  const onSubmit = async (data: EntryFormData) => {
     setIsLoading(true);
     setServerError(null);
 
     try {
-      const response = await fetch("/api/applications", {
+      const response = await fetch("/api/entries", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -88,7 +88,7 @@ export function OwnerApplicationForm() {
           // フィールドごとのエラー設定
           Object.entries(result.error.fields).forEach(([field, messages]) => {
             if (Array.isArray(messages) && messages.length > 0) {
-              setError(field as keyof ApplicationFormData, {
+              setError(field as keyof EntryFormData, {
                 message: messages[0],
               });
             }

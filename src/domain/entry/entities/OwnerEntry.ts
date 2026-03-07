@@ -1,23 +1,23 @@
 import { type Result, type AppError, ok, err, validationError } from "../../shared/result";
-import { ApplicationId } from "../value-objects/ApplicationId";
+import { EntryId } from "../value-objects/EntryId";
 
 /**
  * 応募ステータス
  */
-export const ApplicationStatus = {
+export const EntryStatus = {
   PENDING: "PENDING", // 審査待ち
   REVIEWING: "REVIEWING", // 審査中
   APPROVED: "APPROVED", // 承認
   REJECTED: "REJECTED", // 却下
 } as const;
 
-export type ApplicationStatus = (typeof ApplicationStatus)[keyof typeof ApplicationStatus];
+export type EntryStatus = (typeof EntryStatus)[keyof typeof EntryStatus];
 
 /**
  * 新規応募作成時の入力
  */
-interface CreateApplicationInput {
-  id: ApplicationId;
+interface CreateEntryInput {
+  id: EntryId;
   name: string;
   email: string;
   projectTitle: string;
@@ -28,36 +28,36 @@ interface CreateApplicationInput {
 /**
  * DBから復元する際の入力
  */
-interface ReconstructApplicationInput {
-  id: ApplicationId;
+interface ReconstructEntryInput {
+  id: EntryId;
   name: string;
   email: string;
   projectTitle: string;
   projectSummary: string;
   projectStory: string;
-  status: ApplicationStatus;
+  status: EntryStatus;
   createdAt: Date;
   updatedAt: Date;
 }
 
 /**
- * OwnerApplication エンティティ
+ * OwnerEntry エンティティ
  * オーナー応募を表すドメインエンティティ
  */
-export class OwnerApplication {
+export class OwnerEntry {
   private constructor(
-    private readonly _id: ApplicationId,
+    private readonly _id: EntryId,
     private readonly _name: string,
     private readonly _email: string,
     private readonly _projectTitle: string,
     private readonly _projectSummary: string,
     private readonly _projectStory: string,
-    private readonly _status: ApplicationStatus,
+    private readonly _status: EntryStatus,
     private readonly _createdAt: Date,
     private readonly _updatedAt: Date
   ) {}
 
-  get id(): ApplicationId {
+  get id(): EntryId {
     return this._id;
   }
 
@@ -81,7 +81,7 @@ export class OwnerApplication {
     return this._projectStory;
   }
 
-  get status(): ApplicationStatus {
+  get status(): EntryStatus {
     return this._status;
   }
 
@@ -96,7 +96,7 @@ export class OwnerApplication {
   /**
    * 新規応募を作成（ステータスは PENDING）
    */
-  static create(input: CreateApplicationInput): Result<OwnerApplication, AppError> {
+  static create(input: CreateEntryInput): Result<OwnerEntry, AppError> {
     const name = input.name.trim();
     const email = input.email.trim();
     const projectTitle = input.projectTitle.trim();
@@ -132,14 +132,14 @@ export class OwnerApplication {
 
     const now = new Date();
     return ok(
-      new OwnerApplication(
+      new OwnerEntry(
         input.id,
         name,
         email,
         projectTitle,
         projectSummary,
         projectStory,
-        ApplicationStatus.PENDING,
+        EntryStatus.PENDING,
         now,
         now
       )
@@ -149,8 +149,8 @@ export class OwnerApplication {
   /**
    * DBから復元
    */
-  static reconstruct(input: ReconstructApplicationInput): OwnerApplication {
-    return new OwnerApplication(
+  static reconstruct(input: ReconstructEntryInput): OwnerEntry {
+    return new OwnerEntry(
       input.id,
       input.name,
       input.email,
@@ -167,13 +167,13 @@ export class OwnerApplication {
    * 審査待ちかどうか
    */
   isPending(): boolean {
-    return this._status === ApplicationStatus.PENDING;
+    return this._status === EntryStatus.PENDING;
   }
 
   /**
    * 承認済みかどうか
    */
   isApproved(): boolean {
-    return this._status === ApplicationStatus.APPROVED;
+    return this._status === EntryStatus.APPROVED;
   }
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { OwnerApplicationForm } from "@/components/application/OwnerApplicationForm";
+import { OwnerEntryForm } from "@/components/entry/OwnerEntryForm";
 
 /**
  * オーナー応募ページ
@@ -33,7 +33,7 @@ export default function ApplyPage() {
             </p>
           </div>
 
-          <OwnerApplicationForm />
+          <OwnerEntryForm />
         </div>
 
         {/* フッター */}
