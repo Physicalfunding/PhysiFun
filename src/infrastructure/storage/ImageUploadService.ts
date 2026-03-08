@@ -57,8 +57,8 @@ export class SupabaseImageUploadService implements ImageUploadService {
       throw new Error("Supabase environment variables are not set");
     }
 
-    // バケット名を環境変数から取得（デフォルト: crowfun-images）
-    this.bucketName = process.env.SUPABASE_STORAGE_BUCKET || "crowfun-images";
+    // バケット名を環境変数から取得（デフォルト: project-images）
+    this.bucketName = process.env.SUPABASE_STORAGE_BUCKET || "project-images";
 
     // サービスロールキーを使用してSupabaseクライアントを作成
     // これによりストレージへの書き込み権限を持つ

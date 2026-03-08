@@ -27,7 +27,7 @@
 ### ストレージ
 | 技術 | 用途 |
 |---|---|
-| Supabase Storage | 画像アップロード（バケット: `crowfun-images`） |
+| Supabase Storage | 画像アップロード（バケット: `project-images`） |
 
 ### インフラ（現在）
 | 技術 | 用途 |
@@ -52,7 +52,7 @@ NEXTAUTH_URL          # 本番: https://your-app.vercel.app
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-SUPABASE_STORAGE_BUCKET   # デフォルト: crowfun-images
+SUPABASE_STORAGE_BUCKET   # デフォルト: project-images
 ```
 
 ---

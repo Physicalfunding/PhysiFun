@@ -86,7 +86,7 @@ NEXTAUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="（supabase start で表示された Publishable キー）"
 SUPABASE_SERVICE_ROLE_KEY="（supabase start で表示された Secret キー）"
-SUPABASE_STORAGE_BUCKET="crowfun-images"
+SUPABASE_STORAGE_BUCKET="project-images"
 
 # フェーズ管理
 NEXT_PUBLIC_RELEASE_PHASE=1

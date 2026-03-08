@@ -106,7 +106,7 @@ enabled = true
 file_size_limit = "50MiB"
 
 # Local storage bucket for project images
-[storage.buckets.crowfun-images]
+[storage.buckets.project-images]
 public = true
 file_size_limit = "50MiB"
 allowed_mime_types = ["image/png", "image/jpeg", "image/gif", "image/webp"]
