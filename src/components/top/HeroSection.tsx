@@ -46,7 +46,7 @@ export function HeroSection() {
           </p>
 
           {/* サービス名の由来 */}
-          <p className="mt-6 text-xs sm:text-sm text-white/70 tracking-wider">
+          <p className="mt-8 inline-block border-2 border-white px-6 py-2 text-sm sm:text-base md:text-lg font-bold text-physifun-red bg-white tracking-wider">
             フィジカル（Physical）＋クラウドファンディング（Crowdfunding）
           </p>
 
