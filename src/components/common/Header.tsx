@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
 
@@ -41,8 +42,14 @@ export function Header() {
         <div className="flex h-16 justify-between items-center">
           {/* ロゴ */}
           <div className="flex-shrink-0">
-            <Link href="/" className="text-xl font-bold text-orange-600">
-              フィジファン
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/images/symbol-black.png"
+                alt="フィジファン"
+                width={40}
+                height={40}
+                className="h-10 w-auto"
+              />
             </Link>
           </div>
 
@@ -52,7 +59,7 @@ export function Header() {
             {phase === 1 && (
               <Link
                 href="/apply"
-                className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-500"
+                className="rounded-md bg-physifun-red px-4 py-2 text-sm font-medium text-white hover:bg-physifun-red-light"
               >
                 オーナー応募
               </Link>
@@ -157,7 +164,7 @@ export function Header() {
                     </Link>
                     <Link
                       href="/register"
-                      className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-500"
+                      className="rounded-md bg-physifun-red px-4 py-2 text-sm font-medium text-white hover:bg-physifun-red-light"
                     >
                       新規登録
                     </Link>
@@ -206,7 +213,7 @@ export function Header() {
               {phase === 1 && (
                 <Link
                   href="/apply"
-                  className="block px-3 py-2 text-base font-medium text-orange-600 hover:bg-gray-50"
+                  className="block px-3 py-2 text-base font-medium text-physifun-red hover:bg-gray-50"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   オーナー応募
@@ -284,7 +291,7 @@ export function Header() {
                       </Link>
                       <Link
                         href="/register"
-                        className="block px-3 py-2 text-base font-medium text-orange-600 hover:bg-gray-50"
+                        className="block px-3 py-2 text-base font-medium text-physifun-red hover:bg-gray-50"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         新規登録
