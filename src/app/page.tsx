@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { prisma } from "@/infrastructure/database/prisma";
 import { PrismaProjectRepository } from "@/infrastructure/database/repositories/PrismaProjectRepository";
 import { GetPublishedProjectsUseCase } from "@/application/use-cases/project/GetPublishedProjectsUseCase";
 import { ProjectCard, ProjectCardProps } from "@/components/project/ProjectCard";
 import { getCurrentPhase } from "@/lib/phase";
+import { Phase1LP } from "@/components/top/Phase1LP";
 
 /**
  * ISR（Incremental Static Regeneration）設定
@@ -28,129 +28,6 @@ export default async function Home() {
   }
 
   return <ProjectListPage />;
-}
-
-/**
- * Phase 1: オーナー募集 LP
- */
-function Phase1LP() {
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
-      {/* ヒーローセクション */}
-      <header className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-amber-500 opacity-10" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
-          <div className="text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 tracking-tight">
-              <span className="text-orange-600">フィジ</span>
-              <span className="text-amber-600">ファン</span>
-            </h1>
-            <p className="mt-2 text-base text-gray-500 tracking-widest">フィジカルファンディング</p>
-
-            <p className="mt-6 text-xl sm:text-2xl text-gray-700 font-medium">
-              お金じゃなくて、スキルと時間でプロジェクトを応援しよう
-            </p>
-
-            <p className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-gray-600">
-              古民家再生、米作り、DIY——あなたのプロジェクトに共感した人たちが、
-              スキルと時間で実際に参加して応援する。それが「フィジカルファンディング」です。
-            </p>
-
-            {/* CTA ボタン */}
-            <div className="mt-10">
-              <Link
-                href="/apply"
-                className="inline-flex items-center rounded-lg bg-orange-600 px-8 py-4 text-lg font-semibold text-white shadow-md hover:bg-orange-500 transition-colors"
-              >
-                オーナーとして応募する
-              </Link>
-              <p className="mt-3 text-sm text-gray-500">プロジェクトオーナーを募集中です</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
-          <div className="w-16 h-16 rounded-full bg-orange-500 opacity-20 animate-pulse" />
-        </div>
-      </header>
-
-      {/* フィジファンの仕組みセクション */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        <div className="text-center mb-12">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">フィジファンの仕組み</h2>
-          <p className="mt-2 text-gray-600">
-            お金ではなく「スキルと時間」でプロジェクトを支援する新しい仕組みです
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* ステップ 1 */}
-          <div className="text-center p-6 rounded-lg bg-white shadow-sm">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-orange-100 text-orange-600 text-2xl font-bold mb-4">
-              1
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">プロジェクトを登録</h3>
-            <p className="text-gray-600 text-sm">
-              古民家再生、農業、イベント運営など、あなたのプロジェクトを登録します。
-            </p>
-          </div>
-
-          {/* ステップ 2 */}
-          <div className="text-center p-6 rounded-lg bg-white shadow-sm">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-orange-100 text-orange-600 text-2xl font-bold mb-4">
-              2
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">サポーターが参加</h3>
-            <p className="text-gray-600 text-sm">
-              プロジェクトに共感したサポーターが、スキルと時間を提供して参加します。
-            </p>
-          </div>
-
-          {/* ステップ 3 */}
-          <div className="text-center p-6 rounded-lg bg-white shadow-sm">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-orange-100 text-orange-600 text-2xl font-bold mb-4">
-              3
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">リターンを受け取る</h3>
-            <p className="text-gray-600 text-sm">
-              参加したサポーターは、プロジェクトからリターン（体験・成果物など）を受け取ります。
-            </p>
-          </div>
-        </div>
-
-        {/* オーナー募集セクション */}
-        <div className="mt-20 text-center">
-          <div className="max-w-2xl mx-auto rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 p-8 sm:p-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              プロジェクトオーナー募集中
-            </h2>
-            <p className="mt-4 text-gray-600">
-              「人手が足りない」「一緒にやってくれる仲間がほしい」——
-              そんなプロジェクトをお持ちの方、フィジファンで仲間を集めませんか？
-              まずは応募フォームからお気軽にご連絡ください。
-            </p>
-            <div className="mt-8">
-              <Link
-                href="/apply"
-                className="inline-flex items-center rounded-lg bg-orange-600 px-8 py-4 text-lg font-semibold text-white shadow-md hover:bg-orange-500 transition-colors"
-              >
-                応募フォームへ
-              </Link>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* フッター */}
-      <footer className="border-t border-gray-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <p className="text-center text-sm text-gray-500">
-            &copy; {new Date().getFullYear()} フィジファン. All rights reserved.
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
 }
 
 /**

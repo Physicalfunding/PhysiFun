@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      // Unsplash（モック画像用）
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
       // ローカル開発用 Supabase Storage
       {
         protocol: "http",

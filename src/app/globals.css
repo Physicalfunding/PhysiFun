@@ -3,12 +3,18 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --physifun-red: #c62828;
+  --physifun-red-dark: #a31d1d;
+  --physifun-red-light: #e53935;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-physifun-red: var(--physifun-red);
+  --color-physifun-red-dark: var(--physifun-red-dark);
+  --color-physifun-red-light: var(--physifun-red-light);
+  --font-sans: var(--font-noto-sans-jp), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -22,5 +28,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-noto-sans-jp), var(--font-geist-sans), sans-serif;
 }
