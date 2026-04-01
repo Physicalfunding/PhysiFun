@@ -26,7 +26,7 @@
 ## コミットメッセージ例
 
 ```
-feat: オーナー応募フォームを追加
+feat: リーダー応募フォームを追加
 fix: 画像アップロード時のエラーハンドリングを修正
 refactor: ProjectRepository を Prisma 実装に移行
 docs: tech.md にAWS移行方針を追記

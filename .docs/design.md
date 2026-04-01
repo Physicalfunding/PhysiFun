@@ -258,7 +258,7 @@ class Message {
 - **Email**: メールアドレス（形式バリデーション）
 - **HashedPassword**: ハッシュ化されたパスワード（最小 8 文字のバリデーション）
 - **UserProfile**: ユーザー名、自己紹介、プロフィール画像 URL
-- **UserType**: ホスト/ゲスト/両方の列挙型（HOST/GUEST/BOTH）
+- **UserType**: リーダー/サポーター/両方の列挙型（LEADER/SUPPORTER/BOTH）
 
 #### Project Domain
 
@@ -281,7 +281,7 @@ class Message {
 
 #### プロジェクト管理
 
-- プロジェクトの作成はホストのみ可能
+- プロジェクトの作成はリーダーのみ可能
 - 1 アカウント 1 プロジェクト制限（MVP 段階）
 - 公開前にプレビュー可能
 - 公開後も編集可能、下書きに戻すことも可能
@@ -290,21 +290,21 @@ class Message {
 
 #### スケジュール管理
 
-- スケジュールの作成はプロジェクトのホストのみ可能
+- スケジュールの作成はプロジェクトのリーダーのみ可能
 - 参加申し込みがある場合、削除時に警告
 - 開催日時は未来の日時のみ設定可能
 
 #### 参加申し込み管理
 
-- ゲストのみ参加申し込み可能
+- サポーターのみ参加申し込み可能
 - 募集人数を超える申し込みは不可
-- 同一ゲストが同じスケジュールに複数回申し込み不可
+- 同一サポーターが同じスケジュールに複数回申し込み不可
 - 申し込み時にスケジュールの残り枠を確認
 
 #### メッセージング
 
-- ゲストは参加申し込みをしたプロジェクトのホストにのみメッセージ送信可能
-- ホストは自分のプロジェクトに参加申し込みしたゲストにメッセージ送信可能
+- サポーターは参加申し込みをしたプロジェクトのリーダーにのみメッセージ送信可能
+- リーダーは自分のプロジェクトに参加申し込みしたサポーターにメッセージ送信可能
 - メッセージ送信前に参加関係を検証
 - 返信は元のメッセージに紐づく（スレッド形式）
 - 既読/未読の管理
@@ -439,8 +439,8 @@ model User {
 }
 
 enum UserType {
-  HOST
-  GUEST
+  LEADER
+  SUPPORTER
   BOTH
 }
 
@@ -603,7 +603,7 @@ model Message {
   "email": "user@example.com",
   "password": "password123",
   "name": "山田太郎",
-  "userType": "HOST" | "GUEST" | "BOTH"
+  "userType": "LEADER" | "SUPPORTER" | "BOTH"
 }
 ```
 
@@ -615,7 +615,7 @@ model Message {
     "id": "uuid",
     "email": "user@example.com",
     "name": "山田太郎",
-    "userType": "HOST"
+    "userType": "LEADER"
   },
   "token": "jwt-token"
 }
@@ -644,7 +644,7 @@ model Message {
     "id": "uuid",
     "email": "user@example.com",
     "name": "山田太郎",
-    "userType": "HOST"
+    "userType": "LEADER"
   },
   "token": "jwt-token"
 }
@@ -682,7 +682,7 @@ model Message {
     "name": "山田太郎",
     "bio": "自己紹介文",
     "avatarUrl": "https://...",
-    "userType": "HOST"
+    "userType": "LEADER"
   }
 }
 ```
@@ -713,7 +713,7 @@ model Message {
     "name": "山田太郎",
     "bio": "新しい自己紹介文",
     "avatarUrl": "https://...",
-    "userType": "HOST"
+    "userType": "LEADER"
   }
 }
 ```
@@ -740,7 +740,7 @@ model Message {
 
 #### POST /api/projects
 
-プロジェクト作成（ホスト認証必須）
+プロジェクト作成（リーダー認証必須）
 
 **リクエスト:**
 
@@ -780,7 +780,7 @@ model Message {
 
 #### PUT /api/projects/:id
 
-プロジェクト更新（ホスト認証必須）
+プロジェクト更新（リーダー認証必須）
 
 **リクエスト:**
 
@@ -809,7 +809,7 @@ model Message {
 
 #### PATCH /api/projects/:id/publish
 
-プロジェクト公開（ホスト認証必須）
+プロジェクト公開（リーダー認証必須）
 
 **レスポンス:**
 
@@ -827,7 +827,7 @@ model Message {
 
 #### PATCH /api/projects/:id/unpublish
 
-プロジェクト非公開化（ホスト認証必須）
+プロジェクト非公開化（リーダー認証必須）
 
 **レスポンス:**
 
@@ -918,7 +918,7 @@ model Message {
 
 #### GET /api/my/project
 
-自分のプロジェクト取得（ホスト認証必須）
+自分のプロジェクト取得（リーダー認証必須）
 
 **レスポンス:**
 
@@ -932,7 +932,7 @@ model Message {
 
 #### POST /api/projects/:id/images
 
-プロジェクト画像アップロード（ホスト認証必須）
+プロジェクト画像アップロード（リーダー認証必須）
 
 **リクエスト:** `FormData { files }`
 
@@ -950,7 +950,7 @@ model Message {
 
 #### POST /api/projects/:id/returns
 
-リターン追加（ホスト認証必須）
+リターン追加（リーダー認証必須）
 
 **リクエスト:**
 
@@ -983,7 +983,7 @@ model Message {
 
 #### PUT /api/projects/:projectId/returns/:returnId
 
-リターン更新（ホスト認証必須）
+リターン更新（リーダー認証必須）
 
 **リクエスト:**
 
@@ -1010,7 +1010,7 @@ model Message {
 
 #### DELETE /api/projects/:projectId/returns/:returnId
 
-リターン削除（ホスト認証必須）
+リターン削除（リーダー認証必須）
 
 **レスポンス:**
 
@@ -1026,7 +1026,7 @@ model Message {
 
 #### POST /api/projects/:projectId/schedules
 
-体験スケジュール作成（ホスト認証必須）
+体験スケジュール作成（リーダー認証必須）
 
 **リクエスト:**
 
@@ -1062,7 +1062,7 @@ model Message {
 
 #### PUT /api/projects/:projectId/schedules/:scheduleId
 
-体験スケジュール更新（ホスト認証必須）
+体験スケジュール更新（リーダー認証必須）
 
 **リクエスト:**
 
@@ -1091,7 +1091,7 @@ model Message {
 
 #### DELETE /api/projects/:projectId/schedules/:scheduleId
 
-体験スケジュール削除（ホスト認証必須）
+体験スケジュール削除（リーダー認証必須）
 
 **レスポンス:**
 
@@ -1152,7 +1152,7 @@ model Message {
 
 #### POST /api/schedules/:scheduleId/participate
 
-体験参加申し込み（ゲスト認証必須）
+体験参加申し込み（サポーター認証必須）
 
 **リクエスト:**
 
@@ -1181,7 +1181,7 @@ model Message {
 
 #### GET /api/my/participations
 
-自分の参加予定一覧取得（ゲスト認証必須）
+自分の参加予定一覧取得（サポーター認証必須）
 
 **クエリパラメータ:**
 
@@ -1219,7 +1219,7 @@ model Message {
 
 #### GET /api/schedules/:scheduleId/participants
 
-スケジュールの参加者一覧取得（ホスト認証必須）
+スケジュールの参加者一覧取得（リーダー認証必須）
 
 **レスポンス:**
 
@@ -1471,9 +1471,9 @@ model Message {
 #### 認可方式
 
 - **ロールベースアクセス制御 (RBAC)**:
-  - ホスト: プロジェクト・スケジュール・リターンの作成・編集・削除
-  - ゲスト: 参加申し込み、メッセージ送信（参加済みプロジェクトのみ）
-  - 両方: ホストとゲストの両方の機能を使用可能
+  - リーダー: プロジェクト・スケジュール・リターンの作成・編集・削除
+  - サポーター: 参加申し込み、メッセージ送信（参加済みプロジェクトのみ）
+  - 両方: リーダーとサポーターの両方の機能を使用可能
 
 #### セッション管理
 
