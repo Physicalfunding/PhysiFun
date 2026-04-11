@@ -2,8 +2,8 @@ import Link from "next/link";
 import { OwnerEntryForm } from "@/components/entry/OwnerEntryForm";
 
 /**
- * オーナー応募ページ
- * Phase 1 で公開されるオーナー募集フォーム
+ * リーダー応募ページ
+ * Phase 1 で公開されるリーダー募集フォーム
  */
 export default function ApplyPage() {
   return (
@@ -14,9 +14,9 @@ export default function ApplyPage() {
           <Link href="/" className="text-3xl font-bold tracking-tight text-orange-600">
             フィジファン
           </Link>
-          <h1 className="mt-6 text-2xl font-semibold text-gray-900">オーナー応募フォーム</h1>
+          <h1 className="mt-6 text-2xl font-semibold text-gray-900">リーダー応募フォーム</h1>
           <p className="mt-2 text-sm text-gray-600">
-            スキルと時間でプロジェクトを応援してもらいたいオーナーを募集しています
+            スキルと時間でプロジェクトを応援してもらいたいリーダーを募集しています
           </p>
         </div>
 
