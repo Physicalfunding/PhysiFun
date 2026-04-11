@@ -1,10 +1,6 @@
 export { prisma } from "./database/client";
 
-export type {
-  OutboxMessage,
-  OutboxProcessor,
-  OutboxProcessError,
-} from "./outbox";
+export type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "./outbox";
 
 export type { MailMessage, MailSender, MailSendError } from "./mail";
 

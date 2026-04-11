@@ -1,5 +1,1 @@
-export type {
-  OutboxMessage,
-  OutboxProcessor,
-  OutboxProcessError,
-} from "./types";
+export type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "./types";
