@@ -29,9 +29,14 @@ export interface OutboxMessage<T = unknown> {
  * Outbox 処理失敗を表す基底エラー。
  *
  * 各ドメイン固有の OutboxProcessor 実装が具体化する。
+ *
+ * `retriable` はワーカーのリトライ判定に使う:
+ * - `true`  … 一時障害 (ネットワーク瞬断 / 429 / 5xx など)。attempts を増やして nextRetryAt を設定
+ * - `false` … 永続的失敗 (バリデーション違反 / 4xx など)。dead-letter 扱いにして再試行しない
  */
 export interface OutboxProcessError {
   readonly message: string;
+  readonly retriable: boolean;
   readonly cause?: unknown;
 }
 

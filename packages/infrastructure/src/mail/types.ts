@@ -18,9 +18,14 @@ export interface MailMessage {
 
 /**
  * メール送信失敗を表すエラー。
+ *
+ * `retriable` はワーカーのリトライ判定に使う:
+ * - `true`  … 一時障害 (429 / 5xx / ネットワーク瞬断)。再試行する
+ * - `false` … 永続的失敗 (400 系 / 宛先不正 / 認証失敗)。dead-letter 扱い
  */
 export interface MailSendError {
   readonly message: string;
+  readonly retriable: boolean;
   readonly cause?: unknown;
 }
 
