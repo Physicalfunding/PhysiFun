@@ -225,10 +225,10 @@ CREATE INDEX "project_review_feedbacks_reviewedAt_idx" ON "project_review_feedba
 CREATE INDEX "support_recruitments_projectId_idx" ON "support_recruitments"("projectId");
 
 -- CreateIndex
-CREATE INDEX "recruitment_schedules_supportRecruitmentId_idx" ON "recruitment_schedules"("supportRecruitmentId");
+CREATE INDEX "recruitment_schedules_date_idx" ON "recruitment_schedules"("date");
 
 -- CreateIndex
-CREATE INDEX "recruitment_schedules_date_idx" ON "recruitment_schedules"("date");
+CREATE UNIQUE INDEX "recruitment_schedules_supportRecruitmentId_date_key" ON "recruitment_schedules"("supportRecruitmentId", "date");
 
 -- CreateIndex
 CREATE INDEX "support_tickets_recruitmentScheduleId_idx" ON "support_tickets"("recruitmentScheduleId");

@@ -16,6 +16,7 @@ declare module "next-auth" {
     } & DefaultSession["user"];
   }
 
+  // TODO(#61): Account ベース認証復活時に roles (Role[]) 等を追加する
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface User extends DefaultUser {}
 }

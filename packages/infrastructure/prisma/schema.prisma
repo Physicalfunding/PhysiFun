@@ -228,7 +228,8 @@ model RecruitmentSchedule {
   supportRecruitment SupportRecruitment @relation(fields: [supportRecruitmentId], references: [id], onDelete: Cascade)
   supportTickets     SupportTicket[]
 
-  @@index([supportRecruitmentId])
+  // 同一募集 x 同一日付の重複行を禁止 (1 日単位 = 1 スケジュール)
+  @@unique([supportRecruitmentId, date])
   @@index([date])
   @@map("recruitment_schedules")
 }
