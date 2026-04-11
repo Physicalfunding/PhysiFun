@@ -1,0 +1,303 @@
+// Phase 1 Prisma schema
+// Issue #55 [SP1] 0-3 Prisma schema Phase 1 移行
+//
+// 参照:
+//   - docs-repository/docs/202604_初回リリースに向けた計画/アカウント.md
+//   - docs-repository/docs/202604_初回リリースに向けた計画/プロジェクト.md
+//   - docs-repository/docs/202604_初回リリースに向けた計画/サポート募集.md
+//   - docs-repository/docs/202604_初回リリースに向けた計画/Phase1_ドメイン移行マップ.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== Account ====================
+// アカウント (アカウント.md)
+// 1 種類のアカウントエンティティ。ロールベースで権限を管理する。
+model Account {
+  id                 String        @id @default(uuid())
+  email              String        @unique
+  displayName        String // 表示名 (1〜50 文字、B-3 仮値)
+  status             AccountStatus
+  passwordHash       String? // ACTIVE 時は必須、PENDING_EMAIL_CONFIRMATION 時は null
+  roles              Role[] // ["SUPPORTER"], ["SUPPORTER", "LEADER"] etc.
+  activationToken    String?       @unique // アクティベーション用トークン (24h 有効)
+  activationTokenExp DateTime? // activationToken の有効期限
+
+  // プロフィール (任意、Phase 1 で追加)
+  iconUrl  String?
+  bio      String? @db.Text // 自己紹介 (〜500 文字、B-3 仮値)
+  snsLinks Json? // { x, instagram, facebook, website }
+
+  // 集計値 (Phase 1 では 0 固定、Phase 2 で加算)
+  contributedHours Int @default(0) // 提供時間累計
+  receivedHours    Int @default(0) // 参加時間累計
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  leaderApplications  LeaderApplication[]
+  projects            Project[]
+  projectReviews      ProjectReviewFeedback[]
+  supportTickets      SupportTicket[]
+
+  @@index([status])
+  @@map("accounts")
+}
+
+enum AccountStatus {
+  PENDING_EMAIL_CONFIRMATION
+  ACTIVE
+}
+
+enum Role {
+  SUPPORTER
+  LEADER
+  ADMIN
+}
+
+// ==================== LeaderApplication ====================
+// リーダー応募 (アカウント.md「LeaderApplication」)
+// 1 Account につき PENDING は常に 1 件以下。Phase 1 ではアプリケーション層で担保し、
+// 必要に応じて後続 PR で raw SQL の部分 unique index (WHERE status = 'PENDING') を追加する。
+model LeaderApplication {
+  id           String                   @id @default(uuid())
+  accountId    String
+  status       LeaderApplicationStatus
+  reviewerNote String?                  @db.Text // 却下理由等、運営が付与
+
+  // ProjectDraft 値オブジェクト (B-3 仮値の上限)
+  projectTitle      String // 〜100
+  projectSummary    String  @db.Text // 〜300
+  projectStory      String  @db.Text // 〜5000 (Markdown)
+  projectCategory   String // CATEGORY_MASTER 参照。enum にせず String で保持
+  prefectureCode    String // "01"〜"47"
+  municipality      String? // 任意、〜50
+  plannedActivities String  @db.Text // 〜1000
+  snsLinks          Json? // { x, instagram, facebook, website }
+
+  submittedAt DateTime  @default(now())
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([status])
+  @@index([submittedAt])
+  @@map("leader_applications")
+}
+
+enum LeaderApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ==================== Project ====================
+// プロジェクト (プロジェクト.md)
+// Phase 1 では 3 値 PublishStatus + ProjectPhase の 2 軸で管理。
+model Project {
+  id             String        @id @default(uuid())
+  ownerAccountId String
+  slug           String?       @unique // 公開時に発行
+
+  // ヘッダー情報
+  title          String // 〜100 (B-3 仮値)
+  summary        String        @db.Text // 〜300 (B-3 仮値)
+  story          String        @db.Text // プロジェクト本文 Markdown (B-3 仮値)
+  leaderIntro    String        @db.Text // リーダー紹介 Markdown
+  coverImageUrl  String?
+  category       String // CATEGORY_MASTER の値 (string 保持)
+  prefectureCode String // JIS X 0401 "01"〜"47"
+  municipality   String? // 任意
+  snsLinks       Json? // { x, instagram, facebook, website }
+
+  // ステータス (2 軸)
+  status PublishStatus @default(DRAFT)
+  phase  ProjectPhase  @default(VISION)
+
+  // 公開タイムスタンプ
+  publishRequestedAt DateTime?
+  publishedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  owner               Account                 @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
+  reviewFeedbacks     ProjectReviewFeedback[]
+  supportRecruitments SupportRecruitment[]
+
+  @@index([ownerAccountId])
+  @@index([status])
+  @@index([category])
+  @@index([prefectureCode])
+  @@index([publishedAt])
+  @@map("projects")
+}
+
+enum PublishStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+}
+
+enum ProjectPhase {
+  VISION
+  PLANNING
+  PREPARATION
+  EXECUTION
+  COMPLETED
+}
+
+// ==================== ProjectReviewFeedback ====================
+// プロジェクト公開審査の履歴 (プロジェクト.md「プロジェクト公開審査ワークフロー」)
+model ProjectReviewFeedback {
+  id         String       @id @default(uuid())
+  projectId  String
+  reviewerId String // ADMIN ロールの Account id
+  action     ReviewAction
+  note       String? // 差戻・強制非公開時は必須
+  reviewedAt DateTime     @default(now())
+  createdAt  DateTime     @default(now())
+
+  // Relations
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reviewer Account @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([projectId])
+  @@index([reviewerId])
+  @@index([reviewedAt])
+  @@map("project_review_feedbacks")
+}
+
+enum ReviewAction {
+  APPROVED
+  REJECTED
+  FORCE_UNPUBLISHED
+}
+
+// ==================== SupportRecruitment ====================
+// サポート募集 (サポート募集.md)
+// Phase 1 はリーダー側の作成 UI まで実装、サポーター側の申請は Phase 2
+model SupportRecruitment {
+  id          String          @id @default(uuid())
+  projectId   String
+  type        RecruitmentType @default(ACTIVITY) // Phase 1 は ACTIVITY のみ
+  title       String
+  description String          @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  project   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  schedules RecruitmentSchedule[]
+
+  @@index([projectId])
+  @@map("support_recruitments")
+}
+
+enum RecruitmentType {
+  ACTIVITY
+}
+
+// ==================== RecruitmentSchedule ====================
+// 募集スケジュール (1 日単位)
+model RecruitmentSchedule {
+  id                   String       @id @default(uuid())
+  supportRecruitmentId String
+  date                 DateTime     @db.Date // JST カレンダー日付。Prisma は UTC 深夜として返すため、日付比較は必ずアプリケーション層で JST として扱う
+  startTime            String // "HH:MM" JST
+  endTime              String // "HH:MM" JST
+  capacityPerHour      Int
+  approvalMode         ApprovalMode @default(AUTO)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  supportRecruitment SupportRecruitment @relation(fields: [supportRecruitmentId], references: [id], onDelete: Cascade)
+  supportTickets     SupportTicket[]
+
+  @@index([supportRecruitmentId])
+  @@index([date])
+  @@map("recruitment_schedules")
+}
+
+enum ApprovalMode {
+  AUTO
+  MANUAL
+}
+
+// ==================== SupportTicket ====================
+// サポートチケット (1 申請 = 1 チケット)
+model SupportTicket {
+  id                    String              @id @default(uuid())
+  recruitmentScheduleId String
+  supporterAccountId    String
+  duration              Int // 時間数 (1, 2, 4)
+  slotStart             String // "HH:MM" JST
+  companionCount        Int                 @default(0)
+  status                SupportTicketStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  recruitmentSchedule RecruitmentSchedule @relation(fields: [recruitmentScheduleId], references: [id], onDelete: Cascade)
+  // チケット履歴は監査観点で残すため、Account 削除時はブロックする (Restrict)
+  supporter           Account             @relation(fields: [supporterAccountId], references: [id], onDelete: Restrict)
+
+  @@index([recruitmentScheduleId])
+  @@index([supporterAccountId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+enum SupportTicketStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+// ==================== LeaderApplicationOutboxMessage ====================
+// リーダー応募ドメイン専用 Outbox (アカウント.md / プロジェクト.md「Outbox テーブル」)
+model LeaderApplicationOutboxMessage {
+  id          String    @id @default(uuid())
+  type        String // LeaderApplicationOutboxType
+  payload     Json
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime? // 送信完了時刻 (null = 未送信)
+  attempts    Int       @default(0)
+  lastError   String?   @db.Text
+  nextRetryAt DateTime?
+
+  @@index([sentAt, nextRetryAt])
+  @@map("leader_application_outbox_messages")
+}
+
+// ==================== ProjectOutboxMessage ====================
+// プロジェクトドメイン専用 Outbox
+model ProjectOutboxMessage {
+  id          String    @id @default(uuid())
+  type        String // ProjectOutboxType
+  payload     Json
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime?
+  attempts    Int       @default(0)
+  lastError   String?   @db.Text
+  nextRetryAt DateTime?
+
+  @@index([sentAt, nextRetryAt])
+  @@map("project_outbox_messages")
+}
