@@ -4,6 +4,14 @@
   "workspaces": {
     "": {
       "name": "temp_next",
+      "devDependencies": {
+        "prettier": "^3.4.2",
+        "typescript": "^5",
+      },
+    },
+    "apps/web": {
+      "name": "@physifun/web",
+      "version": "0.1.0",
       "dependencies": {
         "@hookform/resolvers": "^5.0.1",
         "@prisma/client": "^6.9.0",
@@ -21,6 +29,7 @@
         "zod": "^3.25.67",
       },
       "devDependencies": {
+        "@jest/globals": "^29.7.0",
         "@tailwindcss/postcss": "^4",
         "@testing-library/jest-dom": "^6.6.3",
         "@testing-library/react": "^16.3.0",
@@ -30,15 +39,36 @@
         "@types/node": "^20",
         "@types/react": "^19",
         "@types/react-dom": "^19",
+        "dotenv": "^16.4.5",
         "eslint": "^9",
         "eslint-config-next": "16.1.1",
         "jest": "^29.7.0",
         "jest-environment-jsdom": "^29.7.0",
-        "prettier": "^3.4.2",
         "prisma": "^6.9.0",
         "tailwindcss": "^4",
         "ts-jest": "^29.2.6",
         "ts-node": "^10.9.2",
+        "typescript": "^5",
+      },
+    },
+    "packages/application": {
+      "name": "@physifun/application",
+      "version": "0.0.0",
+      "devDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/domain": {
+      "name": "@physifun/domain",
+      "version": "0.0.0",
+      "devDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/infrastructure": {
+      "name": "@physifun/infrastructure",
+      "version": "0.0.0",
+      "devDependencies": {
         "typescript": "^5",
       },
     },
@@ -399,6 +429,14 @@
     "@oxc-transform/binding-win32-x64-msvc": ["@oxc-transform/binding-win32-x64-msvc@0.111.0", "", { "os": "win32", "cpu": "x64" }, "sha512-QddKW4kBH0Wof6Y65eYCNHM4iOGmCTWLLcNYY1FGswhzmTYOUVXajNROR+iCXAOFnOF0ldtsR79SyqgyHH1Bgg=="],
 
     "@panva/hkdf": ["@panva/hkdf@1.2.1", "", {}, "sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw=="],
+
+    "@physifun/application": ["@physifun/application@workspace:packages/application"],
+
+    "@physifun/domain": ["@physifun/domain@workspace:packages/domain"],
+
+    "@physifun/infrastructure": ["@physifun/infrastructure@workspace:packages/infrastructure"],
+
+    "@physifun/web": ["@physifun/web@workspace:apps/web"],
 
     "@prisma/client": ["@prisma/client@6.19.1", "", { "peerDependencies": { "prisma": "*", "typescript": ">=5.1.0" }, "optionalPeers": ["prisma", "typescript"] }, "sha512-4SXj4Oo6HyQkLUWT8Ke5R0PTAfVOKip5Roo+6+b2EDTkFg5be0FnBWiuRJc0BC0sRQIWGMLKW1XguhVfW/z3/A=="],
 
