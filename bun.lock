@@ -63,6 +63,7 @@
       "name": "@physifun/infrastructure",
       "version": "0.0.0",
       "dependencies": {
+        "@physifun/domain": "workspace:*",
         "@prisma/client": "^6.9.0",
       },
       "devDependencies": {
