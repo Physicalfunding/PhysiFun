@@ -4,7 +4,7 @@ import { authOptions } from "./auth";
 /**
  * サーバーサイドでセッションを取得するヘルパー関数
  *
- * Server ComponentsやAPI Routesで使用
+ * Server Components や API Routes で使用する。
  * @example
  * const session = await getSession();
  * if (!session) {
@@ -16,28 +16,10 @@ export async function getSession() {
 }
 
 /**
- * 現在のユーザーIDを取得
- * 未ログインの場合はnullを返す
+ * 現在のユーザー（Account）ID を取得する。
+ * 未ログインの場合は null を返す。
  */
 export async function getCurrentUserId(): Promise<string | null> {
   const session = await getSession();
   return session?.user?.id ?? null;
-}
-
-/**
- * ユーザーがホスト権限を持つかチェック
- */
-export async function isHost(): Promise<boolean> {
-  const session = await getSession();
-  const userType = session?.user?.userType;
-  return userType === "HOST";
-}
-
-/**
- * ユーザーがゲスト権限を持つかチェック
- */
-export async function isGuest(): Promise<boolean> {
-  const session = await getSession();
-  const userType = session?.user?.userType;
-  return userType === "GUEST";
 }
