@@ -91,7 +91,7 @@ jobs:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Run tests
-        run: bun run test
+        run: bun test
 
   build:
     name: Build
