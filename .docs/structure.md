@@ -13,52 +13,46 @@
 ```
 src/
 ├── app/                          # Next.js App Router
-│   ├── (auth)/                   # 認証ページグループ（ログイン・登録）
+│   ├── (auth)/                   # 認証ページグループ（ログイン）
+│   ├── apply/                    # リーダー応募 LP（Phase 1: 非ログイン）
 │   ├── api/                      # API Route Handler（薄い BFF）
 │   │   ├── auth/
-│   │   ├── projects/
-│   │   ├── schedules/
-│   │   ├── messages/
-│   │   ├── my/
-│   │   └── users/
+│   │   ├── leader-applications/  # リーダー応募
+│   │   ├── projects/             # プロジェクト + 審査
+│   │   ├── recruitments/         # サポート募集（リーダー側 UI）
+│   │   └── my/
 │   ├── my/                       # 認証済みユーザー向けページ
-│   ├── page.tsx                  # トップページ（LP または一覧）
+│   ├── page.tsx                  # トップページ（LP）
 │   └── layout.tsx
 │
 ├── application/
 │   └── use-cases/                # ビジネスロジック層（ユースケース）
 │       ├── auth/
-│       ├── project/
-│       ├── schedule/
-│       ├── return/
-│       ├── participation/
-│       ├── message/
-│       ├── profile/
-│       └── guest/
+│       ├── leader-application/   # リーダー応募（旧 entry）
+│       ├── project/              # プロジェクト作成・編集・公開審査
+│       └── recruitment/          # サポート募集（活動参加募集）
 │
 ├── domain/                       # ドメイン層（エンティティ・値オブジェクト・リポジトリIF）
-│   ├── account/
-│   ├── project/
-│   ├── schedule/
-│   ├── participation/
-│   ├── message/
-│   └── shared/
+│   ├── account/                  # Account, Role
+│   ├── leader-application/       # LeaderApplication, ApplicationMode（PRE_ACCOUNT/AUTHENTICATED）
+│   ├── project/                  # Project, ProjectPhase, PublishStatus
+│   ├── recruitment/              # Recruitment, RecruitmentSchedule, SupportTicket
+│   └── shared/                   # Result 型、共通値オブジェクト
 │
 ├── infrastructure/               # インフラ層（外部サービスとの接続）
 │   ├── database/
 │   │   ├── prisma.ts             # Prisma Client シングルトン
-│   │   └── repositories/        # Prisma 実装リポジトリ
+│   │   └── repositories/         # Prisma 実装リポジトリ
+│   ├── outbox/                   # Outbox ワーカー（初期パスワード送信等）
 │   └── storage/
 │       └── ImageUploadService.ts # Supabase Storage 実装
 │
 ├── components/                   # UI コンポーネント
 │   ├── common/                   # 汎用コンポーネント（Button, Input, Modal など）
 │   ├── auth/
-│   ├── project/
-│   ├── schedule/
-│   ├── participation/
-│   ├── message/
-│   ├── profile/
+│   ├── leader-application/       # リーダー応募フォーム
+│   ├── project/                  # プロジェクト編集タブ（基本情報 / サポート募集 / 活動報告）
+│   ├── recruitment/              # サポート募集作成 UI
 │   └── providers/
 │
 ├── lib/                          # ユーティリティ・ヘルパー
@@ -68,6 +62,8 @@ src/
 │
 └── types/                        # 型定義（外部ライブラリ拡張など）
 ```
+
+> **Phase 1 スコープ**: `leader-application` / `project` / `recruitment`（リーダー側 UI のみ）を実装。サポーター向けの閲覧・申請 UI は Phase 2 で追加。廃止された旧 bounded context（`return` / `participation` / `schedule` / `message` / `guest`）は計画ドキュメントに存在しない。
 
 ---
 
