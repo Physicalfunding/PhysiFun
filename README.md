@@ -26,7 +26,7 @@
 | Phase 1 | リーダー募集 + リーダー機能（LP + 応募フォーム / 運営によるアカウント発行 / プロジェクト作成・編集 / サポート募集準備） | 開発中 |
 | Phase 2 | 一般公開（サポーター自由登録 / プロジェクト閲覧 / サポート申請） | 未着手 |
 
-環境変数 `NEXT_PUBLIC_RELEASE_PHASE` で公開フェーズを制御します。詳細は `.docs/product.md` を参照。
+Phase 移行はランタイムのフィーチャーフラグではなく、**コード変更リリース**で行います（Phase 2 リリース PR の中で Phase 1 専用コードを削除する方針）。詳細は `.docs/product.md` を参照。
 
 ---
 
@@ -88,9 +88,6 @@ NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="（supabase start で表示された Publishable キー）"
 SUPABASE_SERVICE_ROLE_KEY="（supabase start で表示された Secret キー）"
 SUPABASE_STORAGE_BUCKET="project-images"
-
-# フェーズ管理
-NEXT_PUBLIC_RELEASE_PHASE=1
 ```
 
 > **Note:** `.env.local` は `.gitignore` に含まれているため、git には追跡されません。
