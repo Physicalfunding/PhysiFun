@@ -12,6 +12,8 @@ export type { MailMessage, MailSender, MailSendError } from "./mail";
 export { ResendMailSender } from "./mail";
 export { NoopMailSender } from "./mail";
 
+export { PrismaCleanupExpiredAccountsAdapter } from "./account/PrismaCleanupExpiredAccountsAdapter";
+
 // Prisma Client のクラスや runtime 値は再エクスポートしない
 // (`PrismaClient` を apps/web 側で new できないようにするため)。
 // モデル型・enum 値は必要になった時点で type-only 再エクスポートを追加する。
