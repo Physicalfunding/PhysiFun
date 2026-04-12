@@ -42,9 +42,7 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
 // ==================== テストデータ ====================
 
 /** PENDING 状態のリーダー応募 */
-function pendingApplication(
-  overrides?: Partial<LeaderApplicationRow>
-): LeaderApplicationRow {
+function pendingApplication(overrides?: Partial<LeaderApplicationRow>): LeaderApplicationRow {
   return {
     id: "app-001",
     accountId: "account-001",
