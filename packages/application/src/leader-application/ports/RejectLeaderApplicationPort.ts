@@ -11,7 +11,7 @@
 export interface LeaderApplicationForReject {
   readonly id: string;
   readonly accountId: string;
-  readonly status: string;
+  readonly status: "PENDING" | "APPROVED" | "REJECTED";
   readonly reviewedAt: Date | null;
 }
 
@@ -27,12 +27,6 @@ export interface RejectLeaderApplicationPort {
    * トランザクション外で呼ばれる。
    */
   findApplicationById(id: string): Promise<LeaderApplicationForReject | null>;
-
-  /**
-   * 指定アカウントの最新の却下済み応募を取得する。
-   * クールダウンチェック用（再申請時に利用）。
-   */
-  findLatestRejectedByAccountId(accountId: string): Promise<{ rejectedAt: Date } | null>;
 
   /**
    * 却下処理 + Outbox メッセージ作成を 1 つのトランザクションで実行する。

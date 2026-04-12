@@ -3,14 +3,7 @@ import {
   type Result,
   err,
   ok,
-  AccountId,
-  LeaderApplication,
-  LeaderApplicationId,
-  LeaderApplicationStatus,
-  type LeaderApplicationStateError,
-  ProjectDraft,
-  ProjectLocation,
-  SnsLinks,
+  LEADER_APPLICATION_REVIEWER_NOTE_MAX_LENGTH,
 } from "@physifun/domain";
 import type { RejectLeaderApplicationPort } from "./ports/RejectLeaderApplicationPort";
 
@@ -55,48 +48,7 @@ export type RejectLeaderApplicationError =
       readonly issues: Array<{ path: string; message: string }>;
     }
   | { readonly type: "APPLICATION_NOT_FOUND" }
-  | { readonly type: "NOT_PENDING"; readonly currentStatus: string }
-  | {
-      readonly type: "DOMAIN_ERROR";
-      readonly domainError: LeaderApplicationStateError;
-    };
-
-// ==================== ダミー ProjectDraft ====================
-
-/**
- * reject() 実行に必要な reconstruct 用ダミー ProjectDraft を生成する。
- *
- * reject() メソッドは projectDraft フィールドを一切参照しないため、
- * Port から projectDraft を取得する必要はない。型制約を満たすためだけに使用する。
- */
-function createDummyProjectDraft(): ProjectDraft {
-  const locationResult = ProjectLocation.create({
-    prefectureCode: "01",
-    municipality: null,
-  });
-  if (!locationResult.ok) throw new Error("ダミー ProjectLocation の生成に失敗");
-
-  const snsLinksResult = SnsLinks.create({
-    x: null,
-    instagram: null,
-    facebook: null,
-    website: null,
-  });
-  if (!snsLinksResult.ok) throw new Error("ダミー SnsLinks の生成に失敗");
-
-  const draftResult = ProjectDraft.create({
-    projectTitle: "dummy",
-    projectSummary: "dummy",
-    projectStory: "dummy",
-    projectCategory: "KOMINKA",
-    location: locationResult.value,
-    plannedActivities: "dummy",
-    snsLinks: snsLinksResult.value,
-  });
-  if (!draftResult.ok) throw new Error("ダミー ProjectDraft の生成に失敗");
-
-  return draftResult.value;
-}
+  | { readonly type: "NOT_PENDING"; readonly currentStatus: string };
 
 // ==================== ユースケース ====================
 
@@ -106,7 +58,7 @@ function createDummyProjectDraft(): ProjectDraft {
  * 1. 入力バリデーション（applicationId / reviewerNote）
  * 2. 応募の存在確認
  * 3. PENDING 状態チェック（冪等性確保）
- * 4. ドメインエンティティ復元 → reject() 呼び出し
+ * 4. reviewerNote バリデーション（ドメイン定数を使用）
  * 5. Outbox メッセージ作成 + 却下処理をトランザクションで実行
  */
 export class RejectLeaderApplicationUseCase {
@@ -132,86 +84,49 @@ export class RejectLeaderApplicationUseCase {
       });
     }
 
-    if (reviewerNote.trim().length > 2000) {
+    const trimmedNote = reviewerNote.trim();
+
+    if (trimmedNote.length > LEADER_APPLICATION_REVIEWER_NOTE_MAX_LENGTH) {
       return err({
         type: "VALIDATION_ERROR",
         issues: [
-          { path: "reviewerNote", message: "却下理由は 2000 文字以内です" },
+          {
+            path: "reviewerNote",
+            message: `却下理由は ${LEADER_APPLICATION_REVIEWER_NOTE_MAX_LENGTH} 文字以内です`,
+          },
         ],
       });
     }
 
     // 2. 応募の存在確認
-    const applicationRow = await this.port.findApplicationById(applicationId);
-    if (!applicationRow) {
+    const application = await this.port.findApplicationById(applicationId);
+    if (!application) {
       return err({ type: "APPLICATION_NOT_FOUND" });
     }
 
     // 3. PENDING 状態チェック（冪等性確保）
-    if (applicationRow.status !== LeaderApplicationStatus.PENDING) {
+    if (application.status !== "PENDING") {
       return err({
         type: "NOT_PENDING",
-        currentStatus: applicationRow.status,
+        currentStatus: application.status,
       });
     }
 
-    // 4. ドメインエンティティ復元 → reject() 呼び出し
-    //    Port から取得するのは最小限の行データなので、reconstruct に必要な
-    //    projectDraft 等はダミーで補完する（reject() は projectDraft に触れない）
-    const idResult = LeaderApplicationId.from(applicationRow.id);
-    if (!idResult.ok) {
-      return err({
-        type: "VALIDATION_ERROR",
-        issues: [{ path: "applicationId", message: "無効な応募 ID 形式です" }],
-      });
-    }
-
-    const accountIdResult = AccountId.from(applicationRow.accountId);
-    if (!accountIdResult.ok) {
-      return err({
-        type: "VALIDATION_ERROR",
-        issues: [{ path: "accountId", message: "無効なアカウント ID 形式です" }],
-      });
-    }
-
-    const entity = LeaderApplication.reconstruct({
-      id: idResult.value,
-      accountId: accountIdResult.value,
-      status: LeaderApplicationStatus.PENDING,
-      projectDraft: createDummyProjectDraft(),
-      submittedAt: new Date(),
-      reviewedAt: null,
-      reviewerNote: null,
-    });
-
+    // 4. 却下実行（Outbox メッセージ作成 + 却下処理をトランザクションで実行）
     const now = new Date();
-    const rejectResult = entity.reject({
-      reviewerNote,
-      reviewedAt: now,
-    });
-
-    if (!rejectResult.ok) {
-      // ドメインエラーをラップして返す
-      return err({
-        type: "DOMAIN_ERROR",
-        domainError: rejectResult.error,
-      });
-    }
-
-    // 5. Outbox メッセージ作成 + 却下処理をトランザクションで実行
     const outboxMessageId = randomUUID();
 
     await this.port.executeRejection({
       applicationId,
-      reviewerNote: entity.reviewerNote!,
-      reviewedAt: entity.reviewedAt!,
+      reviewerNote: trimmedNote,
+      reviewedAt: now,
       outboxMessage: {
         id: outboxMessageId,
         type: "rejected.notify_applicant",
         payload: {
           applicationId,
-          accountId: applicationRow.accountId,
-          reviewerNote: entity.reviewerNote!,
+          accountId: application.accountId,
+          reviewerNote: trimmedNote,
         },
       },
     });

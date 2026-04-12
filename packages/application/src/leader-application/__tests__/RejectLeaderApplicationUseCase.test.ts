@@ -18,9 +18,6 @@ class InMemoryRejectLeaderApplicationPort implements RejectLeaderApplicationPort
   /** 検索用の応募データ */
   applications: LeaderApplicationForReject[] = [];
 
-  /** 最新の却下済み応募（クールダウンチェック用） */
-  latestRejected: Map<string, { rejectedAt: Date }> = new Map();
-
   /** executeRejection で保存されたパラメータ */
   rejectionParams: Array<{
     applicationId: string;
@@ -35,12 +32,6 @@ class InMemoryRejectLeaderApplicationPort implements RejectLeaderApplicationPort
 
   async findApplicationById(id: string): Promise<LeaderApplicationForReject | null> {
     return this.applications.find((a) => a.id === id) ?? null;
-  }
-
-  async findLatestRejectedByAccountId(
-    accountId: string
-  ): Promise<{ rejectedAt: Date } | null> {
-    return this.latestRejected.get(accountId) ?? null;
   }
 
   async executeRejection(params: {
