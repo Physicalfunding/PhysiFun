@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { SnsLinks } from "../value-objects/SnsLinks";
+import { SnsLinks } from "../../shared/value-objects/SnsLinks";
 
 describe("SnsLinks", () => {
   describe("create", () => {
