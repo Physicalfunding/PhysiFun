@@ -18,22 +18,20 @@ export const ACTIVATION_EMAIL_TYPE = "ACTIVATION_EMAIL" as const;
  *
  * payload から宛先・トークンを取り出し、有効化 URL を含むメールを送信する。
  */
-export class ActivationEmailProcessor
-  implements OutboxProcessor<ActivationEmailPayload>
-{
+export class ActivationEmailProcessor implements OutboxProcessor<ActivationEmailPayload> {
   readonly type = ACTIVATION_EMAIL_TYPE;
 
   constructor(
     private readonly mailSender: MailSender,
-    private readonly baseUrl: string,
+    private readonly baseUrl: string
   ) {}
 
   async process(
-    message: OutboxMessage<ActivationEmailPayload>,
+    message: OutboxMessage<ActivationEmailPayload>
   ): Promise<Result<void, OutboxProcessError>> {
     const { email, displayName, activationToken } = message.payload;
 
-    const activationUrl = `${this.baseUrl}/activate?token=${activationToken}`;
+    const activationUrl = `${this.baseUrl}/activate?token=${encodeURIComponent(activationToken)}`;
 
     // TODO: A-4 で正式テンプレートに差し替え
     const subject = "【PhysiFun】アカウント有効化のお願い";

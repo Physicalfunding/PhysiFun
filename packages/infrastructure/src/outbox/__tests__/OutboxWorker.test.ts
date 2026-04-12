@@ -35,9 +35,7 @@ class StubProcessor implements OutboxProcessor {
     this.type = type;
   }
 
-  async process(
-    message: OutboxMessage,
-  ): Promise<Result<void, OutboxProcessError>> {
+  async process(message: OutboxMessage): Promise<Result<void, OutboxProcessError>> {
     this.processedMessages.push(message);
     return this.result;
   }
@@ -90,7 +88,7 @@ describe("OutboxWorker", () => {
         data: expect.objectContaining({
           sentAt: expect.any(Date),
         }),
-      }),
+      })
     );
   });
 
@@ -110,7 +108,7 @@ describe("OutboxWorker", () => {
           attempts: 3,
           lastError: "送信タイムアウト",
         }),
-      }),
+      })
     );
   });
 
@@ -149,14 +147,12 @@ describe("OutboxWorker", () => {
         data: expect.objectContaining({
           nextRetryAt: null,
         }),
-      }),
+      })
     );
   });
 
   it("未知のメッセージ種別は lastError に記録してスキップする", async () => {
-    mockFindMany.mockResolvedValue([
-      makeDbMessage({ type: "UNKNOWN_TYPE" }),
-    ]);
+    mockFindMany.mockResolvedValue([makeDbMessage({ type: "UNKNOWN_TYPE" })]);
 
     await worker.tick();
 
@@ -166,7 +162,7 @@ describe("OutboxWorker", () => {
         data: expect.objectContaining({
           lastError: expect.stringContaining("未知のメッセージ種別"),
         }),
-      }),
+      })
     );
   });
 
