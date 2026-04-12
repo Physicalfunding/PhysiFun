@@ -9,5 +9,5 @@ import type { PublishStatus } from "../value-objects/PublishStatus";
 export interface ProjectRepository {
   save(project: Project): Promise<void>;
   findById(id: ProjectId): Promise<Project | null>;
-  countByOwner(accountId: AccountId, statuses: PublishStatus[]): Promise<number>;
+  countByOwner(accountId: AccountId, statuses: readonly PublishStatus[]): Promise<number>;
 }

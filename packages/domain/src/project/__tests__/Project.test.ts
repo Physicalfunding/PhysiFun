@@ -19,12 +19,18 @@ function validLocation(): ProjectLocation {
   return r.value;
 }
 
+function unwrapDraft(input?: { ownerAccountId?: AccountId; title?: string }): Project {
+  const result = Project.createDraft({
+    ownerAccountId: input?.ownerAccountId ?? AccountId.generate(),
+    title: input?.title ?? "テストプロジェクト",
+  });
+  if (!result.ok) throw new Error("createDraft failed in fixture");
+  return result.value;
+}
+
 /** 公開時必須項目を全て満たした Project を作成する */
 function createFullDraft(): Project {
-  const project = Project.createDraft({
-    ownerAccountId: AccountId.generate(),
-    title: "古民家再生プロジェクト",
-  });
+  const project = unwrapDraft({ title: "古民家再生プロジェクト" });
   const updateResult = project.update({
     coverImageUrl: "https://example.com/image.jpg",
     category: "KOMINKA",
@@ -42,10 +48,13 @@ function createFullDraft(): Project {
 describe("Project", () => {
   describe("createDraft", () => {
     it("title のみで DRAFT 状態のプロジェクトが作成される", () => {
-      const project = Project.createDraft({
+      const result = Project.createDraft({
         ownerAccountId: AccountId.generate(),
         title: "テストプロジェクト",
       });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const project = result.value;
       expect(project.publishStatus).toBe(PublishStatus.DRAFT);
       expect(project.title).toBe("テストプロジェクト");
       expect(project.coverImageUrl).toBeNull();
@@ -59,29 +68,51 @@ describe("Project", () => {
     });
 
     it("title の前後空白はトリムされる", () => {
-      const project = Project.createDraft({
+      const result = Project.createDraft({
         ownerAccountId: AccountId.generate(),
         title: "  テスト  ",
       });
-      expect(project.title).toBe("テスト");
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.value.title).toBe("テスト");
     });
 
     it("id と createdAt が自動設定される", () => {
-      const project = Project.createDraft({
-        ownerAccountId: AccountId.generate(),
-        title: "テスト",
-      });
+      const project = unwrapDraft();
       expect(project.id).toBeInstanceOf(ProjectId);
       expect(project.createdAt).toBeInstanceOf(Date);
+    });
+
+    it("title 空文字はエラー", () => {
+      const result = Project.createDraft({
+        ownerAccountId: AccountId.generate(),
+        title: "",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("TITLE_REQUIRED");
+    });
+
+    it("title 空白のみはエラー", () => {
+      const result = Project.createDraft({
+        ownerAccountId: AccountId.generate(),
+        title: "   ",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("TITLE_REQUIRED");
+    });
+
+    it("title 101 文字はエラー", () => {
+      const result = Project.createDraft({
+        ownerAccountId: AccountId.generate(),
+        title: "あ".repeat(101),
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("TITLE_TOO_LONG");
     });
   });
 
   describe("update", () => {
     it("DRAFT 状態で全フィールドを更新できる", () => {
-      const project = Project.createDraft({
-        ownerAccountId: AccountId.generate(),
-        title: "初期タイトル",
-      });
+      const project = unwrapDraft({ title: "初期タイトル" });
       const result = project.update({
         title: "更新タイトル",
         coverImageUrl: "https://example.com/new.jpg",
@@ -101,38 +132,47 @@ describe("Project", () => {
     });
 
     it("title 空文字はエラー", () => {
-      const project = Project.createDraft({
-        ownerAccountId: AccountId.generate(),
-        title: "テスト",
-      });
+      const project = unwrapDraft();
       const result = project.update({ title: "" });
       expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("TITLE_REQUIRED");
-      }
+      if (!result.ok) expect(result.error.type).toBe("TITLE_REQUIRED");
     });
 
     it("title 100 文字超はエラー", () => {
-      const project = Project.createDraft({
-        ownerAccountId: AccountId.generate(),
-        title: "テスト",
-      });
+      const project = unwrapDraft();
       const result = project.update({ title: "あ".repeat(101) });
       expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("TITLE_TOO_LONG");
-      }
+      if (!result.ok) expect(result.error.type).toBe("TITLE_TOO_LONG");
     });
 
-    it("PUBLISHED 状態で公開必須項目を落とすとエラー", () => {
+    it("無効な category はエラー", () => {
+      const project = unwrapDraft();
+      const result = project.update({ category: "INVALID_VALUE" });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("INVALID_CATEGORY");
+    });
+
+    it("category null は許容", () => {
+      const project = unwrapDraft();
+      project.update({ category: "KOMINKA" });
+      const result = project.update({ category: null });
+      expect(result.ok).toBe(true);
+      expect(project.category).toBeNull();
+    });
+
+    it("PUBLISHED 状態で公開必須項目を落とすとエラー（エンティティは変更されない）", () => {
       const project = createFullDraft();
       project.requestPublish();
       project.approveByAdmin();
-      const result = project.update({ summary: null });
+      const originalTitle = project.title;
+      const result = project.update({ summary: null, title: "新タイトル" });
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.type).toBe("PUBLISHED_REQUIREMENTS_NOT_MET");
+        expect(result.error.type).toBe("PUBLICATION_REQUIREMENTS_NOT_MET");
       }
+      // guard-first, write-last: エラー時はエンティティが変更されない
+      expect(project.title).toBe(originalTitle);
+      expect(project.summary).not.toBeNull();
     });
 
     it("PUBLISHED 状態で公開必須項目を維持すれば更新可", () => {
@@ -154,10 +194,7 @@ describe("Project", () => {
     });
 
     it("公開必須項目が欠落しているとエラー（欠落フィールドリスト付き）", () => {
-      const project = Project.createDraft({
-        ownerAccountId: AccountId.generate(),
-        title: "テスト",
-      });
+      const project = unwrapDraft();
       const result = project.requestPublish();
       expect(result.ok).toBe(false);
       if (!result.ok) {
@@ -178,9 +215,7 @@ describe("Project", () => {
       project.requestPublish();
       const result = project.requestPublish();
       expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("CANNOT_REQUEST_PUBLISH_NON_DRAFT");
-      }
+      if (!result.ok) expect(result.error.type).toBe("CANNOT_REQUEST_PUBLISH_NON_DRAFT");
     });
 
     it("PUBLISHED からは遷移エラー", () => {
@@ -205,9 +240,7 @@ describe("Project", () => {
       const project = createFullDraft();
       const result = project.withdraw();
       expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("CANNOT_WITHDRAW_NON_PENDING");
-      }
+      if (!result.ok) expect(result.error.type).toBe("CANNOT_WITHDRAW_NON_PENDING");
     });
 
     it("PUBLISHED からはエラー", () => {
@@ -232,9 +265,16 @@ describe("Project", () => {
       const project = createFullDraft();
       const result = project.approveByAdmin();
       expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("CANNOT_APPROVE_NON_PENDING");
-      }
+      if (!result.ok) expect(result.error.type).toBe("CANNOT_APPROVE_NON_PENDING");
+    });
+
+    it("PUBLISHED からはエラー", () => {
+      const project = createFullDraft();
+      project.requestPublish();
+      project.approveByAdmin();
+      const result = project.approveByAdmin();
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("CANNOT_APPROVE_NON_PENDING");
     });
   });
 
@@ -251,9 +291,16 @@ describe("Project", () => {
       const project = createFullDraft();
       const result = project.rejectByAdmin();
       expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("CANNOT_REJECT_NON_PENDING");
-      }
+      if (!result.ok) expect(result.error.type).toBe("CANNOT_REJECT_NON_PENDING");
+    });
+
+    it("PUBLISHED からはエラー", () => {
+      const project = createFullDraft();
+      project.requestPublish();
+      project.approveByAdmin();
+      const result = project.rejectByAdmin();
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("CANNOT_REJECT_NON_PENDING");
     });
   });
 
@@ -271,9 +318,7 @@ describe("Project", () => {
       const project = createFullDraft();
       const result = project.unpublishSelf();
       expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("CANNOT_UNPUBLISH_NON_PUBLISHED");
-      }
+      if (!result.ok) expect(result.error.type).toBe("CANNOT_UNPUBLISH_NON_PUBLISHED");
     });
 
     it("PENDING_REVIEW からはエラー", () => {
@@ -298,9 +343,15 @@ describe("Project", () => {
       const project = createFullDraft();
       const result = project.forceUnpublish();
       expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.type).toBe("CANNOT_FORCE_UNPUBLISH_NON_PUBLISHED");
-      }
+      if (!result.ok) expect(result.error.type).toBe("CANNOT_FORCE_UNPUBLISH_NON_PUBLISHED");
+    });
+
+    it("PENDING_REVIEW からはエラー", () => {
+      const project = createFullDraft();
+      project.requestPublish();
+      const result = project.forceUnpublish();
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("CANNOT_FORCE_UNPUBLISH_NON_PUBLISHED");
     });
   });
 
@@ -336,10 +387,7 @@ describe("Project", () => {
 
   describe("phase の自由変更", () => {
     it("任意のフェーズに切替できる", () => {
-      const project = Project.createDraft({
-        ownerAccountId: AccountId.generate(),
-        title: "テスト",
-      });
+      const project = unwrapDraft();
       expect(project.phase).toBe(ProjectPhase.VISION);
 
       project.update({ phase: ProjectPhase.COMPLETED });

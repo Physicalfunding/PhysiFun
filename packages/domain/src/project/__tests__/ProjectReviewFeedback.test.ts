@@ -3,6 +3,7 @@ import { AccountId } from "../../account/value-objects/AccountId";
 import { ProjectReviewFeedback } from "../entities/ProjectReviewFeedback";
 import { ProjectId } from "../value-objects/ProjectId";
 import { ReviewAction } from "../value-objects/ReviewAction";
+import { ReviewFeedbackId } from "../value-objects/ReviewFeedbackId";
 
 describe("ProjectReviewFeedback", () => {
   const projectId = ProjectId.generate();
@@ -119,13 +120,7 @@ describe("ProjectReviewFeedback", () => {
     it("全フィールドを復元できる", () => {
       const now = new Date();
       const feedback = ProjectReviewFeedback.reconstruct({
-        id: ProjectReviewFeedback.create({
-          projectId,
-          reviewerId,
-          action: ReviewAction.APPROVED,
-        }).ok
-          ? (ProjectReviewFeedback.create({ projectId, reviewerId, action: ReviewAction.APPROVED }) as any).value.id
-          : (() => { throw new Error("fixture"); })(),
+        id: ReviewFeedbackId.generate(),
         projectId,
         reviewerId,
         action: ReviewAction.REJECTED,

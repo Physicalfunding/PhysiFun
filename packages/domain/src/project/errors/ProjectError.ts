@@ -64,6 +64,10 @@ export type ProjectUpdateError =
       readonly actualLength: number;
     }
   | {
-      readonly type: "PUBLISHED_REQUIREMENTS_NOT_MET";
+      readonly type: "PUBLICATION_REQUIREMENTS_NOT_MET";
       readonly missingFields: readonly string[];
+    }
+  | {
+      readonly type: "INVALID_CATEGORY";
+      readonly value: string;
     };

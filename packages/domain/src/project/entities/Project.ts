@@ -23,14 +23,13 @@ const LIMITS = {
 /**
  * 公開時に必須のフィールド名
  */
-const PUBLICATION_REQUIRED_FIELDS = [
-  "coverImageUrl",
-  "category",
-  "location",
-  "summary",
-  "body",
-  "leaderIntroduction",
-] as const;
+type PublicationRequiredField =
+  | "coverImageUrl"
+  | "category"
+  | "location"
+  | "summary"
+  | "body"
+  | "leaderIntroduction";
 
 /**
  * Project 集約ルート
@@ -41,6 +40,7 @@ const PUBLICATION_REQUIRED_FIELDS = [
  * - `ProjectPhase` は純粋なラベル（遷移バリデーションなし）
  * - DRAFT 保存時は title のみ必須、公開申請時に追加の必須項目チェック
  * - 件数上限（合計 10 件 / PUBLISHED 3 件）は UseCase 側で検証
+ * - activityPlan は公開時にも任意（公開必須項目に含まない）
  */
 export class Project {
   private constructor(
@@ -63,6 +63,8 @@ export class Project {
 
   /**
    * 新規 DRAFT プロジェクトを作成する。
+   *
+   * title は必須（空文字・空白のみ・100文字超はエラー）。
    */
   static createDraft(input: {
     ownerAccountId: AccountId;
@@ -70,24 +72,33 @@ export class Project {
     id?: ProjectId;
     createdAt?: Date;
     snsLinks?: SnsLinks;
-  }): Project {
+  }): Result<Project, ProjectUpdateError> {
+    const trimmedTitle = input.title.trim();
+    if (trimmedTitle.length === 0) {
+      return err({ type: "TITLE_REQUIRED" });
+    }
+    if (trimmedTitle.length > LIMITS.title) {
+      return err({ type: "TITLE_TOO_LONG", maxLength: LIMITS.title, actualLength: trimmedTitle.length });
+    }
     const now = input.createdAt ?? new Date();
-    return new Project(
-      input.id ?? ProjectId.generate(),
-      input.ownerAccountId,
-      input.title.trim(),
-      null,
-      null,
-      null,
-      ProjectPhase.VISION,
-      PublishStatus.DRAFT,
-      null,
-      null,
-      null,
-      input.snsLinks ?? createEmptySnsLinks(),
-      null,
-      now,
-      now
+    return ok(
+      new Project(
+        input.id ?? ProjectId.generate(),
+        input.ownerAccountId,
+        trimmedTitle,
+        null,
+        null,
+        null,
+        ProjectPhase.VISION,
+        PublishStatus.DRAFT,
+        null,
+        null,
+        null,
+        input.snsLinks ?? createEmptySnsLinks(),
+        null,
+        now,
+        now
+      )
     );
   }
 
@@ -151,11 +162,9 @@ export class Project {
   // ---- Update ----
 
   /**
-   * フィールドを更新する。
+   * フィールドを更新する（guard-first, write-last）。
    *
-   * - DRAFT: title のみ必須、他フィールドは null 許容
-   * - PUBLISHED: 更新後に公開必須項目が全て満たされていることを検証
-   * - PENDING_REVIEW 中の更新は UseCase 側で withdraw() → update() として制御
+   * 全バリデーションを先に通し、失敗時はエンティティを一切変更しない。
    */
   update(input: {
     title?: string;
@@ -169,7 +178,9 @@ export class Project {
     activityPlan?: string | null;
     snsLinks?: SnsLinks;
   }): Result<void, ProjectUpdateError> {
-    // title バリデーション
+    // ---- Phase 1: Validate all inputs (no mutation) ----
+
+    let newTitle = this._title;
     if (input.title !== undefined) {
       const trimmed = input.title.trim();
       if (trimmed.length === 0) {
@@ -178,43 +189,69 @@ export class Project {
       if (trimmed.length > LIMITS.title) {
         return err({ type: "TITLE_TOO_LONG", maxLength: LIMITS.title, actualLength: trimmed.length });
       }
-      this._title = trimmed;
+      newTitle = trimmed;
     }
 
-    // テキストフィールドのバリデーション（null 許容）
-    const textResult = this.validateAndSetNullableText("summary", input.summary, LIMITS.summary);
-    if (textResult && !textResult.ok) return textResult;
+    const newSummary = this.validateNullableText(input.summary, LIMITS.summary, "SUMMARY_TOO_LONG", this._summary);
+    if (!newSummary.ok) return newSummary;
 
-    const bodyResult = this.validateAndSetNullableText("body", input.body, LIMITS.body);
-    if (bodyResult && !bodyResult.ok) return bodyResult;
+    const newBody = this.validateNullableText(input.body, LIMITS.body, "BODY_TOO_LONG", this._body);
+    if (!newBody.ok) return newBody;
 
-    const introResult = this.validateAndSetNullableText(
-      "leaderIntroduction",
+    const newIntro = this.validateNullableText(
       input.leaderIntroduction,
-      LIMITS.leaderIntroduction
+      LIMITS.leaderIntroduction,
+      "LEADER_INTRODUCTION_TOO_LONG",
+      this._leaderIntroduction
     );
-    if (introResult && !introResult.ok) return introResult;
+    if (!newIntro.ok) return newIntro;
 
-    const planResult = this.validateAndSetNullableText("activityPlan", input.activityPlan, LIMITS.activityPlan);
-    if (planResult && !planResult.ok) return planResult;
+    const newPlan = this.validateNullableText(input.activityPlan, LIMITS.activityPlan, "ACTIVITY_PLAN_TOO_LONG", this._activityPlan);
+    if (!newPlan.ok) return newPlan;
 
-    // その他のフィールド
-    if (input.coverImageUrl !== undefined) this._coverImageUrl = input.coverImageUrl;
+    let newCategory = this._category;
     if (input.category !== undefined) {
-      this._category = input.category !== null && isProjectCategory(input.category) ? input.category : null;
-    }
-    if (input.location !== undefined) this._location = input.location;
-    if (input.phase !== undefined) this._phase = input.phase;
-    if (input.snsLinks !== undefined) this._snsLinks = input.snsLinks;
-
-    // PUBLISHED 状態なら公開必須項目の維持を検証
-    if (this._publishStatus === PublishStatus.PUBLISHED) {
-      const missing = this.getMissingPublicationFields();
-      if (missing.length > 0) {
-        return err({ type: "PUBLISHED_REQUIREMENTS_NOT_MET", missingFields: missing });
+      if (input.category === null) {
+        newCategory = null;
+      } else if (isProjectCategory(input.category)) {
+        newCategory = input.category;
+      } else {
+        return err({ type: "INVALID_CATEGORY", value: input.category });
       }
     }
 
+    const newCoverImageUrl = input.coverImageUrl !== undefined ? input.coverImageUrl : this._coverImageUrl;
+    const newLocation = input.location !== undefined ? input.location : this._location;
+    const newPhase = input.phase !== undefined ? input.phase : this._phase;
+    const newSnsLinks = input.snsLinks !== undefined ? input.snsLinks : this._snsLinks;
+
+    // PUBLISHED 状態なら公開必須項目の維持を検証
+    if (this._publishStatus === PublishStatus.PUBLISHED) {
+      const missing = getMissingPublicationFieldsFrom({
+        coverImageUrl: newCoverImageUrl,
+        category: newCategory,
+        location: newLocation,
+        summary: newSummary.value,
+        body: newBody.value,
+        leaderIntroduction: newIntro.value,
+      });
+      if (missing.length > 0) {
+        return err({ type: "PUBLICATION_REQUIREMENTS_NOT_MET", missingFields: missing });
+      }
+    }
+
+    // ---- Phase 2: Apply all mutations (all validation passed) ----
+
+    this._title = newTitle;
+    this._summary = newSummary.value;
+    this._body = newBody.value;
+    this._leaderIntroduction = newIntro.value;
+    this._activityPlan = newPlan.value;
+    this._coverImageUrl = newCoverImageUrl;
+    this._category = newCategory;
+    this._location = newLocation;
+    this._phase = newPhase;
+    this._snsLinks = newSnsLinks;
     this._updatedAt = new Date();
     return ok(undefined);
   }
@@ -299,40 +336,53 @@ export class Project {
 
   // ---- Private helpers ----
 
-  private getMissingPublicationFields(): string[] {
-    const missing: string[] = [];
-    if (!this._coverImageUrl) missing.push("coverImageUrl");
-    if (!this._category) missing.push("category");
-    if (!this._location) missing.push("location");
-    if (!this._summary) missing.push("summary");
-    if (!this._body) missing.push("body");
-    if (!this._leaderIntroduction) missing.push("leaderIntroduction");
-    return missing;
+  private getMissingPublicationFields(): PublicationRequiredField[] {
+    return getMissingPublicationFieldsFrom({
+      coverImageUrl: this._coverImageUrl,
+      category: this._category,
+      location: this._location,
+      summary: this._summary,
+      body: this._body,
+      leaderIntroduction: this._leaderIntroduction,
+    });
   }
 
-  private validateAndSetNullableText(
-    field: "summary" | "body" | "leaderIntroduction" | "activityPlan",
+  /**
+   * null 許容テキストフィールドのバリデーション（mutation なし）。
+   * undefined → 現在値を返す、null → null、string → trim + 長さチェック。
+   */
+  private validateNullableText(
     value: string | null | undefined,
-    maxLength: number
-  ): Result<void, ProjectUpdateError> | null {
-    if (value === undefined) return null;
-    if (value === null) {
-      this[`_${field}` as keyof this] = null as never;
-      return null;
-    }
+    maxLength: number,
+    errorType: ProjectUpdateError["type"],
+    currentValue: string | null
+  ): Result<string | null, ProjectUpdateError> {
+    if (value === undefined) return ok(currentValue);
+    if (value === null) return ok(null);
     const trimmed = value.trim();
     if (trimmed.length > maxLength) {
-      const errorType = {
-        summary: "SUMMARY_TOO_LONG",
-        body: "BODY_TOO_LONG",
-        leaderIntroduction: "LEADER_INTRODUCTION_TOO_LONG",
-        activityPlan: "ACTIVITY_PLAN_TOO_LONG",
-      }[field] as ProjectUpdateError["type"];
       return err({ type: errorType, maxLength, actualLength: trimmed.length } as ProjectUpdateError);
     }
-    this[`_${field}` as keyof this] = (trimmed.length === 0 ? null : trimmed) as never;
-    return null;
+    return ok(trimmed.length === 0 ? null : trimmed);
   }
+}
+
+function getMissingPublicationFieldsFrom(fields: {
+  coverImageUrl: string | null;
+  category: unknown;
+  location: unknown;
+  summary: string | null;
+  body: string | null;
+  leaderIntroduction: string | null;
+}): PublicationRequiredField[] {
+  const missing: PublicationRequiredField[] = [];
+  if (!fields.coverImageUrl) missing.push("coverImageUrl");
+  if (!fields.category) missing.push("category");
+  if (!fields.location) missing.push("location");
+  if (!fields.summary) missing.push("summary");
+  if (!fields.body) missing.push("body");
+  if (!fields.leaderIntroduction) missing.push("leaderIntroduction");
+  return missing;
 }
 
 function createEmptySnsLinks(): SnsLinks {
