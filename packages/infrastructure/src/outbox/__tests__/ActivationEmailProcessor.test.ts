@@ -14,7 +14,7 @@ describe("ActivationEmailProcessor", () => {
   const baseUrl = "https://physifun.com";
 
   const makeMessage = (
-    overrides?: Partial<ActivationEmailPayload>,
+    overrides?: Partial<ActivationEmailPayload>
   ): OutboxMessage<ActivationEmailPayload> => ({
     id: "msg-1",
     type: ACTIVATION_EMAIL_TYPE,
@@ -65,9 +65,7 @@ describe("ActivationEmailProcessor", () => {
   });
 
   it("本文に displayName を含む", async () => {
-    await processor.process(
-      makeMessage({ displayName: "山田太郎" }),
-    );
+    await processor.process(makeMessage({ displayName: "山田太郎" }));
 
     const sent = mailSender.sentMessages[0];
     expect(sent.text).toContain("山田太郎");

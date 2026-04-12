@@ -9,6 +9,9 @@ import type { OutboxProcessor } from "./types";
  *
  * 失敗時は attempts をインクリメントし、exponential backoff で nextRetryAt を設定する。
  */
+/** リトライ回数の上限。超過したら dead-letter 扱い */
+const DEFAULT_MAX_ATTEMPTS = 10;
+
 export class OutboxWorker {
   private readonly processors: Map<string, OutboxProcessor>;
 
@@ -18,14 +21,22 @@ export class OutboxWorker {
   /** backoff の基底秒数 (デフォルト 30 秒) */
   private readonly baseBackoffSeconds: number;
 
+  /** リトライ回数の上限 */
+  private readonly maxAttempts: number;
+
   constructor(
     private readonly prisma: PrismaClient,
     processors: OutboxProcessor[],
-    options?: { batchSize?: number; baseBackoffSeconds?: number },
+    options?: {
+      batchSize?: number;
+      baseBackoffSeconds?: number;
+      maxAttempts?: number;
+    }
   ) {
     this.processors = new Map(processors.map((p) => [p.type, p]));
     this.batchSize = options?.batchSize ?? 20;
     this.baseBackoffSeconds = options?.baseBackoffSeconds ?? 30;
+    this.maxAttempts = options?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
   }
 
   /**
@@ -38,15 +49,14 @@ export class OutboxWorker {
   async tick(): Promise<void> {
     const now = new Date();
 
-    const messages =
-      await this.prisma.leaderApplicationOutboxMessage.findMany({
-        where: {
-          sentAt: null,
-          OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
-        },
-        orderBy: { createdAt: "asc" },
-        take: this.batchSize,
-      });
+    const messages = await this.prisma.leaderApplicationOutboxMessage.findMany({
+      where: {
+        sentAt: null,
+        OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
+      },
+      orderBy: { createdAt: "asc" },
+      take: this.batchSize,
+    });
 
     for (const msg of messages) {
       const processor = this.processors.get(msg.type);
@@ -85,9 +95,10 @@ export class OutboxWorker {
       } else {
         // 失敗: attempts インクリメント + backoff 計算
         const newAttempts = msg.attempts + 1;
-        const nextRetryAt = result.error.retriable
-          ? this.calculateNextRetry(newAttempts)
-          : null; // retriable でない場合はリトライしない (dead-letter 扱い)
+        const nextRetryAt =
+          result.error.retriable && newAttempts < this.maxAttempts
+            ? this.calculateNextRetry(newAttempts)
+            : null; // retriable でない or 上限超過 → dead-letter 扱い
 
         await this.prisma.leaderApplicationOutboxMessage.update({
           where: { id: msg.id },
@@ -106,8 +117,7 @@ export class OutboxWorker {
    * delay = baseBackoffSeconds * 2^(attempts - 1) 秒
    */
   private calculateNextRetry(attempts: number): Date {
-    const delaySeconds =
-      this.baseBackoffSeconds * Math.pow(2, attempts - 1);
+    const delaySeconds = this.baseBackoffSeconds * Math.pow(2, attempts - 1);
     return new Date(Date.now() + delaySeconds * 1000);
   }
 }
