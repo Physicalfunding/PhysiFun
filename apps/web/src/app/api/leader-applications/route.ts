@@ -77,7 +77,8 @@ export async function POST(request: NextRequest) {
     }
 
     return successResponse(result.value, 201);
-  } catch {
+  } catch (e) {
+    console.error("[api] leader-applications POST error:", e);
     return internalErrorResponse();
   }
 }

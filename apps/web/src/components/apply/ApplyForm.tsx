@@ -6,22 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/components/common/Toast";
 import { PREFECTURES } from "@/lib/prefectures";
-
-// ==================== カテゴリマスタ ====================
-
-/**
- * プロジェクトカテゴリの選択肢
- * ドメイン層の CATEGORY_MASTER と同期を保つこと
- */
-const CATEGORY_MASTER = [
-  { value: "KOMINKA", label: "古民家再生" },
-  { value: "RICE_FARMING", label: "米作り" },
-  { value: "FARMING", label: "その他農業" },
-  { value: "DIY", label: "DIY・ものづくり" },
-  { value: "EVENT", label: "地域イベント" },
-  { value: "COMMUNITY", label: "コミュニティ運営" },
-  { value: "OTHER", label: "その他" },
-] as const;
+import { CATEGORY_MASTER, PROJECT_DRAFT_LIMITS } from "@physifun/domain";
 
 // ==================== フロントエンド用バリデーションスキーマ ====================
 
@@ -34,22 +19,34 @@ const applyFormSchema = z.object({
   projectTitle: z
     .string()
     .min(1, "プロジェクトタイトルを入力してください")
-    .max(100, "プロジェクトタイトルは 100 文字以内です"),
+    .max(
+      PROJECT_DRAFT_LIMITS.projectTitle,
+      `プロジェクトタイトルは ${PROJECT_DRAFT_LIMITS.projectTitle} 文字以内です`
+    ),
   projectSummary: z
     .string()
     .min(1, "プロジェクト概要を入力してください")
-    .max(300, "プロジェクト概要は 300 文字以内です"),
+    .max(
+      PROJECT_DRAFT_LIMITS.projectSummary,
+      `プロジェクト概要は ${PROJECT_DRAFT_LIMITS.projectSummary} 文字以内です`
+    ),
   projectStory: z
     .string()
     .min(1, "プロジェクトストーリーを入力してください")
-    .max(5000, "プロジェクトストーリーは 5000 文字以内です"),
+    .max(
+      PROJECT_DRAFT_LIMITS.projectStory,
+      `プロジェクトストーリーは ${PROJECT_DRAFT_LIMITS.projectStory} 文字以内です`
+    ),
   projectCategory: z.string().min(1, "プロジェクトカテゴリを選択してください"),
   prefectureCode: z.string().min(1, "都道府県を選択してください"),
   municipality: z.string().max(50, "市区町村は 50 文字以内です").optional(),
   plannedActivities: z
     .string()
     .min(1, "活動予定を入力してください")
-    .max(1000, "活動予定は 1000 文字以内です"),
+    .max(
+      PROJECT_DRAFT_LIMITS.plannedActivities,
+      `活動予定は ${PROJECT_DRAFT_LIMITS.plannedActivities} 文字以内です`
+    ),
   snsLinks: z
     .object({
       x: z.string().max(500, "URL は 500 文字以内です").optional(),
@@ -225,7 +222,9 @@ export function ApplyForm() {
               className={inputClassName(!!errors.projectSummary)}
               aria-invalid={errors.projectSummary ? "true" : "false"}
             />
-            <p className="mt-1 text-xs text-gray-500">最大 300 文字</p>
+            <p className="mt-1 text-xs text-gray-500">
+              最大 {PROJECT_DRAFT_LIMITS.projectSummary} 文字
+            </p>
             {errors.projectSummary && (
               <p className="mt-1 text-sm text-red-600">{errors.projectSummary.message}</p>
             )}
@@ -243,7 +242,9 @@ export function ApplyForm() {
               className={inputClassName(!!errors.projectStory)}
               aria-invalid={errors.projectStory ? "true" : "false"}
             />
-            <p className="mt-1 text-xs text-gray-500">最大 5000 文字</p>
+            <p className="mt-1 text-xs text-gray-500">
+              最大 {PROJECT_DRAFT_LIMITS.projectStory} 文字
+            </p>
             {errors.projectStory && (
               <p className="mt-1 text-sm text-red-600">{errors.projectStory.message}</p>
             )}
@@ -330,7 +331,9 @@ export function ApplyForm() {
               className={inputClassName(!!errors.plannedActivities)}
               aria-invalid={errors.plannedActivities ? "true" : "false"}
             />
-            <p className="mt-1 text-xs text-gray-500">最大 1000 文字</p>
+            <p className="mt-1 text-xs text-gray-500">
+              最大 {PROJECT_DRAFT_LIMITS.plannedActivities} 文字
+            </p>
             {errors.plannedActivities && (
               <p className="mt-1 text-sm text-red-600">{errors.plannedActivities.message}</p>
             )}
