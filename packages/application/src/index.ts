@@ -30,6 +30,20 @@ export type {
   PasswordHasher,
 } from "./account/ports/ActivateAccountPort";
 
+// ApproveLeaderApplicationUseCase
+export {
+  ApproveLeaderApplicationUseCase,
+  type ApproveLeaderApplicationInput,
+  type ApproveLeaderApplicationOutput,
+  type ApproveLeaderApplicationError,
+} from "./leader-application/ApproveLeaderApplicationUseCase";
+
+// ApproveLeaderApplicationPort
+export type {
+  ApproveLeaderApplicationPort,
+  AccountForApproval,
+} from "./leader-application/ports/ApproveLeaderApplicationPort";
+
 // CleanupExpiredPendingAccountsUseCase
 export {
   CleanupExpiredPendingAccountsUseCase,
