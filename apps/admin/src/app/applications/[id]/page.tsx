@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 // NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
+import { ReviewActions } from "@/components/ReviewActions";
 import { getCategoryLabel } from "@/lib/category";
 import { getPrefectureName } from "@/lib/prefecture";
 
@@ -162,31 +163,8 @@ export default async function ApplicationDetailPage({
         </section>
       )}
 
-      {/* アクションエリア (PENDING のみ) — #70 で有効化 */}
-      {detail.status === "PENDING" && (
-        <section className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold">審査アクション</h2>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              disabled
-              className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white opacity-50"
-            >
-              承認する
-            </button>
-            <button
-              type="button"
-              disabled
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white opacity-50"
-            >
-              却下する
-            </button>
-          </div>
-          <p className="mt-2 text-xs text-gray-400">
-            承認/却下機能は次のタスク (#70) で有効化されます
-          </p>
-        </section>
-      )}
+      {/* 審査アクション (PENDING のみ) */}
+      {detail.status === "PENDING" && <ReviewActions applicationId={detail.id} />}
     </div>
   );
 }
