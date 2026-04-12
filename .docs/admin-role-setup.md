@@ -69,9 +69,9 @@ Phase 1 では ADMIN ロール付与 UI は存在しない。
 
 ```bash
 # bun の場合
-echo -n 'ここに強固なパスワード' | npx bcryptjs hash
+bun -e "import bcrypt from 'bcryptjs'; console.log(await bcrypt.hash('ここに強固なパスワード', 10));"
 
-# または Node.js スクリプト
+# または Node.js の場合
 node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('ここに強固なパスワード', 10, (err, hash) => console.log(hash));"
 ```
 
@@ -139,14 +139,18 @@ INSERT INTO accounts (
 
 方法 A で作成したアカウント、または既に存在するアカウントに ADMIN ロールを追加する場合。
 
+> **前提**: 方法 A 経由でアカウント作成済みの場合、`SUPPORTER` ロールは自動付与されている。手動 INSERT（方法 B）でも `SUPPORTER` を含めて作成しているため、以下の UPDATE では `ADMIN` の追加のみ行う。
+
 ```sql
 -- 既存アカウントに ADMIN ロールを追加（重複付与を防止）
 UPDATE accounts
 SET roles = array_append(roles, 'ADMIN'::"Role"),
     "updatedAt" = NOW()
 WHERE email = 'admin@example.com'
-  AND NOT ('ADMIN' = ANY(roles));
+  AND NOT ('ADMIN'::"Role" = ANY(roles));
 ```
+
+> **注意**: 生 SQL では `updatedAt` は Prisma ORM のように自動更新されないため、必ず `NOW()` を明示すること。
 
 ---
 
@@ -158,7 +162,7 @@ ADMIN ロールが正しく付与されたことを確認する。
 -- ADMIN ロール保持者の一覧
 SELECT id, email, "displayName", roles, status
 FROM accounts
-WHERE 'ADMIN' = ANY(roles);
+WHERE 'ADMIN'::"Role" = ANY(roles);
 ```
 
 期待される結果:
@@ -190,6 +194,7 @@ WHERE email = 'admin@example.com';
 - **パスワード強度**: 最低 12 文字以上、英大小文字・数字・記号を含む
 - **アクセス制限**: 本番環境の Supabase Studio へのアクセスは限定メンバーのみに許可する
 - **動作確認**: ロール変更後は `apps/admin`（管理画面）にログインして動作確認する
+- **パスワードの共有**: 生成したパスワードはパスワードマネージャーを通じて共有すること（平文メール禁止）
 - **本番操作時の注意**: SQL 実行前に必ず `WHERE` 句の対象を確認する。`BEGIN` / `COMMIT` でトランザクションを使うことを推奨する
 
 ```sql
@@ -200,7 +205,7 @@ UPDATE accounts
 SET roles = array_append(roles, 'ADMIN'::"Role"),
     "updatedAt" = NOW()
 WHERE email = 'admin@example.com'
-  AND NOT ('ADMIN' = ANY(roles));
+  AND NOT ('ADMIN'::"Role" = ANY(roles));
 
 -- 結果を確認
 SELECT id, email, "displayName", roles, status
