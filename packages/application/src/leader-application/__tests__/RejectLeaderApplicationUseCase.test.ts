@@ -1,13 +1,76 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
 import {
+  LeaderApplication,
+  LeaderApplicationId,
+  LeaderApplicationStatus,
+  ProjectDraft,
+  ProjectLocation,
+  SnsLinks,
+  AccountId,
+} from "@physifun/domain";
+import {
   RejectLeaderApplicationUseCase,
   REJECTION_COOLDOWN_MS,
   type RejectLeaderApplicationInput,
 } from "../RejectLeaderApplicationUseCase";
-import type {
-  RejectLeaderApplicationPort,
-  LeaderApplicationForReject,
-} from "../ports/RejectLeaderApplicationPort";
+import type { RejectLeaderApplicationPort } from "../ports/RejectLeaderApplicationPort";
+
+// ==================== テストヘルパー ====================
+
+const VALID_APP_ID = "550e8400-e29b-41d4-a716-446655440000";
+const VALID_ACCOUNT_ID = "660e8400-e29b-41d4-a716-446655440000";
+
+/**
+ * テスト用の最小限な ProjectDraft を生成する
+ */
+function createTestProjectDraft(): ProjectDraft {
+  const location = ProjectLocation.create({ prefectureCode: "13" });
+  if (!location.ok) throw new Error("Failed to create test ProjectLocation");
+
+  const snsLinks = SnsLinks.create({});
+  if (!snsLinks.ok) throw new Error("Failed to create test SnsLinks");
+
+  const draft = ProjectDraft.create({
+    projectTitle: "テストプロジェクト",
+    projectSummary: "テストプロジェクトの概要",
+    projectStory: "テストプロジェクトのストーリー",
+    projectCategory: "COMMUNITY",
+    location: location.value,
+    plannedActivities: "テスト活動内容",
+    snsLinks: snsLinks.value,
+  });
+  if (!draft.ok) throw new Error("Failed to create test ProjectDraft");
+
+  return draft.value;
+}
+
+/**
+ * PENDING 状態のテスト用 LeaderApplication エンティティを生成する
+ */
+function pendingApplication(
+  overrides?: Partial<{
+    id: string;
+    accountId: string;
+    status: LeaderApplicationStatus;
+  }>
+): LeaderApplication {
+  const appId = LeaderApplicationId.from(overrides?.id ?? VALID_APP_ID);
+  if (!appId.ok) throw new Error("Failed to create test LeaderApplicationId");
+
+  const accountId = AccountId.from(overrides?.accountId ?? VALID_ACCOUNT_ID);
+  if (!accountId.ok) throw new Error("Failed to create test AccountId");
+
+  return LeaderApplication.reconstruct({
+    id: appId.value,
+    accountId: accountId.value,
+    status: overrides?.status ?? LeaderApplicationStatus.PENDING,
+    projectDraft: createTestProjectDraft(),
+    submittedAt: new Date("2026-01-01T00:00:00Z"),
+    reviewedAt:
+      overrides?.status && overrides.status !== LeaderApplicationStatus.PENDING ? new Date() : null,
+    reviewerNote: overrides?.status === LeaderApplicationStatus.REJECTED ? "以前の却下理由" : null,
+  });
+}
 
 // ==================== インメモリ実装 ====================
 
@@ -16,13 +79,11 @@ import type {
  */
 class InMemoryRejectLeaderApplicationPort implements RejectLeaderApplicationPort {
   /** 検索用の応募データ */
-  applications: LeaderApplicationForReject[] = [];
+  applications: LeaderApplication[] = [];
 
-  /** executeRejection で保存されたパラメータ */
+  /** executeRejectionInTransaction で保存されたパラメータ */
   rejectionParams: Array<{
-    applicationId: string;
-    reviewerNote: string;
-    reviewedAt: Date;
+    application: LeaderApplication;
     outboxMessage: {
       id: string;
       type: string;
@@ -30,14 +91,12 @@ class InMemoryRejectLeaderApplicationPort implements RejectLeaderApplicationPort
     };
   }> = [];
 
-  async findApplicationById(id: string): Promise<LeaderApplicationForReject | null> {
-    return this.applications.find((a) => a.id === id) ?? null;
+  async findApplicationById(id: string): Promise<LeaderApplication | null> {
+    return this.applications.find((a) => a.id.toString() === id) ?? null;
   }
 
-  async executeRejection(params: {
-    applicationId: string;
-    reviewerNote: string;
-    reviewedAt: Date;
+  async executeRejectionInTransaction(params: {
+    application: LeaderApplication;
     outboxMessage: {
       id: string;
       type: string;
@@ -49,24 +108,6 @@ class InMemoryRejectLeaderApplicationPort implements RejectLeaderApplicationPort
 }
 
 // ==================== テストデータ ====================
-
-const VALID_APP_ID = "550e8400-e29b-41d4-a716-446655440000";
-const VALID_ACCOUNT_ID = "660e8400-e29b-41d4-a716-446655440000";
-
-/**
- * PENDING 状態のテスト用応募データを生成する
- */
-function pendingApplication(
-  overrides?: Partial<LeaderApplicationForReject>
-): LeaderApplicationForReject {
-  return {
-    id: VALID_APP_ID,
-    accountId: VALID_ACCOUNT_ID,
-    status: "PENDING",
-    reviewedAt: null,
-    ...overrides,
-  };
-}
 
 /**
  * 有効な入力データを生成する
@@ -104,12 +145,13 @@ describe("RejectLeaderApplicationUseCase", () => {
 
     expect(result.value.applicationId).toBe(VALID_APP_ID);
 
-    // executeRejection が呼ばれたことを確認
+    // executeRejectionInTransaction が呼ばれたことを確認
     expect(port.rejectionParams).toHaveLength(1);
     const params = port.rejectionParams[0];
-    expect(params.applicationId).toBe(VALID_APP_ID);
-    expect(params.reviewerNote).toBe("提出された企画書の内容が不十分です。再度ご検討ください。");
-    expect(params.reviewedAt).toBeInstanceOf(Date);
+    expect(params.application.id.toString()).toBe(VALID_APP_ID);
+    expect(params.application.reviewerNote).toBe(
+      "提出された企画書の内容が不十分です。再度ご検討ください。"
+    );
   });
 
   it("Outbox メッセージの type が rejected.notify_applicant である", async () => {
@@ -169,7 +211,7 @@ describe("RejectLeaderApplicationUseCase", () => {
   // ---- NOT_PENDING ----
 
   it("APPROVED 状態の応募を却下しようとすると NOT_PENDING エラー", async () => {
-    port.applications.push(pendingApplication({ status: "APPROVED" }));
+    port.applications.push(pendingApplication({ status: LeaderApplicationStatus.APPROVED }));
 
     const result = await useCase.execute(validInput());
 
@@ -182,7 +224,7 @@ describe("RejectLeaderApplicationUseCase", () => {
   });
 
   it("REJECTED 状態の応募を却下しようとすると NOT_PENDING エラー", async () => {
-    port.applications.push(pendingApplication({ status: "REJECTED", reviewedAt: new Date() }));
+    port.applications.push(pendingApplication({ status: LeaderApplicationStatus.REJECTED }));
 
     const result = await useCase.execute(validInput());
 

@@ -48,7 +48,4 @@ export {
 } from "./leader-application/RejectLeaderApplicationUseCase";
 
 // RejectLeaderApplicationPort
-export type {
-  RejectLeaderApplicationPort,
-  LeaderApplicationForReject,
-} from "./leader-application/ports/RejectLeaderApplicationPort";
+export type { RejectLeaderApplicationPort } from "./leader-application/ports/RejectLeaderApplicationPort";

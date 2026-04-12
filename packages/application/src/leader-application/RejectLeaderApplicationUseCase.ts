@@ -1,10 +1,5 @@
 import { randomUUID } from "node:crypto";
-import {
-  type Result,
-  err,
-  ok,
-  LEADER_APPLICATION_REVIEWER_NOTE_MAX_LENGTH,
-} from "@physifun/domain";
+import { type Result, err, ok } from "@physifun/domain";
 import type { RejectLeaderApplicationPort } from "./ports/RejectLeaderApplicationPort";
 
 // ==================== 定数 ====================
@@ -16,6 +11,7 @@ import type { RejectLeaderApplicationPort } from "./ports/RejectLeaderApplicatio
  * チェック自体は SubmitLeaderApplicationUseCase の責務だが、
  * 定数はここで一元管理する。
  */
+// TODO: #XX クールダウン定数はドメイン層に移動する
 export const REJECTION_COOLDOWN_MS = 72 * 60 * 60 * 1000;
 
 // ==================== 入力型 ====================
@@ -55,11 +51,10 @@ export type RejectLeaderApplicationError =
 /**
  * リーダー応募を却下するユースケース
  *
- * 1. 入力バリデーション（applicationId / reviewerNote）
+ * 1. 入力バリデーション（applicationId）
  * 2. 応募の存在確認
- * 3. PENDING 状態チェック（冪等性確保）
- * 4. reviewerNote バリデーション（ドメイン定数を使用）
- * 5. Outbox メッセージ作成 + 却下処理をトランザクションで実行
+ * 3. ドメインエンティティの reject() で状態遷移 + バリデーション
+ * 4. Outbox メッセージ作成 + 却下処理をトランザクションで実行
  */
 export class RejectLeaderApplicationUseCase {
   constructor(private readonly port: RejectLeaderApplicationPort) {}
@@ -67,34 +62,13 @@ export class RejectLeaderApplicationUseCase {
   async execute(
     input: RejectLeaderApplicationInput
   ): Promise<Result<RejectLeaderApplicationOutput, RejectLeaderApplicationError>> {
-    // 1. 入力バリデーション
-    const { applicationId, reviewerNote } = input;
+    // 1. 入力バリデーション（applicationId はユースケース層の入力なのでここでチェック）
+    const { applicationId } = input;
 
     if (!applicationId || applicationId.trim().length === 0) {
       return err({
         type: "VALIDATION_ERROR",
         issues: [{ path: "applicationId", message: "応募 ID は必須です" }],
-      });
-    }
-
-    if (!reviewerNote || reviewerNote.trim().length === 0) {
-      return err({
-        type: "VALIDATION_ERROR",
-        issues: [{ path: "reviewerNote", message: "却下理由は必須です" }],
-      });
-    }
-
-    const trimmedNote = reviewerNote.trim();
-
-    if (trimmedNote.length > LEADER_APPLICATION_REVIEWER_NOTE_MAX_LENGTH) {
-      return err({
-        type: "VALIDATION_ERROR",
-        issues: [
-          {
-            path: "reviewerNote",
-            message: `却下理由は ${LEADER_APPLICATION_REVIEWER_NOTE_MAX_LENGTH} 文字以内です`,
-          },
-        ],
       });
     }
 
@@ -104,33 +78,50 @@ export class RejectLeaderApplicationUseCase {
       return err({ type: "APPLICATION_NOT_FOUND" });
     }
 
-    // 3. PENDING 状態チェック（冪等性確保）
-    if (application.status !== "PENDING") {
-      return err({
-        type: "NOT_PENDING",
-        currentStatus: application.status,
-      });
+    // 3. ドメインエンティティの reject() で状態遷移 + バリデーション
+    const rejectResult = application.reject({ reviewerNote: input.reviewerNote });
+    if (!rejectResult.ok) {
+      const domainError = rejectResult.error;
+      switch (domainError.type) {
+        case "CANNOT_REJECT_NON_PENDING":
+          return err({
+            type: "NOT_PENDING",
+            currentStatus: domainError.currentStatus,
+          });
+        case "REVIEWER_NOTE_REQUIRED":
+          return err({
+            type: "VALIDATION_ERROR",
+            issues: [{ path: "reviewerNote", message: "却下理由は必須です" }],
+          });
+        case "REVIEWER_NOTE_TOO_LONG":
+          return err({
+            type: "VALIDATION_ERROR",
+            issues: [
+              {
+                path: "reviewerNote",
+                message: `却下理由は ${domainError.maxLength} 文字以内です`,
+              },
+            ],
+          });
+      }
     }
 
     // 4. 却下実行（Outbox メッセージ作成 + 却下処理をトランザクションで実行）
-    const now = new Date();
     const outboxMessageId = randomUUID();
 
-    await this.port.executeRejection({
-      applicationId,
-      reviewerNote: trimmedNote,
-      reviewedAt: now,
+    await this.port.executeRejectionInTransaction({
+      application,
       outboxMessage: {
         id: outboxMessageId,
         type: "rejected.notify_applicant",
         payload: {
-          applicationId,
-          accountId: application.accountId,
-          reviewerNote: trimmedNote,
+          applicationId: application.id.toString(),
+          accountId: application.accountId.toString(),
+          reviewerNote: application.reviewerNote,
         },
       },
     });
 
-    return ok({ applicationId });
+    return ok({ applicationId: application.id.toString() });
   }
 }
