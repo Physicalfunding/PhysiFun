@@ -194,8 +194,7 @@ describe("SubmitLeaderApplicationUseCase", () => {
 
   it("無効なプロジェクトカテゴリの場合はバリデーションエラー", async () => {
     const result = await useCase.execute(
-      // @ts-expect-error - テスト用に無効な値を渡す
-      validInput({ projectCategory: "INVALID_CATEGORY" })
+      validInput({ projectCategory: "INVALID_CATEGORY" as "KOMINKA" })
     );
 
     expect(result.ok).toBe(false);

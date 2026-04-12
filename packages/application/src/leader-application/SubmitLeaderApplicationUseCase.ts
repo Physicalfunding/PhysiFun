@@ -1,27 +1,26 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { type Result, err, ok } from "@physifun/domain";
+import {
+  type Result,
+  err,
+  ok,
+  CATEGORY_MASTER,
+  PROJECT_DRAFT_LIMITS,
+  ProjectDraft,
+  type ProjectDraftError,
+  ProjectLocation,
+  type ProjectLocationError,
+  SnsLinks,
+  type SnsLinksError,
+} from "@physifun/domain";
 import { z } from "zod";
 import type { SubmitLeaderApplicationPort } from "./ports/SubmitLeaderApplicationPort";
 
 // ==================== 入力バリデーション ====================
 
 /**
- * 都道府県コードの正規表現 (JIS X 0401: "01"〜"47")
+ * ドメイン層の CATEGORY_MASTER から Zod enum 用の値配列を生成（Single Source of Truth）
  */
-const PREFECTURE_CODE_REGEX = /^(?:0[1-9]|[1-3][0-9]|4[0-7])$/;
-
-/**
- * 許可されるプロジェクトカテゴリ値
- */
-const PROJECT_CATEGORIES = [
-  "KOMINKA",
-  "RICE_FARMING",
-  "FARMING",
-  "DIY",
-  "EVENT",
-  "COMMUNITY",
-  "OTHER",
-] as const;
+const PROJECT_CATEGORY_VALUES = CATEGORY_MASTER.map((c) => c.value) as [string, ...string[]];
 
 /**
  * SNS リンクのスキーマ（各フィールド任意、最大 500 文字）
@@ -37,6 +36,8 @@ const snsLinksSchema = z
 
 /**
  * SubmitLeaderApplication の入力スキーマ (Zod)
+ *
+ * 文字数上限はドメイン層の PROJECT_DRAFT_LIMITS を参照し、Single Source of Truth を維持する。
  */
 export const submitLeaderApplicationInputSchema = z.object({
   email: z.string().email("有効なメールアドレスを入力してください"),
@@ -44,26 +45,38 @@ export const submitLeaderApplicationInputSchema = z.object({
   projectTitle: z
     .string()
     .min(1, "プロジェクトタイトルは必須です")
-    .max(100, "プロジェクトタイトルは 100 文字以内です"),
+    .max(
+      PROJECT_DRAFT_LIMITS.projectTitle,
+      `プロジェクトタイトルは ${PROJECT_DRAFT_LIMITS.projectTitle} 文字以内です`
+    ),
   projectSummary: z
     .string()
     .min(1, "プロジェクト概要は必須です")
-    .max(300, "プロジェクト概要は 300 文字以内です"),
+    .max(
+      PROJECT_DRAFT_LIMITS.projectSummary,
+      `プロジェクト概要は ${PROJECT_DRAFT_LIMITS.projectSummary} 文字以内です`
+    ),
   projectStory: z
     .string()
     .min(1, "プロジェクトストーリーは必須です")
-    .max(5000, "プロジェクトストーリーは 5000 文字以内です"),
-  projectCategory: z.enum(PROJECT_CATEGORIES, {
+    .max(
+      PROJECT_DRAFT_LIMITS.projectStory,
+      `プロジェクトストーリーは ${PROJECT_DRAFT_LIMITS.projectStory} 文字以内です`
+    ),
+  projectCategory: z.enum(PROJECT_CATEGORY_VALUES, {
     errorMap: () => ({ message: "無効なプロジェクトカテゴリです" }),
   }),
-  prefectureCode: z.string().regex(PREFECTURE_CODE_REGEX, {
+  prefectureCode: z.string().regex(/^(?:0[1-9]|[1-3][0-9]|4[0-7])$/, {
     message: "無効な都道府県コードです",
   }),
   municipality: z.string().max(50, "市区町村は 50 文字以内です").nullish(),
   plannedActivities: z
     .string()
     .min(1, "活動予定は必須です")
-    .max(1000, "活動予定は 1000 文字以内です"),
+    .max(
+      PROJECT_DRAFT_LIMITS.plannedActivities,
+      `活動予定は ${PROJECT_DRAFT_LIMITS.plannedActivities} 文字以内です`
+    ),
   snsLinks: snsLinksSchema,
   /** リクエスト元の IP アドレス（レートリミット用） */
   ipAddress: z.string().min(1, "IP アドレスは必須です"),
@@ -145,6 +158,33 @@ function generateActivationToken(): string {
   return randomBytes(32).toString("hex");
 }
 
+// ==================== ドメインエラー → VALIDATION_ERROR 変換 ====================
+
+type DomainVoError = ProjectLocationError | SnsLinksError | ProjectDraftError;
+
+/**
+ * ドメイン VO のエラーを VALIDATION_ERROR の issues 形式に変換する
+ */
+function mapDomainErrorToIssue(error: DomainVoError): { path: string; message: string } {
+  switch (error.type) {
+    case "INVALID_PREFECTURE_CODE":
+      return { path: "prefectureCode", message: "無効な都道府県コードです" };
+    case "MUNICIPALITY_TOO_LONG":
+      return { path: "municipality", message: `市区町村は ${error.maxLength} 文字以内です` };
+    case "SNS_URL_TOO_LONG":
+      return {
+        path: `snsLinks.${error.field}`,
+        message: `SNS URL は ${error.maxLength} 文字以内です`,
+      };
+    case "REQUIRED_TEXT_EMPTY":
+      return { path: error.field, message: `${error.field} は必須です` };
+    case "TEXT_TOO_LONG":
+      return { path: error.field, message: `${error.field} は ${error.maxLength} 文字以内です` };
+    case "INVALID_PROJECT_CATEGORY":
+      return { path: "projectCategory", message: "無効なプロジェクトカテゴリです" };
+  }
+}
+
 // ==================== ユースケース ====================
 
 /**
@@ -153,11 +193,12 @@ function generateActivationToken(): string {
  * 1. 入力バリデーション（Zod）
  * 2. IP レートリミットチェック（スタブ）
  * 3. CAPTCHA 検証（スタブ）
- * 4. 重複チェック（同一メールで PENDING / PENDING_EMAIL_CONFIRMATION のアカウントが存在しないか）
- * 5. Account 作成（PENDING_EMAIL_CONFIRMATION, roles: [SUPPORTER]）
- * 6. LeaderApplication 作成（PENDING）
- * 7. OutboxMessage 作成（ACTIVATION_EMAIL）
- * 8. 上記 5〜7 をトランザクションで実行
+ * 4. ドメイン VO 構築（ProjectLocation / SnsLinks / ProjectDraft）
+ * 5. 重複チェック（同一メールで PENDING / PENDING_EMAIL_CONFIRMATION のアカウントが存在しないか）
+ * 6. Account 作成（PENDING_EMAIL_CONFIRMATION, roles: [SUPPORTER]）
+ * 7. LeaderApplication 作成（PENDING）
+ * 8. OutboxMessage 作成（ACTIVATION_EMAIL）
+ * 9. 上記 6〜8 をトランザクションで実行
  */
 export class SubmitLeaderApplicationUseCase {
   constructor(private readonly port: SubmitLeaderApplicationPort) {}
@@ -165,7 +206,7 @@ export class SubmitLeaderApplicationUseCase {
   async execute(
     input: unknown
   ): Promise<Result<SubmitLeaderApplicationOutput, SubmitLeaderApplicationError>> {
-    // 1. 入力バリデーション
+    // 1. 入力バリデーション（Zod: 基本的な型・形式チェック）
     const parseResult = submitLeaderApplicationInputSchema.safeParse(input);
     if (!parseResult.success) {
       return err({
@@ -190,7 +231,52 @@ export class SubmitLeaderApplicationUseCase {
       return err({ type: "CAPTCHA_VERIFICATION_FAILED" });
     }
 
-    // 4. 重複チェック
+    // 4. ドメイン VO 構築（ドメイン層のバリデーションを通す）
+    const locationResult = ProjectLocation.create({
+      prefectureCode: validated.prefectureCode,
+      municipality: validated.municipality ?? null,
+    });
+    if (!locationResult.ok) {
+      return err({
+        type: "VALIDATION_ERROR",
+        issues: [mapDomainErrorToIssue(locationResult.error)],
+      });
+    }
+
+    const snsLinksResult = SnsLinks.create({
+      x: validated.snsLinks?.x ?? null,
+      instagram: validated.snsLinks?.instagram ?? null,
+      facebook: validated.snsLinks?.facebook ?? null,
+      website: validated.snsLinks?.website ?? null,
+    });
+    if (!snsLinksResult.ok) {
+      return err({
+        type: "VALIDATION_ERROR",
+        issues: [mapDomainErrorToIssue(snsLinksResult.error)],
+      });
+    }
+
+    const draftResult = ProjectDraft.create({
+      projectTitle: validated.projectTitle,
+      projectSummary: validated.projectSummary,
+      projectStory: validated.projectStory,
+      projectCategory: validated.projectCategory,
+      location: locationResult.value,
+      plannedActivities: validated.plannedActivities,
+      snsLinks: snsLinksResult.value,
+    });
+    if (!draftResult.ok) {
+      return err({
+        type: "VALIDATION_ERROR",
+        issues: [mapDomainErrorToIssue(draftResult.error)],
+      });
+    }
+
+    const draft = draftResult.value;
+    const location = locationResult.value;
+    const snsLinks = snsLinksResult.value;
+
+    // 5. 重複チェック
     const existingAccount = await this.port.findAccountByEmail(validated.email);
     if (
       existingAccount &&
@@ -203,31 +289,13 @@ export class SubmitLeaderApplicationUseCase {
       });
     }
 
-    // 5〜8. ID 生成 → トランザクション実行
+    // 6〜9. ID 生成 → トランザクション実行
     const accountId = randomUUID();
     const applicationId = randomUUID();
     const outboxMessageId = randomUUID();
     const activationToken = generateActivationToken();
     const now = new Date();
     const activationTokenExp = new Date(now.getTime() + ACTIVATION_TOKEN_EXPIRY_MS);
-
-    // SNS リンクの正規化
-    const snsLinksPayload = validated.snsLinks
-      ? {
-          x: validated.snsLinks.x?.trim() || null,
-          instagram: validated.snsLinks.instagram?.trim() || null,
-          facebook: validated.snsLinks.facebook?.trim() || null,
-          website: validated.snsLinks.website?.trim() || null,
-        }
-      : null;
-
-    // SNS リンクが全部 null なら null にする
-    const hasSnsLink =
-      snsLinksPayload &&
-      (snsLinksPayload.x ||
-        snsLinksPayload.instagram ||
-        snsLinksPayload.facebook ||
-        snsLinksPayload.website);
 
     await this.port.executeInTransaction({
       account: {
@@ -243,14 +311,21 @@ export class SubmitLeaderApplicationUseCase {
         id: applicationId,
         accountId,
         status: "PENDING",
-        projectTitle: validated.projectTitle.trim(),
-        projectSummary: validated.projectSummary.trim(),
-        projectStory: validated.projectStory.trim(),
-        projectCategory: validated.projectCategory,
-        prefectureCode: validated.prefectureCode,
-        municipality: validated.municipality?.trim() || null,
-        plannedActivities: validated.plannedActivities.trim(),
-        snsLinks: hasSnsLink ? snsLinksPayload : null,
+        projectTitle: draft.projectTitle,
+        projectSummary: draft.projectSummary,
+        projectStory: draft.projectStory,
+        projectCategory: draft.projectCategory,
+        prefectureCode: location.prefectureCode,
+        municipality: location.municipality,
+        plannedActivities: draft.plannedActivities,
+        snsLinks: snsLinks.isEmpty()
+          ? null
+          : {
+              x: snsLinks.x,
+              instagram: snsLinks.instagram,
+              facebook: snsLinks.facebook,
+              website: snsLinks.website,
+            },
         submittedAt: now,
       },
       outboxMessage: {
