@@ -17,3 +17,15 @@ export type {
   CreateLeaderApplicationParams,
   CreateOutboxMessageParams,
 } from "./leader-application/ports/SubmitLeaderApplicationPort";
+
+// ActivateAccountUseCase
+export {
+  ActivateAccountUseCase,
+  type ActivateAccountError,
+  type ActivateAccountResult,
+} from "./account/ActivateAccountUseCase";
+export type {
+  ActivateAccountPort,
+  AccountForActivation,
+  PasswordHasher,
+} from "./account/ports/ActivateAccountPort";
