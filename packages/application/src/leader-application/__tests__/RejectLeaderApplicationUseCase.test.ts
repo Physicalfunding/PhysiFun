@@ -108,9 +108,7 @@ describe("RejectLeaderApplicationUseCase", () => {
     expect(port.rejectionParams).toHaveLength(1);
     const params = port.rejectionParams[0];
     expect(params.applicationId).toBe(VALID_APP_ID);
-    expect(params.reviewerNote).toBe(
-      "提出された企画書の内容が不十分です。再度ご検討ください。"
-    );
+    expect(params.reviewerNote).toBe("提出された企画書の内容が不十分です。再度ご検討ください。");
     expect(params.reviewedAt).toBeInstanceOf(Date);
   });
 
@@ -141,9 +139,7 @@ describe("RejectLeaderApplicationUseCase", () => {
     };
     expect(payload.applicationId).toBe(VALID_APP_ID);
     expect(payload.accountId).toBe(VALID_ACCOUNT_ID);
-    expect(payload.reviewerNote).toBe(
-      "提出された企画書の内容が不十分です。再度ご検討ください。"
-    );
+    expect(payload.reviewerNote).toBe("提出された企画書の内容が不十分です。再度ご検討ください。");
   });
 
   it("Outbox メッセージの id が UUID v4 形式である", async () => {
@@ -186,9 +182,7 @@ describe("RejectLeaderApplicationUseCase", () => {
   });
 
   it("REJECTED 状態の応募を却下しようとすると NOT_PENDING エラー", async () => {
-    port.applications.push(
-      pendingApplication({ status: "REJECTED", reviewedAt: new Date() })
-    );
+    port.applications.push(pendingApplication({ status: "REJECTED", reviewedAt: new Date() }));
 
     const result = await useCase.execute(validInput());
 
