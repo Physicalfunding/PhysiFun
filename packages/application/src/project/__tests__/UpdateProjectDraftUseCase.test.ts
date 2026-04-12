@@ -141,6 +141,22 @@ describe("UpdateProjectDraftUseCase", () => {
     expect(result.error.type).toBe("PROJECT_NOT_FOUND");
   });
 
+  it("不正な accountId 形式で INVALID_ACCOUNT_ID", async () => {
+    port.projects.push(createTestProject());
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      accountId: "not-a-uuid",
+      title: "タイトル",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.error.type).toBe("INVALID_ACCOUNT_ID");
+    expect(port.savedProjects).toHaveLength(0);
+  });
+
   it("オーナーでないアカウントで NOT_OWNER", async () => {
     port.projects.push(createTestProject());
 

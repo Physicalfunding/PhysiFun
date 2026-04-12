@@ -6,11 +6,7 @@
  */
 
 import type { Project } from "@physifun/domain";
-
-/**
- * アカウントのロール
- */
-export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
+import type { AccountRole } from "../../shared/AccountRole";
 
 /**
  * プロジェクト作成時に必要なアカウント情報
@@ -31,6 +27,9 @@ export interface CreateProjectDraftPort {
 
   /**
    * 指定アカウントが所有するプロジェクト数（全ステータス）を返す。
+   *
+   * NOTE: 上限チェックと saveProject は同一トランザクション内で
+   * アトミックに実行すること（TOCTOU 防止）。
    */
   countProjectsByOwner(accountId: string): Promise<number>;
 

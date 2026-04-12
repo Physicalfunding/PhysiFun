@@ -171,6 +171,30 @@ describe("CreateProjectDraftUseCase", () => {
     expect(result.error.domainError.type).toBe("TITLE_REQUIRED");
   });
 
+  it("不正な accountId 形式で INVALID_ACCOUNT_ID", async () => {
+    const result = await useCase.execute({
+      accountId: "not-a-uuid",
+      title: "テストプロジェクト",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.error.type).toBe("INVALID_ACCOUNT_ID");
+    expect(port.savedProjects).toHaveLength(0);
+  });
+
+  it("エラー時は saveProject が呼ばれない", async () => {
+    port.accounts.push(leaderAccount());
+
+    await useCase.execute({
+      accountId: ACCOUNT_ID_STR,
+      title: "",
+    });
+
+    expect(port.savedProjects).toHaveLength(0);
+  });
+
   it("タイトルが101文字の場合 DOMAIN_ERROR", async () => {
     port.accounts.push(leaderAccount());
 

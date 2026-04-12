@@ -29,6 +29,7 @@ export interface UpdateProjectDraftOutput {
  * ユースケースのエラー型（判別共用体）
  */
 export type UpdateProjectDraftError =
+  | { readonly type: "INVALID_ACCOUNT_ID" }
   | { readonly type: "PROJECT_NOT_FOUND" }
   | { readonly type: "NOT_OWNER" }
   | { readonly type: "CANNOT_EDIT_PUBLISHED" }
@@ -91,7 +92,7 @@ export class UpdateProjectDraftUseCase {
     // 2. オーナー権限チェック
     const callerIdResult = AccountId.from(input.accountId);
     if (!callerIdResult.ok) {
-      return err({ type: "NOT_OWNER" });
+      return err({ type: "INVALID_ACCOUNT_ID" });
     }
     if (!project.ownerAccountId.equals(callerIdResult.value)) {
       return err({ type: "NOT_OWNER" });
@@ -107,7 +108,7 @@ export class UpdateProjectDraftUseCase {
 
     // 5. 入力値オブジェクトの構築
     // location
-    let location: import("@physifun/domain").ProjectLocation | null | undefined;
+    let location: ProjectLocation | null | undefined;
     if (input.location !== undefined) {
       if (input.location === null) {
         location = null;
@@ -132,7 +133,7 @@ export class UpdateProjectDraftUseCase {
     }
 
     // snsLinks
-    let snsLinks: import("@physifun/domain").SnsLinks | undefined;
+    let snsLinks: SnsLinks | undefined;
     if (input.snsLinks !== undefined) {
       const snsResult = SnsLinks.create({
         x: input.snsLinks.x,
@@ -152,13 +153,13 @@ export class UpdateProjectDraftUseCase {
     }
 
     // phase
-    let phase: import("@physifun/domain").ProjectPhase | undefined;
+    let phase: ProjectPhase | undefined;
     if (input.phase !== undefined) {
       const validPhases = Object.values(ProjectPhase) as string[];
       if (!validPhases.includes(input.phase)) {
         return err({ type: "INVALID_PHASE", value: input.phase });
       }
-      phase = input.phase as import("@physifun/domain").ProjectPhase;
+      phase = input.phase as ProjectPhase;
     }
 
     // 6. ドメインエンティティの update() 呼び出し
@@ -192,9 +193,10 @@ export class UpdateProjectDraftUseCase {
         action: ReviewAction.REJECTED,
         note: "自動取下げ: PENDING_REVIEW 中にリーダーが編集を行ったため",
       });
-      if (feedbackResult.ok) {
-        await this.port.saveReviewFeedback(feedbackResult.value);
+      if (!feedbackResult.ok) {
+        throw new Error(`[invariant] Failed to create auto-withdrawal feedback: ${feedbackResult.error.type}`);
       }
+      await this.port.saveReviewFeedback(feedbackResult.value);
     }
 
     // 9. プロジェクトの永続化

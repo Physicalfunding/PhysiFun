@@ -12,7 +12,6 @@ export type {
   SubmitLeaderApplicationPort,
   AccountRow,
   AccountStatus,
-  AccountRole,
   CreateAccountParams,
   CreateLeaderApplicationParams,
   CreateOutboxMessageParams,
@@ -77,8 +76,10 @@ export {
 export type {
   CreateProjectDraftPort,
   AccountForProjectCreation,
-  AccountRole as ProjectAccountRole,
 } from "./project/ports/CreateProjectDraftPort";
+
+// Shared
+export type { AccountRole } from "./shared/AccountRole";
 
 // UpdateProjectDraftUseCase
 export {
