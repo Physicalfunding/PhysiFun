@@ -29,3 +29,12 @@ export type {
   AccountForActivation,
   PasswordHasher,
 } from "./account/ports/ActivateAccountPort";
+
+// CleanupExpiredPendingAccountsUseCase
+export {
+  CleanupExpiredPendingAccountsUseCase,
+  type CleanupExpiredAccountsPort,
+  type CleanupExpiredAccountsResult,
+  type CleanupExpiredAccountsError,
+} from "./account/CleanupExpiredPendingAccountsUseCase";
+
