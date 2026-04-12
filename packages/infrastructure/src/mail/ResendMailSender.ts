@@ -42,8 +42,7 @@ export class ResendMailSender implements MailSender {
     } catch (cause: unknown) {
       // ネットワーク障害などの例外は一時障害扱い
       return err({
-        message:
-          cause instanceof Error ? cause.message : "Unknown error occurred",
+        message: cause instanceof Error ? cause.message : "Unknown error occurred",
         retriable: true,
         cause,
       });

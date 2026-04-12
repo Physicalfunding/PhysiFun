@@ -16,7 +16,7 @@ type MockMessage = {
 };
 
 const mockFindMany = jest.fn<() => Promise<MockMessage[]>>();
-const mockUpdate = jest.fn<() => Promise<MockMessage>>();
+const mockUpdate = jest.fn<(...args: unknown[]) => Promise<MockMessage>>();
 
 const mockPrisma = {
   leaderApplicationOutboxMessage: {

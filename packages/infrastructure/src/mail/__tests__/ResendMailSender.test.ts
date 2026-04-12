@@ -3,7 +3,7 @@ import { ResendMailSender } from "../ResendMailSender";
 import type { MailMessage } from "../types";
 
 // Resend SDK をモック
-const mockSend = jest.fn();
+const mockSend = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 jest.mock("resend", () => ({
   Resend: class {
     emails = { send: mockSend };
