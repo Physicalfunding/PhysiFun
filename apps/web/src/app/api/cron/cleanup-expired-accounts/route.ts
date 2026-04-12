@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
   if (!result.ok) {
     console.error("[cron] cleanup-expired-accounts failed:", result.error.message);
-    return NextResponse.json({ error: result.error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   console.log(`[cron] cleanup-expired-accounts: ${result.value.deletedCount} accounts deleted`);
