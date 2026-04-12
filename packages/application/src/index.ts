@@ -37,3 +37,18 @@ export {
   type CleanupExpiredAccountsResult,
   type CleanupExpiredAccountsError,
 } from "./account/CleanupExpiredPendingAccountsUseCase";
+
+// RejectLeaderApplicationUseCase
+export {
+  RejectLeaderApplicationUseCase,
+  REJECTION_COOLDOWN_MS,
+  type RejectLeaderApplicationInput,
+  type RejectLeaderApplicationOutput,
+  type RejectLeaderApplicationError,
+} from "./leader-application/RejectLeaderApplicationUseCase";
+
+// RejectLeaderApplicationPort
+export type {
+  RejectLeaderApplicationPort,
+  LeaderApplicationForReject,
+} from "./leader-application/ports/RejectLeaderApplicationPort";
