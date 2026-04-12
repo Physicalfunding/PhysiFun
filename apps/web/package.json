@@ -17,6 +17,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
     "@physifun/application": "workspace:*",
+    "@physifun/domain": "workspace:*",
     "@physifun/infrastructure": "workspace:*",
     "@supabase/supabase-js": "^2.89.0",
     "jose": "^6.0.11",

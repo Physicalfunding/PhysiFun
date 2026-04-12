@@ -4,16 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, Button, LoadingSpinner } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
-
-const CATEGORY_MASTER = [
-  { value: "KOMINKA", label: "古民家再生" },
-  { value: "RICE_FARMING", label: "米作り" },
-  { value: "FARMING", label: "その他農業" },
-  { value: "DIY", label: "DIY・ものづくり" },
-  { value: "EVENT", label: "地域イベント" },
-  { value: "COMMUNITY", label: "コミュニティ運営" },
-  { value: "OTHER", label: "その他" },
-] as const;
+import { CATEGORY_MASTER } from "@physifun/domain";
 
 type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -86,7 +77,8 @@ export function ApplicationStatus() {
       }
     }
     fetchApplication();
-  }, [showToast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isLoading) {
     return (

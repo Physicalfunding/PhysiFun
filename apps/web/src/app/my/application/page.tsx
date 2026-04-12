@@ -1,5 +1,10 @@
 import { ApplicationStatus } from "@/components/my/ApplicationStatus";
 
+export const metadata = {
+  title: "応募状況 | PhysiFun",
+  description: "リーダー応募の審査状況を確認できます",
+};
+
 /**
  * /my/application - 応募状況ページ
  *
