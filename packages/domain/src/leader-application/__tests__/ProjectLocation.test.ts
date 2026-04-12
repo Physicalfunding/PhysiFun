@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { ProjectLocation } from "../value-objects/ProjectLocation";
+import { ProjectLocation } from "../../shared/value-objects/ProjectLocation";
 
 describe("ProjectLocation", () => {
   describe("create", () => {

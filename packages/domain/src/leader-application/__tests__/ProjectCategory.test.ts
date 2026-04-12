@@ -3,7 +3,7 @@ import {
   CATEGORY_MASTER,
   type ProjectCategory,
   isProjectCategory,
-} from "../value-objects/ProjectCategory";
+} from "../../shared/value-objects/ProjectCategory";
 
 describe("ProjectCategory", () => {
   it("CATEGORY_MASTER は 7 値を持つ", () => {

@@ -1,7 +1,7 @@
 import { type Result, err, ok } from "../../shared/result";
-import { type ProjectCategory, isProjectCategory } from "./ProjectCategory";
-import { ProjectLocation, type ProjectLocationError } from "./ProjectLocation";
-import { SnsLinks, type SnsLinksError } from "./SnsLinks";
+import { type ProjectCategory, isProjectCategory } from "../../shared/value-objects/ProjectCategory";
+import { ProjectLocation, type ProjectLocationError } from "../../shared/value-objects/ProjectLocation";
+import { SnsLinks, type SnsLinksError } from "../../shared/value-objects/SnsLinks";
 
 /**
  * ProjectDraft 文字数上限（`アカウント.md` B-3 仮値）
