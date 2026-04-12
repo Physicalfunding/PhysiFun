@@ -10,6 +10,7 @@ import {
   ProjectReviewFeedback,
   ReviewAction,
   type ProjectUpdateError,
+  isProjectCategory,
 } from "@physifun/domain";
 import type { UpdateProjectDraftPort } from "./ports/UpdateProjectDraftPort";
 
@@ -34,6 +35,7 @@ export type UpdateProjectDraftError =
   | { readonly type: "NOT_OWNER" }
   | { readonly type: "CANNOT_EDIT_PUBLISHED" }
   | { readonly type: "DOMAIN_ERROR"; readonly domainError: ProjectUpdateError }
+  | { readonly type: "INVALID_CATEGORY"; readonly value: string }
   | { readonly type: "INVALID_LOCATION"; readonly issues: string[] }
   | { readonly type: "INVALID_SNS_LINKS"; readonly issues: string[] }
   | { readonly type: "INVALID_PHASE"; readonly value: string };
@@ -49,6 +51,7 @@ export interface UpdateProjectDraftInput {
   readonly title?: string;
   readonly coverImageUrl?: string | null;
   readonly category?: string | null;
+  /** Phase 1 では prefectureCode のみ。municipality は将来対応 */
   readonly location?: { prefectureCode: string } | null;
   readonly phase?: string;
   readonly summary?: string | null;
@@ -70,12 +73,12 @@ export interface UpdateProjectDraftInput {
  *
  * 処理フロー:
  * 1. プロジェクトの存在チェック
- * 2. オーナー権限チェック
+ * 2. AccountId 生成 + オーナー権限チェック
  * 3. PUBLISHED 状態の編集禁止チェック
- * 4. 入力値オブジェクトの構築
+ * 4. 入力値オブジェクトの構築（category, location, snsLinks, phase）
  * 5. ドメインエンティティの update() 呼び出し
- * 6. PENDING_REVIEW → DRAFT の自動取下げ検知 + フィードバック記録
- * 7. 永続化
+ * 6. PENDING_REVIEW → DRAFT の自動取下げ検知 + WITHDRAWN フィードバック記録
+ * 7. アトミック永続化（project + optional feedback）
  */
 export class UpdateProjectDraftUseCase {
   constructor(private readonly port: UpdateProjectDraftPort) {}
@@ -103,10 +106,23 @@ export class UpdateProjectDraftUseCase {
       return err({ type: "CANNOT_EDIT_PUBLISHED" });
     }
 
-    // 4. 自動取下げ検知のために現在の publishStatus を記録
+    // 自動取下げ検知のために現在の publishStatus を記録
     const previousStatus = project.publishStatus;
 
-    // 5. 入力値オブジェクトの構築
+    // 4. 入力値オブジェクトの構築
+
+    // category
+    let category: string | null | undefined;
+    if (input.category !== undefined) {
+      if (input.category === null) {
+        category = null;
+      } else if (isProjectCategory(input.category)) {
+        category = input.category;
+      } else {
+        return err({ type: "INVALID_CATEGORY", value: input.category });
+      }
+    }
+
     // location
     let location: ProjectLocation | null | undefined;
     if (input.location !== undefined) {
@@ -162,11 +178,11 @@ export class UpdateProjectDraftUseCase {
       phase = input.phase as ProjectPhase;
     }
 
-    // 6. ドメインエンティティの update() 呼び出し
+    // 5. ドメインエンティティの update() 呼び出し
     const updateResult = project.update({
       title: input.title,
       coverImageUrl: input.coverImageUrl,
-      category: input.category,
+      category,
       location,
       phase,
       summary: input.summary,
@@ -180,29 +196,31 @@ export class UpdateProjectDraftUseCase {
       return err({ type: "DOMAIN_ERROR", domainError: updateResult.error });
     }
 
-    // 7. 自動取下げの検知
+    // 6. 自動取下げの検知 + フィードバック記録
     const withdrawnFromPending =
       previousStatus === PublishStatus.PENDING_REVIEW &&
       project.publishStatus === PublishStatus.DRAFT;
 
-    // 8. 自動取下げ時のフィードバック記録
+    let reviewFeedback: ProjectReviewFeedback | undefined;
     if (withdrawnFromPending) {
       const feedbackResult = ProjectReviewFeedback.create({
         projectId: project.id,
         reviewerId: callerIdResult.value,
-        action: ReviewAction.REJECTED,
+        action: ReviewAction.WITHDRAWN,
         note: "自動取下げ: PENDING_REVIEW 中にリーダーが編集を行ったため",
       });
       if (!feedbackResult.ok) {
         throw new Error(`[invariant] Failed to create auto-withdrawal feedback: ${feedbackResult.error.type}`);
       }
-      await this.port.saveReviewFeedback(feedbackResult.value);
+      reviewFeedback = feedbackResult.value;
     }
 
-    // 9. プロジェクトの永続化
-    await this.port.saveProject(project);
+    // 7. アトミック永続化
+    await this.port.saveProjectWithOptionalFeedback({
+      project,
+      reviewFeedback,
+    });
 
-    // 10. 成功レスポンス
     return ok({
       projectId: project.id.toString(),
       withdrawnFromPending,

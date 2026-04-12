@@ -76,12 +76,14 @@ class InMemoryUpdateProjectDraftPort implements UpdateProjectDraftPort {
     return this.projects.find((p) => p.id.toString() === projectId) ?? null;
   }
 
-  async saveProject(project: Project): Promise<void> {
-    this.savedProjects.push(project);
-  }
-
-  async saveReviewFeedback(feedback: ProjectReviewFeedback): Promise<void> {
-    this.savedFeedbacks.push(feedback);
+  async saveProjectWithOptionalFeedback(params: {
+    project: Project;
+    reviewFeedback?: ProjectReviewFeedback;
+  }): Promise<void> {
+    this.savedProjects.push(params.project);
+    if (params.reviewFeedback) {
+      this.savedFeedbacks.push(params.reviewFeedback);
+    }
   }
 }
 
@@ -114,7 +116,7 @@ describe("UpdateProjectDraftUseCase", () => {
     expect(result.value.withdrawnFromPending).toBe(false);
   });
 
-  it("更新後に saveProject が呼ばれる", async () => {
+  it("更新後に saveProjectWithOptionalFeedback が呼ばれる", async () => {
     port.projects.push(createTestProject());
 
     await useCase.execute({
@@ -128,18 +130,6 @@ describe("UpdateProjectDraftUseCase", () => {
   });
 
   // ---- エラーケース ----
-
-  it("存在しないプロジェクト ID で PROJECT_NOT_FOUND", async () => {
-    const result = await useCase.execute({
-      projectId: "00000000-0000-4000-b000-000000000099",
-      accountId: OWNER_ACCOUNT_ID_STR,
-    });
-
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-
-    expect(result.error.type).toBe("PROJECT_NOT_FOUND");
-  });
 
   it("不正な accountId 形式で INVALID_ACCOUNT_ID", async () => {
     port.projects.push(createTestProject());
@@ -155,6 +145,18 @@ describe("UpdateProjectDraftUseCase", () => {
 
     expect(result.error.type).toBe("INVALID_ACCOUNT_ID");
     expect(port.savedProjects).toHaveLength(0);
+  });
+
+  it("存在しないプロジェクト ID で PROJECT_NOT_FOUND", async () => {
+    const result = await useCase.execute({
+      projectId: "00000000-0000-4000-b000-000000000099",
+      accountId: OWNER_ACCOUNT_ID_STR,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.error.type).toBe("PROJECT_NOT_FOUND");
   });
 
   it("オーナーでないアカウントで NOT_OWNER", async () => {
@@ -203,7 +205,7 @@ describe("UpdateProjectDraftUseCase", () => {
     expect(result.value.withdrawnFromPending).toBe(true);
   });
 
-  it("PENDING_REVIEW の自動取下げで ReviewFeedback が記録される", async () => {
+  it("PENDING_REVIEW の自動取下げで WITHDRAWN の ReviewFeedback が記録される", async () => {
     port.projects.push(createTestProject({ publishStatus: PublishStatus.PENDING_REVIEW }));
 
     await useCase.execute({
@@ -216,7 +218,7 @@ describe("UpdateProjectDraftUseCase", () => {
     const feedback = port.savedFeedbacks[0];
     expect(feedback.projectId.toString()).toBe(PROJECT_ID_STR);
     expect(feedback.reviewerId.toString()).toBe(OWNER_ACCOUNT_ID_STR);
-    expect(feedback.action).toBe(ReviewAction.REJECTED);
+    expect(feedback.action).toBe(ReviewAction.WITHDRAWN);
     expect(feedback.note).toContain("自動取下げ");
   });
 
@@ -249,6 +251,40 @@ describe("UpdateProjectDraftUseCase", () => {
     expect(result.error.type).toBe("DOMAIN_ERROR");
     if (result.error.type !== "DOMAIN_ERROR") return;
     expect(result.error.domainError.type).toBe("TITLE_REQUIRED");
+    expect(port.savedProjects).toHaveLength(0);
+  });
+
+  // ---- category エラー ----
+
+  it("無効な category で INVALID_CATEGORY が返る", async () => {
+    port.projects.push(createTestProject());
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      accountId: OWNER_ACCOUNT_ID_STR,
+      category: "NONEXISTENT",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.error.type).toBe("INVALID_CATEGORY");
+    if (result.error.type !== "INVALID_CATEGORY") return;
+    expect(result.error.value).toBe("NONEXISTENT");
+    expect(port.savedProjects).toHaveLength(0);
+  });
+
+  it("有効な category で更新できる", async () => {
+    port.projects.push(createTestProject());
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      accountId: OWNER_ACCOUNT_ID_STR,
+      category: "KOMINKA",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(port.savedProjects[0].category).toBe("KOMINKA");
   });
 
   // ---- location VO エラー ----

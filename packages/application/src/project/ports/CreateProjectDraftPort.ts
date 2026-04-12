@@ -26,15 +26,14 @@ export interface CreateProjectDraftPort {
   findAccountById(accountId: string): Promise<AccountForProjectCreation | null>;
 
   /**
-   * 指定アカウントが所有するプロジェクト数（全ステータス）を返す。
+   * 件数チェック + プロジェクト保存をアトミックに実行する。
    *
-   * NOTE: 上限チェックと saveProject は同一トランザクション内で
-   * アトミックに実行すること（TOCTOU 防止）。
+   * インフラ層は同一トランザクション内で件数チェックと INSERT を行い、
+   * TOCTOU を防止すること。上限超過時は例外をスローする。
    */
-  countProjectsByOwner(accountId: string): Promise<number>;
-
-  /**
-   * プロジェクトを永続化する。
-   */
-  saveProject(project: Project): Promise<void>;
+  countAndSaveProject(params: {
+    project: Project;
+    accountId: string;
+    maxCount: number;
+  }): Promise<void>;
 }

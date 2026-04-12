@@ -66,6 +66,7 @@ export type { RejectLeaderApplicationPort } from "./leader-application/ports/Rej
 // CreateProjectDraftUseCase
 export {
   CreateProjectDraftUseCase,
+  ProjectLimitExceededError,
   MAX_PROJECTS_PER_LEADER,
   type CreateProjectDraftInput,
   type CreateProjectDraftOutput,

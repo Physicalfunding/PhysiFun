@@ -19,7 +19,7 @@ export type CreateProjectDraftError =
   | { readonly type: "INVALID_ACCOUNT_ID" }
   | { readonly type: "ACCOUNT_NOT_FOUND" }
   | { readonly type: "NOT_LEADER" }
-  | { readonly type: "PROJECT_LIMIT_EXCEEDED"; readonly max: number; readonly current: number }
+  | { readonly type: "PROJECT_LIMIT_EXCEEDED"; readonly max: number }
   | { readonly type: "DOMAIN_ERROR"; readonly domainError: ProjectUpdateError };
 
 // ==================== 入力 DTO ====================
@@ -35,7 +35,9 @@ export interface CreateProjectDraftInput {
 // ==================== 定数 ====================
 
 /**
- * リーダーあたりの最大プロジェクト数
+ * リーダーあたりの最大プロジェクト数（全ステータス合計）
+ *
+ * NOTE: PUBLISHED 3件上限は RequestPublishUseCase が担う。
  */
 export const MAX_PROJECTS_PER_LEADER = 10;
 
@@ -48,10 +50,9 @@ export const MAX_PROJECTS_PER_LEADER = 10;
  * 1. AccountId VO 生成（入力バリデーション）
  * 2. アカウントの存在チェック
  * 3. LEADER ロールチェック
- * 4. プロジェクト数上限チェック（10件）
- * 5. Project.createDraft でドメインエンティティ生成
- * 6. プロジェクトを永続化
- * 7. projectId を返却
+ * 4. Project.createDraft でドメインエンティティ生成
+ * 5. 件数チェック + 永続化（アトミック）
+ * 6. projectId を返却
  */
 export class CreateProjectDraftUseCase {
   constructor(private readonly port: CreateProjectDraftPort) {}
@@ -76,13 +77,7 @@ export class CreateProjectDraftUseCase {
       return err({ type: "NOT_LEADER" });
     }
 
-    // 4. プロジェクト数上限チェック
-    const currentCount = await this.port.countProjectsByOwner(input.accountId);
-    if (currentCount >= MAX_PROJECTS_PER_LEADER) {
-      return err({ type: "PROJECT_LIMIT_EXCEEDED", max: MAX_PROJECTS_PER_LEADER, current: currentCount });
-    }
-
-    // 5. ドメインエンティティ生成
+    // 4. ドメインエンティティ生成
     const projectResult = Project.createDraft({
       ownerAccountId: accountIdResult.value,
       title: input.title,
@@ -91,11 +86,32 @@ export class CreateProjectDraftUseCase {
       return err({ type: "DOMAIN_ERROR", domainError: projectResult.error });
     }
 
-    // 6. 永続化
+    // 5. 件数チェック + 永続化（アトミック、TOCTOU 防止）
     const project = projectResult.value;
-    await this.port.saveProject(project);
+    try {
+      await this.port.countAndSaveProject({
+        project,
+        accountId: input.accountId,
+        maxCount: MAX_PROJECTS_PER_LEADER,
+      });
+    } catch (e) {
+      if (e instanceof ProjectLimitExceededError) {
+        return err({ type: "PROJECT_LIMIT_EXCEEDED", max: MAX_PROJECTS_PER_LEADER });
+      }
+      throw e;
+    }
 
-    // 7. 結果返却
+    // 6. 結果返却
     return ok({ projectId: project.id.toString() });
+  }
+}
+
+/**
+ * countAndSaveProject が上限超過時にスローするエラー
+ */
+export class ProjectLimitExceededError extends Error {
+  constructor() {
+    super("Project limit exceeded");
+    this.name = "ProjectLimitExceededError";
   }
 }

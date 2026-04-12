@@ -10,13 +10,13 @@ export interface UpdateProjectDraftPort {
   findProjectById(projectId: string): Promise<Project | null>;
 
   /**
-   * Project 集約を永続化する。
+   * Project 集約と（任意の）審査フィードバックをアトミックに永続化する。
    *
-   * NOTE: 自動取下げ時は saveReviewFeedback と同一トランザクション内で
-   * 実行すること（監査記録の整合性保証）。
+   * 自動取下げ時は reviewFeedback が渡される。
+   * インフラ層は同一トランザクション内で両方を保存すること。
    */
-  saveProject(project: Project): Promise<void>;
-
-  /** 自動取下げ時の審査フィードバックを永続化する */
-  saveReviewFeedback(feedback: ProjectReviewFeedback): Promise<void>;
+  saveProjectWithOptionalFeedback(params: {
+    project: Project;
+    reviewFeedback?: ProjectReviewFeedback;
+  }): Promise<void>;
 }

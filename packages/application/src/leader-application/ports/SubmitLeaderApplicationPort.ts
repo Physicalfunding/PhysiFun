@@ -12,8 +12,6 @@ export type AccountStatus = "PENDING_EMAIL_CONFIRMATION" | "ACTIVE";
 
 import type { AccountRole } from "../../shared/AccountRole";
 
-export type { AccountRole };
-
 /**
  * findByEmail で返すアカウント行の最小型
  */

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
 import {
   CreateProjectDraftUseCase,
+  ProjectLimitExceededError,
   MAX_PROJECTS_PER_LEADER,
   type CreateProjectDraftError,
 } from "../CreateProjectDraftUseCase";
@@ -45,19 +46,23 @@ class InMemoryCreateProjectDraftPort implements CreateProjectDraftPort {
   /** オーナーごとのプロジェクト数 */
   projectCounts: Map<string, number> = new Map();
 
-  /** saveProject で渡されたプロジェクトを記録 */
+  /** countAndSaveProject で渡されたプロジェクトを記録 */
   savedProjects: Project[] = [];
 
   async findAccountById(accountId: string): Promise<AccountForProjectCreation | null> {
     return this.accounts.find((a) => a.id === accountId) ?? null;
   }
 
-  async countProjectsByOwner(accountId: string): Promise<number> {
-    return this.projectCounts.get(accountId) ?? 0;
-  }
-
-  async saveProject(project: Project): Promise<void> {
-    this.savedProjects.push(project);
+  async countAndSaveProject(params: {
+    project: Project;
+    accountId: string;
+    maxCount: number;
+  }): Promise<void> {
+    const count = this.projectCounts.get(params.accountId) ?? 0;
+    if (count >= params.maxCount) {
+      throw new ProjectLimitExceededError();
+    }
+    this.savedProjects.push(params.project);
   }
 }
 
@@ -91,7 +96,7 @@ describe("CreateProjectDraftUseCase", () => {
     );
   });
 
-  it("saveProject が正しいプロジェクトで呼ばれる", async () => {
+  it("countAndSaveProject が正しいプロジェクトで呼ばれる", async () => {
     port.accounts.push(leaderAccount());
 
     const result = await useCase.execute({
@@ -110,6 +115,19 @@ describe("CreateProjectDraftUseCase", () => {
   });
 
   // ---- エラーケース ----
+
+  it("不正な accountId 形式で INVALID_ACCOUNT_ID", async () => {
+    const result = await useCase.execute({
+      accountId: "not-a-uuid",
+      title: "テストプロジェクト",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.error.type).toBe("INVALID_ACCOUNT_ID");
+    expect(port.savedProjects).toHaveLength(0);
+  });
 
   it("存在しないアカウントで ACCOUNT_NOT_FOUND", async () => {
     const result = await useCase.execute({
@@ -152,7 +170,17 @@ describe("CreateProjectDraftUseCase", () => {
     expect(result.error.type).toBe("PROJECT_LIMIT_EXCEEDED");
     if (result.error.type !== "PROJECT_LIMIT_EXCEEDED") return;
     expect(result.error.max).toBe(MAX_PROJECTS_PER_LEADER);
-    expect(result.error.current).toBe(10);
+  });
+
+  it("エラー時は saveProject が呼ばれない", async () => {
+    port.accounts.push(leaderAccount());
+
+    await useCase.execute({
+      accountId: ACCOUNT_ID_STR,
+      title: "",
+    });
+
+    expect(port.savedProjects).toHaveLength(0);
   });
 
   it("タイトルが空文字の場合 DOMAIN_ERROR", async () => {
@@ -169,30 +197,6 @@ describe("CreateProjectDraftUseCase", () => {
     expect(result.error.type).toBe("DOMAIN_ERROR");
     if (result.error.type !== "DOMAIN_ERROR") return;
     expect(result.error.domainError.type).toBe("TITLE_REQUIRED");
-  });
-
-  it("不正な accountId 形式で INVALID_ACCOUNT_ID", async () => {
-    const result = await useCase.execute({
-      accountId: "not-a-uuid",
-      title: "テストプロジェクト",
-    });
-
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-
-    expect(result.error.type).toBe("INVALID_ACCOUNT_ID");
-    expect(port.savedProjects).toHaveLength(0);
-  });
-
-  it("エラー時は saveProject が呼ばれない", async () => {
-    port.accounts.push(leaderAccount());
-
-    await useCase.execute({
-      accountId: ACCOUNT_ID_STR,
-      title: "",
-    });
-
-    expect(port.savedProjects).toHaveLength(0);
   });
 
   it("タイトルが101文字の場合 DOMAIN_ERROR", async () => {
