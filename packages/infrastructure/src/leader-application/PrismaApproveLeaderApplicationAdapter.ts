@@ -1,18 +1,32 @@
 import type { LeaderApplication } from "@physifun/domain";
-import type {
-  ApproveLeaderApplicationPort,
-  AccountForApproval,
-  AccountRole,
-} from "@physifun/application";
 import { prisma } from "../database/client";
 import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
 
 /**
+ * 承認対象のアカウント情報
+ *
+ * application 層の ApproveLeaderApplicationPort.AccountForApproval と同一の型。
+ * 循環依存 (infrastructure → application) を避けるためここで定義する。
+ */
+export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
+
+export interface AccountForApproval {
+  readonly id: string;
+  readonly status: "PENDING_EMAIL_CONFIRMATION" | "ACTIVE" | "SUSPENDED";
+  readonly roles: AccountRole[];
+  readonly email: string;
+}
+
+/**
  * Prisma ベースの ApproveLeaderApplicationPort 実装
  *
+ * application 層の ApproveLeaderApplicationPort インターフェースに準拠。
  * 承認処理を単一トランザクションで実行する。
+ *
+ * NOTE: 循環依存 (infrastructure → application) を避けるため、
+ * Port インターフェースを直接 import せず、構造的部分型で適合する。
  */
-export class PrismaApproveLeaderApplicationAdapter implements ApproveLeaderApplicationPort {
+export class PrismaApproveLeaderApplicationAdapter {
   async findApplicationById(id: string): Promise<LeaderApplication | null> {
     const row = await prisma.leaderApplication.findUnique({ where: { id } });
     if (!row) return null;
