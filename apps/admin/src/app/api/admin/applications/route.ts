@@ -18,6 +18,10 @@ type Status = (typeof VALID_STATUSES)[number];
  *
  * リーダー応募の一覧を返す。ADMIN ロール必須。
  *
+ * 認証の注意:
+ * - middleware.ts は /api パスを除外しているため、この Route Handler が唯一の認可チェック
+ * - token.roles は auth.ts の jwt コールバックで設定される（TODO: #61 で実装予定）
+ *
  * クエリパラメータ:
  * - status: "PENDING" | "APPROVED" | "REJECTED" (省略時: 全件)
  * - page: number (デフォルト 1)
@@ -26,6 +30,7 @@ type Status = (typeof VALID_STATUSES)[number];
 export async function GET(request: NextRequest) {
   try {
     // ADMIN ロールチェック
+    // NOTE: token.roles は auth.ts の jwt コールバックで設定される（#61 で実装予定）
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token) return unauthorizedResponse();
     const roles = (token.roles as string[] | undefined) ?? [];

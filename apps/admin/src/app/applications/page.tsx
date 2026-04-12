@@ -1,4 +1,5 @@
 import Link from "next/link";
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
 
@@ -24,8 +25,18 @@ export default async function ApplicationsListPage({
   const page = Math.max(1, Number(params.page) || 1);
   const perPage = 20;
 
-  const result = await queryService.findMany({ status: currentStatus, page, perPage });
+  const [result, pendingCount, approvedCount, rejectedCount] = await Promise.all([
+    queryService.findMany({ status: currentStatus, page, perPage }),
+    queryService.countByStatus("PENDING"),
+    queryService.countByStatus("APPROVED"),
+    queryService.countByStatus("REJECTED"),
+  ]);
   const totalPages = Math.ceil(result.totalCount / perPage);
+  const countMap: Record<string, number> = {
+    PENDING: pendingCount,
+    APPROVED: approvedCount,
+    REJECTED: rejectedCount,
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -49,6 +60,15 @@ export default async function ApplicationsListPage({
             }`}
           >
             {tab.label}
+            <span
+              className={`ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                currentStatus === tab.status
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {countMap[tab.status]}
+            </span>
           </Link>
         ))}
       </div>

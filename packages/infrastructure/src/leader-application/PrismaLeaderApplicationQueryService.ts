@@ -1,3 +1,4 @@
+import type { LeaderApplicationStatus } from "@physifun/domain";
 import { prisma } from "../database/client";
 
 // ==================== 型定義 ====================
@@ -11,7 +12,7 @@ export interface LeaderApplicationListItem {
   readonly displayName: string;
   readonly email: string;
   readonly projectTitle: string;
-  readonly status: "PENDING" | "APPROVED" | "REJECTED";
+  readonly status: LeaderApplicationStatus;
   readonly submittedAt: Date;
   readonly reviewedAt: Date | null;
 }
@@ -24,7 +25,7 @@ export interface LeaderApplicationDetail {
   readonly accountId: string;
   readonly displayName: string;
   readonly email: string;
-  readonly status: "PENDING" | "APPROVED" | "REJECTED";
+  readonly status: LeaderApplicationStatus;
   readonly reviewerNote: string | null;
   readonly projectTitle: string;
   readonly projectSummary: string;
@@ -61,14 +62,14 @@ export interface LeaderApplicationListResult {
  */
 export interface LeaderApplicationQueryService {
   findMany(params: {
-    status?: "PENDING" | "APPROVED" | "REJECTED";
+    status?: LeaderApplicationStatus;
     page: number;
     perPage: number;
   }): Promise<LeaderApplicationListResult>;
 
   findById(id: string): Promise<LeaderApplicationDetail | null>;
 
-  countByStatus(status: "PENDING" | "APPROVED" | "REJECTED"): Promise<number>;
+  countByStatus(status: LeaderApplicationStatus): Promise<number>;
 }
 
 // ==================== Prisma 実装 ====================
@@ -78,7 +79,7 @@ export interface LeaderApplicationQueryService {
  */
 export class PrismaLeaderApplicationQueryService implements LeaderApplicationQueryService {
   async findMany(params: {
-    status?: "PENDING" | "APPROVED" | "REJECTED";
+    status?: LeaderApplicationStatus;
     page: number;
     perPage: number;
   }): Promise<LeaderApplicationListResult> {
@@ -147,7 +148,7 @@ export class PrismaLeaderApplicationQueryService implements LeaderApplicationQue
     };
   }
 
-  async countByStatus(status: "PENDING" | "APPROVED" | "REJECTED"): Promise<number> {
+  async countByStatus(status: LeaderApplicationStatus): Promise<number> {
     return prisma.leaderApplication.count({ where: { status } });
   }
 }

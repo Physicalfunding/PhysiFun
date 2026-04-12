@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
 import { getCategoryLabel } from "@/lib/category";
@@ -97,22 +98,54 @@ export default async function ApplicationDetailPage({
               <dd className="mt-1 space-y-1">
                 {detail.snsLinks.x && (
                   <p className="text-sm">
-                    X: <span className="text-blue-600">{detail.snsLinks.x}</span>
+                    X:{" "}
+                    <a
+                      href={detail.snsLinks.x}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {detail.snsLinks.x}
+                    </a>
                   </p>
                 )}
                 {detail.snsLinks.instagram && (
                   <p className="text-sm">
-                    Instagram: <span className="text-blue-600">{detail.snsLinks.instagram}</span>
+                    Instagram:{" "}
+                    <a
+                      href={detail.snsLinks.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {detail.snsLinks.instagram}
+                    </a>
                   </p>
                 )}
                 {detail.snsLinks.facebook && (
                   <p className="text-sm">
-                    Facebook: <span className="text-blue-600">{detail.snsLinks.facebook}</span>
+                    Facebook:{" "}
+                    <a
+                      href={detail.snsLinks.facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {detail.snsLinks.facebook}
+                    </a>
                   </p>
                 )}
                 {detail.snsLinks.website && (
                   <p className="text-sm">
-                    Website: <span className="text-blue-600">{detail.snsLinks.website}</span>
+                    Website:{" "}
+                    <a
+                      href={detail.snsLinks.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {detail.snsLinks.website}
+                    </a>
                   </p>
                 )}
               </dd>
