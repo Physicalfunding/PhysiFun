@@ -1,6 +1,11 @@
 import { Suspense } from "react";
 import { ActivateForm } from "@/components/activate/ActivateForm";
 
+export const metadata = {
+  title: "アカウント有効化 | PhysiFun",
+  description: "パスワードを設定してアカウントを有効化します",
+};
+
 /**
  * アカウント有効化ページ
  *

@@ -24,10 +24,10 @@ const stubActivateAccountPort: ActivateAccountPort = {
   },
 };
 
-// TODO: infrastructure 層に移動する（bcrypt 等の実装）
+// TODO: @security-stub infrastructure 層に移動する（bcrypt 等の実装）
 const stubPasswordHasher: PasswordHasher = {
   async hash(password: string): Promise<string> {
-    // TODO: bcrypt 等のハッシュ化ライブラリに置き換える
+    // TODO: @security-stub bcrypt 等の本番用ハッシュ実装に差し替えること
     return `hashed_${password}`;
   },
 };
