@@ -7,7 +7,7 @@
 /** アカウント有効化に必要な最小限のアカウント情報 */
 export interface AccountForActivation {
   id: string;
-  status: string; // "PENDING_EMAIL_CONFIRMATION" | "ACTIVE"
+  status: "PENDING_EMAIL_CONFIRMATION" | "ACTIVE";
   activationTokenExp: Date | null;
 }
 

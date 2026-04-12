@@ -4,9 +4,11 @@ import type { ActivateAccountPort, PasswordHasher } from "./ports/ActivateAccoun
 
 // --- 入力バリデーションスキーマ ---
 
+const PASSWORD_MAX_LENGTH = 128;
+
 const activateAccountInputSchema = z.object({
   token: z.string().min(1),
-  password: z.string().min(1),
+  password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
 });
 
 // --- パスワードポリシー（B-8: 暫定ルール） ---
@@ -51,26 +53,26 @@ export class ActivateAccountUseCase {
 
     const { token, password } = parsed.data;
 
-    // 2. トークンでアカウントを検索
+    // 2. パスワードポリシーの検証（DBアクセス前に実行）
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return err({ type: "INVALID_PASSWORD", reason: passwordError });
+    }
+
+    // 3. トークンでアカウントを検索
     const account = await this.port.findByActivationToken(token);
     if (!account) {
       return err({ type: "TOKEN_NOT_FOUND" });
     }
 
-    // 3. アカウントステータスの確認
+    // 4. アカウントステータスの確認
     if (account.status !== "PENDING_EMAIL_CONFIRMATION") {
       return err({ type: "ACCOUNT_ALREADY_ACTIVE" });
     }
 
-    // 4. トークン有効期限の確認
+    // 5. トークン有効期限の確認
     if (!account.activationTokenExp || account.activationTokenExp < new Date()) {
       return err({ type: "TOKEN_EXPIRED" });
-    }
-
-    // 5. パスワードポリシーの検証
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      return err({ type: "INVALID_PASSWORD", reason: passwordError });
     }
 
     // 6. パスワードハッシュ化
