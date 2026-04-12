@@ -168,7 +168,7 @@ describe("Project", () => {
       const result = project.update({ summary: null, title: "新タイトル" });
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.type).toBe("PUBLICATION_REQUIREMENTS_NOT_MET");
+        expect(result.error.type).toBe("CANNOT_UPDATE_PUBLISHED_MISSING_FIELDS");
       }
       // guard-first, write-last: エラー時はエンティティが変更されない
       expect(project.title).toBe(originalTitle);
@@ -182,6 +182,25 @@ describe("Project", () => {
       const result = project.update({ title: "新しいタイトル" });
       expect(result.ok).toBe(true);
       expect(project.title).toBe("新しいタイトル");
+    });
+
+    it("PENDING_REVIEW 状態で編集すると自動で DRAFT に戻る", () => {
+      const project = createFullDraft();
+      project.requestPublish();
+      expect(project.publishStatus).toBe(PublishStatus.PENDING_REVIEW);
+      const result = project.update({ title: "編集後タイトル" });
+      expect(result.ok).toBe(true);
+      expect(project.title).toBe("編集後タイトル");
+      expect(project.publishStatus).toBe(PublishStatus.DRAFT);
+    });
+
+    it("PENDING_REVIEW 状態で無効な更新をするとエラー（ステータスも変わらない）", () => {
+      const project = createFullDraft();
+      project.requestPublish();
+      const result = project.update({ title: "" });
+      expect(result.ok).toBe(false);
+      // エラー時はステータスも変わらない
+      expect(project.publishStatus).toBe(PublishStatus.PENDING_REVIEW);
     });
   });
 

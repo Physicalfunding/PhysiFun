@@ -236,7 +236,7 @@ export class Project {
         leaderIntroduction: newIntro.value,
       });
       if (missing.length > 0) {
-        return err({ type: "PUBLICATION_REQUIREMENTS_NOT_MET", missingFields: missing });
+        return err({ type: "CANNOT_UPDATE_PUBLISHED_MISSING_FIELDS", missingFields: missing });
       }
     }
 
@@ -253,6 +253,12 @@ export class Project {
     this._phase = newPhase;
     this._snsLinks = newSnsLinks;
     this._updatedAt = new Date();
+
+    // PENDING_REVIEW 中に編集した場合は自動で DRAFT に戻す
+    if (this._publishStatus === PublishStatus.PENDING_REVIEW) {
+      this._publishStatus = PublishStatus.DRAFT;
+    }
+
     return ok(undefined);
   }
 

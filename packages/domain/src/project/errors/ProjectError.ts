@@ -64,7 +64,7 @@ export type ProjectUpdateError =
       readonly actualLength: number;
     }
   | {
-      readonly type: "PUBLICATION_REQUIREMENTS_NOT_MET";
+      readonly type: "CANNOT_UPDATE_PUBLISHED_MISSING_FIELDS";
       readonly missingFields: readonly string[];
     }
   | {
