@@ -1,0 +1,192 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
+import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
+import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
+import { getCategoryLabel } from "@/lib/category";
+import { getPrefectureName } from "@/lib/prefecture";
+
+const queryService = new PrismaLeaderApplicationQueryService();
+
+/**
+ * /applications/[id] — リーダー応募詳細
+ */
+export default async function ApplicationDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const detail = await queryService.findById(id);
+
+  if (!detail) {
+    notFound();
+  }
+
+  const locationText = [getPrefectureName(detail.prefectureCode), detail.municipality]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      {/* ヘッダー */}
+      <div className="mb-6">
+        <Link href="/applications" className="text-sm text-blue-600 hover:underline">
+          ← 一覧に戻る
+        </Link>
+      </div>
+
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{detail.projectTitle}</h1>
+          <div className="mt-2 flex items-center gap-3">
+            <ApplicationStatusBadge status={detail.status} />
+            <span className="text-sm text-gray-500">
+              応募日: {detail.submittedAt.toLocaleDateString("ja-JP")}
+            </span>
+            {detail.reviewedAt && (
+              <span className="text-sm text-gray-500">
+                審査日: {detail.reviewedAt.toLocaleDateString("ja-JP")}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 応募者情報 */}
+      <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
+        <h2 className="mb-4 text-lg font-semibold">応募者情報</h2>
+        <dl className="grid grid-cols-2 gap-4">
+          <div>
+            <dt className="text-sm font-medium text-gray-500">表示名</dt>
+            <dd className="mt-1">{detail.displayName}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">メールアドレス</dt>
+            <dd className="mt-1">{detail.email}</dd>
+          </div>
+        </dl>
+      </section>
+
+      {/* 企画内容 */}
+      <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
+        <h2 className="mb-4 text-lg font-semibold">企画内容</h2>
+        <dl className="space-y-6">
+          <div>
+            <dt className="text-sm font-medium text-gray-500">カテゴリ</dt>
+            <dd className="mt-1">{getCategoryLabel(detail.projectCategory)}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">活動地域</dt>
+            <dd className="mt-1">{locationText}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">概要</dt>
+            <dd className="mt-1 text-gray-900">{detail.projectSummary}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">詳細</dt>
+            <dd className="mt-1 whitespace-pre-wrap text-gray-900">{detail.projectStory}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">活動予定</dt>
+            <dd className="mt-1 whitespace-pre-wrap text-gray-900">{detail.plannedActivities}</dd>
+          </div>
+          {detail.snsLinks && (
+            <div>
+              <dt className="text-sm font-medium text-gray-500">SNS リンク</dt>
+              <dd className="mt-1 space-y-1">
+                {detail.snsLinks.x && (
+                  <p className="text-sm">
+                    X:{" "}
+                    <a
+                      href={detail.snsLinks.x}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {detail.snsLinks.x}
+                    </a>
+                  </p>
+                )}
+                {detail.snsLinks.instagram && (
+                  <p className="text-sm">
+                    Instagram:{" "}
+                    <a
+                      href={detail.snsLinks.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {detail.snsLinks.instagram}
+                    </a>
+                  </p>
+                )}
+                {detail.snsLinks.facebook && (
+                  <p className="text-sm">
+                    Facebook:{" "}
+                    <a
+                      href={detail.snsLinks.facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {detail.snsLinks.facebook}
+                    </a>
+                  </p>
+                )}
+                {detail.snsLinks.website && (
+                  <p className="text-sm">
+                    Website:{" "}
+                    <a
+                      href={detail.snsLinks.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {detail.snsLinks.website}
+                    </a>
+                  </p>
+                )}
+              </dd>
+            </div>
+          )}
+        </dl>
+      </section>
+
+      {/* 審査メモ (REJECTED のみ) */}
+      {detail.status === "REJECTED" && detail.reviewerNote && (
+        <section className="mb-8 rounded-lg border border-red-200 bg-red-50 p-6">
+          <h2 className="mb-2 text-lg font-semibold text-red-800">却下理由</h2>
+          <p className="whitespace-pre-wrap text-red-900">{detail.reviewerNote}</p>
+        </section>
+      )}
+
+      {/* アクションエリア (PENDING のみ) — #70 で有効化 */}
+      {detail.status === "PENDING" && (
+        <section className="rounded-lg border border-gray-200 bg-white p-6">
+          <h2 className="mb-4 text-lg font-semibold">審査アクション</h2>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              disabled
+              className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white opacity-50"
+            >
+              承認する
+            </button>
+            <button
+              type="button"
+              disabled
+              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white opacity-50"
+            >
+              却下する
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-gray-400">
+            承認/却下機能は次のタスク (#70) で有効化されます
+          </p>
+        </section>
+      )}
+    </div>
+  );
+}

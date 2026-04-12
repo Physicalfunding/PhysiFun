@@ -14,6 +14,14 @@ export { NoopMailSender } from "./mail";
 
 export { PrismaCleanupExpiredAccountsAdapter } from "./account/PrismaCleanupExpiredAccountsAdapter";
 
+export {
+  PrismaLeaderApplicationQueryService,
+  type LeaderApplicationQueryService,
+  type LeaderApplicationListItem,
+  type LeaderApplicationListResult,
+  type LeaderApplicationDetail,
+} from "./leader-application/PrismaLeaderApplicationQueryService";
+
 // Prisma Client のクラスや runtime 値は再エクスポートしない
 // (`PrismaClient` を apps/web 側で new できないようにするため)。
 // モデル型・enum 値は必要になった時点で type-only 再エクスポートを追加する。
