@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "@physifun/domain";
-import type { ApproveLeaderApplicationPort } from "./ports/ApproveLeaderApplicationPort";
+import type { AccountRole, ApproveLeaderApplicationPort } from "./ports/ApproveLeaderApplicationPort";
 
 // ==================== 出力 DTO ====================
 
@@ -21,8 +21,7 @@ export type ApproveLeaderApplicationError =
   | { readonly type: "APPLICATION_NOT_FOUND" }
   | { readonly type: "ACCOUNT_NOT_FOUND" }
   | { readonly type: "NOT_PENDING" }
-  | { readonly type: "ALREADY_LEADER" }
-  | { readonly type: "DOMAIN_ERROR"; readonly message: string };
+  | { readonly type: "ALREADY_LEADER" };
 
 // ==================== 入力 DTO ====================
 
@@ -78,7 +77,7 @@ export class ApproveLeaderApplicationUseCase {
 
     // 2-4. 承認処理をトランザクションで実行
     const now = new Date();
-    const newRoles = [...account.roles, "LEADER"];
+    const newRoles: AccountRole[] = [...account.roles, "LEADER"];
     const outboxMessageId = randomUUID();
 
     await this.port.executeApproval({

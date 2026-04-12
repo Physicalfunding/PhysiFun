@@ -6,14 +6,24 @@
  */
 
 /**
+ * 承認フローで扱うリーダー応募のステータス
+ */
+export type LeaderApplicationStatusForApproval = "PENDING" | "APPROVED" | "REJECTED";
+
+/**
  * 応募の永続化行（findApplicationById 用）
  */
 export interface LeaderApplicationRow {
   readonly id: string;
   readonly accountId: string;
-  readonly status: string;
+  readonly status: LeaderApplicationStatusForApproval;
   readonly email: string;
 }
+
+/**
+ * アカウントのロール
+ */
+export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
 
 /**
  * 承認対象のアカウント情報
@@ -21,7 +31,7 @@ export interface LeaderApplicationRow {
 export interface AccountForApproval {
   readonly id: string;
   readonly status: string;
-  readonly roles: string[];
+  readonly roles: AccountRole[];
 }
 
 /**
@@ -51,7 +61,7 @@ export interface ApproveLeaderApplicationPort {
   executeApproval(params: {
     applicationId: string;
     accountId: string;
-    newRoles: string[];
+    newRoles: AccountRole[];
     reviewedAt: Date;
     outboxMessage: {
       id: string;
