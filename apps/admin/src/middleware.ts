@@ -44,7 +44,5 @@ export async function middleware(request: NextRequest) {
  * 静的アセットと Next.js 内部パスを除外する。
  */
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

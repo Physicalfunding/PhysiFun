@@ -49,11 +49,7 @@ export default function AdminLoginPage() {
         <h1 className="text-center text-2xl font-bold">運営管理ログイン</h1>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {error && (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
+          {error && <div className="rounded bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium">
