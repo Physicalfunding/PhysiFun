@@ -1,0 +1,94 @@
+/**
+ * SubmitLeaderApplicationUseCase が依存するポートインターフェース
+ *
+ * アプリケーション層は Prisma に直接依存せず、このポートを介して
+ * インフラストラクチャ層と通信する。インフラ層が実装を提供する。
+ */
+
+/**
+ * アカウントの状態
+ */
+export type AccountStatus = "PENDING_EMAIL_CONFIRMATION" | "ACTIVE";
+
+/**
+ * アカウントのロール
+ */
+export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
+
+/**
+ * findByEmail で返すアカウント行の最小型
+ */
+export interface AccountRow {
+  readonly id: string;
+  readonly email: string;
+  readonly status: AccountStatus;
+}
+
+/**
+ * トランザクション内で実行する Account 作成パラメータ
+ */
+export interface CreateAccountParams {
+  readonly id: string;
+  readonly email: string;
+  readonly displayName: string;
+  readonly status: AccountStatus;
+  readonly roles: AccountRole[];
+  readonly activationToken: string;
+  readonly activationTokenExp: Date;
+}
+
+/**
+ * トランザクション内で実行する LeaderApplication 作成パラメータ
+ */
+export interface CreateLeaderApplicationParams {
+  readonly id: string;
+  readonly accountId: string;
+  readonly status: "PENDING";
+  readonly projectTitle: string;
+  readonly projectSummary: string;
+  readonly projectStory: string;
+  readonly projectCategory: string;
+  readonly prefectureCode: string;
+  readonly municipality: string | null;
+  readonly plannedActivities: string;
+  readonly snsLinks: {
+    x: string | null;
+    instagram: string | null;
+    facebook: string | null;
+    website: string | null;
+  } | null;
+  readonly submittedAt: Date;
+}
+
+/**
+ * トランザクション内で実行する OutboxMessage 作成パラメータ
+ */
+export interface CreateOutboxMessageParams {
+  readonly id: string;
+  readonly type: string;
+  readonly payload: unknown;
+}
+
+/**
+ * SubmitLeaderApplication ユースケースのポート
+ *
+ * トランザクション境界を含むすべての永続化操作をカプセル化する。
+ * インフラ層が Prisma トランザクション等で実装する。
+ */
+export interface SubmitLeaderApplicationPort {
+  /**
+   * メールアドレスでアカウントを検索する。
+   * トランザクション外で呼ばれる（重複チェック用）。
+   */
+  findAccountByEmail(email: string): Promise<AccountRow | null>;
+
+  /**
+   * アカウント作成 + リーダー応募作成 + Outbox メッセージ作成を
+   * 1 つのトランザクションで実行する。
+   */
+  executeInTransaction(params: {
+    account: CreateAccountParams;
+    leaderApplication: CreateLeaderApplicationParams;
+    outboxMessage: CreateOutboxMessageParams;
+  }): Promise<void>;
+}

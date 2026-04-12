@@ -48,7 +48,14 @@
     "packages/application": {
       "name": "@physifun/application",
       "version": "0.0.0",
+      "dependencies": {
+        "@physifun/domain": "workspace:*",
+        "@physifun/infrastructure": "workspace:*",
+        "zod": "^3.25.67",
+      },
       "devDependencies": {
+        "@jest/globals": "^29.7.0",
+        "@types/node": "^20",
         "typescript": "^5",
       },
     },
@@ -67,8 +74,10 @@
       "dependencies": {
         "@physifun/domain": "workspace:*",
         "@prisma/client": "^6.9.0",
+        "resend": "^6.9.3",
       },
       "devDependencies": {
+        "@jest/globals": "^29.7.0",
         "@types/node": "^20",
         "dotenv": "^16.4.5",
         "prisma": "^6.9.0",
