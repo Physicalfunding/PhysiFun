@@ -5,9 +5,18 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@physifun/domain": "workspace:*",
+    "@physifun/infrastructure": "workspace:*",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/node": "^20",
     "typescript": "^5"
   }
 }

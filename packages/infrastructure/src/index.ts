@@ -1,8 +1,18 @@
 export { prisma } from "./database/client";
 
 export type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "./outbox";
+export {
+  OutboxWorker,
+  ActivationEmailProcessor,
+  ACTIVATION_EMAIL_TYPE,
+  type ActivationEmailPayload,
+} from "./outbox";
 
 export type { MailMessage, MailSender, MailSendError } from "./mail";
+export { ResendMailSender } from "./mail";
+export { NoopMailSender } from "./mail";
+
+export { PrismaCleanupExpiredAccountsAdapter } from "./account/PrismaCleanupExpiredAccountsAdapter";
 
 // Prisma Client のクラスや runtime 値は再エクスポートしない
 // (`PrismaClient` を apps/web 側で new できないようにするため)。
