@@ -5,20 +5,7 @@
  * インフラストラクチャ層と通信する。インフラ層が実装を提供する。
  */
 
-/**
- * 承認フローで扱うリーダー応募のステータス
- */
-export type LeaderApplicationStatusForApproval = "PENDING" | "APPROVED" | "REJECTED";
-
-/**
- * 応募の永続化行（findApplicationById 用）
- */
-export interface LeaderApplicationRow {
-  readonly id: string;
-  readonly accountId: string;
-  readonly status: LeaderApplicationStatusForApproval;
-  readonly email: string;
-}
+import type { LeaderApplication, LeaderApplicationStatus } from "@physifun/domain";
 
 /**
  * アカウントのロール
@@ -30,8 +17,9 @@ export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
  */
 export interface AccountForApproval {
   readonly id: string;
-  readonly status: string;
+  readonly status: "PENDING_EMAIL_CONFIRMATION" | "ACTIVE" | "SUSPENDED";
   readonly roles: AccountRole[];
+  readonly email: string;
 }
 
 /**
@@ -44,7 +32,7 @@ export interface ApproveLeaderApplicationPort {
   /**
    * 応募 ID でリーダー応募を検索する。
    */
-  findApplicationById(id: string): Promise<LeaderApplicationRow | null>;
+  findApplicationById(id: string): Promise<LeaderApplication | null>;
 
   /**
    * アカウント ID でアカウントを検索する。
@@ -59,7 +47,7 @@ export interface ApproveLeaderApplicationPort {
    * - OutboxMessage を作成
    */
   executeApproval(params: {
-    applicationId: string;
+    application: LeaderApplication;
     accountId: string;
     newRoles: AccountRole[];
     reviewedAt: Date;

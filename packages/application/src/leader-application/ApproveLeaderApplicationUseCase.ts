@@ -62,13 +62,14 @@ export class ApproveLeaderApplicationUseCase {
       return err({ type: "APPLICATION_NOT_FOUND" });
     }
 
-    // 1-b. PENDING 状態チェック（冪等性確保）
-    if (application.status !== "PENDING") {
+    // 1-b. ドメインエンティティの approve() を呼んで PENDING 状態チェック
+    const approveResult = application.approve();
+    if (!approveResult.ok) {
       return err({ type: "NOT_PENDING" });
     }
 
     // 1-c. アカウントの存在チェック
-    const account = await this.port.findAccountById(application.accountId);
+    const account = await this.port.findAccountById(application.accountId.toString());
     if (!account) {
       return err({ type: "ACCOUNT_NOT_FOUND" });
     }
@@ -84,7 +85,7 @@ export class ApproveLeaderApplicationUseCase {
     const outboxMessageId = randomUUID();
 
     await this.port.executeApproval({
-      applicationId: application.id,
+      application,
       accountId: account.id,
       newRoles,
       reviewedAt: now,
@@ -92,15 +93,15 @@ export class ApproveLeaderApplicationUseCase {
         id: outboxMessageId,
         type: "approved.notify_applicant",
         payload: {
-          applicationId: application.id,
+          applicationId: application.id.toString(),
           accountId: account.id,
-          email: application.email,
+          email: account.email,
         },
       },
     });
 
     return ok({
-      applicationId: application.id,
+      applicationId: application.id.toString(),
       accountId: account.id,
     });
   }

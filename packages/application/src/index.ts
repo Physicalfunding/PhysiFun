@@ -41,9 +41,6 @@ export {
 // ApproveLeaderApplicationPort
 export type {
   ApproveLeaderApplicationPort,
-  LeaderApplicationStatusForApproval,
-  LeaderApplicationRow,
-  AccountRole as AccountRoleForApproval,
   AccountForApproval,
 } from "./leader-application/ports/ApproveLeaderApplicationPort";
 
