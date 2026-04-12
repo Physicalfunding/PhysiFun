@@ -29,15 +29,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // ADMIN ロールチェック
-  // TODO: token.roles が実装されたら有効化する
-  // JWT に roles が保存されるようになったら以下を有効化:
-  // const roles = (token.roles as string[]) ?? [];
-  // if (!roles.includes("ADMIN")) {
-  //   const loginUrl = new URL("/login", request.url);
-  //   loginUrl.searchParams.set("error", "unauthorized");
-  //   return NextResponse.redirect(loginUrl);
-  // }
+  // token.roles に ADMIN が含まれない場合はログインページにリダイレクト
+  const roles = (token.roles as string[] | undefined) ?? [];
+  if (!roles.includes("ADMIN")) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   return NextResponse.next();
 }

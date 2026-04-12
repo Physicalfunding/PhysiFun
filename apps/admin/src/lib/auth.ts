@@ -33,6 +33,8 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
+  secret: process.env.NEXTAUTH_SECRET,
+
   session: {
     strategy: "jwt",
     maxAge: 24 * 60 * 60, // 管理画面は 1日 で期限切れ（web より短い）
@@ -59,8 +61,8 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
+      if (session.user && token.id) {
+        session.user.id = token.id;
         // TODO: roles を session に公開する
         // session.user.roles = token.roles;
       }
