@@ -70,5 +70,9 @@ function mapApproveError(error: ApproveLeaderApplicationError) {
       return unprocessableEntityResponse("この応募は審査待ち状態ではありません");
     case "ALREADY_LEADER":
       return unprocessableEntityResponse("このアカウントは既にリーダーです");
+    default: {
+      const _exhaustive: never = error;
+      return internalErrorResponse();
+    }
   }
 }

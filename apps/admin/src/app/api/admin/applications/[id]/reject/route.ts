@@ -44,7 +44,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // リクエストボディ
-    const body = (await request.json()) as { reviewerNote?: string };
+    let body: { reviewerNote?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return validationErrorResponse("リクエストボディが不正です", {});
+    }
     if (!body.reviewerNote || body.reviewerNote.trim().length === 0) {
       return validationErrorResponse("却下理由は必須です", {
         reviewerNote: ["却下理由を入力してください"],
@@ -82,5 +87,9 @@ function mapRejectError(error: RejectLeaderApplicationError) {
         "入力内容を確認してください",
         Object.fromEntries(error.issues.map((i) => [i.path, [i.message]]))
       );
+    default: {
+      const _exhaustive: never = error;
+      return internalErrorResponse();
+    }
   }
 }
