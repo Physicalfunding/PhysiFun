@@ -26,8 +26,6 @@ export interface ProjectListItem {
 export interface ProjectListResult {
   readonly items: ProjectListItem[];
   readonly totalCount: number;
-  readonly page: number;
-  readonly perPage: number;
 }
 
 /**

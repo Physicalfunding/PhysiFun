@@ -2,7 +2,7 @@ import {
   WithdrawProjectUseCase,
   type WithdrawProjectError,
 } from "@physifun/application";
-import { PrismaProjectCommandAdapter } from "@physifun/infrastructure";
+import { getProjectStatusPort } from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
 import {
   successResponse,
@@ -51,12 +51,7 @@ export async function POST(
     }
 
     const { projectId } = await params;
-    const adapter = new PrismaProjectCommandAdapter();
-    const port = {
-      findProjectById: (id: string) => adapter.findProjectById(id),
-      saveProject: (project: Parameters<typeof adapter.saveProjectWithOptionalFeedback>[0]["project"]) =>
-        adapter.saveProjectWithOptionalFeedback({ project }),
-    };
+    const port = getProjectStatusPort();
     const useCase = new WithdrawProjectUseCase(port);
 
     const result = await useCase.execute({

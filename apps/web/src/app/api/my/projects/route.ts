@@ -5,9 +5,9 @@ import {
   type CreateProjectDraftError,
 } from "@physifun/application";
 import {
-  PrismaProjectQueryService,
-  PrismaProjectCommandAdapter,
-} from "@physifun/infrastructure";
+  getProjectQueryService,
+  getProjectCommandAdapter,
+} from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
 import {
   successResponse,
@@ -18,7 +18,7 @@ import {
   internalErrorResponse,
 } from "@/lib/api/response";
 
-const queryService = new PrismaProjectQueryService();
+const queryService = getProjectQueryService();
 
 /**
  * GET /api/my/projects
@@ -31,7 +31,7 @@ export async function GET() {
       return unauthorizedResponse();
     }
 
-    const result = await queryService.findManyByOwner(userId);
+    const result = await queryService.findProjectsByOwner(userId);
     return successResponse(result);
   } catch (error) {
     console.error("[api/my/projects] GET error:", error);
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       return validationErrorResponse("入力内容を確認してください", fields);
     }
 
-    const adapter = new PrismaProjectCommandAdapter();
+    const adapter = getProjectCommandAdapter();
     const useCase = new CreateProjectDraftUseCase(adapter);
     const result = await useCase.execute({
       accountId: userId,

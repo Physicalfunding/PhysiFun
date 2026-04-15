@@ -4,9 +4,9 @@ import {
   type UpdateProjectDraftError,
 } from "@physifun/application";
 import {
-  PrismaProjectQueryService,
-  PrismaProjectCommandAdapter,
-} from "@physifun/infrastructure";
+  getProjectQueryService,
+  getProjectCommandAdapter,
+} from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
 import {
   successResponse,
@@ -19,7 +19,7 @@ import {
 } from "@/lib/api/response";
 import { projectFormSchema } from "@/lib/validations/projectFormSchema";
 
-const queryService = new PrismaProjectQueryService();
+const queryService = getProjectQueryService();
 
 /**
  * GET /api/my/projects/[projectId]
@@ -36,7 +36,7 @@ export async function GET(
     }
 
     const { projectId } = await params;
-    const detail = await queryService.findByIdForOwner(projectId, userId);
+    const detail = await queryService.findProjectDetailForOwner(projectId, userId);
     if (!detail) {
       return notFoundResponse("プロジェクト");
     }
@@ -118,7 +118,7 @@ export async function PATCH(
     const data = parsed.data;
 
     // UseCase 入力に変換
-    const adapter = new PrismaProjectCommandAdapter();
+    const adapter = getProjectCommandAdapter();
     const useCase = new UpdateProjectDraftUseCase(adapter);
 
     const result = await useCase.execute({

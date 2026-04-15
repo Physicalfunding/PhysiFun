@@ -1,79 +1,10 @@
 import type { PublishStatus, ProjectPhase, ReviewAction } from "@physifun/domain";
+import type {
+  ProjectQueryPort,
+  ProjectListResult,
+  ProjectDetailDTO,
+} from "@physifun/application";
 import { prisma } from "../database/client";
-
-// ==================== 型定義 ====================
-
-/**
- * 一覧表示用のプロジェクトデータ
- */
-export interface ProjectListItem {
-  readonly id: string;
-  readonly title: string;
-  readonly status: PublishStatus;
-  readonly phase: ProjectPhase;
-  readonly category: string | null;
-  readonly coverImageUrl: string | null;
-  readonly updatedAt: Date;
-}
-
-/**
- * 詳細表示用のプロジェクトデータ
- */
-export interface ProjectDetailDTO {
-  readonly id: string;
-  readonly title: string;
-  readonly summary: string | null;
-  readonly body: string | null;
-  readonly leaderIntroduction: string | null;
-  readonly coverImageUrl: string | null;
-  readonly category: string | null;
-  readonly prefectureCode: string | null;
-  readonly municipality: string | null;
-  readonly snsLinks: {
-    x: string | null;
-    instagram: string | null;
-    facebook: string | null;
-    website: string | null;
-  } | null;
-  readonly status: PublishStatus;
-  readonly phase: ProjectPhase;
-  readonly activityPlan: string | null;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  readonly latestFeedback: {
-    action: ReviewAction;
-    note: string | null;
-    reviewedAt: Date;
-  } | null;
-}
-
-/**
- * 一覧取得の結果
- */
-export interface ProjectListResult {
-  readonly items: ProjectListItem[];
-  readonly totalCount: number;
-}
-
-// ==================== Query Service インターフェース ====================
-
-/**
- * Project の読み取り専用 Query Service
- *
- * CQRS の Q 側。ドメインエンティティを経由せず、
- * Prisma から直接 DTO にマッピングする。
- */
-export interface ProjectQueryService {
-  findManyByOwner(
-    accountId: string,
-    params?: { page?: number; perPage?: number }
-  ): Promise<ProjectListResult>;
-
-  findByIdForOwner(
-    projectId: string,
-    accountId: string
-  ): Promise<ProjectDetailDTO | null>;
-}
 
 // ==================== Prisma 実装 ====================
 
@@ -82,9 +13,12 @@ const DEFAULT_PER_PAGE = 20;
 
 /**
  * Prisma ベースの Project Query Service
+ *
+ * CQRS の Q 側。ドメインエンティティを経由せず、
+ * Prisma から直接 DTO にマッピングする。
  */
-export class PrismaProjectQueryService implements ProjectQueryService {
-  async findManyByOwner(
+export class PrismaProjectQueryService implements ProjectQueryPort {
+  async findProjectsByOwner(
     accountId: string,
     params?: { page?: number; perPage?: number }
   ): Promise<ProjectListResult> {
@@ -127,7 +61,7 @@ export class PrismaProjectQueryService implements ProjectQueryService {
     };
   }
 
-  async findByIdForOwner(
+  async findProjectDetailForOwner(
     projectId: string,
     accountId: string
   ): Promise<ProjectDetailDTO | null> {
