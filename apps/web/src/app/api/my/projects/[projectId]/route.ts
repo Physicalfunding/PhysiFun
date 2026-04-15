@@ -125,12 +125,12 @@ export async function PATCH(
       projectId,
       accountId: userId,
       title: data.title,
-      coverImageUrl: data.coverImageUrl,
+      coverImageUrl: data.coverImageUrl || null,
       category: data.category,
       location:
         data.prefectureCode !== undefined
           ? data.prefectureCode
-            ? { prefectureCode: data.prefectureCode }
+            ? { prefectureCode: data.prefectureCode, municipality: data.municipality }
             : null
           : undefined,
       phase: data.phase,

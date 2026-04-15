@@ -3,6 +3,11 @@ import { CATEGORY_MASTER } from "@physifun/domain";
 
 const CATEGORY_VALUES = CATEGORY_MASTER.map((c) => c.value);
 
+const httpsUrl = z
+  .string()
+  .url("有効なURLを入力してください")
+  .regex(/^https?:\/\//, "http:// または https:// で始まるURLを入力してください");
+
 /**
  * プロジェクト編集フォームの Zod スキーマ
  *
@@ -30,12 +35,7 @@ export const projectFormSchema = z.object({
     .max(1000, "活動計画は1000文字以内です")
     .nullable()
     .optional(),
-  coverImageUrl: z
-    .string()
-    .url("有効なURLを入力してください")
-    .nullable()
-    .optional()
-    .or(z.literal("")),
+  coverImageUrl: httpsUrl.nullable().optional().or(z.literal("")),
   category: z
     .string()
     .refine((v) => CATEGORY_VALUES.includes(v as (typeof CATEGORY_VALUES)[number]), {
@@ -43,7 +43,12 @@ export const projectFormSchema = z.object({
     })
     .nullable()
     .optional(),
-  prefectureCode: z.string().nullable().optional(),
+  prefectureCode: z
+    .string()
+    .regex(/^(?:0[1-9]|[1-3]\d|4[0-7])$/, "無効な都道府県コードです")
+    .nullable()
+    .optional()
+    .or(z.literal("")),
   municipality: z
     .string()
     .max(50, "市区町村は50文字以内です")
@@ -52,23 +57,19 @@ export const projectFormSchema = z.object({
   phase: z.string().optional(),
   snsLinks: z
     .object({
-      x: z
-        .string()
+      x: httpsUrl
         .max(500, "URLは500文字以内です")
         .optional()
         .or(z.literal("")),
-      instagram: z
-        .string()
+      instagram: httpsUrl
         .max(500, "URLは500文字以内です")
         .optional()
         .or(z.literal("")),
-      facebook: z
-        .string()
+      facebook: httpsUrl
         .max(500, "URLは500文字以内です")
         .optional()
         .or(z.literal("")),
-      website: z
-        .string()
+      website: httpsUrl
         .max(500, "URLは500文字以内です")
         .optional()
         .or(z.literal("")),

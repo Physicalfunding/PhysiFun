@@ -51,8 +51,7 @@ export interface UpdateProjectDraftInput {
   readonly title?: string;
   readonly coverImageUrl?: string | null;
   readonly category?: string | null;
-  /** Phase 1 では prefectureCode のみ。municipality は将来対応 */
-  readonly location?: { prefectureCode: string } | null;
+  readonly location?: { prefectureCode: string; municipality?: string | null } | null;
   readonly phase?: string;
   readonly summary?: string | null;
   readonly body?: string | null;
@@ -131,6 +130,7 @@ export class UpdateProjectDraftUseCase {
       } else {
         const locationResult = ProjectLocation.create({
           prefectureCode: input.location.prefectureCode,
+          municipality: input.location.municipality,
         });
         if (!locationResult.ok) {
           return err({
