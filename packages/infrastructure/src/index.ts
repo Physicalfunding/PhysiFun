@@ -25,6 +25,16 @@ export {
 export { PrismaApproveLeaderApplicationAdapter } from "./leader-application/PrismaApproveLeaderApplicationAdapter";
 export { PrismaRejectLeaderApplicationAdapter } from "./leader-application/PrismaRejectLeaderApplicationAdapter";
 
+export {
+  PrismaProjectQueryService,
+  type ProjectQueryService,
+  type ProjectListItem,
+  type ProjectListResult,
+  type ProjectDetailDTO,
+} from "./project/PrismaProjectQueryService";
+
+export { PrismaProjectCommandAdapter } from "./project/PrismaProjectCommandAdapter";
+
 // Prisma Client のクラスや runtime 値は再エクスポートしない
 // (`PrismaClient` を apps/web 側で new できないようにするため)。
 // モデル型・enum 値は必要になった時点で type-only 再エクスポートを追加する。

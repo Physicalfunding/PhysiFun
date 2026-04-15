@@ -92,3 +92,38 @@ export {
 
 // UpdateProjectDraftPort
 export type { UpdateProjectDraftPort } from "./project/ports/UpdateProjectDraftPort";
+
+// ProjectQueryPort
+export type {
+  ProjectQueryPort,
+  ProjectListItem,
+  ProjectListResult,
+  ProjectDetailDTO,
+} from "./project/ports/ProjectQueryPort";
+
+// RequestPublishUseCase
+export {
+  RequestPublishUseCase,
+  type RequestPublishInput,
+  type RequestPublishOutput,
+  type RequestPublishError,
+} from "./project/RequestPublishUseCase";
+export type { RequestPublishPort } from "./project/RequestPublishUseCase";
+
+// WithdrawProjectUseCase
+export {
+  WithdrawProjectUseCase,
+  type WithdrawProjectInput,
+  type WithdrawProjectOutput,
+  type WithdrawProjectError,
+} from "./project/WithdrawProjectUseCase";
+export type { WithdrawProjectPort } from "./project/WithdrawProjectUseCase";
+
+// UnpublishProjectUseCase
+export {
+  UnpublishProjectUseCase,
+  type UnpublishProjectInput,
+  type UnpublishProjectOutput,
+  type UnpublishProjectError,
+} from "./project/UnpublishProjectUseCase";
+export type { UnpublishProjectPort } from "./project/UnpublishProjectUseCase";

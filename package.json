@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev": "bun --filter @physifun/web dev",
+    "dev:all": "bun --filter '@physifun/{web,admin}' dev",
     "build": "bun --filter @physifun/web build",
     "start": "bun --filter @physifun/web start",
     "lint": "bun --filter @physifun/web lint",

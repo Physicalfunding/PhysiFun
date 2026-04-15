@@ -1,0 +1,167 @@
+import type { Project, ProjectReviewFeedback } from "@physifun/domain";
+import { ProjectLimitExceededError } from "@physifun/application";
+import { prisma } from "../database/client";
+import { reconstructProject } from "./reconstructProject";
+
+// ==================== 型定義 ====================
+
+/**
+ * プロジェクト作成時に必要なアカウント情報
+ *
+ * application 層の AccountForProjectCreation と構造的に適合する。
+ * 循環依存 (infrastructure → application) を避けるためここで定義する。
+ */
+export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
+
+export interface AccountForProjectCreation {
+  readonly id: string;
+  readonly roles: AccountRole[];
+}
+
+// ==================== Prisma 実装 ====================
+
+/**
+ * Prisma ベースの Project コマンドアダプタ
+ *
+ * CreateProjectDraftPort と UpdateProjectDraftPort の両方を実装する。
+ * 構造的部分型で Port インターフェースに適合する。
+ */
+export class PrismaProjectCommandAdapter {
+  /**
+   * アカウント ID でアカウントを検索する。
+   * ロールを AccountRole 型にマッピングして返す。
+   */
+  async findAccountById(accountId: string): Promise<AccountForProjectCreation | null> {
+    const row = await prisma.account.findUnique({
+      where: { id: accountId },
+      select: { id: true, roles: true },
+    });
+    if (!row) return null;
+    return {
+      id: row.id,
+      roles: row.roles as AccountRole[],
+    };
+  }
+
+  /**
+   * 件数チェック + プロジェクト保存をアトミックに実行する。
+   *
+   * 同一トランザクション内で件数チェックと INSERT を行い、
+   * TOCTOU を防止する。上限超過時は ProjectLimitExceededError をスローする。
+   */
+  async countAndSaveProject(params: {
+    project: Project;
+    accountId: string;
+    maxCount: number;
+  }): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      const count = await tx.project.count({
+        where: { ownerAccountId: params.accountId },
+      });
+
+      if (count >= params.maxCount) {
+        throw new ProjectLimitExceededError();
+      }
+
+      const p = params.project;
+      await tx.project.create({
+        data: {
+          id: p.id.toString(),
+          ownerAccountId: params.accountId,
+          title: p.title,
+          coverImageUrl: p.coverImageUrl,
+          category: p.category,
+          prefectureCode: p.location?.prefectureCode ?? null,
+          municipality: p.location?.municipality ?? null,
+          phase: p.phase,
+          status: p.publishStatus,
+          summary: p.summary,
+          story: p.body,
+          leaderIntro: p.leaderIntroduction,
+          snsLinks: p.snsLinks.isEmpty()
+            ? {}
+            : {
+                x: p.snsLinks.x,
+                instagram: p.snsLinks.instagram,
+                facebook: p.snsLinks.facebook,
+                website: p.snsLinks.website,
+              },
+          activityPlan: p.activityPlan,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        },
+      });
+    });
+  }
+
+  /**
+   * プロジェクト ID で Project 集約を取得する。
+   * Prisma 行データを reconstructProject で復元する。
+   */
+  async findProjectById(projectId: string): Promise<Project | null> {
+    const row = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!row) return null;
+    return reconstructProject(row);
+  }
+
+  /**
+   * Project 集約と（任意の）審査フィードバックをアトミックに永続化する。
+   *
+   * 自動取下げ時は reviewFeedback が渡される。
+   * 同一トランザクション内で両方を保存する。
+   */
+  async saveProjectWithOptionalFeedback(params: {
+    project: Project;
+    reviewFeedback?: ProjectReviewFeedback;
+  }): Promise<void> {
+    const p = params.project;
+
+    const operations = [
+      prisma.project.update({
+        where: { id: p.id.toString() },
+        data: {
+          title: p.title,
+          coverImageUrl: p.coverImageUrl,
+          category: p.category,
+          prefectureCode: p.location?.prefectureCode ?? null,
+          municipality: p.location?.municipality ?? null,
+          phase: p.phase,
+          status: p.publishStatus,
+          summary: p.summary,
+          story: p.body,
+          leaderIntro: p.leaderIntroduction,
+          snsLinks: p.snsLinks.isEmpty()
+            ? {}
+            : {
+                x: p.snsLinks.x,
+                instagram: p.snsLinks.instagram,
+                facebook: p.snsLinks.facebook,
+                website: p.snsLinks.website,
+              },
+          activityPlan: p.activityPlan,
+          updatedAt: p.updatedAt,
+        },
+      }),
+    ];
+
+    if (params.reviewFeedback) {
+      const fb = params.reviewFeedback;
+      operations.push(
+        prisma.projectReviewFeedback.create({
+          data: {
+            id: fb.id.toString(),
+            projectId: fb.projectId.toString(),
+            reviewerId: fb.reviewerId.toString(),
+            action: fb.action as string as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Domain ReviewAction includes WITHDRAWN which Prisma enum doesn't yet have
+            note: fb.note,
+            reviewedAt: fb.reviewedAt,
+          },
+        }) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      );
+    }
+
+    await prisma.$transaction(operations);
+  }
+}
