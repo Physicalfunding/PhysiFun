@@ -12,7 +12,6 @@ export type {
   SubmitLeaderApplicationPort,
   AccountRow,
   AccountStatus,
-  AccountRole,
   CreateAccountParams,
   CreateLeaderApplicationParams,
   CreateOutboxMessageParams,
@@ -63,3 +62,33 @@ export {
 
 // RejectLeaderApplicationPort
 export type { RejectLeaderApplicationPort } from "./leader-application/ports/RejectLeaderApplicationPort";
+
+// CreateProjectDraftUseCase
+export {
+  CreateProjectDraftUseCase,
+  ProjectLimitExceededError,
+  MAX_PROJECTS_PER_LEADER,
+  type CreateProjectDraftInput,
+  type CreateProjectDraftOutput,
+  type CreateProjectDraftError,
+} from "./project/CreateProjectDraftUseCase";
+
+// CreateProjectDraftPort
+export type {
+  CreateProjectDraftPort,
+  AccountForProjectCreation,
+} from "./project/ports/CreateProjectDraftPort";
+
+// Shared
+export type { AccountRole } from "./shared/AccountRole";
+
+// UpdateProjectDraftUseCase
+export {
+  UpdateProjectDraftUseCase,
+  type UpdateProjectDraftInput,
+  type UpdateProjectDraftOutput,
+  type UpdateProjectDraftError,
+} from "./project/UpdateProjectDraftUseCase";
+
+// UpdateProjectDraftPort
+export type { UpdateProjectDraftPort } from "./project/ports/UpdateProjectDraftPort";

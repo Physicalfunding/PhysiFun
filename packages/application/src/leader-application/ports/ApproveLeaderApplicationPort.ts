@@ -6,11 +6,7 @@
  */
 
 import type { LeaderApplication, LeaderApplicationStatus } from "@physifun/domain";
-
-/**
- * アカウントのロール
- */
-export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
+import type { AccountRole } from "../../shared/AccountRole";
 
 /**
  * 承認対象のアカウント情報
