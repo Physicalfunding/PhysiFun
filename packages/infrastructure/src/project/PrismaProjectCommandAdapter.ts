@@ -166,6 +166,14 @@ export class PrismaProjectCommandAdapter {
    * リーダーへの差戻通知メール送信タスクを Outbox に積み、後段ワーカーが配信する。
    */
   async executeRejectInTransaction(params: {
+   * 運営による強制非公開 (PUBLISHED → DRAFT) を 1 トランザクションで永続化する。
+   *
+   * ForceUnpublishProjectUseCase が使用する。
+   *  1. Project.update (status=DRAFT, updatedAt=project.updatedAt)
+   *  2. ProjectReviewFeedback.create (action=FORCE_UNPUBLISHED, note=理由)
+   *  3. ProjectOutboxMessage.create (リーダーへの通知メール)
+   */
+  async executeForceUnpublishInTransaction(params: {
     project: Project;
     reviewFeedback: ProjectReviewFeedback;
     outboxMessage: CreateProjectOutboxMessageParams;
@@ -204,6 +212,7 @@ export class PrismaProjectCommandAdapter {
           projectId: fb.projectId.toString(),
           reviewerId: fb.reviewerId.toString(),
           action: fb.action as ReviewAction,
+          action: fb.action as import("@prisma/client").ReviewAction,
           note: fb.note,
           reviewedAt: fb.reviewedAt,
         },

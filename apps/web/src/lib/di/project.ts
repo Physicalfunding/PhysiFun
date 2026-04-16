@@ -4,6 +4,7 @@ import type {
   RequestPublishPort,
   CreateProjectOutboxMessageParams,
   RejectProjectPublicationPort,
+  ForceUnpublishProjectPort,
 } from "@physifun/application";
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 
@@ -79,5 +80,27 @@ export function getRejectProjectPublicationPort(): RejectProjectPublicationPort 
       reviewFeedback: ProjectReviewFeedback;
       outboxMessage: CreateProjectOutboxMessageParams;
     }) => adapter.executeRejectInTransaction(params),
+ * ForceUnpublishProjectUseCase 用のポート生成ヘルパー
+ *
+ * 運営による強制非公開 (PUBLISHED → DRAFT) は
+ *  - Project.status 更新
+ *  - ProjectReviewFeedback 作成 (FORCE_UNPUBLISHED)
+ *  - ProjectOutboxMessage 書き込み (リーダー通知メール)
+ * を同一トランザクションで実行する必要があるため、専用のヘルパーを切り出している。
+ *
+ * NOTE: 他の DI 関数と同様に、PrismaProjectCommandAdapter は stateless なため
+ * DI 関数ごとに独自インスタンス化している。Port ごとの依存関係を明示的に
+ * 分離するための意図的な設計。
+ */
+export function getForceUnpublishProjectPort(): ForceUnpublishProjectPort {
+  const adapter = new PrismaProjectCommandAdapter();
+  return {
+    findAccountById: (id: string) => adapter.findAccountById(id),
+    findProjectById: (id: string) => adapter.findProjectById(id),
+    executeForceUnpublishInTransaction: (params: {
+      project: Project;
+      reviewFeedback: ProjectReviewFeedback;
+      outboxMessage: CreateProjectOutboxMessageParams;
+    }) => adapter.executeForceUnpublishInTransaction(params),
   };
 }
