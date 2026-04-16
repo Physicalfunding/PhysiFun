@@ -4,6 +4,8 @@ import type {
   ProjectQueryPort,
   RequestPublishPort,
   CreateProjectOutboxMessageParams,
+  RejectProjectPublicationPort,
+  ForceUnpublishProjectPort,
 } from "@physifun/application";
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 
@@ -75,6 +77,16 @@ export function getRequestPublishPort(): RequestPublishPort {
  * Port ごとの依存関係を明示的に分離する。
  */
 export function getApproveProjectPublicationPort(): ApproveProjectPublicationPort {
+ * RejectProjectPublicationUseCase 用のポート生成ヘルパー
+ *
+ * 運営差戻は Project 更新 / ProjectReviewFeedback 作成 /
+ * ProjectOutboxMessage 書き込みを同一トランザクションで実行する必要があるため、
+ * executeRejectInTransaction を提供する。
+ *
+ * NOTE: getProjectStatusPort / getRequestPublishPort と同様、
+ * PrismaProjectCommandAdapter は stateless なため DI 関数ごとに独自インスタンス化する。
+ */
+export function getRejectProjectPublicationPort(): RejectProjectPublicationPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
     findAccountById: (accountId: string) => adapter.findAccountById(accountId),
@@ -86,5 +98,32 @@ export function getApproveProjectPublicationPort(): ApproveProjectPublicationPor
       publishedAt: Date;
       maxPublishedPerOwner: number;
     }) => adapter.executeApproveInTransaction(params),
+    executeRejectInTransaction: (params: {
+      project: Project;
+      reviewFeedback: ProjectReviewFeedback;
+      outboxMessage: CreateProjectOutboxMessageParams;
+    }) => adapter.executeRejectInTransaction(params),
+ * ForceUnpublishProjectUseCase 用のポート生成ヘルパー
+ *
+ * 運営による強制非公開 (PUBLISHED → DRAFT) は
+ *  - Project.status 更新
+ *  - ProjectReviewFeedback 作成 (FORCE_UNPUBLISHED)
+ *  - ProjectOutboxMessage 書き込み (リーダー通知メール)
+ * を同一トランザクションで実行する必要があるため、専用のヘルパーを切り出している。
+ *
+ * NOTE: 他の DI 関数と同様に、PrismaProjectCommandAdapter は stateless なため
+ * DI 関数ごとに独自インスタンス化している。Port ごとの依存関係を明示的に
+ * 分離するための意図的な設計。
+ */
+export function getForceUnpublishProjectPort(): ForceUnpublishProjectPort {
+  const adapter = new PrismaProjectCommandAdapter();
+  return {
+    findAccountById: (id: string) => adapter.findAccountById(id),
+    findProjectById: (id: string) => adapter.findProjectById(id),
+    executeForceUnpublishInTransaction: (params: {
+      project: Project;
+      reviewFeedback: ProjectReviewFeedback;
+      outboxMessage: CreateProjectOutboxMessageParams;
+    }) => adapter.executeForceUnpublishInTransaction(params),
   };
 }
