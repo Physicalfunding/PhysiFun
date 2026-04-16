@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
 import { ReviewActions } from "@/components/ReviewActions";
+import { SafeSnsLink } from "@/components/SafeSnsLink";
 import { getCategoryLabel } from "@/lib/category";
 import { getPrefectureName } from "@/lib/prefecture";
 
@@ -97,58 +98,10 @@ export default async function ApplicationDetailPage({
             <div>
               <dt className="text-sm font-medium text-gray-500">SNS リンク</dt>
               <dd className="mt-1 space-y-1">
-                {detail.snsLinks.x && (
-                  <p className="text-sm">
-                    X:{" "}
-                    <a
-                      href={detail.snsLinks.x}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {detail.snsLinks.x}
-                    </a>
-                  </p>
-                )}
-                {detail.snsLinks.instagram && (
-                  <p className="text-sm">
-                    Instagram:{" "}
-                    <a
-                      href={detail.snsLinks.instagram}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {detail.snsLinks.instagram}
-                    </a>
-                  </p>
-                )}
-                {detail.snsLinks.facebook && (
-                  <p className="text-sm">
-                    Facebook:{" "}
-                    <a
-                      href={detail.snsLinks.facebook}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {detail.snsLinks.facebook}
-                    </a>
-                  </p>
-                )}
-                {detail.snsLinks.website && (
-                  <p className="text-sm">
-                    Website:{" "}
-                    <a
-                      href={detail.snsLinks.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {detail.snsLinks.website}
-                    </a>
-                  </p>
-                )}
+                <SafeSnsLink label="X" url={detail.snsLinks.x} />
+                <SafeSnsLink label="Instagram" url={detail.snsLinks.instagram} />
+                <SafeSnsLink label="Facebook" url={detail.snsLinks.facebook} />
+                <SafeSnsLink label="Website" url={detail.snsLinks.website} />
               </dd>
             </div>
           )}

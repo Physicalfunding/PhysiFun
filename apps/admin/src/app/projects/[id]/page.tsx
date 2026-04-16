@@ -6,6 +6,7 @@ import type { ReviewAction } from "@physifun/domain";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { ProjectPhaseBadge } from "@/components/ProjectPhaseBadge";
 import { ProjectReviewActions } from "@/components/ProjectReviewActions";
+import { SafeSnsLink, isSafeHttpUrl } from "@/components/SafeSnsLink";
 import { getCategoryLabel } from "@/lib/category";
 import { getPrefectureName } from "@/lib/prefecture";
 
@@ -13,16 +14,6 @@ import { getPrefectureName } from "@/lib/prefecture";
 export const dynamic = "force-dynamic";
 
 const queryService = new PrismaProjectQueryService();
-
-/**
- * 画像 URL が http(s) スキームのみ許可する簡易ホワイトリスト検証。
- * - `javascript:` / `data:` / `file:` などのスキームをブロック
- * - SSRF 対策として `http://169.254.169.254/` などの内部ネットワーク URL も
- *   将来的には Supabase Storage ドメイン allowlist で更に絞る予定 (Issue #120)
- */
-function isSafeImageUrl(url: string): boolean {
-  return url.startsWith("https://") || url.startsWith("http://");
-}
 
 const REVIEW_ACTION_LABELS: Record<ReviewAction, string> = {
   APPROVED: "承認",
@@ -136,58 +127,10 @@ export default async function AdminProjectDetailPage({
             <div>
               <dt className="text-sm font-medium text-gray-500">SNS リンク</dt>
               <dd className="mt-1 space-y-1">
-                {detail.snsLinks.x && (
-                  <p className="text-sm">
-                    X:{" "}
-                    <a
-                      href={detail.snsLinks.x}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {detail.snsLinks.x}
-                    </a>
-                  </p>
-                )}
-                {detail.snsLinks.instagram && (
-                  <p className="text-sm">
-                    Instagram:{" "}
-                    <a
-                      href={detail.snsLinks.instagram}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {detail.snsLinks.instagram}
-                    </a>
-                  </p>
-                )}
-                {detail.snsLinks.facebook && (
-                  <p className="text-sm">
-                    Facebook:{" "}
-                    <a
-                      href={detail.snsLinks.facebook}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {detail.snsLinks.facebook}
-                    </a>
-                  </p>
-                )}
-                {detail.snsLinks.website && (
-                  <p className="text-sm">
-                    Website:{" "}
-                    <a
-                      href={detail.snsLinks.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {detail.snsLinks.website}
-                    </a>
-                  </p>
-                )}
+                <SafeSnsLink label="X" url={detail.snsLinks.x} />
+                <SafeSnsLink label="Instagram" url={detail.snsLinks.instagram} />
+                <SafeSnsLink label="Facebook" url={detail.snsLinks.facebook} />
+                <SafeSnsLink label="Website" url={detail.snsLinks.website} />
               </dd>
             </div>
           )}
@@ -195,7 +138,7 @@ export default async function AdminProjectDetailPage({
             <div>
               <dt className="text-sm font-medium text-gray-500">カバー画像</dt>
               <dd className="mt-1">
-                {isSafeImageUrl(detail.coverImageUrl) ? (
+                {isSafeHttpUrl(detail.coverImageUrl) ? (
                   <>
                     {/* next/image を使わず素の img で表示 (外部ホスト許可リスト設定を避けるため) */}
                     {/* Issue #120 で Supabase Storage ドメイン allowlist + next/image 移行予定 */}

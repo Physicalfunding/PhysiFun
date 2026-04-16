@@ -176,6 +176,11 @@ function mapDomainErrorToIssue(error: DomainVoError): { path: string; message: s
         path: `snsLinks.${error.field}`,
         message: `SNS URL は ${error.maxLength} 文字以内です`,
       };
+    case "INVALID_URL_SCHEME":
+      return {
+        path: `snsLinks.${error.field}`,
+        message: `SNS URL は ${error.allowedSchemes.join(" または ")} で始まる URL を指定してください`,
+      };
     case "REQUIRED_TEXT_EMPTY":
       return { path: error.field, message: `${error.field} は必須です` };
     case "TEXT_TOO_LONG":
