@@ -10,10 +10,7 @@
  */
 export type AccountStatus = "PENDING_EMAIL_CONFIRMATION" | "ACTIVE";
 
-/**
- * アカウントのロール
- */
-export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
+import type { AccountRole } from "../../shared/AccountRole";
 
 /**
  * findByEmail で返すアカウント行の最小型

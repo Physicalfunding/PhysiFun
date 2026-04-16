@@ -5,12 +5,8 @@
  * インフラストラクチャ層と通信する。インフラ層が実装を提供する。
  */
 
-import type { LeaderApplication, LeaderApplicationStatus } from "@physifun/domain";
-
-/**
- * アカウントのロール
- */
-export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
+import type { LeaderApplication } from "@physifun/domain";
+import type { AccountRole } from "../../shared/AccountRole";
 
 /**
  * 承認対象のアカウント情報

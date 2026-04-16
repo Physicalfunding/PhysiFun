@@ -12,7 +12,6 @@ export type {
   SubmitLeaderApplicationPort,
   AccountRow,
   AccountStatus,
-  AccountRole,
   CreateAccountParams,
   CreateLeaderApplicationParams,
   CreateOutboxMessageParams,
@@ -63,3 +62,68 @@ export {
 
 // RejectLeaderApplicationPort
 export type { RejectLeaderApplicationPort } from "./leader-application/ports/RejectLeaderApplicationPort";
+
+// CreateProjectDraftUseCase
+export {
+  CreateProjectDraftUseCase,
+  ProjectLimitExceededError,
+  MAX_PROJECTS_PER_LEADER,
+  type CreateProjectDraftInput,
+  type CreateProjectDraftOutput,
+  type CreateProjectDraftError,
+} from "./project/CreateProjectDraftUseCase";
+
+// CreateProjectDraftPort
+export type {
+  CreateProjectDraftPort,
+  AccountForProjectCreation,
+} from "./project/ports/CreateProjectDraftPort";
+
+// Shared
+export type { AccountRole } from "./shared/AccountRole";
+
+// UpdateProjectDraftUseCase
+export {
+  UpdateProjectDraftUseCase,
+  type UpdateProjectDraftInput,
+  type UpdateProjectDraftOutput,
+  type UpdateProjectDraftError,
+} from "./project/UpdateProjectDraftUseCase";
+
+// UpdateProjectDraftPort
+export type { UpdateProjectDraftPort } from "./project/ports/UpdateProjectDraftPort";
+
+// ProjectQueryPort
+export type {
+  ProjectQueryPort,
+  ProjectListItem,
+  ProjectListResult,
+  ProjectDetailDTO,
+} from "./project/ports/ProjectQueryPort";
+
+// RequestPublishUseCase
+export {
+  RequestPublishUseCase,
+  type RequestPublishInput,
+  type RequestPublishOutput,
+  type RequestPublishError,
+} from "./project/RequestPublishUseCase";
+export type { RequestPublishPort } from "./project/ports/RequestPublishPort";
+
+// WithdrawProjectUseCase
+export {
+  WithdrawProjectUseCase,
+  type WithdrawProjectInput,
+  type WithdrawProjectOutput,
+  type WithdrawProjectError,
+} from "./project/WithdrawProjectUseCase";
+export type { WithdrawProjectPort } from "./project/ports/WithdrawProjectPort";
+
+// UnpublishProjectUseCase
+export {
+  UnpublishProjectUseCase,
+  type UnpublishProjectInput,
+  type UnpublishProjectOutput,
+  type UnpublishProjectError,
+} from "./project/UnpublishProjectUseCase";
+export type { UnpublishProjectPort } from "./project/ports/UnpublishProjectPort";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { PROJECT_DRAFT_LIMITS, ProjectDraft } from "../value-objects/ProjectDraft";
-import { ProjectLocation } from "../value-objects/ProjectLocation";
-import { SnsLinks } from "../value-objects/SnsLinks";
+import { ProjectLocation } from "../../shared/value-objects/ProjectLocation";
+import { SnsLinks } from "../../shared/value-objects/SnsLinks";
 
 function validLocation(): ProjectLocation {
   const r = ProjectLocation.create({ prefectureCode: "13" });

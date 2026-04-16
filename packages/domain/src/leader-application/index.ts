@@ -10,19 +10,21 @@ export {
 } from "./value-objects/LeaderApplicationId";
 export { LeaderApplicationStatus } from "./value-objects/LeaderApplicationStatus";
 export {
-  CATEGORY_MASTER,
-  isProjectCategory,
-  type ProjectCategory,
-} from "./value-objects/ProjectCategory";
-export {
   PROJECT_DRAFT_LIMITS,
   ProjectDraft,
   type ProjectDraftError,
   type ProjectDraftTextField,
 } from "./value-objects/ProjectDraft";
+// ProjectCategory, ProjectLocation, SnsLinks は shared/ に移動済み。
+// 後方互換のため re-export する。
 export {
+  CATEGORY_MASTER,
+  isProjectCategory,
+  type ProjectCategory,
   ProjectLocation,
   type PrefectureCode,
   type ProjectLocationError,
-} from "./value-objects/ProjectLocation";
-export { SnsLinks, type SnsLinksError, type SnsLinksField } from "./value-objects/SnsLinks";
+  SnsLinks,
+  type SnsLinksError,
+  type SnsLinksField,
+} from "../shared";
