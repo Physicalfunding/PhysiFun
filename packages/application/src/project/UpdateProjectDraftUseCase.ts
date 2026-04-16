@@ -5,12 +5,30 @@ import {
   AccountId,
   ProjectLocation,
   SnsLinks,
+  type SnsLinksError,
   ProjectPhase,
   PublishStatus,
   type ProjectUpdateError,
   isProjectCategory,
 } from "@physifun/domain";
 import type { UpdateProjectDraftPort } from "./ports/UpdateProjectDraftPort";
+
+/**
+ * SnsLinks の判別共用体エラーを UseCase の issues[] に変換する
+ */
+function formatSnsLinksError(error: SnsLinksError): string {
+  switch (error.type) {
+    case "SNS_URL_TOO_LONG":
+      return `SNS_URL_TOO_LONG: field=${error.field}, max=${error.maxLength}, actual=${error.actualLength}`;
+    case "INVALID_URL_SCHEME":
+      return `INVALID_URL_SCHEME: field=${error.field}, allowed=${error.allowedSchemes.join("|")}`;
+    default: {
+      // 将来 SnsLinksError に variant が追加された場合にコンパイルエラーで気づけるようにする
+      const _exhaustive: never = error;
+      throw new Error(`Unknown SnsLinksError variant: ${JSON.stringify(_exhaustive)}`);
+    }
+  }
+}
 
 // ==================== 出力 DTO ====================
 
@@ -158,9 +176,7 @@ export class UpdateProjectDraftUseCase {
       if (!snsResult.ok) {
         return err({
           type: "INVALID_SNS_LINKS",
-          issues: [
-            `${snsResult.error.type}: field=${snsResult.error.field}, max=${snsResult.error.maxLength}, actual=${snsResult.error.actualLength}`,
-          ],
+          issues: [formatSnsLinksError(snsResult.error)],
         });
       }
       snsLinks = snsResult.value;

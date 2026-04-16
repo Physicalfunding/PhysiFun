@@ -10,6 +10,27 @@ import { CATEGORY_MASTER, PROJECT_DRAFT_LIMITS } from "@physifun/domain";
 
 // ==================== フロントエンド用バリデーションスキーマ ====================
 
+/**
+ * SNS URL フィールド用の Zod スキーマビルダー。
+ *
+ * - 任意入力 (空文字 or undefined は通す)
+ * - 最大 500 文字
+ * - `https://` / `http://` スキームのみ許可 (XSS 対策)
+ *
+ * ドメイン層 (`SnsLinks.create`) で同等のスキーム検証を行うが、
+ * フォーム段階で弾くことでユーザー体験を損なわないようにする。
+ */
+function snsUrlField(label: string) {
+  return z
+    .string()
+    .max(500, `${label} の URL は 500 文字以内です`)
+    .refine(
+      (v) => v === "" || /^https?:\/\//i.test(v),
+      `${label} は https:// または http:// で始まる URL を入力してください`
+    )
+    .optional();
+}
+
 const applyFormSchema = z.object({
   displayName: z.string().min(1, "表示名を入力してください").max(50, "表示名は 50 文字以内です"),
   email: z
@@ -49,10 +70,10 @@ const applyFormSchema = z.object({
     ),
   snsLinks: z
     .object({
-      x: z.string().max(500, "URL は 500 文字以内です").optional(),
-      instagram: z.string().max(500, "URL は 500 文字以内です").optional(),
-      facebook: z.string().max(500, "URL は 500 文字以内です").optional(),
-      website: z.string().max(500, "URL は 500 文字以内です").optional(),
+      x: snsUrlField("X"),
+      instagram: snsUrlField("Instagram"),
+      facebook: snsUrlField("Facebook"),
+      website: snsUrlField("Website"),
     })
     .optional(),
   agreeTerms: z.literal(true, {

@@ -6,10 +6,20 @@ import { type Result, err, ok } from "../../shared/result";
 const MAX_SNS_URL_LENGTH = 500;
 
 /**
+ * 許可する URL スキーム一覧。
+ *
+ * セキュリティ上、`javascript:` / `data:` / `vbscript:` などの XSS 誘発可能な
+ * スキームを弾くためのホワイトリスト。相対 URL (`/foo`, `foo.com`) も外部リンク
+ * としては不正な入力とみなすため拒否する (表示層で必ず `<a href>` / `<img src>`
+ * に渡るという前提での defense-in-depth 方針)。
+ */
+const ALLOWED_URL_SCHEMES = ["https://", "http://"] as const;
+
+/**
  * SnsLinks 値オブジェクト
  *
  * プロジェクトに紐づく SNS / ウェブサイトのリンク集。すべての項目は任意。
- * URL の内容バリデーションは行わず、文字列長のみ検証する（Phase 1 仮値）。
+ * URL は `https://` / `http://` スキームのみ許可し、長さは 500 文字以内に制限する。
  */
 export class SnsLinks {
   private constructor(
@@ -71,12 +81,18 @@ export class SnsLinks {
 
 export type SnsLinksField = "x" | "instagram" | "facebook" | "website";
 
-export type SnsLinksError = {
-  readonly type: "SNS_URL_TOO_LONG";
-  readonly field: SnsLinksField;
-  readonly maxLength: number;
-  readonly actualLength: number;
-};
+export type SnsLinksError =
+  | {
+      readonly type: "SNS_URL_TOO_LONG";
+      readonly field: SnsLinksField;
+      readonly maxLength: number;
+      readonly actualLength: number;
+    }
+  | {
+      readonly type: "INVALID_URL_SCHEME";
+      readonly field: SnsLinksField;
+      readonly allowedSchemes: readonly string[];
+    };
 
 function normalizeLink(
   field: SnsLinksField,
@@ -91,6 +107,16 @@ function normalizeLink(
       field,
       maxLength: MAX_SNS_URL_LENGTH,
       actualLength: trimmed.length,
+    });
+  }
+  // スキーム検証は小文字化した文字列で判定し、`JAVASCRIPT:` や `HTTPS://` の
+  // ような大小混在ケースも同一視する
+  const lower = trimmed.toLowerCase();
+  if (!ALLOWED_URL_SCHEMES.some((scheme) => lower.startsWith(scheme))) {
+    return err({
+      type: "INVALID_URL_SCHEME",
+      field,
+      allowedSchemes: ALLOWED_URL_SCHEMES,
     });
   }
   return ok(trimmed);
