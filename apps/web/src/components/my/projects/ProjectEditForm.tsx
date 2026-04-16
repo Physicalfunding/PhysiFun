@@ -15,10 +15,7 @@ import {
   LoadingSpinner,
 } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
-import {
-  projectFormSchema,
-  type ProjectFormValues,
-} from "@/lib/validations/projectFormSchema";
+import { projectFormSchema, type ProjectFormValues } from "@/lib/validations/projectFormSchema";
 import { PREFECTURES } from "@/lib/prefectures";
 
 const PREFECTURE_OPTIONS = PREFECTURES.map((p) => ({
@@ -141,12 +138,7 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
         <CardContent>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">基本情報</h3>
           <div className="space-y-4">
-            <Input
-              label="タイトル"
-              required
-              error={errors.title?.message}
-              {...register("title")}
-            />
+            <Input label="タイトル" required error={errors.title?.message} {...register("title")} />
             <Textarea
               label="概要"
               rows={3}

@@ -5,23 +5,8 @@ import {
   AccountId,
   ProjectId,
   type ProjectStateError,
-  type Project,
 } from "@physifun/domain";
-
-// ==================== ポートインターフェース ====================
-
-/**
- * RequestPublishUseCase のポートインターフェース
- *
- * インフラ層で実装する。
- */
-export interface RequestPublishPort {
-  /** プロジェクトID で Project 集約を取得する */
-  findProjectById(projectId: string): Promise<Project | null>;
-
-  /** Project 集約を永続化する */
-  saveProject(project: Project): Promise<void>;
-}
+import type { RequestPublishPort } from "./ports/RequestPublishPort";
 
 // ==================== 出力 DTO ====================
 

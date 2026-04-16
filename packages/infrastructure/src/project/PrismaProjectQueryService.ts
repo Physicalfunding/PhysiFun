@@ -1,9 +1,5 @@
 import type { PublishStatus, ProjectPhase, ReviewAction } from "@physifun/domain";
-import type {
-  ProjectQueryPort,
-  ProjectListResult,
-  ProjectDetailDTO,
-} from "@physifun/application";
+import type { ProjectQueryPort, ProjectListResult, ProjectDetailDTO } from "@physifun/application";
 import { prisma } from "../database/client";
 
 // ==================== Prisma 実装 ====================

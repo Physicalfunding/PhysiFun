@@ -108,7 +108,7 @@ export {
   type RequestPublishOutput,
   type RequestPublishError,
 } from "./project/RequestPublishUseCase";
-export type { RequestPublishPort } from "./project/RequestPublishUseCase";
+export type { RequestPublishPort } from "./project/ports/RequestPublishPort";
 
 // WithdrawProjectUseCase
 export {
@@ -117,7 +117,7 @@ export {
   type WithdrawProjectOutput,
   type WithdrawProjectError,
 } from "./project/WithdrawProjectUseCase";
-export type { WithdrawProjectPort } from "./project/WithdrawProjectUseCase";
+export type { WithdrawProjectPort } from "./project/ports/WithdrawProjectPort";
 
 // UnpublishProjectUseCase
 export {
@@ -126,4 +126,4 @@ export {
   type UnpublishProjectOutput,
   type UnpublishProjectError,
 } from "./project/UnpublishProjectUseCase";
-export type { UnpublishProjectPort } from "./project/UnpublishProjectUseCase";
+export type { UnpublishProjectPort } from "./project/ports/UnpublishProjectPort";

@@ -1,7 +1,4 @@
-import {
-  RequestPublishUseCase,
-  type RequestPublishError,
-} from "@physifun/application";
+import { RequestPublishUseCase, type RequestPublishError } from "@physifun/application";
 import { getProjectStatusPort } from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
 import {
@@ -30,17 +27,9 @@ function handleError(error: RequestPublishError) {
     case "DOMAIN_ERROR": {
       const domainErr = error.domainError;
       if (domainErr.type === "PUBLICATION_REQUIREMENTS_NOT_MET") {
-        return errorResponse(
-          "公開に必要な項目が未入力です",
-          "UNPROCESSABLE_ENTITY",
-          422
-        );
+        return errorResponse("公開に必要な項目が未入力です", "UNPROCESSABLE_ENTITY", 422);
       }
-      return errorResponse(
-        "現在のステータスでは公開申請できません",
-        "UNPROCESSABLE_ENTITY",
-        422
-      );
+      return errorResponse("現在のステータスでは公開申請できません", "UNPROCESSABLE_ENTITY", 422);
     }
   }
 }

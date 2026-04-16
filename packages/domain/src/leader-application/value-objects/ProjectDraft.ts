@@ -1,6 +1,12 @@
 import { type Result, err, ok } from "../../shared/result";
-import { type ProjectCategory, isProjectCategory } from "../../shared/value-objects/ProjectCategory";
-import { ProjectLocation, type ProjectLocationError } from "../../shared/value-objects/ProjectLocation";
+import {
+  type ProjectCategory,
+  isProjectCategory,
+} from "../../shared/value-objects/ProjectCategory";
+import {
+  ProjectLocation,
+  type ProjectLocationError,
+} from "../../shared/value-objects/ProjectLocation";
 import { SnsLinks, type SnsLinksError } from "../../shared/value-objects/SnsLinks";
 
 /**

@@ -78,8 +78,5 @@ export interface ProjectQueryPort {
    *
    * accountId がオーナーでない場合は null を返す。
    */
-  findProjectDetailForOwner(
-    projectId: string,
-    accountId: string
-  ): Promise<ProjectDetailDTO | null>;
+  findProjectDetailForOwner(projectId: string, accountId: string): Promise<ProjectDetailDTO | null>;
 }

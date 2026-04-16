@@ -3,18 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { PublishStatus, ProjectPhase } from "@physifun/domain";
-import {
-  Button,
-  Card,
-  CardContent,
-  LoadingSpinner,
-  ConfirmModal,
-} from "@/components/common";
+import { Button, Card, CardContent, LoadingSpinner, ConfirmModal } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
-import {
-  PROJECT_PHASE_LABEL,
-  CATEGORY_LABEL,
-} from "@/lib/project-labels";
+import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { PREFECTURES } from "@/lib/prefectures";
 import { ProjectStatusBadge } from "./ProjectStatusBadge";
 import { PendingReviewBanner } from "./PendingReviewBanner";
@@ -63,7 +54,6 @@ const TABS = [
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
-
 
 export function ProjectDetail({ projectId }: ProjectDetailProps) {
   const [project, setProject] = useState<ProjectDetailDTO | null>(null);
@@ -192,12 +182,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-gray-400">
-                  <svg
-                    className="h-12 w-12"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
+                  <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -213,9 +198,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <ProjectStatusBadge status={status} />
-                <span className="text-sm text-gray-500">
-                  {PROJECT_PHASE_LABEL[phase]}
-                </span>
+                <span className="text-sm text-gray-500">{PROJECT_PHASE_LABEL[phase]}</span>
               </div>
               <h1 className="text-xl font-bold text-gray-900">{project.title}</h1>
               {project.category && (
@@ -223,9 +206,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
                   {CATEGORY_LABEL[project.category] || project.category}
                 </p>
               )}
-              {locationText && (
-                <p className="text-sm text-gray-500 mt-1">{locationText}</p>
-              )}
+              {locationText && <p className="text-sm text-gray-500 mt-1">{locationText}</p>}
             </div>
           </div>
 
@@ -347,9 +328,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
             <Card>
               <CardContent>
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">活動計画</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                  {project.activityPlan}
-                </p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.activityPlan}</p>
               </CardContent>
             </Card>
           )}

@@ -13,5 +13,4 @@ export const PublishStatus = {
   PUBLISHED: "PUBLISHED",
 } as const;
 
-export type PublishStatus =
-  (typeof PublishStatus)[keyof typeof PublishStatus];
+export type PublishStatus = (typeof PublishStatus)[keyof typeof PublishStatus];

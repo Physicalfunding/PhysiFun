@@ -78,7 +78,11 @@ export class Project {
       return err({ type: "TITLE_REQUIRED" });
     }
     if (trimmedTitle.length > LIMITS.title) {
-      return err({ type: "TITLE_TOO_LONG", maxLength: LIMITS.title, actualLength: trimmedTitle.length });
+      return err({
+        type: "TITLE_TOO_LONG",
+        maxLength: LIMITS.title,
+        actualLength: trimmedTitle.length,
+      });
     }
     const now = input.createdAt ?? new Date();
     return ok(
@@ -143,21 +147,51 @@ export class Project {
 
   // ---- Getters ----
 
-  get id(): ProjectId { return this._id; }
-  get ownerAccountId(): AccountId { return this._ownerAccountId; }
-  get title(): string { return this._title; }
-  get coverImageUrl(): string | null { return this._coverImageUrl; }
-  get category(): ProjectCategory | null { return this._category; }
-  get location(): ProjectLocation | null { return this._location; }
-  get phase(): ProjectPhase { return this._phase; }
-  get publishStatus(): PublishStatus { return this._publishStatus; }
-  get summary(): string | null { return this._summary; }
-  get body(): string | null { return this._body; }
-  get leaderIntroduction(): string | null { return this._leaderIntroduction; }
-  get snsLinks(): SnsLinks { return this._snsLinks; }
-  get activityPlan(): string | null { return this._activityPlan; }
-  get createdAt(): Date { return this._createdAt; }
-  get updatedAt(): Date { return this._updatedAt; }
+  get id(): ProjectId {
+    return this._id;
+  }
+  get ownerAccountId(): AccountId {
+    return this._ownerAccountId;
+  }
+  get title(): string {
+    return this._title;
+  }
+  get coverImageUrl(): string | null {
+    return this._coverImageUrl;
+  }
+  get category(): ProjectCategory | null {
+    return this._category;
+  }
+  get location(): ProjectLocation | null {
+    return this._location;
+  }
+  get phase(): ProjectPhase {
+    return this._phase;
+  }
+  get publishStatus(): PublishStatus {
+    return this._publishStatus;
+  }
+  get summary(): string | null {
+    return this._summary;
+  }
+  get body(): string | null {
+    return this._body;
+  }
+  get leaderIntroduction(): string | null {
+    return this._leaderIntroduction;
+  }
+  get snsLinks(): SnsLinks {
+    return this._snsLinks;
+  }
+  get activityPlan(): string | null {
+    return this._activityPlan;
+  }
+  get createdAt(): Date {
+    return this._createdAt;
+  }
+  get updatedAt(): Date {
+    return this._updatedAt;
+  }
 
   // ---- Update ----
 
@@ -187,12 +221,21 @@ export class Project {
         return err({ type: "TITLE_REQUIRED" });
       }
       if (trimmed.length > LIMITS.title) {
-        return err({ type: "TITLE_TOO_LONG", maxLength: LIMITS.title, actualLength: trimmed.length });
+        return err({
+          type: "TITLE_TOO_LONG",
+          maxLength: LIMITS.title,
+          actualLength: trimmed.length,
+        });
       }
       newTitle = trimmed;
     }
 
-    const newSummary = this.validateNullableText(input.summary, LIMITS.summary, "SUMMARY_TOO_LONG", this._summary);
+    const newSummary = this.validateNullableText(
+      input.summary,
+      LIMITS.summary,
+      "SUMMARY_TOO_LONG",
+      this._summary
+    );
     if (!newSummary.ok) return newSummary;
 
     const newBody = this.validateNullableText(input.body, LIMITS.body, "BODY_TOO_LONG", this._body);
@@ -206,7 +249,12 @@ export class Project {
     );
     if (!newIntro.ok) return newIntro;
 
-    const newPlan = this.validateNullableText(input.activityPlan, LIMITS.activityPlan, "ACTIVITY_PLAN_TOO_LONG", this._activityPlan);
+    const newPlan = this.validateNullableText(
+      input.activityPlan,
+      LIMITS.activityPlan,
+      "ACTIVITY_PLAN_TOO_LONG",
+      this._activityPlan
+    );
     if (!newPlan.ok) return newPlan;
 
     let newCategory = this._category;
@@ -220,7 +268,8 @@ export class Project {
       }
     }
 
-    const newCoverImageUrl = input.coverImageUrl !== undefined ? input.coverImageUrl : this._coverImageUrl;
+    const newCoverImageUrl =
+      input.coverImageUrl !== undefined ? input.coverImageUrl : this._coverImageUrl;
     const newLocation = input.location !== undefined ? input.location : this._location;
     const newPhase = input.phase !== undefined ? input.phase : this._phase;
     const newSnsLinks = input.snsLinks !== undefined ? input.snsLinks : this._snsLinks;
@@ -333,7 +382,10 @@ export class Project {
    */
   forceUnpublish(): Result<void, ProjectStateError> {
     if (this._publishStatus !== PublishStatus.PUBLISHED) {
-      return err({ type: "CANNOT_FORCE_UNPUBLISH_NON_PUBLISHED", currentStatus: this._publishStatus });
+      return err({
+        type: "CANNOT_FORCE_UNPUBLISH_NON_PUBLISHED",
+        currentStatus: this._publishStatus,
+      });
     }
     this._publishStatus = PublishStatus.DRAFT;
     this._updatedAt = new Date();
@@ -367,7 +419,11 @@ export class Project {
     if (value === null) return ok(null);
     const trimmed = value.trim();
     if (trimmed.length > maxLength) {
-      return err({ type: errorType, maxLength, actualLength: trimmed.length } as ProjectUpdateError);
+      return err({
+        type: errorType,
+        maxLength,
+        actualLength: trimmed.length,
+      } as ProjectUpdateError);
     }
     return ok(trimmed.length === 0 ? null : trimmed);
   }

@@ -12,5 +12,4 @@ export const ProjectPhase = {
   COMPLETED: "COMPLETED",
 } as const;
 
-export type ProjectPhase =
-  (typeof ProjectPhase)[keyof typeof ProjectPhase];
+export type ProjectPhase = (typeof ProjectPhase)[keyof typeof ProjectPhase];

@@ -1,12 +1,6 @@
 import { NextRequest } from "next/server";
-import {
-  UpdateProjectDraftUseCase,
-  type UpdateProjectDraftError,
-} from "@physifun/application";
-import {
-  getProjectQueryService,
-  getProjectCommandAdapter,
-} from "@/lib/di/project";
+import { UpdateProjectDraftUseCase, type UpdateProjectDraftError } from "@physifun/application";
+import { getProjectQueryService, getProjectCommandAdapter } from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
 import {
   successResponse,
@@ -18,8 +12,6 @@ import {
   internalErrorResponse,
 } from "@/lib/api/response";
 import { projectFormSchema } from "@/lib/validations/projectFormSchema";
-
-const queryService = getProjectQueryService();
 
 /**
  * GET /api/my/projects/[projectId]
@@ -36,6 +28,7 @@ export async function GET(
     }
 
     const { projectId } = await params;
+    const queryService = getProjectQueryService();
     const detail = await queryService.findProjectDetailForOwner(projectId, userId);
     if (!detail) {
       return notFoundResponse("プロジェクト");
@@ -60,11 +53,7 @@ function handleUpdateError(error: UpdateProjectDraftError) {
     case "NOT_OWNER":
       return forbiddenResponse("このプロジェクトの編集権限がありません");
     case "CANNOT_EDIT_PUBLISHED":
-      return errorResponse(
-        "公開中のプロジェクトは直接編集できません",
-        "UNPROCESSABLE_ENTITY",
-        422
-      );
+      return errorResponse("公開中のプロジェクトは直接編集できません", "UNPROCESSABLE_ENTITY", 422);
     case "DOMAIN_ERROR":
       return validationErrorResponse("入力内容を確認してください");
     case "INVALID_CATEGORY":

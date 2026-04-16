@@ -94,12 +94,24 @@ export class ProjectReviewFeedback {
     );
   }
 
-  get id(): ReviewFeedbackId { return this._id; }
-  get projectId(): ProjectId { return this._projectId; }
-  get reviewerId(): AccountId { return this._reviewerId; }
-  get action(): ReviewAction { return this._action; }
-  get note(): string | null { return this._note; }
-  get reviewedAt(): Date { return this._reviewedAt; }
+  get id(): ReviewFeedbackId {
+    return this._id;
+  }
+  get projectId(): ProjectId {
+    return this._projectId;
+  }
+  get reviewerId(): AccountId {
+    return this._reviewerId;
+  }
+  get action(): ReviewAction {
+    return this._action;
+  }
+  get note(): string | null {
+    return this._note;
+  }
+  get reviewedAt(): Date {
+    return this._reviewedAt;
+  }
 }
 
 export type ReviewFeedbackError =

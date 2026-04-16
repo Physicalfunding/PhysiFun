@@ -1,7 +1,4 @@
-import {
-  WithdrawProjectUseCase,
-  type WithdrawProjectError,
-} from "@physifun/application";
+import { WithdrawProjectUseCase, type WithdrawProjectError } from "@physifun/application";
 import { getProjectStatusPort } from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
 import {
@@ -28,11 +25,7 @@ function handleError(error: WithdrawProjectError) {
     case "NOT_OWNER":
       return forbiddenResponse("このプロジェクトの操作権限がありません");
     case "DOMAIN_ERROR":
-      return errorResponse(
-        "現在のステータスでは取下げできません",
-        "UNPROCESSABLE_ENTITY",
-        422
-      );
+      return errorResponse("現在のステータスでは取下げできません", "UNPROCESSABLE_ENTITY", 422);
   }
 }
 

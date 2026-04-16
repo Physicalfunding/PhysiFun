@@ -13,9 +13,7 @@ export class ReviewFeedbackId {
     return new ReviewFeedbackId(randomUUID());
   }
 
-  static from(
-    value: string
-  ): Result<ReviewFeedbackId, InvalidReviewFeedbackIdError> {
+  static from(value: string): Result<ReviewFeedbackId, InvalidReviewFeedbackIdError> {
     if (!UUID_V4_REGEX.test(value)) {
       return err({ type: "INVALID_REVIEW_FEEDBACK_ID_FORMAT", value });
     }
@@ -36,5 +34,4 @@ export interface InvalidReviewFeedbackIdError {
   readonly value: string;
 }
 
-const UUID_V4_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

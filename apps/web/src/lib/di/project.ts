@@ -1,7 +1,4 @@
-import {
-  PrismaProjectQueryService,
-  PrismaProjectCommandAdapter,
-} from "@physifun/infrastructure";
+import { PrismaProjectQueryService, PrismaProjectCommandAdapter } from "@physifun/infrastructure";
 import type { ProjectQueryPort } from "@physifun/application";
 import type { Project } from "@physifun/domain";
 
@@ -23,7 +20,6 @@ export function getProjectStatusPort() {
   const adapter = new PrismaProjectCommandAdapter();
   return {
     findProjectById: (id: string) => adapter.findProjectById(id),
-    saveProject: (project: Project) =>
-      adapter.saveProjectWithOptionalFeedback({ project }),
+    saveProject: (project: Project) => adapter.saveProjectWithOptionalFeedback({ project }),
   };
 }

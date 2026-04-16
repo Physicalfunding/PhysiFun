@@ -1,13 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import {
-  CreateProjectDraftUseCase,
-  type CreateProjectDraftError,
-} from "@physifun/application";
-import {
-  getProjectQueryService,
-  getProjectCommandAdapter,
-} from "@/lib/di/project";
+import { CreateProjectDraftUseCase, type CreateProjectDraftError } from "@physifun/application";
+import { getProjectQueryService, getProjectCommandAdapter } from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
 import {
   successResponse,
@@ -17,8 +11,6 @@ import {
   errorResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-
-const queryService = getProjectQueryService();
 
 /**
  * GET /api/my/projects
@@ -31,6 +23,7 @@ export async function GET() {
       return unauthorizedResponse();
     }
 
+    const queryService = getProjectQueryService();
     const result = await queryService.findProjectsByOwner(userId);
     return successResponse(result);
   } catch (error) {

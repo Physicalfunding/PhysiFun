@@ -11,4 +11,7 @@ export { ProjectId, type InvalidProjectIdError } from "./value-objects/ProjectId
 export { ProjectPhase } from "./value-objects/ProjectPhase";
 export { PublishStatus } from "./value-objects/PublishStatus";
 export { ReviewAction } from "./value-objects/ReviewAction";
-export { ReviewFeedbackId, type InvalidReviewFeedbackIdError } from "./value-objects/ReviewFeedbackId";
+export {
+  ReviewFeedbackId,
+  type InvalidReviewFeedbackIdError,
+} from "./value-objects/ReviewFeedbackId";

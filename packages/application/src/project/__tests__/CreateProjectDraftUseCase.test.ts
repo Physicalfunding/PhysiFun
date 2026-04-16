@@ -26,7 +26,9 @@ function leaderAccount(overrides?: Partial<AccountForProjectCreation>): AccountF
 }
 
 /** SUPPORTER ロールのみのアカウント */
-function supporterAccount(overrides?: Partial<AccountForProjectCreation>): AccountForProjectCreation {
+function supporterAccount(
+  overrides?: Partial<AccountForProjectCreation>
+): AccountForProjectCreation {
   return {
     id: ACCOUNT_ID_STR,
     roles: ["SUPPORTER"],

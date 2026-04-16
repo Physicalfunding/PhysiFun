@@ -5,23 +5,8 @@ import {
   AccountId,
   ProjectId,
   type ProjectStateError,
-  type Project,
 } from "@physifun/domain";
-
-// ==================== ポートインターフェース ====================
-
-/**
- * WithdrawProjectUseCase のポートインターフェース
- *
- * インフラ層で実装する。
- */
-export interface WithdrawProjectPort {
-  /** プロジェクトID で Project 集約を取得する */
-  findProjectById(projectId: string): Promise<Project | null>;
-
-  /** Project 集約を永続化する */
-  saveProject(project: Project): Promise<void>;
-}
+import type { WithdrawProjectPort } from "./ports/WithdrawProjectPort";
 
 // ==================== 出力 DTO ====================
 

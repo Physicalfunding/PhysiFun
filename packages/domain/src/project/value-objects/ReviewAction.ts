@@ -16,5 +16,4 @@ export const ReviewAction = {
   FORCE_UNPUBLISHED: "FORCE_UNPUBLISHED",
 } as const;
 
-export type ReviewAction =
-  (typeof ReviewAction)[keyof typeof ReviewAction];
+export type ReviewAction = (typeof ReviewAction)[keyof typeof ReviewAction];

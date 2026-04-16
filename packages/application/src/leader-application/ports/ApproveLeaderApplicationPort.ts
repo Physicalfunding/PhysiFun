@@ -5,7 +5,7 @@
  * インフラストラクチャ層と通信する。インフラ層が実装を提供する。
  */
 
-import type { LeaderApplication, LeaderApplicationStatus } from "@physifun/domain";
+import type { LeaderApplication } from "@physifun/domain";
 import type { AccountRole } from "../../shared/AccountRole";
 
 /**
