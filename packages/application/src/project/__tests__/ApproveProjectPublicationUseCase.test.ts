@@ -13,6 +13,7 @@ import {
 import {
   ApproveProjectPublicationUseCase,
   MAX_PUBLISHED_PROJECTS_PER_OWNER,
+  OwnerPublishedLimitExceededError,
   PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE,
 } from "../ApproveProjectPublicationUseCase";
 import type {
@@ -92,7 +93,10 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
   /** findProjectById が返す候補 */
   projects: Project[] = [];
 
-  /** countPublishedByOwner が返す値（デフォルト 0） */
+  /**
+   * executeApproveInTransaction 内の count が参照する値。
+   * 実際の Prisma 実装では tx 内 count() の結果を使う。
+   */
   publishedCountByOwner = new Map<string, number>();
 
   /** executeApproveInTransaction で保存された Project */
@@ -122,16 +126,20 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
     return this.projects.find((p) => p.id.toString() === projectId) ?? null;
   }
 
-  async countPublishedByOwner(ownerAccountId: AccountId): Promise<number> {
-    return this.publishedCountByOwner.get(ownerAccountId.toString()) ?? 0;
-  }
-
   async executeApproveInTransaction(params: {
     project: Project;
     reviewFeedback: ProjectReviewFeedback;
     outboxMessage: CreateProjectOutboxMessageParams;
     publishedAt: Date;
+    maxPublishedPerOwner: number;
   }): Promise<void> {
+    // 同一 tx 内 count → 上限チェックをシミュレート
+    const count =
+      this.publishedCountByOwner.get(params.project.ownerAccountId.toString()) ?? 0;
+    if (count >= params.maxPublishedPerOwner) {
+      throw new OwnerPublishedLimitExceededError();
+    }
+
     this.executeApproveCallCount += 1;
     this.savedProjects.push(params.project);
     this.savedPublishedAt.push(params.publishedAt);
@@ -371,7 +379,7 @@ describe("ApproveProjectPublicationUseCase", () => {
     expect(port.executeApproveCallCount).toBe(0);
   });
 
-  // ---- Case A: PUBLISHED 上限超過 ----
+  // ---- Case A: PUBLISHED 上限超過（tx 内で throw） ----
 
   it("同一オーナーが既に 3 件 PUBLISHED の場合は OWNER_PUBLISHED_LIMIT_EXCEEDED", async () => {
     port.projects.push(createPendingReviewProject());
@@ -387,8 +395,10 @@ describe("ApproveProjectPublicationUseCase", () => {
     expect(result.error.type).toBe("OWNER_PUBLISHED_LIMIT_EXCEEDED");
     if (result.error.type !== "OWNER_PUBLISHED_LIMIT_EXCEEDED") return;
     expect(result.error.maxCount).toBe(MAX_PUBLISHED_PROJECTS_PER_OWNER);
-    expect(result.error.currentCount).toBe(MAX_PUBLISHED_PROJECTS_PER_OWNER);
-    expect(port.executeApproveCallCount).toBe(0);
+    // tx 内で throw されるため保存は発生しない
+    expect(port.savedProjects).toHaveLength(0);
+    expect(port.savedFeedbacks).toHaveLength(0);
+    expect(port.createdOutboxMessages).toHaveLength(0);
   });
 
   it("同一オーナーが 2 件 PUBLISHED の場合は承認できる (境界値)", async () => {

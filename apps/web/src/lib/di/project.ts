@@ -5,7 +5,7 @@ import type {
   RequestPublishPort,
   CreateProjectOutboxMessageParams,
 } from "@physifun/application";
-import type { AccountId, Project, ProjectReviewFeedback } from "@physifun/domain";
+import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 
 export function getProjectQueryService(): ProjectQueryPort {
   return new PrismaProjectQueryService();
@@ -62,10 +62,14 @@ export function getRequestPublishPort(): RequestPublishPort {
 /**
  * ApproveProjectPublicationUseCase 用のポート生成ヘルパー
  *
- * 公開承認は Project 更新・ProjectReviewFeedback 作成・
- * ProjectOutboxMessage 書き込みを単一トランザクションで実行する必要があるため、
- * executeApproveInTransaction と Case A 用の countPublishedByOwner を提供する。
- * また、UseCase 層での ADMIN ロール二重防御のために findAccountById も提供する。
+ * 公開承認は
+ * - Case A 上限チェック（同一オーナーの PUBLISHED 件数）
+ * - Project 更新
+ * - ProjectReviewFeedback 作成
+ * - ProjectOutboxMessage 書き込み
+ * を単一トランザクション（interactive tx）で実行する必要があるため、
+ * executeApproveInTransaction を提供する。
+ * ADMIN ロール二重防御のために findAccountById も提供する。
  *
  * NOTE: 他の DI ヘルパーと同様に PrismaProjectCommandAdapter を独自インスタンス化し、
  * Port ごとの依存関係を明示的に分離する。
@@ -75,13 +79,12 @@ export function getApproveProjectPublicationPort(): ApproveProjectPublicationPor
   return {
     findAccountById: (accountId: string) => adapter.findAccountById(accountId),
     findProjectById: (id: string) => adapter.findProjectById(id),
-    countPublishedByOwner: (ownerAccountId: AccountId) =>
-      adapter.countPublishedByOwner(ownerAccountId),
     executeApproveInTransaction: (params: {
       project: Project;
       reviewFeedback: ProjectReviewFeedback;
       outboxMessage: CreateProjectOutboxMessageParams;
       publishedAt: Date;
+      maxPublishedPerOwner: number;
     }) => adapter.executeApproveInTransaction(params),
   };
 }

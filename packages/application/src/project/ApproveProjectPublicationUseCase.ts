@@ -19,6 +19,22 @@ import type { ApproveProjectPublicationPort } from "./ports/ApproveProjectPublic
  */
 export const MAX_PUBLISHED_PROJECTS_PER_OWNER = 3;
 
+// ==================== エラー ====================
+
+/**
+ * executeApproveInTransaction が Case A 上限超過時にスローするエラー
+ *
+ * 同一トランザクション内で count → 上限チェックを実行することで
+ * TOCTOU を解消する。UseCase 側で catch して
+ * OWNER_PUBLISHED_LIMIT_EXCEEDED にマッピングする。
+ */
+export class OwnerPublishedLimitExceededError extends Error {
+  constructor() {
+    super("Owner published project limit exceeded");
+    this.name = "OwnerPublishedLimitExceededError";
+  }
+}
+
 /**
  * プロジェクト公開承認通知 (プロジェクトオーナー宛) の Outbox task type
  *
@@ -62,7 +78,6 @@ export type ApproveProjectPublicationError =
   | {
       readonly type: "OWNER_PUBLISHED_LIMIT_EXCEEDED";
       readonly maxCount: number;
-      readonly currentCount: number;
     }
   | {
       readonly type: "REVIEW_FEEDBACK_ERROR";
@@ -90,11 +105,12 @@ export interface ApproveProjectPublicationInput {
  * 2. 審査者の ADMIN ロールチェック（Route Handler と二重防御）
  * 3. プロジェクトの存在チェック
  * 4. project.approveByAdmin() 呼び出し（ドメイン状態遷移チェック）
- * 5. Case A 再検証: オーナーの PUBLISHED 件数 >= 3 ならエラー
- * 6. ProjectReviewFeedback (action=APPROVED) を生成
- * 7. 承認通知メール Outbox メッセージを生成
- * 8. executeApproveInTransaction で Project 更新 + ReviewFeedback 作成 +
- *    Outbox 書き込みを同一トランザクションで永続化
+ * 5. ProjectReviewFeedback (action=APPROVED) を生成
+ * 6. 承認通知メール Outbox メッセージを生成
+ * 7. executeApproveInTransaction で
+ *    - Case A 上限チェック (PUBLISHED 件数 >= 3 なら throw)
+ *    - Project 更新 + ReviewFeedback 作成 + Outbox 書き込み
+ *    を同一トランザクションで永続化（TOCTOU 解消）
  */
 export class ApproveProjectPublicationUseCase {
   constructor(private readonly port: ApproveProjectPublicationPort) {}
@@ -137,19 +153,7 @@ export class ApproveProjectPublicationUseCase {
       });
     }
 
-    // 5. Case A 再検証: PUBLISHED 件数上限
-    // 現在の project 自身は approveByAdmin 直後で PUBLISHED に遷移しているが、
-    // DB 上はまだ PENDING_REVIEW のためカウント対象外。超過判定は >= 3。
-    const publishedCount = await this.port.countPublishedByOwner(project.ownerAccountId);
-    if (publishedCount >= MAX_PUBLISHED_PROJECTS_PER_OWNER) {
-      return err({
-        type: "OWNER_PUBLISHED_LIMIT_EXCEEDED",
-        maxCount: MAX_PUBLISHED_PROJECTS_PER_OWNER,
-        currentCount: publishedCount,
-      });
-    }
-
-    // 6. ProjectReviewFeedback 生成 (action=APPROVED, note optional)
+    // 5. ProjectReviewFeedback 生成 (action=APPROVED, note optional)
     const feedbackResult = ProjectReviewFeedback.create({
       projectId: project.id,
       reviewerId: reviewerIdResult.value,
@@ -163,7 +167,7 @@ export class ApproveProjectPublicationUseCase {
       });
     }
 
-    // 7. Outbox メッセージ生成（公開承認通知メール、プロジェクトオーナー宛）
+    // 6. Outbox メッセージ生成（公開承認通知メール、プロジェクトオーナー宛）
     const approvedAt = project.updatedAt;
     const outboxMessage = {
       id: randomUUID(),
@@ -177,14 +181,26 @@ export class ApproveProjectPublicationUseCase {
       },
     };
 
-    // 8. トランザクション内で永続化
+    // 7. トランザクション内で Case A 上限チェック + 永続化
     // publishedAt と updatedAt は同じ値 (project.updatedAt = approveByAdmin 直後の timestamp) を渡す。
-    await this.port.executeApproveInTransaction({
-      project,
-      reviewFeedback: feedbackResult.value,
-      outboxMessage,
-      publishedAt: project.updatedAt,
-    });
+    // Case A は interactive tx 内で count → 上限チェックを行うため TOCTOU を解消。
+    try {
+      await this.port.executeApproveInTransaction({
+        project,
+        reviewFeedback: feedbackResult.value,
+        outboxMessage,
+        publishedAt: project.updatedAt,
+        maxPublishedPerOwner: MAX_PUBLISHED_PROJECTS_PER_OWNER,
+      });
+    } catch (e) {
+      if (e instanceof OwnerPublishedLimitExceededError) {
+        return err({
+          type: "OWNER_PUBLISHED_LIMIT_EXCEEDED",
+          maxCount: MAX_PUBLISHED_PROJECTS_PER_OWNER,
+        });
+      }
+      throw e;
+    }
 
     return ok({ projectId: project.id.toString() });
   }

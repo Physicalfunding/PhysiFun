@@ -1,5 +1,6 @@
-import type { AccountId, Project, ProjectReviewFeedback } from "@physifun/domain";
+import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 import {
+  OwnerPublishedLimitExceededError,
   ProjectLimitExceededError,
   type CreateProjectOutboxMessageParams,
 } from "@physifun/application";
@@ -217,51 +218,54 @@ export class PrismaProjectCommandAdapter {
   }
 
   /**
-   * 指定オーナーの PUBLISHED 件数を取得する。
-   *
-   * ApproveProjectPublicationUseCase の Case A 再検証（PUBLISHED 3 件上限）で使用する。
-   */
-  async countPublishedByOwner(ownerAccountId: AccountId): Promise<number> {
-    return prisma.project.count({
-      where: {
-        ownerAccountId: ownerAccountId.toString(),
-        status: "PUBLISHED",
-      },
-    });
-  }
-
-  /**
    * プロジェクト公開承認をアトミックに実行する。
    *
    * ApproveProjectPublicationUseCase（PENDING_REVIEW → PUBLISHED）が使用する。
-   * 同一トランザクション内で
-   * - Project.status を PUBLISHED に更新し publishedAt / updatedAt を UseCase から渡された同一 Date でセット
+   * interactive transaction 内で
+   * - 同一オーナーの PUBLISHED 件数を count し上限チェック（Case A、TOCTOU 解消）
+   *   超過時は OwnerPublishedLimitExceededError を throw
+   * - Project.status / publishedAt / updatedAt を更新
+   *   （publishedAt は UseCase から渡される project.updatedAt と同一値）
    * - ProjectReviewFeedback (action=APPROVED) を作成
    * - ProjectOutboxMessage (承認通知メール) を作成
    * をまとめて永続化する。
    *
-   * NOTE: publishedAt は UseCase 側で project.updatedAt と同じ値が渡されるため、
-   * ここで new Date() を生成して両者がずれる事象を避ける。
+   * NOTE: project の update は status / publishedAt / updatedAt のみ更新する最小フィールド設計。
+   * その他のフィールドは approveByAdmin() で変化しないため触らない。
    */
   async executeApproveInTransaction(params: {
     project: Project;
     reviewFeedback: ProjectReviewFeedback;
     outboxMessage: CreateProjectOutboxMessageParams;
     publishedAt: Date;
+    maxPublishedPerOwner: number;
   }): Promise<void> {
     const p = params.project;
     const fb = params.reviewFeedback;
 
-    await prisma.$transaction([
-      prisma.project.update({
+    await prisma.$transaction(async (tx) => {
+      // Case A: 同一オーナーの PUBLISHED 件数チェック（同一 tx 内で実施して TOCTOU 解消）
+      const count = await tx.project.count({
+        where: {
+          ownerAccountId: p.ownerAccountId.toString(),
+          status: "PUBLISHED",
+        },
+      });
+      if (count >= params.maxPublishedPerOwner) {
+        throw new OwnerPublishedLimitExceededError();
+      }
+
+      // Project の最小更新: status / publishedAt / updatedAt のみ
+      await tx.project.update({
         where: { id: p.id.toString() },
         data: {
           status: p.publishStatus,
           publishedAt: params.publishedAt,
           updatedAt: p.updatedAt,
         },
-      }),
-      prisma.projectReviewFeedback.create({
+      });
+
+      await tx.projectReviewFeedback.create({
         data: {
           id: fb.id.toString(),
           projectId: fb.projectId.toString(),
@@ -270,14 +274,15 @@ export class PrismaProjectCommandAdapter {
           note: fb.note,
           reviewedAt: fb.reviewedAt,
         },
-      }),
-      prisma.projectOutboxMessage.create({
+      });
+
+      await tx.projectOutboxMessage.create({
         data: {
           id: params.outboxMessage.id,
           type: params.outboxMessage.type,
           payload: params.outboxMessage.payload as object,
         },
-      }),
-    ]);
+      });
+    });
   }
 }

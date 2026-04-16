@@ -135,6 +135,7 @@ export type { UnpublishProjectPort } from "./project/ports/UnpublishProjectPort"
 // ApproveProjectPublicationUseCase
 export {
   ApproveProjectPublicationUseCase,
+  OwnerPublishedLimitExceededError,
   MAX_PUBLISHED_PROJECTS_PER_OWNER,
   PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE,
   type ApproveProjectPublicationInput,
