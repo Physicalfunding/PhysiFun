@@ -1,5 +1,8 @@
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
-import { ProjectLimitExceededError } from "@physifun/application";
+import {
+  ProjectLimitExceededError,
+  type CreateProjectOutboxMessageParams,
+} from "@physifun/application";
 import { prisma } from "../database/client";
 import { reconstructProject } from "./reconstructProject";
 
@@ -104,6 +107,54 @@ export class PrismaProjectCommandAdapter {
     });
     if (!row) return null;
     return reconstructProject(row);
+  }
+
+  /**
+   * Project 集約の更新と ProjectOutboxMessage 書き込みを
+   * 単一トランザクションで実行する。
+   *
+   * RequestPublishUseCase（公開申請: DRAFT → PENDING_REVIEW）が使用する。
+   * 運営への公開申請通知タスクを Outbox に積み、後段ワーカーがメール配信する。
+   */
+  async executeInTransaction(params: {
+    project: Project;
+    outboxMessage: CreateProjectOutboxMessageParams;
+  }): Promise<void> {
+    const p = params.project;
+    await prisma.$transaction([
+      prisma.project.update({
+        where: { id: p.id.toString() },
+        data: {
+          title: p.title,
+          coverImageUrl: p.coverImageUrl,
+          category: p.category,
+          prefectureCode: p.location?.prefectureCode ?? null,
+          municipality: p.location?.municipality ?? null,
+          phase: p.phase,
+          status: p.publishStatus,
+          summary: p.summary,
+          story: p.body,
+          leaderIntro: p.leaderIntroduction,
+          snsLinks: p.snsLinks.isEmpty()
+            ? {}
+            : {
+                x: p.snsLinks.x,
+                instagram: p.snsLinks.instagram,
+                facebook: p.snsLinks.facebook,
+                website: p.snsLinks.website,
+              },
+          activityPlan: p.activityPlan,
+          updatedAt: p.updatedAt,
+        },
+      }),
+      prisma.projectOutboxMessage.create({
+        data: {
+          id: params.outboxMessage.id,
+          type: params.outboxMessage.type,
+          payload: params.outboxMessage.payload as object,
+        },
+      }),
+    ]);
   }
 
   /**

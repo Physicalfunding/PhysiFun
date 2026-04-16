@@ -104,11 +104,15 @@ export type {
 // RequestPublishUseCase
 export {
   RequestPublishUseCase,
+  ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE,
   type RequestPublishInput,
   type RequestPublishOutput,
   type RequestPublishError,
 } from "./project/RequestPublishUseCase";
-export type { RequestPublishPort } from "./project/ports/RequestPublishPort";
+export type {
+  RequestPublishPort,
+  CreateProjectOutboxMessageParams,
+} from "./project/ports/RequestPublishPort";
 
 // WithdrawProjectUseCase
 export {
