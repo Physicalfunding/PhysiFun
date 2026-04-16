@@ -1,9 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "@physifun/domain";
-import type {
-  AccountRole,
-  ApproveLeaderApplicationPort,
-} from "./ports/ApproveLeaderApplicationPort";
+import type { ApproveLeaderApplicationPort } from "./ports/ApproveLeaderApplicationPort";
+import type { AccountRole } from "../shared/AccountRole";
 
 // ==================== 出力 DTO ====================
 

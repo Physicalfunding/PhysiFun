@@ -7,8 +7,6 @@ import {
   SnsLinks,
   ProjectPhase,
   PublishStatus,
-  ProjectReviewFeedback,
-  ReviewAction,
   type ProjectUpdateError,
   isProjectCategory,
 } from "@physifun/domain";
@@ -51,8 +49,7 @@ export interface UpdateProjectDraftInput {
   readonly title?: string;
   readonly coverImageUrl?: string | null;
   readonly category?: string | null;
-  /** Phase 1 では prefectureCode のみ。municipality は将来対応 */
-  readonly location?: { prefectureCode: string } | null;
+  readonly location?: { prefectureCode: string; municipality?: string | null } | null;
   readonly phase?: string;
   readonly summary?: string | null;
   readonly body?: string | null;
@@ -77,8 +74,8 @@ export interface UpdateProjectDraftInput {
  * 3. PUBLISHED 状態の編集禁止チェック
  * 4. 入力値オブジェクトの構築（category, location, snsLinks, phase）
  * 5. ドメインエンティティの update() 呼び出し
- * 6. PENDING_REVIEW → DRAFT の自動取下げ検知 + WITHDRAWN フィードバック記録
- * 7. アトミック永続化（project + optional feedback）
+ * 6. PENDING_REVIEW → DRAFT の自動取下げ検知
+ * 7. 永続化
  */
 export class UpdateProjectDraftUseCase {
   constructor(private readonly port: UpdateProjectDraftPort) {}
@@ -131,6 +128,7 @@ export class UpdateProjectDraftUseCase {
       } else {
         const locationResult = ProjectLocation.create({
           prefectureCode: input.location.prefectureCode,
+          municipality: input.location.municipality,
         });
         if (!locationResult.ok) {
           return err({
@@ -196,30 +194,13 @@ export class UpdateProjectDraftUseCase {
       return err({ type: "DOMAIN_ERROR", domainError: updateResult.error });
     }
 
-    // 6. 自動取下げの検知 + フィードバック記録
+    // 6. 自動取下げの検知
     const withdrawnFromPending =
       previousStatus === PublishStatus.PENDING_REVIEW &&
       project.publishStatus === PublishStatus.DRAFT;
 
-    let reviewFeedback: ProjectReviewFeedback | undefined;
-    if (withdrawnFromPending) {
-      const feedbackResult = ProjectReviewFeedback.create({
-        projectId: project.id,
-        reviewerId: callerIdResult.value,
-        action: ReviewAction.WITHDRAWN,
-        note: "自動取下げ: PENDING_REVIEW 中にリーダーが編集を行ったため",
-      });
-      if (!feedbackResult.ok) {
-        throw new Error(`[invariant] Failed to create auto-withdrawal feedback: ${feedbackResult.error.type}`);
-      }
-      reviewFeedback = feedbackResult.value;
-    }
-
-    // 7. アトミック永続化
-    await this.port.saveProjectWithOptionalFeedback({
-      project,
-      reviewFeedback,
-    });
+    // 7. 永続化
+    await this.port.saveProjectWithOptionalFeedback({ project });
 
     return ok({
       projectId: project.id.toString(),

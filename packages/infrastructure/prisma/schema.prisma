@@ -112,14 +112,15 @@ model Project {
 
   // ヘッダー情報
   title          String // 〜100 (B-3 仮値)
-  summary        String        @db.Text // 〜300 (B-3 仮値)
-  story          String        @db.Text // プロジェクト本文 Markdown (B-3 仮値)
-  leaderIntro    String        @db.Text // リーダー紹介 Markdown
+  summary        String?       @db.Text // 〜300 (B-3 仮値)。DRAFT 時は null 許容
+  story          String?       @db.Text // プロジェクト本文 Markdown (B-3 仮値)。DRAFT 時は null 許容
+  leaderIntro    String?       @db.Text // リーダー紹介 Markdown。DRAFT 時は null 許容
   coverImageUrl  String?
-  category       String // CATEGORY_MASTER の値 (string 保持)
-  prefectureCode String // JIS X 0401 "01"〜"47"
+  category       String? // CATEGORY_MASTER の値 (string 保持)。DRAFT 時は null 許容
+  prefectureCode String? // JIS X 0401 "01"〜"47"。DRAFT 時は null 許容
   municipality   String? // 任意
   snsLinks       Json? // { x, instagram, facebook, website }
+  activityPlan   String?       @db.Text // 活動計画 〜1000。任意
 
   // ステータス (2 軸)
   status PublishStatus @default(DRAFT)
