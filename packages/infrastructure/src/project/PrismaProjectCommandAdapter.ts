@@ -167,6 +167,59 @@ export class PrismaProjectCommandAdapter {
    * リーダーへの差戻通知メール送信タスクを Outbox に積み、後段ワーカーが配信する。
    */
   async executeRejectInTransaction(params: {
+    project: Project;
+    reviewFeedback: ProjectReviewFeedback;
+    outboxMessage: CreateProjectOutboxMessageParams;
+  }): Promise<void> {
+    const p = params.project;
+    const fb = params.reviewFeedback;
+    await prisma.$transaction([
+      prisma.project.update({
+        where: { id: p.id.toString() },
+        data: {
+          title: p.title,
+          coverImageUrl: p.coverImageUrl,
+          category: p.category,
+          prefectureCode: p.location?.prefectureCode ?? null,
+          municipality: p.location?.municipality ?? null,
+          phase: p.phase,
+          status: p.publishStatus,
+          summary: p.summary,
+          story: p.body,
+          leaderIntro: p.leaderIntroduction,
+          snsLinks: p.snsLinks.isEmpty()
+            ? {}
+            : {
+                x: p.snsLinks.x,
+                instagram: p.snsLinks.instagram,
+                facebook: p.snsLinks.facebook,
+                website: p.snsLinks.website,
+              },
+          activityPlan: p.activityPlan,
+          updatedAt: p.updatedAt,
+        },
+      }),
+      prisma.projectReviewFeedback.create({
+        data: {
+          id: fb.id.toString(),
+          projectId: fb.projectId.toString(),
+          reviewerId: fb.reviewerId.toString(),
+          action: fb.action as ReviewAction,
+          note: fb.note,
+          reviewedAt: fb.reviewedAt,
+        },
+      }),
+      prisma.projectOutboxMessage.create({
+        data: {
+          id: params.outboxMessage.id,
+          type: params.outboxMessage.type,
+          payload: params.outboxMessage.payload as object,
+        },
+      }),
+    ]);
+  }
+
+  /**
    * 運営による強制非公開 (PUBLISHED → DRAFT) を 1 トランザクションで永続化する。
    *
    * ForceUnpublishProjectUseCase が使用する。
@@ -213,7 +266,6 @@ export class PrismaProjectCommandAdapter {
           projectId: fb.projectId.toString(),
           reviewerId: fb.reviewerId.toString(),
           action: fb.action as ReviewAction,
-          action: fb.action as import("@prisma/client").ReviewAction,
           note: fb.note,
           reviewedAt: fb.reviewedAt,
         },

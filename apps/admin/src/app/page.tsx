@@ -1,13 +1,23 @@
 import Link from "next/link";
-import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
+import {
+  PrismaLeaderApplicationQueryService,
+  PrismaProjectQueryService,
+} from "@physifun/infrastructure";
 
-const queryService = new PrismaLeaderApplicationQueryService();
+// ADMIN 認証が必要な動的ページのため、ビルド時の静的生成を無効化する
+export const dynamic = "force-dynamic";
+
+const leaderApplicationQueryService = new PrismaLeaderApplicationQueryService();
+const projectQueryService = new PrismaProjectQueryService();
 
 /**
  * 運営管理トップページ
  */
 export default async function AdminTopPage() {
-  const pendingCount = await queryService.countByStatus("PENDING");
+  const [pendingApplicationCount, pendingProjectCount] = await Promise.all([
+    leaderApplicationQueryService.countByStatus("PENDING"),
+    projectQueryService.countByStatus("PENDING_REVIEW"),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
@@ -27,9 +37,27 @@ export default async function AdminTopPage() {
                   リーダー応募の審査・承認・却下を行います
                 </p>
               </div>
-              {pendingCount > 0 && (
+              {pendingApplicationCount > 0 && (
                 <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-yellow-500 px-2 text-xs font-bold text-white">
-                  {pendingCount}
+                  {pendingApplicationCount}
+                </span>
+              )}
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/projects"
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:border-blue-300 hover:shadow-md"
+            >
+              <div>
+                <span className="text-lg font-medium">プロジェクト審査管理</span>
+                <p className="mt-1 text-sm text-gray-500">
+                  プロジェクト公開申請の審査・承認・差戻・強制非公開を行います
+                </p>
+              </div>
+              {pendingProjectCount > 0 && (
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-yellow-500 px-2 text-xs font-bold text-white">
+                  {pendingProjectCount}
                 </span>
               )}
             </Link>

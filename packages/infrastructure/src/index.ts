@@ -25,7 +25,13 @@ export {
 export { PrismaApproveLeaderApplicationAdapter } from "./leader-application/PrismaApproveLeaderApplicationAdapter";
 export { PrismaRejectLeaderApplicationAdapter } from "./leader-application/PrismaRejectLeaderApplicationAdapter";
 
-export { PrismaProjectQueryService } from "./project/PrismaProjectQueryService";
+export {
+  PrismaProjectQueryService,
+  type ProjectAdminListItem,
+  type ProjectAdminListResult,
+  type ProjectAdminDetail,
+  type ProjectReviewFeedbackHistoryItem,
+} from "./project/PrismaProjectQueryService";
 
 export { PrismaProjectCommandAdapter } from "./project/PrismaProjectCommandAdapter";
 
