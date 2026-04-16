@@ -187,6 +187,12 @@ function mapDomainErrorToIssue(error: DomainVoError): { path: string; message: s
       return { path: error.field, message: `${error.field} は ${error.maxLength} 文字以内です` };
     case "INVALID_PROJECT_CATEGORY":
       return { path: "projectCategory", message: "無効なプロジェクトカテゴリです" };
+    default: {
+      // 将来 DomainVoError 配下の VO エラーに variant が追加された場合に
+      // コンパイルエラーで気づけるようにする
+      const _exhaustive: never = error;
+      throw new Error(`Unknown DomainVoError variant: ${JSON.stringify(_exhaustive)}`);
+    }
   }
 }
 

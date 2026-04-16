@@ -7,6 +7,12 @@
  *
  * - SNS/Website リンク: XSS 対策として domain 層で一次防御済み (Issue #118)
  * - 大小文字は区別しない (`HTTPS://` も許可)
+ *
+ * **SSRF 注意 (Issue #120 で別途対応予定)**:
+ * 本関数はスキームのみを検証する。`coverImageUrl` 等の画像 URL では、
+ * `http://169.254.169.254/` (AWS インスタンスメタデータ) や RFC1918 内部 IP
+ * を踏ませる SSRF ベクタが残るため、画像表示用途では Supabase Storage
+ * ドメインのホスト allowlist + `next/image` 移行で別防御を入れる必要がある。
  */
 export function isSafeHttpUrl(url: string): boolean {
   const lower = url.toLowerCase();

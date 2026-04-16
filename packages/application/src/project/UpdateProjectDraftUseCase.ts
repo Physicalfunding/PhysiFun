@@ -22,6 +22,11 @@ function formatSnsLinksError(error: SnsLinksError): string {
       return `SNS_URL_TOO_LONG: field=${error.field}, max=${error.maxLength}, actual=${error.actualLength}`;
     case "INVALID_URL_SCHEME":
       return `INVALID_URL_SCHEME: field=${error.field}, allowed=${error.allowedSchemes.join("|")}`;
+    default: {
+      // 将来 SnsLinksError に variant が追加された場合にコンパイルエラーで気づけるようにする
+      const _exhaustive: never = error;
+      throw new Error(`Unknown SnsLinksError variant: ${JSON.stringify(_exhaustive)}`);
+    }
   }
 }
 
