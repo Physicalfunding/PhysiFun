@@ -6,14 +6,12 @@ import {
 import type { UpdateProjectDraftPort } from "../ports/UpdateProjectDraftPort";
 import {
   Project,
-  ProjectReviewFeedback,
   ProjectId,
   ProjectPhase,
   PublishStatus,
   AccountId,
   ProjectLocation,
   SnsLinks,
-  ReviewAction,
 } from "@physifun/domain";
 
 // ==================== テストヘルパー ====================
@@ -205,7 +203,7 @@ describe("UpdateProjectDraftUseCase", () => {
     expect(result.value.withdrawnFromPending).toBe(true);
   });
 
-  it("PENDING_REVIEW の自動取下げで WITHDRAWN の ReviewFeedback が記録される", async () => {
+  it("PENDING_REVIEW の自動取下げでは ReviewFeedback は作成されない", async () => {
     port.projects.push(createTestProject({ publishStatus: PublishStatus.PENDING_REVIEW }));
 
     await useCase.execute({
@@ -214,12 +212,7 @@ describe("UpdateProjectDraftUseCase", () => {
       title: "編集による自動取下げ",
     });
 
-    expect(port.savedFeedbacks).toHaveLength(1);
-    const feedback = port.savedFeedbacks[0];
-    expect(feedback.projectId.toString()).toBe(PROJECT_ID_STR);
-    expect(feedback.reviewerId.toString()).toBe(OWNER_ACCOUNT_ID_STR);
-    expect(feedback.action).toBe(ReviewAction.WITHDRAWN);
-    expect(feedback.note).toContain("自動取下げ");
+    expect(port.savedFeedbacks).toHaveLength(0);
   });
 
   it("DRAFT 更新では ReviewFeedback は記録されない", async () => {

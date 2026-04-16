@@ -118,7 +118,7 @@ export class PrismaProjectCommandAdapter {
   }): Promise<void> {
     const p = params.project;
 
-    const operations = [
+    const operations: import("@prisma/client").Prisma.PrismaPromise<unknown>[] = [
       prisma.project.update({
         where: { id: p.id.toString() },
         data: {
@@ -154,11 +154,11 @@ export class PrismaProjectCommandAdapter {
             id: fb.id.toString(),
             projectId: fb.projectId.toString(),
             reviewerId: fb.reviewerId.toString(),
-            action: fb.action as string as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Domain ReviewAction includes WITHDRAWN which Prisma enum doesn't yet have
+            action: fb.action as import("@prisma/client").ReviewAction,
             note: fb.note,
             reviewedAt: fb.reviewedAt,
           },
-        }) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        })
       );
     }
 
