@@ -178,10 +178,12 @@ export class ApproveProjectPublicationUseCase {
     };
 
     // 8. トランザクション内で永続化
+    // publishedAt と updatedAt は同じ値 (project.updatedAt = approveByAdmin 直後の timestamp) を渡す。
     await this.port.executeApproveInTransaction({
       project,
       reviewFeedback: feedbackResult.value,
       outboxMessage,
+      publishedAt: project.updatedAt,
     });
 
     return ok({ projectId: project.id.toString() });

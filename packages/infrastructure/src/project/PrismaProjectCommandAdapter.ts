@@ -235,29 +235,29 @@ export class PrismaProjectCommandAdapter {
    *
    * ApproveProjectPublicationUseCase（PENDING_REVIEW → PUBLISHED）が使用する。
    * 同一トランザクション内で
-   * - Project.status を PUBLISHED に更新し publishedAt をセット
+   * - Project.status を PUBLISHED に更新し publishedAt / updatedAt を UseCase から渡された同一 Date でセット
    * - ProjectReviewFeedback (action=APPROVED) を作成
    * - ProjectOutboxMessage (承認通知メール) を作成
    * をまとめて永続化する。
    *
-   * count() と update() を同一 tx に置くことで Case A (同一オーナーの
-   * PUBLISHED 3 件上限) の TOCTOU を最小化する。
+   * NOTE: publishedAt は UseCase 側で project.updatedAt と同じ値が渡されるため、
+   * ここで new Date() を生成して両者がずれる事象を避ける。
    */
   async executeApproveInTransaction(params: {
     project: Project;
     reviewFeedback: ProjectReviewFeedback;
     outboxMessage: CreateProjectOutboxMessageParams;
+    publishedAt: Date;
   }): Promise<void> {
     const p = params.project;
     const fb = params.reviewFeedback;
-    const publishedAt = new Date();
 
     await prisma.$transaction([
       prisma.project.update({
         where: { id: p.id.toString() },
         data: {
           status: p.publishStatus,
-          publishedAt,
+          publishedAt: params.publishedAt,
           updatedAt: p.updatedAt,
         },
       }),

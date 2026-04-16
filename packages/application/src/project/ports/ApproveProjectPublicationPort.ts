@@ -47,7 +47,7 @@ export interface ApproveProjectPublicationPort {
   /**
    * 承認処理をトランザクションで実行する。
    *
-   * - Project 集約の更新 (status=PUBLISHED, publishedAt=now)
+   * - Project 集約の更新 (status=PUBLISHED, publishedAt / updatedAt は UseCase から渡される同一 Date)
    * - ProjectReviewFeedback (action=APPROVED) の作成
    * - ProjectOutboxMessage (公開承認通知メール) の作成
    * をアトミックに永続化する。
@@ -56,5 +56,10 @@ export interface ApproveProjectPublicationPort {
     project: Project;
     reviewFeedback: ProjectReviewFeedback;
     outboxMessage: CreateProjectOutboxMessageParams;
+    /**
+     * Project の publishedAt に設定する日時。
+     * updatedAt との時刻ズレを防ぐため、UseCase は project.updatedAt と同じ値を渡す。
+     */
+    publishedAt: Date;
   }): Promise<void>;
 }

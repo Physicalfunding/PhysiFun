@@ -98,6 +98,9 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
   /** executeApproveInTransaction で保存された Project */
   savedProjects: Project[] = [];
 
+  /** executeApproveInTransaction で受け取った publishedAt */
+  savedPublishedAt: Date[] = [];
+
   /** executeApproveInTransaction で保存された ReviewFeedback */
   savedFeedbacks: ProjectReviewFeedback[] = [];
 
@@ -127,9 +130,11 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
     project: Project;
     reviewFeedback: ProjectReviewFeedback;
     outboxMessage: CreateProjectOutboxMessageParams;
+    publishedAt: Date;
   }): Promise<void> {
     this.executeApproveCallCount += 1;
     this.savedProjects.push(params.project);
+    this.savedPublishedAt.push(params.publishedAt);
     this.savedFeedbacks.push(params.reviewFeedback);
     this.createdOutboxMessages.push(params.outboxMessage);
   }
@@ -182,6 +187,21 @@ describe("ApproveProjectPublicationUseCase", () => {
     expect(feedback.note).toBeNull();
 
     expect(port.createdOutboxMessages).toHaveLength(1);
+  });
+
+  it("publishedAt と updatedAt は同一の timestamp (project.updatedAt) が渡される", async () => {
+    port.projects.push(createPendingReviewProject());
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(port.savedPublishedAt).toHaveLength(1);
+    expect(port.savedProjects[0].updatedAt.getTime()).toBe(
+      port.savedPublishedAt[0].getTime()
+    );
   });
 
   it("Outbox メッセージの type と payload が正しい", async () => {

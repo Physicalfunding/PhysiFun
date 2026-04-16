@@ -81,6 +81,7 @@ export function getApproveProjectPublicationPort(): ApproveProjectPublicationPor
       project: Project;
       reviewFeedback: ProjectReviewFeedback;
       outboxMessage: CreateProjectOutboxMessageParams;
+      publishedAt: Date;
     }) => adapter.executeApproveInTransaction(params),
   };
 }
