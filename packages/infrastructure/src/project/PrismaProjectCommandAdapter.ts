@@ -1,6 +1,7 @@
 import type { Prisma, ReviewAction } from "@prisma/client";
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 import {
+  OwnerPublishedLimitExceededError,
   ProjectLimitExceededError,
   type CreateProjectOutboxMessageParams,
 } from "@physifun/application";
@@ -284,5 +285,74 @@ export class PrismaProjectCommandAdapter {
     }
 
     await prisma.$transaction(operations);
+  }
+
+  /**
+   * プロジェクト公開承認をアトミックに実行する。
+   *
+   * ApproveProjectPublicationUseCase（PENDING_REVIEW → PUBLISHED）が使用する。
+   * interactive transaction 内で
+   * - 同一オーナーの PUBLISHED 件数を count し上限チェック（Case A、TOCTOU 解消）
+   *   超過時は OwnerPublishedLimitExceededError を throw
+   * - Project.status / publishedAt / updatedAt を更新
+   *   （publishedAt は UseCase から渡される project.updatedAt と同一値）
+   * - ProjectReviewFeedback (action=APPROVED) を作成
+   * - ProjectOutboxMessage (承認通知メール) を作成
+   * をまとめて永続化する。
+   *
+   * NOTE: project の update は status / publishedAt / updatedAt のみ更新する最小フィールド設計。
+   * その他のフィールドは approveByAdmin() で変化しないため触らない。
+   */
+  async executeApproveInTransaction(params: {
+    project: Project;
+    reviewFeedback: ProjectReviewFeedback;
+    outboxMessage: CreateProjectOutboxMessageParams;
+    publishedAt: Date;
+    maxPublishedPerOwner: number;
+  }): Promise<void> {
+    const p = params.project;
+    const fb = params.reviewFeedback;
+
+    await prisma.$transaction(async (tx) => {
+      // Case A: 同一オーナーの PUBLISHED 件数チェック（同一 tx 内で実施して TOCTOU 解消）
+      const count = await tx.project.count({
+        where: {
+          ownerAccountId: p.ownerAccountId.toString(),
+          status: "PUBLISHED",
+        },
+      });
+      if (count >= params.maxPublishedPerOwner) {
+        throw new OwnerPublishedLimitExceededError();
+      }
+
+      // Project の最小更新: status / publishedAt / updatedAt のみ
+      await tx.project.update({
+        where: { id: p.id.toString() },
+        data: {
+          status: p.publishStatus,
+          publishedAt: params.publishedAt,
+          updatedAt: p.updatedAt,
+        },
+      });
+
+      await tx.projectReviewFeedback.create({
+        data: {
+          id: fb.id.toString(),
+          projectId: fb.projectId.toString(),
+          reviewerId: fb.reviewerId.toString(),
+          action: fb.action as import("@prisma/client").ReviewAction,
+          note: fb.note,
+          reviewedAt: fb.reviewedAt,
+        },
+      });
+
+      await tx.projectOutboxMessage.create({
+        data: {
+          id: params.outboxMessage.id,
+          type: params.outboxMessage.type,
+          payload: params.outboxMessage.payload as object,
+        },
+      });
+    });
   }
 }
