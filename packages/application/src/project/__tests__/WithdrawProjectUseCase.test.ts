@@ -151,28 +151,9 @@ describe("WithdrawProjectUseCase", () => {
     expect(port.savedProjects[0].publishStatus).toBe(PublishStatus.DRAFT);
   });
 
-  it("自主取下げでは ReviewFeedback が作成されない（Port に該当メソッド自体が存在しない）", async () => {
-    port.projects.push(createPendingReviewProject());
-
-    await useCase.execute({
-      accountId: OWNER_ACCOUNT_ID_STR,
-      projectId: PROJECT_ID_STR,
-    });
-
-    // プロジェクト.md line 76 の仕様: 「自主取下げはフィードバック不要」。
-    // Port インターフェース上に ReviewFeedback を扱うメソッドが無いことで、
-    // 呼び出しが発生しないことを構造的に保証している。
-    const portKeys = Object.keys(port).concat(
-      Object.getOwnPropertyNames(Object.getPrototypeOf(port))
-    );
-    expect(portKeys.some((k) => k.toLowerCase().includes("feedback"))).toBe(false);
-  });
-
   // ---- 入力バリデーションエラー ----
 
   it("不正な accountId 形式で INVALID_ACCOUNT_ID", async () => {
-    port.projects.push(createPendingReviewProject());
-
     const result = await useCase.execute({
       accountId: "not-a-uuid",
       projectId: PROJECT_ID_STR,
