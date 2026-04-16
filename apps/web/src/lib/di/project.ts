@@ -3,6 +3,7 @@ import type {
   ProjectQueryPort,
   RequestPublishPort,
   CreateProjectOutboxMessageParams,
+  RejectProjectPublicationPort,
   ForceUnpublishProjectPort,
 } from "@physifun/application";
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
@@ -60,6 +61,25 @@ export function getRequestPublishPort(): RequestPublishPort {
 }
 
 /**
+ * RejectProjectPublicationUseCase 用のポート生成ヘルパー
+ *
+ * 運営差戻は Project 更新 / ProjectReviewFeedback 作成 /
+ * ProjectOutboxMessage 書き込みを同一トランザクションで実行する必要があるため、
+ * executeRejectInTransaction を提供する。
+ *
+ * NOTE: getProjectStatusPort / getRequestPublishPort と同様、
+ * PrismaProjectCommandAdapter は stateless なため DI 関数ごとに独自インスタンス化する。
+ */
+export function getRejectProjectPublicationPort(): RejectProjectPublicationPort {
+  const adapter = new PrismaProjectCommandAdapter();
+  return {
+    findAccountById: (accountId: string) => adapter.findAccountById(accountId),
+    findProjectById: (id: string) => adapter.findProjectById(id),
+    executeRejectInTransaction: (params: {
+      project: Project;
+      reviewFeedback: ProjectReviewFeedback;
+      outboxMessage: CreateProjectOutboxMessageParams;
+    }) => adapter.executeRejectInTransaction(params),
  * ForceUnpublishProjectUseCase 用のポート生成ヘルパー
  *
  * 運営による強制非公開 (PUBLISHED → DRAFT) は

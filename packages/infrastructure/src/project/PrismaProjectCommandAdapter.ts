@@ -1,3 +1,4 @@
+import type { Prisma, ReviewAction } from "@prisma/client";
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 import {
   ProjectLimitExceededError,
@@ -158,6 +159,13 @@ export class PrismaProjectCommandAdapter {
   }
 
   /**
+   * 運営差戻: Project 更新 + ProjectReviewFeedback 作成 + ProjectOutboxMessage 書き込みを
+   * 単一トランザクションで実行する。
+   *
+   * RejectProjectPublicationUseCase（PENDING_REVIEW → DRAFT）が使用する。
+   * リーダーへの差戻通知メール送信タスクを Outbox に積み、後段ワーカーが配信する。
+   */
+  async executeRejectInTransaction(params: {
    * 運営による強制非公開 (PUBLISHED → DRAFT) を 1 トランザクションで永続化する。
    *
    * ForceUnpublishProjectUseCase が使用する。
@@ -203,6 +211,7 @@ export class PrismaProjectCommandAdapter {
           id: fb.id.toString(),
           projectId: fb.projectId.toString(),
           reviewerId: fb.reviewerId.toString(),
+          action: fb.action as ReviewAction,
           action: fb.action as import("@prisma/client").ReviewAction,
           note: fb.note,
           reviewedAt: fb.reviewedAt,
@@ -230,7 +239,7 @@ export class PrismaProjectCommandAdapter {
   }): Promise<void> {
     const p = params.project;
 
-    const operations: import("@prisma/client").Prisma.PrismaPromise<unknown>[] = [
+    const operations: Prisma.PrismaPromise<unknown>[] = [
       prisma.project.update({
         where: { id: p.id.toString() },
         data: {
@@ -266,7 +275,7 @@ export class PrismaProjectCommandAdapter {
             id: fb.id.toString(),
             projectId: fb.projectId.toString(),
             reviewerId: fb.reviewerId.toString(),
-            action: fb.action as import("@prisma/client").ReviewAction,
+            action: fb.action as ReviewAction,
             note: fb.note,
             reviewedAt: fb.reviewedAt,
           },

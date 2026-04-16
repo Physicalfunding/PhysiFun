@@ -132,6 +132,18 @@ export {
 } from "./project/UnpublishProjectUseCase";
 export type { UnpublishProjectPort } from "./project/ports/UnpublishProjectPort";
 
+// RejectProjectPublicationUseCase
+export {
+  RejectProjectPublicationUseCase,
+  LEADER_PUBLISH_REJECTED_NOTIFY_TYPE,
+  type RejectProjectPublicationInput,
+  type RejectProjectPublicationOutput,
+  type RejectProjectPublicationError,
+  type ReviewerNoteRequiredError,
+  type ProjectNotFoundError,
+  type InvalidProjectStatusError,
+} from "./project/RejectProjectPublicationUseCase";
+export type { RejectProjectPublicationPort } from "./project/ports/RejectProjectPublicationPort";
 // ForceUnpublishProjectUseCase
 export {
   ForceUnpublishProjectUseCase,
