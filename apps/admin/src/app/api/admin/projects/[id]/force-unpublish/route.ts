@@ -58,9 +58,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     } catch {
       return validationErrorResponse("リクエストボディが不正です", {});
     }
-    if (typeof body.reviewerNote !== "string") {
+    if (typeof body.reviewerNote !== "string" || body.reviewerNote.trim().length === 0) {
       return validationErrorResponse("強制非公開理由は必須です", {
-        reviewerNote: ["文字列で入力してください"],
+        reviewerNote: ["強制非公開理由を入力してください"],
       });
     }
 

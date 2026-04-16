@@ -40,18 +40,22 @@ export default async function AdminProjectsListPage({
   const currentStatus = toPublishStatus(params.status);
   const page = Math.max(1, Number(params.page) || 1);
 
-  const [result, draftCount, pendingCount, publishedCount] = await Promise.all([
+  // 現在アクティブなタブの count は findManyForAdmin の totalCount を再利用し、他 2 タブのみ countByStatus を発行する
+  const otherStatuses = TABS.map((tab) => tab.status).filter((s) => s !== currentStatus);
+  const [result, otherCountA, otherCountB] = await Promise.all([
     queryService.findManyForAdmin({ status: currentStatus, page, perPage: PER_PAGE }),
-    queryService.countByStatus("DRAFT"),
-    queryService.countByStatus("PENDING_REVIEW"),
-    queryService.countByStatus("PUBLISHED"),
+    queryService.countByStatus(otherStatuses[0]),
+    queryService.countByStatus(otherStatuses[1]),
   ]);
   const totalPages = Math.ceil(result.totalCount / PER_PAGE);
   const countMap: Record<PublishStatus, number> = {
-    DRAFT: draftCount,
-    PENDING_REVIEW: pendingCount,
-    PUBLISHED: publishedCount,
+    DRAFT: 0,
+    PENDING_REVIEW: 0,
+    PUBLISHED: 0,
   };
+  countMap[currentStatus] = result.totalCount;
+  countMap[otherStatuses[0]] = otherCountA;
+  countMap[otherStatuses[1]] = otherCountB;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">

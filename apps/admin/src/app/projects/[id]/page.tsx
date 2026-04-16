@@ -3,16 +3,26 @@ import { notFound } from "next/navigation";
 // NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 import { PrismaProjectQueryService } from "@physifun/infrastructure";
 import type { ReviewAction } from "@physifun/domain";
-
-// ADMIN 認証が必要な動的ページのため、ビルド時の静的生成を無効化する
-export const dynamic = "force-dynamic";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { ProjectPhaseBadge } from "@/components/ProjectPhaseBadge";
 import { ProjectReviewActions } from "@/components/ProjectReviewActions";
 import { getCategoryLabel } from "@/lib/category";
 import { getPrefectureName } from "@/lib/prefecture";
 
+// ADMIN 認証が必要な動的ページのため、ビルド時の静的生成を無効化する
+export const dynamic = "force-dynamic";
+
 const queryService = new PrismaProjectQueryService();
+
+/**
+ * 画像 URL が http(s) スキームのみ許可する簡易ホワイトリスト検証。
+ * - `javascript:` / `data:` / `file:` などのスキームをブロック
+ * - SSRF 対策として `http://169.254.169.254/` などの内部ネットワーク URL も
+ *   将来的には Supabase Storage ドメイン allowlist で更に絞る予定 (Issue #120)
+ */
+function isSafeImageUrl(url: string): boolean {
+  return url.startsWith("https://") || url.startsWith("http://");
+}
 
 const REVIEW_ACTION_LABELS: Record<ReviewAction, string> = {
   APPROVED: "承認",
@@ -185,13 +195,22 @@ export default async function AdminProjectDetailPage({
             <div>
               <dt className="text-sm font-medium text-gray-500">カバー画像</dt>
               <dd className="mt-1">
-                {/* next/image を使わず素の img で表示 (外部ホスト許可リスト設定を避けるため) */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={detail.coverImageUrl}
-                  alt="カバー画像"
-                  className="max-h-80 w-auto rounded-md border border-gray-200"
-                />
+                {isSafeImageUrl(detail.coverImageUrl) ? (
+                  <>
+                    {/* next/image を使わず素の img で表示 (外部ホスト許可リスト設定を避けるため) */}
+                    {/* Issue #120 で Supabase Storage ドメイン allowlist + next/image 移行予定 */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={detail.coverImageUrl}
+                      alt="カバー画像"
+                      className="max-h-80 w-auto rounded-md border border-gray-200"
+                    />
+                  </>
+                ) : (
+                  <p className="text-sm text-red-600">
+                    表示できない URL 形式です: {detail.coverImageUrl}
+                  </p>
+                )}
               </dd>
             </div>
           )}
