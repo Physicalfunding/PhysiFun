@@ -1,3 +1,4 @@
+import type { Prisma, ReviewAction } from "@prisma/client";
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 import {
   ProjectLimitExceededError,
@@ -202,7 +203,7 @@ export class PrismaProjectCommandAdapter {
           id: fb.id.toString(),
           projectId: fb.projectId.toString(),
           reviewerId: fb.reviewerId.toString(),
-          action: fb.action as import("@prisma/client").ReviewAction,
+          action: fb.action as ReviewAction,
           note: fb.note,
           reviewedAt: fb.reviewedAt,
         },
@@ -229,7 +230,7 @@ export class PrismaProjectCommandAdapter {
   }): Promise<void> {
     const p = params.project;
 
-    const operations: import("@prisma/client").Prisma.PrismaPromise<unknown>[] = [
+    const operations: Prisma.PrismaPromise<unknown>[] = [
       prisma.project.update({
         where: { id: p.id.toString() },
         data: {
@@ -265,7 +266,7 @@ export class PrismaProjectCommandAdapter {
             id: fb.id.toString(),
             projectId: fb.projectId.toString(),
             reviewerId: fb.reviewerId.toString(),
-            action: fb.action as import("@prisma/client").ReviewAction,
+            action: fb.action as ReviewAction,
             note: fb.note,
             reviewedAt: fb.reviewedAt,
           },

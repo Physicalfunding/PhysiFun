@@ -13,6 +13,16 @@ import type { CreateProjectOutboxMessageParams } from "./RequestPublishPort";
  * 混同しないよう `executeRejectInTransaction` として分離する。
  */
 export interface RejectProjectPublicationPort {
+  /**
+   * アカウント ID でアカウント（ロール情報付き）を取得する。
+   *
+   * UseCase 層での ADMIN ロール二重防御に使用する。Route Handler 側でも
+   * 認可チェックを行うが、UseCase 単体の契約としても ADMIN 権限を担保する。
+   */
+  findAccountById(
+    accountId: string
+  ): Promise<{ readonly id: string; readonly roles: readonly string[] } | null>;
+
   /** プロジェクトID で Project 集約を取得する */
   findProjectById(projectId: string): Promise<Project | null>;
 

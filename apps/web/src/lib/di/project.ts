@@ -72,6 +72,7 @@ export function getRequestPublishPort(): RequestPublishPort {
 export function getRejectProjectPublicationPort(): RejectProjectPublicationPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
+    findAccountById: (accountId: string) => adapter.findAccountById(accountId),
     findProjectById: (id: string) => adapter.findProjectById(id),
     executeRejectInTransaction: (params: {
       project: Project;

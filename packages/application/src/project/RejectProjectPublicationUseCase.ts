@@ -6,6 +6,7 @@ import {
   AccountId,
   ProjectId,
   ProjectReviewFeedback,
+  REVIEW_FEEDBACK_NOTE_MAX_LENGTH,
   ReviewAction,
   PublishStatus,
 } from "@physifun/domain";
@@ -49,14 +50,20 @@ export interface InvalidProjectStatusError {
  * ユースケースのエラー型（判別共用体）
  *
  * Issue #78 で明示要求された 3 エラー型に加え、入力形式バリデーション用の
- * 2 メンバー（INVALID_REVIEWER_ID / INVALID_PROJECT_ID）を持つ。
+ * 2 メンバー（INVALID_REVIEWER_ID / INVALID_PROJECT_ID）、
+ * UseCase 層の ADMIN 二重防御で検出される 2 メンバー
+ * （REVIEWER_NOT_FOUND / REVIEWER_NOT_ADMIN）、
+ * および reviewerNote の文字数超過を表す REVIEWER_NOTE_TOO_LONG を持つ。
  */
 export type RejectProjectPublicationError =
   | ReviewerNoteRequiredError
   | ProjectNotFoundError
   | InvalidProjectStatusError
   | { readonly type: "INVALID_REVIEWER_ID" }
-  | { readonly type: "INVALID_PROJECT_ID" };
+  | { readonly type: "INVALID_PROJECT_ID" }
+  | { readonly type: "REVIEWER_NOT_FOUND" }
+  | { readonly type: "REVIEWER_NOT_ADMIN" }
+  | { readonly type: "REVIEWER_NOTE_TOO_LONG"; readonly maxLength: number };
 
 // ==================== 入力 DTO ====================
 
@@ -100,7 +107,8 @@ export class RejectProjectPublicationUseCase {
     input: RejectProjectPublicationInput
   ): Promise<Result<RejectProjectPublicationOutput, RejectProjectPublicationError>> {
     // 1. reviewerNote バリデーション（空/空白のみは拒否）
-    const trimmedNote = input.reviewerNote?.trim() ?? "";
+    // input.reviewerNote は型上 string のため optional chaining は不要。
+    const trimmedNote = input.reviewerNote.trim();
     if (trimmedNote.length === 0) {
       return err({ type: "REVIEWER_NOTE_REQUIRED" });
     }
@@ -116,7 +124,16 @@ export class RejectProjectPublicationUseCase {
       return err({ type: "INVALID_PROJECT_ID" });
     }
 
-    // 3. プロジェクトの存在チェック
+    // 3. ADMIN ロール二重防御（Route Handler 側の認可とは独立に UseCase 単体でも担保）
+    const reviewer = await this.port.findAccountById(input.reviewerId);
+    if (!reviewer) {
+      return err({ type: "REVIEWER_NOT_FOUND" });
+    }
+    if (!reviewer.roles.includes("ADMIN")) {
+      return err({ type: "REVIEWER_NOT_ADMIN" });
+    }
+
+    // 4. プロジェクトの存在チェック
     const project = await this.port.findProjectById(input.projectId);
     if (!project) {
       return err({ type: "PROJECT_NOT_FOUND" });
@@ -152,8 +169,15 @@ export class RejectProjectPublicationUseCase {
     });
     if (!feedbackResult.ok) {
       // 上流で trim 済みの note を渡しているため NOTE_REQUIRED_FOR_ACTION は発生しない。
-      // NOTE_TOO_LONG のみ到達しうる。API 境界ではこのケースが想定されていないため
-      // 型を肥大化させず REVIEWER_NOTE_REQUIRED に集約する（note が空扱いの外れ値）。
+      // NOTE_TOO_LONG は専用エラー（REVIEWER_NOTE_TOO_LONG）にマッピングし、
+      // Route Handler 側で 400 バリデーションエラーとして maxLength を返せるようにする。
+      if (feedbackResult.error.type === "NOTE_TOO_LONG") {
+        return err({
+          type: "REVIEWER_NOTE_TOO_LONG",
+          maxLength: REVIEW_FEEDBACK_NOTE_MAX_LENGTH,
+        });
+      }
+      // NOTE_REQUIRED_FOR_ACTION は到達不可能だが、安全側で REQUIRED に集約する。
       return err({ type: "REVIEWER_NOTE_REQUIRED" });
     }
 

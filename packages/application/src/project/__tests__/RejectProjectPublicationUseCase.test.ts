@@ -7,6 +7,7 @@ import {
   ProjectPhase,
   ProjectReviewFeedback,
   PublishStatus,
+  REVIEW_FEEDBACK_NOTE_MAX_LENGTH,
   ReviewAction,
   SnsLinks,
 } from "@physifun/domain";
@@ -75,9 +76,20 @@ function createProjectWithStatus(
 
 // ==================== インメモリ実装 ====================
 
+interface InMemoryAccountRow {
+  readonly id: string;
+  readonly roles: readonly string[];
+}
+
 class InMemoryRejectProjectPublicationPort implements RejectProjectPublicationPort {
   /** 保存済みプロジェクト（findProjectById 用） */
   projects: Project[] = [];
+
+  /**
+   * 保存済みアカウント（findAccountById 用）。
+   * 明示的にセットされていない場合は「ADMIN ロールを持つ常に見つかるアカウント」として振る舞う。
+   */
+  accounts: InMemoryAccountRow[] | null = null;
 
   /** executeRejectInTransaction で保存された Project */
   savedProjects: Project[] = [];
@@ -90,6 +102,14 @@ class InMemoryRejectProjectPublicationPort implements RejectProjectPublicationPo
 
   /** executeRejectInTransaction の呼び出し回数 */
   executeRejectInTransactionCallCount = 0;
+
+  async findAccountById(accountId: string): Promise<InMemoryAccountRow | null> {
+    if (this.accounts === null) {
+      // デフォルトは ADMIN ロール付きの有効なアカウントとして応答する
+      return { id: accountId, roles: ["ADMIN"] };
+    }
+    return this.accounts.find((a) => a.id === accountId) ?? null;
+  }
 
   async findProjectById(projectId: string): Promise<Project | null> {
     return this.projects.find((p) => p.id.toString() === projectId) ?? null;
@@ -342,6 +362,60 @@ describe("RejectProjectPublicationUseCase", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.type).toBe("INVALID_PROJECT_ID");
+    expect(port.executeRejectInTransactionCallCount).toBe(0);
+  });
+
+  // ---- REVIEWER_NOT_FOUND / REVIEWER_NOT_ADMIN（UseCase 層の二重防御） ----
+
+  it("reviewer アカウントが存在しない場合 REVIEWER_NOT_FOUND（永続化は走らない）", async () => {
+    port.accounts = []; // 空リスト: 指定 reviewerId は見つからない
+    port.projects.push(createProjectWithStatus(PublishStatus.PENDING_REVIEW));
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+      reviewerNote: "却下理由",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
+    expect(port.executeRejectInTransactionCallCount).toBe(0);
+  });
+
+  it("reviewer が ADMIN ロールを持たない場合 REVIEWER_NOT_ADMIN（永続化は走らない）", async () => {
+    port.accounts = [{ id: REVIEWER_ACCOUNT_ID_STR, roles: ["LEADER"] }];
+    port.projects.push(createProjectWithStatus(PublishStatus.PENDING_REVIEW));
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+      reviewerNote: "却下理由",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOT_ADMIN");
+    expect(port.executeRejectInTransactionCallCount).toBe(0);
+  });
+
+  // ---- REVIEWER_NOTE_TOO_LONG ----
+
+  it("reviewerNote が最大長を超える場合 REVIEWER_NOTE_TOO_LONG（maxLength 付き）", async () => {
+    port.projects.push(createProjectWithStatus(PublishStatus.PENDING_REVIEW));
+    const tooLongNote = "a".repeat(REVIEW_FEEDBACK_NOTE_MAX_LENGTH + 1);
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+      reviewerNote: tooLongNote,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOTE_TOO_LONG");
+    if (result.error.type !== "REVIEWER_NOTE_TOO_LONG") return;
+    expect(result.error.maxLength).toBe(REVIEW_FEEDBACK_NOTE_MAX_LENGTH);
     expect(port.executeRejectInTransactionCallCount).toBe(0);
   });
 });
