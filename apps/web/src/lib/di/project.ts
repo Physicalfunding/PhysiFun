@@ -77,6 +77,21 @@ export function getRequestPublishPort(): RequestPublishPort {
  * Port ごとの依存関係を明示的に分離する。
  */
 export function getApproveProjectPublicationPort(): ApproveProjectPublicationPort {
+  const adapter = new PrismaProjectCommandAdapter();
+  return {
+    findAccountById: (accountId: string) => adapter.findAccountById(accountId),
+    findProjectById: (id: string) => adapter.findProjectById(id),
+    executeApproveInTransaction: (params: {
+      project: Project;
+      reviewFeedback: ProjectReviewFeedback;
+      outboxMessage: CreateProjectOutboxMessageParams;
+      publishedAt: Date;
+      maxPublishedPerOwner: number;
+    }) => adapter.executeApproveInTransaction(params),
+  };
+}
+
+/**
  * RejectProjectPublicationUseCase 用のポート生成ヘルパー
  *
  * 運営差戻は Project 更新 / ProjectReviewFeedback 作成 /
@@ -91,18 +106,15 @@ export function getRejectProjectPublicationPort(): RejectProjectPublicationPort 
   return {
     findAccountById: (accountId: string) => adapter.findAccountById(accountId),
     findProjectById: (id: string) => adapter.findProjectById(id),
-    executeApproveInTransaction: (params: {
-      project: Project;
-      reviewFeedback: ProjectReviewFeedback;
-      outboxMessage: CreateProjectOutboxMessageParams;
-      publishedAt: Date;
-      maxPublishedPerOwner: number;
-    }) => adapter.executeApproveInTransaction(params),
     executeRejectInTransaction: (params: {
       project: Project;
       reviewFeedback: ProjectReviewFeedback;
       outboxMessage: CreateProjectOutboxMessageParams;
     }) => adapter.executeRejectInTransaction(params),
+  };
+}
+
+/**
  * ForceUnpublishProjectUseCase 用のポート生成ヘルパー
  *
  * 運営による強制非公開 (PUBLISHED → DRAFT) は
