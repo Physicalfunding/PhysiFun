@@ -15,11 +15,13 @@ export function getProjectCommandAdapter() {
 }
 
 /**
- * Withdraw / Unpublish 用の共通ポート生成ヘルパー
+ * Withdraw (WithdrawProjectUseCase) と Unpublish (UnpublishProjectUseCase)
+ * 用の共通ポート生成ヘルパー
  *
  * 単純な Project 更新のみを行うユースケース（PENDING_REVIEW → DRAFT,
  * PUBLISHED → DRAFT）が必要とする { findProjectById, saveProject }
  * ポートを組み立てる。
+ * RequestPublish は Outbox 通知を伴うため、別途 getRequestPublishPort を使用する。
  */
 export function getProjectStatusPort() {
   const adapter = new PrismaProjectCommandAdapter();

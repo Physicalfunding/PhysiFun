@@ -1,5 +1,8 @@
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
-import { ProjectLimitExceededError } from "@physifun/application";
+import {
+  ProjectLimitExceededError,
+  type CreateProjectOutboxMessageParams,
+} from "@physifun/application";
 import { prisma } from "../database/client";
 import { reconstructProject } from "./reconstructProject";
 
@@ -115,7 +118,7 @@ export class PrismaProjectCommandAdapter {
    */
   async executeInTransaction(params: {
     project: Project;
-    outboxMessage: { id: string; type: string; payload: unknown };
+    outboxMessage: CreateProjectOutboxMessageParams;
   }): Promise<void> {
     const p = params.project;
     await prisma.$transaction([

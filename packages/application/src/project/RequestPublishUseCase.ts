@@ -97,6 +97,7 @@ export class RequestPublishUseCase {
     }
 
     // 5. トランザクション内で永続化 + Outbox 書き込み
+    // project.requestPublish() 内で updatedAt が申請日時にセットされる
     const requestedAt = project.updatedAt;
     await this.port.executeInTransaction({
       project,
