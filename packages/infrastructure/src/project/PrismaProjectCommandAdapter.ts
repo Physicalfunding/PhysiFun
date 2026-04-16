@@ -158,6 +158,67 @@ export class PrismaProjectCommandAdapter {
   }
 
   /**
+   * 運営による強制非公開 (PUBLISHED → DRAFT) を 1 トランザクションで永続化する。
+   *
+   * ForceUnpublishProjectUseCase が使用する。
+   *  1. Project.update (status=DRAFT, updatedAt=project.updatedAt)
+   *  2. ProjectReviewFeedback.create (action=FORCE_UNPUBLISHED, note=理由)
+   *  3. ProjectOutboxMessage.create (リーダーへの通知メール)
+   */
+  async executeForceUnpublishInTransaction(params: {
+    project: Project;
+    reviewFeedback: ProjectReviewFeedback;
+    outboxMessage: CreateProjectOutboxMessageParams;
+  }): Promise<void> {
+    const p = params.project;
+    const fb = params.reviewFeedback;
+    await prisma.$transaction([
+      prisma.project.update({
+        where: { id: p.id.toString() },
+        data: {
+          title: p.title,
+          coverImageUrl: p.coverImageUrl,
+          category: p.category,
+          prefectureCode: p.location?.prefectureCode ?? null,
+          municipality: p.location?.municipality ?? null,
+          phase: p.phase,
+          status: p.publishStatus,
+          summary: p.summary,
+          story: p.body,
+          leaderIntro: p.leaderIntroduction,
+          snsLinks: p.snsLinks.isEmpty()
+            ? {}
+            : {
+                x: p.snsLinks.x,
+                instagram: p.snsLinks.instagram,
+                facebook: p.snsLinks.facebook,
+                website: p.snsLinks.website,
+              },
+          activityPlan: p.activityPlan,
+          updatedAt: p.updatedAt,
+        },
+      }),
+      prisma.projectReviewFeedback.create({
+        data: {
+          id: fb.id.toString(),
+          projectId: fb.projectId.toString(),
+          reviewerId: fb.reviewerId.toString(),
+          action: fb.action as import("@prisma/client").ReviewAction,
+          note: fb.note,
+          reviewedAt: fb.reviewedAt,
+        },
+      }),
+      prisma.projectOutboxMessage.create({
+        data: {
+          id: params.outboxMessage.id,
+          type: params.outboxMessage.type,
+          payload: params.outboxMessage.payload as object,
+        },
+      }),
+    ]);
+  }
+
+  /**
    * Project 集約と（任意の）審査フィードバックをアトミックに永続化する。
    *
    * 自動取下げ時は reviewFeedback が渡される。
