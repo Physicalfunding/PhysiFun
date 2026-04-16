@@ -15,7 +15,10 @@ import {
   MAX_PUBLISHED_PROJECTS_PER_OWNER,
   PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE,
 } from "../ApproveProjectPublicationUseCase";
-import type { ApproveProjectPublicationPort } from "../ports/ApproveProjectPublicationPort";
+import type {
+  AccountForProjectApproval,
+  ApproveProjectPublicationPort,
+} from "../ports/ApproveProjectPublicationPort";
 import type { CreateProjectOutboxMessageParams } from "../ports/RequestPublishPort";
 
 // ==================== テストヘルパー ====================
@@ -78,6 +81,14 @@ function createPendingReviewProject(): Project {
 // ==================== インメモリ実装 ====================
 
 class InMemoryApproveProjectPublicationPort implements ApproveProjectPublicationPort {
+  /**
+   * findAccountById の挙動を制御するオーバーライド。
+   * - 未設定: デフォルトで ADMIN として扱う
+   * - null: アカウント未発見（REVIEWER_NOT_FOUND 検証用）
+   * - object: そのロール構成を返す
+   */
+  accountOverrides = new Map<string, AccountForProjectApproval | null>();
+
   /** findProjectById が返す候補 */
   projects: Project[] = [];
 
@@ -95,6 +106,14 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
 
   /** executeApproveInTransaction 呼び出し回数 */
   executeApproveCallCount = 0;
+
+  async findAccountById(accountId: string): Promise<AccountForProjectApproval | null> {
+    if (this.accountOverrides.has(accountId)) {
+      return this.accountOverrides.get(accountId) ?? null;
+    }
+    // デフォルト: ADMIN として扱う
+    return { id: accountId, roles: ["ADMIN"] };
+  }
 
   async findProjectById(projectId: string): Promise<Project | null> {
     return this.projects.find((p) => p.id.toString() === projectId) ?? null;
@@ -244,6 +263,40 @@ describe("ApproveProjectPublicationUseCase", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.type).toBe("INVALID_REVIEWER_ID");
+    expect(port.executeApproveCallCount).toBe(0);
+  });
+
+  // ---- ADMIN ロール二重防御 ----
+
+  it("審査者アカウントが存在しない場合は REVIEWER_NOT_FOUND", async () => {
+    port.accountOverrides.set(REVIEWER_ACCOUNT_ID_STR, null);
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
+    expect(port.executeApproveCallCount).toBe(0);
+  });
+
+  it("審査者が ADMIN ロールを持たない場合は REVIEWER_NOT_ADMIN", async () => {
+    port.accountOverrides.set(REVIEWER_ACCOUNT_ID_STR, {
+      id: REVIEWER_ACCOUNT_ID_STR,
+      roles: ["LEADER"],
+    });
+    port.projects.push(createPendingReviewProject());
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOT_ADMIN");
     expect(port.executeApproveCallCount).toBe(0);
   });
 

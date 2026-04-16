@@ -20,7 +20,7 @@ import type { ApproveProjectPublicationPort } from "./ports/ApproveProjectPublic
 export const MAX_PUBLISHED_PROJECTS_PER_OWNER = 3;
 
 /**
- * 公開承認通知メール (リーダー宛) の Outbox task type
+ * プロジェクト公開承認通知 (プロジェクトオーナー宛) の Outbox task type
  *
  * Outbox ワーカーが「プロジェクトが承認され公開されました」旨の
  * メールをプロジェクトオーナー宛に送信する。
@@ -42,6 +42,8 @@ export interface ApproveProjectPublicationOutput {
  * ユースケースのエラー型（判別共用体）
  *
  * - `INVALID_PROJECT_ID` / `INVALID_REVIEWER_ID`: 入力バリデーション
+ * - `REVIEWER_NOT_FOUND`: 審査者アカウントが存在しない
+ * - `REVIEWER_NOT_ADMIN`: 審査者が ADMIN ロールを持たない（UseCase 層の第二防衛線）
  * - `PROJECT_NOT_FOUND`: 対象プロジェクトが存在しない
  * - `INVALID_PROJECT_STATUS`: PENDING_REVIEW 以外からの承認 (ドメイン状態違反)
  * - `OWNER_PUBLISHED_LIMIT_EXCEEDED`: Case A - 同一オーナーが既に 3 件 PUBLISHED
@@ -50,6 +52,8 @@ export interface ApproveProjectPublicationOutput {
 export type ApproveProjectPublicationError =
   | { readonly type: "INVALID_PROJECT_ID" }
   | { readonly type: "INVALID_REVIEWER_ID" }
+  | { readonly type: "REVIEWER_NOT_FOUND" }
+  | { readonly type: "REVIEWER_NOT_ADMIN" }
   | { readonly type: "PROJECT_NOT_FOUND" }
   | {
       readonly type: "INVALID_PROJECT_STATUS";
@@ -83,12 +87,13 @@ export interface ApproveProjectPublicationInput {
  *
  * 処理フロー:
  * 1. ProjectId / ReviewerId VO 生成（入力バリデーション）
- * 2. プロジェクトの存在チェック
- * 3. project.approveByAdmin() 呼び出し（ドメイン状態遷移チェック）
- * 4. Case A 再検証: オーナーの PUBLISHED 件数 >= 3 ならエラー
- * 5. ProjectReviewFeedback (action=APPROVED) を生成
- * 6. 承認通知メール Outbox メッセージを生成
- * 7. executeApproveInTransaction で Project 更新 + ReviewFeedback 作成 +
+ * 2. 審査者の ADMIN ロールチェック（Route Handler と二重防御）
+ * 3. プロジェクトの存在チェック
+ * 4. project.approveByAdmin() 呼び出し（ドメイン状態遷移チェック）
+ * 5. Case A 再検証: オーナーの PUBLISHED 件数 >= 3 ならエラー
+ * 6. ProjectReviewFeedback (action=APPROVED) を生成
+ * 7. 承認通知メール Outbox メッセージを生成
+ * 8. executeApproveInTransaction で Project 更新 + ReviewFeedback 作成 +
  *    Outbox 書き込みを同一トランザクションで永続化
  */
 export class ApproveProjectPublicationUseCase {
@@ -108,13 +113,22 @@ export class ApproveProjectPublicationUseCase {
       return err({ type: "INVALID_REVIEWER_ID" });
     }
 
-    // 2. プロジェクトの存在チェック
+    // 2. 審査者の ADMIN ロールチェック（Route Handler と二重防御）
+    const reviewer = await this.port.findAccountById(input.reviewerId);
+    if (!reviewer) {
+      return err({ type: "REVIEWER_NOT_FOUND" });
+    }
+    if (!reviewer.roles.includes("ADMIN")) {
+      return err({ type: "REVIEWER_NOT_ADMIN" });
+    }
+
+    // 3. プロジェクトの存在チェック
     const project = await this.port.findProjectById(input.projectId);
     if (!project) {
       return err({ type: "PROJECT_NOT_FOUND" });
     }
 
-    // 3. ドメイン状態遷移（PENDING_REVIEW チェック含む）
+    // 4. ドメイン状態遷移（PENDING_REVIEW チェック含む）
     const approveResult = project.approveByAdmin();
     if (!approveResult.ok) {
       return err({
@@ -123,7 +137,7 @@ export class ApproveProjectPublicationUseCase {
       });
     }
 
-    // 4. Case A 再検証: PUBLISHED 件数上限
+    // 5. Case A 再検証: PUBLISHED 件数上限
     // 現在の project 自身は approveByAdmin 直後で PUBLISHED に遷移しているが、
     // DB 上はまだ PENDING_REVIEW のためカウント対象外。超過判定は >= 3。
     const publishedCount = await this.port.countPublishedByOwner(project.ownerAccountId);
@@ -135,7 +149,7 @@ export class ApproveProjectPublicationUseCase {
       });
     }
 
-    // 5. ProjectReviewFeedback 生成 (action=APPROVED, note optional)
+    // 6. ProjectReviewFeedback 生成 (action=APPROVED, note optional)
     const feedbackResult = ProjectReviewFeedback.create({
       projectId: project.id,
       reviewerId: reviewerIdResult.value,
@@ -149,7 +163,7 @@ export class ApproveProjectPublicationUseCase {
       });
     }
 
-    // 6. Outbox メッセージ生成（公開承認通知メール）
+    // 7. Outbox メッセージ生成（公開承認通知メール、プロジェクトオーナー宛）
     const approvedAt = project.updatedAt;
     const outboxMessage = {
       id: randomUUID(),
@@ -163,7 +177,7 @@ export class ApproveProjectPublicationUseCase {
       },
     };
 
-    // 7. トランザクション内で永続化
+    // 8. トランザクション内で永続化
     await this.port.executeApproveInTransaction({
       project,
       reviewFeedback: feedbackResult.value,

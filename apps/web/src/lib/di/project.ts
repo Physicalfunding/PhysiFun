@@ -65,6 +65,7 @@ export function getRequestPublishPort(): RequestPublishPort {
  * 公開承認は Project 更新・ProjectReviewFeedback 作成・
  * ProjectOutboxMessage 書き込みを単一トランザクションで実行する必要があるため、
  * executeApproveInTransaction と Case A 用の countPublishedByOwner を提供する。
+ * また、UseCase 層での ADMIN ロール二重防御のために findAccountById も提供する。
  *
  * NOTE: 他の DI ヘルパーと同様に PrismaProjectCommandAdapter を独自インスタンス化し、
  * Port ごとの依存関係を明示的に分離する。
@@ -72,6 +73,7 @@ export function getRequestPublishPort(): RequestPublishPort {
 export function getApproveProjectPublicationPort(): ApproveProjectPublicationPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
+    findAccountById: (accountId: string) => adapter.findAccountById(accountId),
     findProjectById: (id: string) => adapter.findProjectById(id),
     countPublishedByOwner: (ownerAccountId: AccountId) =>
       adapter.countPublishedByOwner(ownerAccountId),

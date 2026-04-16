@@ -141,4 +141,7 @@ export {
   type ApproveProjectPublicationOutput,
   type ApproveProjectPublicationError,
 } from "./project/ApproveProjectPublicationUseCase";
-export type { ApproveProjectPublicationPort } from "./project/ports/ApproveProjectPublicationPort";
+export type {
+  ApproveProjectPublicationPort,
+  AccountForProjectApproval,
+} from "./project/ports/ApproveProjectPublicationPort";
