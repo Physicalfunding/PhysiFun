@@ -75,6 +75,7 @@ export function getRequestPublishPort(): RequestPublishPort {
 export function getForceUnpublishProjectPort(): ForceUnpublishProjectPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
+    findAccountById: (id: string) => adapter.findAccountById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
     executeForceUnpublishInTransaction: (params: {
       project: Project;

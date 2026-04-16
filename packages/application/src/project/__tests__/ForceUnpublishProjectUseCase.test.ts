@@ -74,12 +74,22 @@ function createProjectWithStatus(publishStatus: PublishStatus): Project {
 
 // ==================== インメモリ実装 ====================
 
+interface AccountRecord {
+  readonly id: string;
+  readonly roles: readonly string[];
+}
+
 class InMemoryForceUnpublishProjectPort implements ForceUnpublishProjectPort {
   projects: Project[] = [];
+  accounts: AccountRecord[] = [];
   savedProjects: Project[] = [];
   savedFeedbacks: ProjectReviewFeedback[] = [];
   createdOutboxMessages: CreateProjectOutboxMessageParams[] = [];
   executeInTransactionCallCount = 0;
+
+  async findAccountById(accountId: string): Promise<AccountRecord | null> {
+    return this.accounts.find((a) => a.id === accountId) ?? null;
+  }
 
   async findProjectById(projectId: string): Promise<Project | null> {
     return this.projects.find((p) => p.id.toString() === projectId) ?? null;
@@ -105,6 +115,8 @@ describe("ForceUnpublishProjectUseCase", () => {
 
   beforeEach(() => {
     port = new InMemoryForceUnpublishProjectPort();
+    // デフォルトで reviewer は ADMIN ロールを持つ（正常系で使う）
+    port.accounts.push({ id: REVIEWER_ACCOUNT_ID_STR, roles: ["ADMIN"] });
     useCase = new ForceUnpublishProjectUseCase(port);
   });
 
@@ -299,5 +311,98 @@ describe("ForceUnpublishProjectUseCase", () => {
       expect(result.error.domainError.currentStatus).toBe(PublishStatus.PENDING_REVIEW);
     }
     expect(port.executeInTransactionCallCount).toBe(0);
+  });
+
+  // ---- ADMIN 二重防御 ----
+
+  it("reviewer アカウントが存在しない場合 REVIEWER_NOT_FOUND を返す", async () => {
+    port.projects.push(createProjectWithStatus(PublishStatus.PUBLISHED));
+    // デフォルト登録された ADMIN アカウントを取り除いて unknown reviewer を再現
+    port.accounts = [];
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+      reviewerNote: "理由",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
+    expect(port.executeInTransactionCallCount).toBe(0);
+  });
+
+  it("reviewer が ADMIN ロールを持たない場合 REVIEWER_NOT_ADMIN を返す", async () => {
+    port.projects.push(createProjectWithStatus(PublishStatus.PUBLISHED));
+    // ADMIN を含まない roles に上書き
+    port.accounts = [{ id: REVIEWER_ACCOUNT_ID_STR, roles: ["LEADER", "SUPPORTER"] }];
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+      reviewerNote: "理由",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOT_ADMIN");
+    expect(port.executeInTransactionCallCount).toBe(0);
+  });
+
+  // ---- reviewerNote 追加バリデーション ----
+
+  it("reviewerNote がタブ/改行のみの場合 REVIEWER_NOTE_REQUIRED", async () => {
+    port.projects.push(createProjectWithStatus(PublishStatus.PUBLISHED));
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+      reviewerNote: "\t\n\r",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOTE_REQUIRED");
+    expect(port.executeInTransactionCallCount).toBe(0);
+  });
+
+  it("reviewerNote が上限 2000 文字を超えると REVIEWER_NOTE_TOO_LONG", async () => {
+    port.projects.push(createProjectWithStatus(PublishStatus.PUBLISHED));
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+      reviewerNote: "a".repeat(2001),
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOTE_TOO_LONG");
+    if (result.error.type !== "REVIEWER_NOTE_TOO_LONG") return;
+    expect(result.error.maxLength).toBe(2000);
+    expect(result.error.actualLength).toBe(2001);
+    expect(port.executeInTransactionCallCount).toBe(0);
+  });
+
+  // ---- Outbox payload 型保証 ----
+
+  it("Outbox payload.reviewerNote は trim 済み string 型である（string | null にならない）", async () => {
+    port.projects.push(createProjectWithStatus(PublishStatus.PUBLISHED));
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      reviewerId: REVIEWER_ACCOUNT_ID_STR,
+      reviewerNote: "  違反内容  ",
+    });
+
+    expect(result.ok).toBe(true);
+
+    const payload = port.createdOutboxMessages[0].payload as {
+      reviewerNote: string;
+    };
+    // 型レベル: string のみを受け入れる変数に代入できることで string 型であることを保証
+    const reviewerNoteAsString: string = payload.reviewerNote;
+    expect(reviewerNoteAsString).toBe("違反内容");
+    expect(typeof reviewerNoteAsString).toBe("string");
   });
 });

@@ -15,6 +15,17 @@ import type { CreateProjectOutboxMessageParams } from "./RequestPublishPort";
  * 後段のワーカーが拾って配信する。
  */
 export interface ForceUnpublishProjectPort {
+  /**
+   * アカウント ID でアカウントの id / roles を取得する。
+   *
+   * UseCase 層でも ADMIN ロールを二重チェックするために使う
+   * （第一防衛線は API Route Handler の getToken ベース認可）。
+   * 構造的部分型により PrismaProjectCommandAdapter.findAccountById が適合する。
+   */
+  findAccountById(
+    accountId: string
+  ): Promise<{ readonly id: string; readonly roles: readonly string[] } | null>;
+
   /** プロジェクトID で Project 集約を取得する */
   findProjectById(projectId: string): Promise<Project | null>;
 
