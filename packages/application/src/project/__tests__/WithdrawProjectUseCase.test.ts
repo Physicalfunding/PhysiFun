@@ -142,11 +142,12 @@ describe("WithdrawProjectUseCase", () => {
   it("saveProject が 1 回だけ呼ばれ、ステータスが DRAFT に変わっている", async () => {
     port.projects.push(createPendingReviewProject());
 
-    await useCase.execute({
+    const result = await useCase.execute({
       accountId: OWNER_ACCOUNT_ID_STR,
       projectId: PROJECT_ID_STR,
     });
 
+    expect(result.ok).toBe(true);
     expect(port.savedProjects).toHaveLength(1);
     expect(port.savedProjects[0].publishStatus).toBe(PublishStatus.DRAFT);
   });
@@ -225,6 +226,9 @@ describe("WithdrawProjectUseCase", () => {
     expect(result.error.type).toBe("DOMAIN_ERROR");
     if (result.error.type !== "DOMAIN_ERROR") return;
     expect(result.error.domainError.type).toBe("CANNOT_WITHDRAW_NON_PENDING");
+    if (result.error.domainError.type === "CANNOT_WITHDRAW_NON_PENDING") {
+      expect(result.error.domainError.currentStatus).toBe(PublishStatus.DRAFT);
+    }
     expect(port.savedProjects).toHaveLength(0);
   });
 
@@ -242,6 +246,9 @@ describe("WithdrawProjectUseCase", () => {
     expect(result.error.type).toBe("DOMAIN_ERROR");
     if (result.error.type !== "DOMAIN_ERROR") return;
     expect(result.error.domainError.type).toBe("CANNOT_WITHDRAW_NON_PENDING");
+    if (result.error.domainError.type === "CANNOT_WITHDRAW_NON_PENDING") {
+      expect(result.error.domainError.currentStatus).toBe(PublishStatus.PUBLISHED);
+    }
     expect(port.savedProjects).toHaveLength(0);
   });
 });
