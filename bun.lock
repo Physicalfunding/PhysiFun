@@ -97,6 +97,7 @@
       "name": "@physifun/infrastructure",
       "version": "0.0.0",
       "dependencies": {
+        "@physifun/application": "workspace:*",
         "@physifun/domain": "workspace:*",
         "@prisma/client": "^6.9.0",
         "resend": "^6.9.3",
