@@ -131,3 +131,14 @@ export {
   type UnpublishProjectError,
 } from "./project/UnpublishProjectUseCase";
 export type { UnpublishProjectPort } from "./project/ports/UnpublishProjectPort";
+
+// ApproveProjectPublicationUseCase
+export {
+  ApproveProjectPublicationUseCase,
+  MAX_PUBLISHED_PROJECTS_PER_OWNER,
+  PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE,
+  type ApproveProjectPublicationInput,
+  type ApproveProjectPublicationOutput,
+  type ApproveProjectPublicationError,
+} from "./project/ApproveProjectPublicationUseCase";
+export type { ApproveProjectPublicationPort } from "./project/ports/ApproveProjectPublicationPort";

@@ -1,10 +1,11 @@
 import { PrismaProjectQueryService, PrismaProjectCommandAdapter } from "@physifun/infrastructure";
 import type {
+  ApproveProjectPublicationPort,
   ProjectQueryPort,
   RequestPublishPort,
   CreateProjectOutboxMessageParams,
 } from "@physifun/application";
-import type { Project } from "@physifun/domain";
+import type { AccountId, Project, ProjectReviewFeedback } from "@physifun/domain";
 
 export function getProjectQueryService(): ProjectQueryPort {
   return new PrismaProjectQueryService();
@@ -55,5 +56,29 @@ export function getRequestPublishPort(): RequestPublishPort {
       project: Project;
       outboxMessage: CreateProjectOutboxMessageParams;
     }) => adapter.executeInTransaction(params),
+  };
+}
+
+/**
+ * ApproveProjectPublicationUseCase 用のポート生成ヘルパー
+ *
+ * 公開承認は Project 更新・ProjectReviewFeedback 作成・
+ * ProjectOutboxMessage 書き込みを単一トランザクションで実行する必要があるため、
+ * executeApproveInTransaction と Case A 用の countPublishedByOwner を提供する。
+ *
+ * NOTE: 他の DI ヘルパーと同様に PrismaProjectCommandAdapter を独自インスタンス化し、
+ * Port ごとの依存関係を明示的に分離する。
+ */
+export function getApproveProjectPublicationPort(): ApproveProjectPublicationPort {
+  const adapter = new PrismaProjectCommandAdapter();
+  return {
+    findProjectById: (id: string) => adapter.findProjectById(id),
+    countPublishedByOwner: (ownerAccountId: AccountId) =>
+      adapter.countPublishedByOwner(ownerAccountId),
+    executeApproveInTransaction: (params: {
+      project: Project;
+      reviewFeedback: ProjectReviewFeedback;
+      outboxMessage: CreateProjectOutboxMessageParams;
+    }) => adapter.executeApproveInTransaction(params),
   };
 }
