@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   type Result,
   err,
@@ -39,6 +40,15 @@ export interface RequestPublishInput {
   readonly projectId: string;
 }
 
+// ==================== Outbox 定数 ====================
+
+/**
+ * 運営への公開申請通知タスク種別
+ *
+ * Outbox ワーカーが運営向けに「新しい公開申請が届いた」旨のメールを送信する。
+ */
+export const ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE = "admin_publish_request.notify";
+
 // ==================== ユースケース ====================
 
 /**
@@ -49,7 +59,8 @@ export interface RequestPublishInput {
  * 2. プロジェクトの存在チェック
  * 3. オーナー権限チェック
  * 4. project.requestPublish()（必須項目チェック + ステータス遷移）
- * 5. 永続化
+ * 5. Project.status 更新と ProjectOutboxMessage 書き込みを
+ *    同一トランザクションで永続化（Outbox パターン）
  */
 export class RequestPublishUseCase {
   constructor(private readonly port: RequestPublishPort) {}
@@ -85,8 +96,21 @@ export class RequestPublishUseCase {
       return err({ type: "DOMAIN_ERROR", domainError: publishResult.error });
     }
 
-    // 5. 永続化
-    await this.port.saveProject(project);
+    // 5. トランザクション内で永続化 + Outbox 書き込み
+    const requestedAt = project.updatedAt;
+    await this.port.executeInTransaction({
+      project,
+      outboxMessage: {
+        id: randomUUID(),
+        type: ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE,
+        payload: {
+          projectId: project.id.toString(),
+          projectTitle: project.title,
+          leaderAccountId: project.ownerAccountId.toString(),
+          requestedAt: requestedAt.toISOString(),
+        },
+      },
+    });
 
     return ok({ projectId: project.id.toString() });
   }

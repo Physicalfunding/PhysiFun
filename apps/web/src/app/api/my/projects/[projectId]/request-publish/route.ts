@@ -1,5 +1,5 @@
 import { RequestPublishUseCase, type RequestPublishError } from "@physifun/application";
-import { getProjectStatusPort } from "@/lib/di/project";
+import { getRequestPublishPort } from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
 import {
   successResponse,
@@ -49,7 +49,7 @@ export async function POST(
     }
 
     const { projectId } = await params;
-    const port = getProjectStatusPort();
+    const port = getRequestPublishPort();
     const useCase = new RequestPublishUseCase(port);
 
     const result = await useCase.execute({
