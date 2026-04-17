@@ -84,6 +84,39 @@ export interface ProjectAdminDetail {
   readonly reviewFeedbacks: ProjectReviewFeedbackHistoryItem[];
 }
 
+// ==================== 公開ページ向け DTO ====================
+
+/**
+ * 公開ページ向け DTO
+ *
+ * 認証不要。PUBLISHED プロジェクトのみ返す。
+ * owner の email など機密情報は含めない。
+ */
+export interface ProjectPublicDetail {
+  readonly slug: string;
+  readonly title: string;
+  readonly summary: string | null;
+  readonly body: string | null;
+  readonly leaderIntroduction: string | null;
+  readonly coverImageUrl: string | null;
+  readonly category: string | null;
+  readonly prefectureCode: string | null;
+  readonly municipality: string | null;
+  readonly snsLinks: {
+    x: string | null;
+    instagram: string | null;
+    facebook: string | null;
+    website: string | null;
+  } | null;
+  readonly activityPlan: string | null;
+  readonly phase: ProjectPhase;
+  readonly publishedAt: Date | null;
+  readonly leader: {
+    readonly displayName: string;
+    readonly bio: string | null;
+  };
+}
+
 // ==================== 定数 ====================
 
 const DEFAULT_PAGE = 1;
@@ -315,6 +348,47 @@ export class PrismaProjectQueryService implements ProjectQueryPort {
    */
   async countByStatus(status: PublishStatus): Promise<number> {
     return prisma.project.count({ where: { status } });
+  }
+
+  // ==================== 公開ページ向け ====================
+
+  /**
+   * slug で PUBLISHED プロジェクトを取得する（公開ページ用）。
+   *
+   * PUBLISHED 以外は null を返す。
+   */
+  async findPublishedBySlug(slug: string): Promise<ProjectPublicDetail | null> {
+    const row = await prisma.project.findUnique({
+      where: { slug },
+      include: {
+        owner: {
+          select: { displayName: true, bio: true },
+        },
+      },
+    });
+
+    if (!row) return null;
+    if (row.status !== "PUBLISHED") return null;
+
+    return {
+      slug: row.slug!,
+      title: row.title,
+      summary: row.summary,
+      body: row.story,
+      leaderIntroduction: row.leaderIntro,
+      coverImageUrl: row.coverImageUrl,
+      category: row.category,
+      prefectureCode: row.prefectureCode,
+      municipality: row.municipality,
+      snsLinks: row.snsLinks as ProjectPublicDetail["snsLinks"],
+      activityPlan: row.activityPlan,
+      phase: row.phase as ProjectPhase,
+      publishedAt: row.publishedAt,
+      leader: {
+        displayName: row.owner.displayName,
+        bio: row.owner.bio,
+      },
+    };
   }
 }
 
