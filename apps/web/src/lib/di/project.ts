@@ -2,6 +2,7 @@ import { PrismaProjectQueryService, PrismaProjectCommandAdapter } from "@physifu
 import type {
   ApproveProjectPublicationPort,
   ProjectQueryPort,
+  PublicProjectQueryPort,
   RequestPublishPort,
   CreateProjectOutboxMessageParams,
   RejectProjectPublicationPort,
@@ -10,6 +11,15 @@ import type {
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 
 export function getProjectQueryService(): ProjectQueryPort {
+  return new PrismaProjectQueryService();
+}
+
+/**
+ * 公開ページ向けクエリサービス。
+ *
+ * PublicProjectQueryPort を介してインフラ層の具象クラスに依存しない。
+ */
+export function getPublicProjectQueryService(): PublicProjectQueryPort {
   return new PrismaProjectQueryService();
 }
 

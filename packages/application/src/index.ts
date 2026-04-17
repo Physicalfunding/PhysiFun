@@ -96,9 +96,11 @@ export type { UpdateProjectDraftPort } from "./project/ports/UpdateProjectDraftP
 // ProjectQueryPort
 export type {
   ProjectQueryPort,
+  PublicProjectQueryPort,
   ProjectListItem,
   ProjectListResult,
   ProjectDetailDTO,
+  ProjectPublicDetailDTO,
 } from "./project/ports/ProjectQueryPort";
 
 // RequestPublishUseCase

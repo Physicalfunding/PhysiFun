@@ -1,5 +1,11 @@
 import type { PublishStatus, ProjectPhase, ReviewAction } from "@physifun/domain";
-import type { ProjectQueryPort, ProjectListResult, ProjectDetailDTO } from "@physifun/application";
+import type {
+  ProjectQueryPort,
+  PublicProjectQueryPort,
+  ProjectListResult,
+  ProjectDetailDTO,
+  ProjectPublicDetailDTO,
+} from "@physifun/application";
 import { prisma } from "../database/client";
 
 // ==================== ADMIN 向け DTO ====================
@@ -104,7 +110,7 @@ const ADMIN_REVIEW_FEEDBACK_HISTORY_LIMIT = 5;
  * - リーダー向け: findProjectsByOwner / findProjectDetailForOwner (owner-check あり)
  * - 運営向け    : findManyForAdmin / findDetailForAdmin / countByStatus (owner-check なし)
  */
-export class PrismaProjectQueryService implements ProjectQueryPort {
+export class PrismaProjectQueryService implements ProjectQueryPort, PublicProjectQueryPort {
   async findProjectsByOwner(
     accountId: string,
     params?: { page?: number; perPage?: number }
@@ -316,6 +322,47 @@ export class PrismaProjectQueryService implements ProjectQueryPort {
   async countByStatus(status: PublishStatus): Promise<number> {
     return prisma.project.count({ where: { status } });
   }
+
+  // ==================== 公開ページ向け ====================
+
+  /**
+   * slug で PUBLISHED プロジェクトを取得する（公開ページ用）。
+   *
+   * where 条件で status: PUBLISHED を含めることで、
+   * DRAFT / PENDING_REVIEW のレコードは取得しない。
+   */
+  async findPublishedBySlug(slug: string): Promise<ProjectPublicDetailDTO | null> {
+    const row = await prisma.project.findFirst({
+      where: { slug, status: "PUBLISHED" },
+      include: {
+        owner: {
+          select: { displayName: true, bio: true },
+        },
+      },
+    });
+
+    if (!row || !row.slug) return null;
+
+    return {
+      slug: row.slug,
+      title: row.title,
+      summary: row.summary,
+      body: row.story,
+      leaderIntroduction: row.leaderIntro,
+      coverImageUrl: row.coverImageUrl,
+      category: row.category,
+      prefectureCode: row.prefectureCode,
+      municipality: row.municipality,
+      snsLinks: parseSnsLinks(row.snsLinks),
+      activityPlan: row.activityPlan,
+      phase: row.phase as ProjectPhase,
+      publishedAt: row.publishedAt,
+      leader: {
+        displayName: row.owner.displayName,
+        bio: row.owner.bio,
+      },
+    };
+  }
 }
 
 // ==================== ヘルパー ====================
@@ -337,6 +384,29 @@ function pickAdminOrderBy(status: PublishStatus) {
     default:
       return [{ updatedAt: "desc" as const }];
   }
+}
+
+/**
+ * Prisma の Json? フィールドを snsLinks DTO にランタイム変換する。
+ *
+ * 構造が期待と異なる場合は null を返す。
+ * 各 value が string でなければ null に落とす。
+ */
+function parseSnsLinks(
+  raw: unknown
+): { x: string | null; instagram: string | null; facebook: string | null; website: string | null } | null {
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return null;
+
+  const obj = raw as Record<string, unknown>;
+  const asStringOrNull = (v: unknown): string | null =>
+    typeof v === "string" ? v : null;
+
+  return {
+    x: asStringOrNull(obj.x),
+    instagram: asStringOrNull(obj.instagram),
+    facebook: asStringOrNull(obj.facebook),
+    website: asStringOrNull(obj.website),
+  };
 }
 
 function pickAdminSortedAt(
