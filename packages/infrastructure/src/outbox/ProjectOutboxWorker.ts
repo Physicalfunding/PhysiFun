@@ -54,52 +54,68 @@ export class ProjectOutboxWorker {
     });
 
     for (const msg of messages) {
-      const processor = this.processors.get(msg.type);
+      try {
+        const processor = this.processors.get(msg.type);
 
-      if (!processor) {
-        await this.prisma.projectOutboxMessage.update({
-          where: { id: msg.id },
-          data: {
-            attempts: msg.attempts + 1,
-            lastError: `未知のメッセージ種別: ${msg.type}`,
-          },
-        });
-        continue;
-      }
+        if (!processor) {
+          await this.prisma.projectOutboxMessage.update({
+            where: { id: msg.id },
+            data: {
+              attempts: msg.attempts + 1,
+              lastError: `未知のメッセージ種別: ${msg.type}`,
+            },
+          });
+          continue;
+        }
 
-      const outboxMessage = {
-        id: msg.id,
-        type: msg.type,
-        payload: msg.payload as Record<string, unknown>,
-        createdAt: msg.createdAt,
-        sentAt: msg.sentAt,
-        attempts: msg.attempts,
-        lastError: msg.lastError,
-        nextRetryAt: msg.nextRetryAt,
-      };
+        const outboxMessage = {
+          id: msg.id,
+          type: msg.type,
+          payload: msg.payload as Record<string, unknown>,
+          createdAt: msg.createdAt,
+          sentAt: msg.sentAt,
+          attempts: msg.attempts,
+          lastError: msg.lastError,
+          nextRetryAt: msg.nextRetryAt,
+        };
 
-      const result = await processor.process(outboxMessage);
+        const result = await processor.process(outboxMessage);
 
-      if (result.ok) {
-        await this.prisma.projectOutboxMessage.update({
-          where: { id: msg.id },
-          data: { sentAt: new Date() },
-        });
-      } else {
-        const newAttempts = msg.attempts + 1;
-        const nextRetryAt =
-          result.error.retriable && newAttempts < this.maxAttempts
-            ? this.calculateNextRetry(newAttempts)
-            : null;
+        if (result.ok) {
+          await this.prisma.projectOutboxMessage.update({
+            where: { id: msg.id },
+            data: { sentAt: new Date() },
+          });
+        } else {
+          const newAttempts = msg.attempts + 1;
+          const nextRetryAt =
+            result.error.retriable && newAttempts < this.maxAttempts
+              ? this.calculateNextRetry(newAttempts)
+              : null;
 
-        await this.prisma.projectOutboxMessage.update({
-          where: { id: msg.id },
-          data: {
-            attempts: newAttempts,
-            lastError: result.error.message,
-            nextRetryAt,
-          },
-        });
+          await this.prisma.projectOutboxMessage.update({
+            where: { id: msg.id },
+            data: {
+              attempts: newAttempts,
+              lastError: result.error.message,
+              nextRetryAt,
+            },
+          });
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        try {
+          await this.prisma.projectOutboxMessage.update({
+            where: { id: msg.id },
+            data: {
+              attempts: msg.attempts + 1,
+              lastError: `unexpected: ${errorMessage}`,
+            },
+          });
+        } catch {
+          // update 自体が失敗した場合は次 tick で再処理される
+        }
       }
     }
   }

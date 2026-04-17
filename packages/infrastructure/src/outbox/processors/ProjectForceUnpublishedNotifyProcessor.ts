@@ -1,4 +1,5 @@
 import { ok, err, type Result } from "@physifun/domain";
+import { PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE } from "@physifun/application";
 import type { MailSender } from "../../mail/types";
 import type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "../types";
 import { escapeHtml } from "./escapeHtml";
@@ -14,8 +15,7 @@ export interface ProjectForceUnpublishedPayload {
   readonly unpublishedAt: string;
 }
 
-/** メッセージ種別定数 (UseCase 側と一致させる) */
-export const PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE = "project_force_unpublished.notify";
+export { PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE };
 
 /**
  * リーダー向け強制非公開通知メールを送信する OutboxProcessor。
@@ -71,7 +71,7 @@ export class ProjectForceUnpublishedNotifyProcessor
       "<p><strong>理由:</strong></p>",
       `<p style="padding:12px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">${escapeHtml(reviewerNote)}</p>`,
       "<p>ご不明な点がございましたら、運営までお問い合わせください。</p>",
-      `<p><a href="${projectUrl}" style="display:inline-block;padding:12px 24px;background:#6b7280;color:#fff;text-decoration:none;border-radius:6px;">プロジェクトを確認する</a></p>`,
+      `<p><a href="${escapeHtml(projectUrl)}" style="display:inline-block;padding:12px 24px;background:#6b7280;color:#fff;text-decoration:none;border-radius:6px;">プロジェクトを確認する</a></p>`,
       "<hr>",
       "<p>PhysiFun 運営チーム</p>",
     ].join("\n");

@@ -1,4 +1,5 @@
 import { ok, err, type Result } from "@physifun/domain";
+import { PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE } from "@physifun/application";
 import type { MailSender } from "../../mail/types";
 import type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "../types";
 import { escapeHtml } from "./escapeHtml";
@@ -13,8 +14,7 @@ export interface ProjectPublishApprovedPayload {
   readonly approvedAt: string;
 }
 
-/** メッセージ種別定数 (UseCase 側と一致させる) */
-export const PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE = "project_publish_approved.notify";
+export { PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE };
 
 /**
  * リーダー向けプロジェクト承認通知メールを送信する OutboxProcessor。
@@ -64,7 +64,7 @@ export class ProjectPublishApprovedNotifyProcessor
     const html = [
       "<p>プロジェクトが承認され、公開されました。</p>",
       `<p><strong>プロジェクト名:</strong> ${escapeHtml(projectTitle)}</p>`,
-      `<p><a href="${projectUrl}" style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;">プロジェクトを確認する</a></p>`,
+      `<p><a href="${escapeHtml(projectUrl)}" style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;">プロジェクトを確認する</a></p>`,
       "<hr>",
       "<p>PhysiFun 運営チーム</p>",
     ].join("\n");

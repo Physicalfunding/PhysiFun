@@ -1,4 +1,5 @@
 import { ok, err, type Result } from "@physifun/domain";
+import { ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE } from "@physifun/application";
 import type { MailSender } from "../../mail/types";
 import type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "../types";
 import { escapeHtml } from "./escapeHtml";
@@ -11,8 +12,7 @@ export interface AdminPublishRequestNotifyPayload {
   readonly requestedAt: string;
 }
 
-/** メッセージ種別定数 (UseCase 側と一致させる) */
-export const ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE = "admin_publish_request.notify";
+export { ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE };
 
 /**
  * 運営向け公開申請通知メールを送信する OutboxProcessor。
@@ -60,7 +60,7 @@ export class AdminPublishRequestNotifyProcessor
       "<p>新しいプロジェクト公開申請が届きました。</p>",
       `<p><strong>プロジェクト名:</strong> ${escapeHtml(projectTitle)}</p>`,
       `<p><strong>申請日時:</strong> ${escapeHtml(requestedAt)}</p>`,
-      `<p><a href="${reviewUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">審査する</a></p>`,
+      `<p><a href="${escapeHtml(reviewUrl)}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">審査する</a></p>`,
       "<hr>",
       "<p>PhysiFun 自動通知</p>",
     ].join("\n");

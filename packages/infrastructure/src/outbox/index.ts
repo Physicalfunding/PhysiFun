@@ -19,7 +19,6 @@ export {
 export {
   ProjectPublishRejectedNotifyProcessor,
   LEADER_PUBLISH_REJECTED_NOTIFY_TYPE,
-  PROJECT_PUBLISH_REJECTED_NOTIFY_TYPE,
   type ProjectPublishRejectedPayload,
 } from "./processors/ProjectPublishRejectedNotifyProcessor";
 export {
