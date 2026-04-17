@@ -15,8 +15,12 @@
  * ドメインのホスト allowlist + `next/image` 移行で別防御を入れる必要がある。
  */
 export function isSafeHttpUrl(url: string): boolean {
-  const lower = url.toLowerCase();
-  return lower.startsWith("https://") || lower.startsWith("http://");
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
 }
 
 /**

@@ -153,7 +153,7 @@ export class PrismaProjectCommandAdapter {
         data: {
           id: params.outboxMessage.id,
           type: params.outboxMessage.type,
-          payload: params.outboxMessage.payload as object,
+          payload: params.outboxMessage.payload as Prisma.InputJsonValue,
         },
       }),
     ]);
@@ -213,7 +213,7 @@ export class PrismaProjectCommandAdapter {
         data: {
           id: params.outboxMessage.id,
           type: params.outboxMessage.type,
-          payload: params.outboxMessage.payload as object,
+          payload: params.outboxMessage.payload as Prisma.InputJsonValue,
         },
       }),
     ]);
@@ -274,7 +274,7 @@ export class PrismaProjectCommandAdapter {
         data: {
           id: params.outboxMessage.id,
           type: params.outboxMessage.type,
-          payload: params.outboxMessage.payload as object,
+          payload: params.outboxMessage.payload as Prisma.InputJsonValue,
         },
       }),
     ]);
@@ -402,7 +402,7 @@ export class PrismaProjectCommandAdapter {
         data: {
           id: params.outboxMessage.id,
           type: params.outboxMessage.type,
-          payload: params.outboxMessage.payload as object,
+          payload: params.outboxMessage.payload as Prisma.InputJsonValue,
         },
       });
     });

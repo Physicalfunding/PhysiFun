@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { PublishStatus } from "@physifun/domain";
 
@@ -11,7 +11,7 @@ interface ProjectReviewActionsProps {
 
 const REVIEWER_NOTE_MAX_LENGTH = 2000;
 
-type ModalKind = "reject" | "forceUnpublish" | null;
+type ModalKind = "approve" | "reject" | "forceUnpublish" | null;
 
 /**
  * プロジェクト公開審査アクション
@@ -26,13 +26,12 @@ type ModalKind = "reject" | "forceUnpublish" | null;
  */
 export function ProjectReviewActions({ projectId, status }: ProjectReviewActionsProps) {
   const router = useRouter();
-  const [isApproving, setIsApproving] = useState(false);
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [modal, setModal] = useState<ModalKind>(null);
   const [reviewerNote, setReviewerNote] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const isAnyPending = isApproving || isSubmittingNote;
+  const isAnyPending = isSubmittingNote;
 
   function openModal(kind: Exclude<ModalKind, null>) {
     setModal(kind);
@@ -46,60 +45,51 @@ export function ProjectReviewActions({ projectId, status }: ProjectReviewActions
     setError(null);
   }
 
-  async function handleApprove() {
-    if (
-      !window.confirm("このプロジェクトを承認して公開しますか？承認すると即座に公開されます。")
-    ) {
-      return;
-    }
-
-    setIsApproving(true);
-    setError(null);
-
-    try {
-      const res = await fetch(`/api/admin/projects/${projectId}/approve`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (!data.success) {
-        setError(data.error?.message ?? "承認に失敗しました");
+  async function submitModalAction(kind: Exclude<ModalKind, null>) {
+    // approve は note 任意、reject / forceUnpublish は必須
+    if (kind !== "approve") {
+      if (reviewerNote.trim().length === 0) {
+        setError(
+          kind === "reject" ? "差戻理由を入力してください" : "強制非公開理由を入力してください"
+        );
         return;
       }
-      router.refresh();
-    } catch {
-      setError("通信エラーが発生しました");
-    } finally {
-      setIsApproving(false);
-    }
-  }
-
-  async function submitReviewerNote(kind: Exclude<ModalKind, null>) {
-    if (reviewerNote.trim().length === 0) {
-      setError(kind === "reject" ? "差戻理由を入力してください" : "強制非公開理由を入力してください");
-      return;
-    }
-    if (reviewerNote.length > REVIEWER_NOTE_MAX_LENGTH) {
-      setError(`${REVIEWER_NOTE_MAX_LENGTH} 文字以内で入力してください`);
-      return;
+      if (reviewerNote.length > REVIEWER_NOTE_MAX_LENGTH) {
+        setError(`${REVIEWER_NOTE_MAX_LENGTH} 文字以内で入力してください`);
+        return;
+      }
     }
 
     setIsSubmittingNote(true);
     setError(null);
 
-    const endpoint =
-      kind === "reject"
-        ? `/api/admin/projects/${projectId}/reject`
-        : `/api/admin/projects/${projectId}/force-unpublish`;
+    const endpointMap: Record<Exclude<ModalKind, null>, string> = {
+      approve: `/api/admin/projects/${projectId}/approve`,
+      reject: `/api/admin/projects/${projectId}/reject`,
+      forceUnpublish: `/api/admin/projects/${projectId}/force-unpublish`,
+    };
+    const errorMsgMap: Record<Exclude<ModalKind, null>, string> = {
+      approve: "承認に失敗しました",
+      reject: "差戻に失敗しました",
+      forceUnpublish: "強制非公開に失敗しました",
+    };
+
+    const bodyPayload: Record<string, string> =
+      kind === "approve"
+        ? reviewerNote.trim().length > 0
+          ? { note: reviewerNote.trim() }
+          : {}
+        : { reviewerNote };
 
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch(endpointMap[kind], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reviewerNote }),
+        body: JSON.stringify(bodyPayload),
       });
       const data = await res.json();
       if (!data.success) {
-        setError(data.error?.message ?? (kind === "reject" ? "差戻に失敗しました" : "強制非公開に失敗しました"));
+        setError(data.error?.message ?? errorMsgMap[kind]);
         return;
       }
       closeModal();
@@ -136,11 +126,11 @@ export function ProjectReviewActions({ projectId, status }: ProjectReviewActions
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={handleApprove}
+              onClick={() => openModal("approve")}
               disabled={isAnyPending}
               className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
             >
-              {isApproving ? "承認中..." : "承認する"}
+              承認する
             </button>
             <button
               type="button"
@@ -173,7 +163,7 @@ export function ProjectReviewActions({ projectId, status }: ProjectReviewActions
           reviewerNote={reviewerNote}
           onChange={setReviewerNote}
           onCancel={closeModal}
-          onSubmit={() => submitReviewerNote(modal)}
+          onSubmit={() => submitModalAction(modal)}
           isSubmitting={isSubmittingNote}
           error={error}
         />
@@ -194,7 +184,7 @@ function ReviewerNoteModal({
   isSubmitting,
   error,
 }: {
-  kind: "reject" | "forceUnpublish";
+  kind: "approve" | "reject" | "forceUnpublish";
   reviewerNote: string;
   onChange: (value: string) => void;
   onCancel: () => void;
@@ -202,18 +192,85 @@ function ReviewerNoteModal({
   isSubmitting: boolean;
   error: string | null;
 }) {
-  const title = kind === "reject" ? "差戻理由を入力" : "強制非公開理由を入力";
-  const placeholder =
-    kind === "reject"
-      ? "差戻理由を入力してください（必須）"
-      : "強制非公開理由を入力してください（必須）";
-  const submitLabel = kind === "reject" ? "差戻す" : "強制非公開にする";
-  const submittingLabel = kind === "reject" ? "差戻中..." : "非公開処理中...";
+  const titleMap = {
+    approve: "プロジェクトを承認",
+    reject: "差戻理由を入力",
+    forceUnpublish: "強制非公開理由を入力",
+  } as const;
+  const placeholderMap = {
+    approve: "コメント（任意）",
+    reject: "差戻理由を入力してください（必須）",
+    forceUnpublish: "強制非公開理由を入力してください（必須）",
+  } as const;
+  const submitLabelMap = {
+    approve: "承認する",
+    reject: "差戻す",
+    forceUnpublish: "強制非公開にする",
+  } as const;
+  const submittingLabelMap = {
+    approve: "承認中...",
+    reject: "差戻中...",
+    forceUnpublish: "非公開処理中...",
+  } as const;
+  const title = titleMap[kind];
+  const placeholder = placeholderMap[kind];
+  const submitLabel = submitLabelMap[kind];
+  const submittingLabel = submittingLabelMap[kind];
+  const isNoteRequired = kind !== "approve";
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = `modal-title-${kind}`;
+
+  // Escape キーで閉じる + フォーカストラップ
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !isSubmitting) {
+        onCancel();
+        return;
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isSubmitting, onCancel]);
+
+  // 開いた時にダイアログにフォーカスを移す
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h3 className="mb-4 text-lg font-semibold">{title}</h3>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl outline-none"
+      >
+        <h3 id={titleId} className="mb-4 text-lg font-semibold">
+          {title}
+        </h3>
+
+        {kind === "approve" && (
+          <p className="mb-4 text-sm text-gray-600">
+            このプロジェクトを承認して公開します。承認すると即座に公開されます。
+          </p>
+        )}
 
         {error && (
           <div className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
@@ -243,8 +300,10 @@ function ReviewerNoteModal({
           <button
             type="button"
             onClick={onSubmit}
-            disabled={isSubmitting || reviewerNote.trim().length === 0}
-            className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            disabled={isSubmitting || (isNoteRequired && reviewerNote.trim().length === 0)}
+            className={`rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
+              kind === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+            }`}
           >
             {isSubmitting ? submittingLabel : submitLabel}
           </button>

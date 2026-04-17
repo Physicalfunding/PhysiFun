@@ -64,6 +64,14 @@ describe("AdminPublishRequestNotifyProcessor", () => {
     expect(sent.html).toContain("https://admin.physifun.com/projects/proj-abc");
   });
 
+  it("HTML テンプレートでユーザー入力がエスケープされる", async () => {
+    await processor.process(makeMessage({ projectTitle: '<script>alert("xss")</script>' }));
+
+    const sent = mailSender.sentMessages[0];
+    expect(sent.html).not.toContain("<script>");
+    expect(sent.html).toContain("&lt;script&gt;");
+  });
+
   it("メール送信失敗時に err を返す", async () => {
     mailSender.nextResult = err({ message: "送信失敗", retriable: true });
 

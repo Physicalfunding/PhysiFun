@@ -8,6 +8,10 @@ import type { OutboxProcessor } from "./types";
  * 登録済みの OutboxProcessor にディスパッチする。
  *
  * 失敗時は attempts をインクリメントし、exponential backoff で nextRetryAt を設定する。
+ *
+ * **NOTE**: 現在 claim/lock 機構はなく、並��実行時に同一メッセー���を
+ * 二重処理するリスクがある。単一ワーカーでの運用を前提とする。
+ * Issue #127 で Worker 共通化 + 排他制御を計画中。
  */
 
 /** リトライ回数の上限。超過したら dead-letter 扱い */

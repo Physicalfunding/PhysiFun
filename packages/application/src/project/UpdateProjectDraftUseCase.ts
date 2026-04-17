@@ -3,6 +3,7 @@ import {
   err,
   ok,
   AccountId,
+  ProjectId,
   ProjectLocation,
   SnsLinks,
   type SnsLinksError,
@@ -47,6 +48,7 @@ export interface UpdateProjectDraftOutput {
  */
 export type UpdateProjectDraftError =
   | { readonly type: "INVALID_ACCOUNT_ID" }
+  | { readonly type: "INVALID_PROJECT_ID" }
   | { readonly type: "PROJECT_NOT_FOUND" }
   | { readonly type: "NOT_OWNER" }
   | { readonly type: "CANNOT_EDIT_PUBLISHED" }
@@ -101,22 +103,29 @@ export class UpdateProjectDraftUseCase {
   async execute(
     input: UpdateProjectDraftInput
   ): Promise<Result<UpdateProjectDraftOutput, UpdateProjectDraftError>> {
-    // 1. プロジェクトの存在チェック
+    // 1. 入力バリデーション
+    const projectIdResult = ProjectId.from(input.projectId);
+    if (!projectIdResult.ok) {
+      return err({ type: "INVALID_PROJECT_ID" });
+    }
+
+    const callerIdResult = AccountId.from(input.accountId);
+    if (!callerIdResult.ok) {
+      return err({ type: "INVALID_ACCOUNT_ID" });
+    }
+
+    // 2. プロジェクトの存在チェック
     const project = await this.port.findProjectById(input.projectId);
     if (!project) {
       return err({ type: "PROJECT_NOT_FOUND" });
     }
 
-    // 2. オーナー権限チェック
-    const callerIdResult = AccountId.from(input.accountId);
-    if (!callerIdResult.ok) {
-      return err({ type: "INVALID_ACCOUNT_ID" });
-    }
+    // 3. オーナー権限チェック
     if (!project.ownerAccountId.equals(callerIdResult.value)) {
       return err({ type: "NOT_OWNER" });
     }
 
-    // 3. PUBLISHED 状態の編集禁止
+    // 4. PUBLISHED 状態の編集禁止
     if (project.publishStatus === PublishStatus.PUBLISHED) {
       return err({ type: "CANNOT_EDIT_PUBLISHED" });
     }
@@ -124,7 +133,7 @@ export class UpdateProjectDraftUseCase {
     // 自動取下げ検知のために現在の publishStatus を記録
     const previousStatus = project.publishStatus;
 
-    // 4. 入力値オブジェクトの構築
+    // 5. 入力値オブジェクトの構築
 
     // category
     let category: string | null | undefined;
@@ -192,7 +201,7 @@ export class UpdateProjectDraftUseCase {
       phase = input.phase as ProjectPhase;
     }
 
-    // 5. ドメインエンティティの update() 呼び出し
+    // 6. ドメインエンティティの update() 呼び出し
     const updateResult = project.update({
       title: input.title,
       coverImageUrl: input.coverImageUrl,
@@ -210,12 +219,12 @@ export class UpdateProjectDraftUseCase {
       return err({ type: "DOMAIN_ERROR", domainError: updateResult.error });
     }
 
-    // 6. 自動取下げの検知
+    // 7. 自動取下げの検知
     const withdrawnFromPending =
       previousStatus === PublishStatus.PENDING_REVIEW &&
       project.publishStatus === PublishStatus.DRAFT;
 
-    // 7. 永続化
+    // 8. 永続化
     await this.port.saveProjectWithOptionalFeedback({ project });
 
     return ok({

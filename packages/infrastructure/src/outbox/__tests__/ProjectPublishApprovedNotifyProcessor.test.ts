@@ -67,6 +67,14 @@ describe("ProjectPublishApprovedNotifyProcessor", () => {
     expect(sent.text).toContain("https://physifun.com/my/projects/proj-abc");
   });
 
+  it("HTML テンプレートでユーザー入力がエスケープされる", async () => {
+    await processor.process(makeMessage({ projectTitle: '<script>alert("xss")</script>' }));
+
+    const sent = mailSender.sentMessages[0];
+    expect(sent.html).not.toContain("<script>");
+    expect(sent.html).toContain("&lt;script&gt;");
+  });
+
   it("リーダーのメールが見つからない場合は retriable: false の err を返す", async () => {
     const result = await processor.process(makeMessage({ leaderAccountId: "unknown-id" }));
 
