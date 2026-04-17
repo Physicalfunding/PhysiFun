@@ -1,6 +1,7 @@
 import { ok, err, type Result } from "@physifun/domain";
 import type { MailSender } from "../../mail/types";
 import type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "../types";
+import { escapeHtml } from "./escapeHtml";
 import type { AccountEmailLookup } from "./types";
 
 /** payload 型 */
@@ -14,7 +15,9 @@ export interface ProjectPublishRejectedPayload {
 }
 
 /** メッセージ種別定数 (UseCase 側と一致させる) */
+/** @deprecated Use PROJECT_PUBLISH_REJECTED_NOTIFY_TYPE instead */
 export const LEADER_PUBLISH_REJECTED_NOTIFY_TYPE = "project_publish_rejected.notify";
+export const PROJECT_PUBLISH_REJECTED_NOTIFY_TYPE = LEADER_PUBLISH_REJECTED_NOTIFY_TYPE;
 
 /**
  * リーダー向けプロジェクト差戻通知メールを送信する OutboxProcessor。
@@ -66,9 +69,9 @@ export class ProjectPublishRejectedNotifyProcessor
 
     const html = [
       "<p>プロジェクトの公開申請が差し戻されました。</p>",
-      `<p><strong>プロジェクト名:</strong> ${projectTitle}</p>`,
+      `<p><strong>プロジェクト名:</strong> ${escapeHtml(projectTitle)}</p>`,
       "<p><strong>差戻理由:</strong></p>",
-      `<p style="padding:12px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">${reviewerNote}</p>`,
+      `<p style="padding:12px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">${escapeHtml(reviewerNote)}</p>`,
       "<p>内容を修正して、再度公開申請してください。</p>",
       `<p><a href="${editUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">プロジェクトを編集する</a></p>`,
       "<hr>",

@@ -186,6 +186,31 @@ describe("ProjectOutboxWorker", () => {
     expect(mockUpdate).toHaveBeenCalledTimes(2);
   });
 
+  it("maxAttempts 到達時は retriable: true でも nextRetryAt を null にする (dead-letter)", async () => {
+    mockFindMany.mockResolvedValue([makeDbMessage({ attempts: 9 })]);
+    processor.result = err({
+      message: "送信タイムアウト",
+      retriable: true,
+    });
+
+    worker = new ProjectOutboxWorker(mockPrisma, [processor], {
+      baseBackoffSeconds: 30,
+      maxAttempts: 10,
+    });
+
+    await worker.tick();
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          attempts: 10,
+          lastError: "送信タイムアウト",
+          nextRetryAt: null,
+        }),
+      })
+    );
+  });
+
   it("正しい種別のプロセッサにディスパッチする", async () => {
     const otherProcessor = new StubProcessor("project_publish_approved.notify");
     worker = new ProjectOutboxWorker(mockPrisma, [processor, otherProcessor]);

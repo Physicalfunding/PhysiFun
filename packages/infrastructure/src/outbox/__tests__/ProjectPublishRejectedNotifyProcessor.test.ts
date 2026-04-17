@@ -64,6 +64,21 @@ describe("ProjectPublishRejectedNotifyProcessor", () => {
     expect(sent.html).toContain("概要が短すぎます");
   });
 
+  it("HTML テンプレートでユーザー入力がエスケープされる", async () => {
+    await processor.process(
+      makeMessage({
+        projectTitle: '<script>alert("xss")</script>',
+        reviewerNote: '<img onerror="alert(1)" src=x>',
+      })
+    );
+
+    const sent = mailSender.sentMessages[0];
+    expect(sent.html).not.toContain("<script>");
+    expect(sent.html).not.toContain("<img");
+    expect(sent.html).toContain("&lt;script&gt;");
+    expect(sent.html).toContain("&lt;img");
+  });
+
   it("本文に編集 URL を含む", async () => {
     await processor.process(makeMessage({ projectId: "proj-abc" }));
 

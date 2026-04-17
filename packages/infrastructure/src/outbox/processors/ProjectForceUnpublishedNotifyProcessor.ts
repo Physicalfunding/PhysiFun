@@ -1,6 +1,7 @@
 import { ok, err, type Result } from "@physifun/domain";
 import type { MailSender } from "../../mail/types";
 import type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "../types";
+import { escapeHtml } from "./escapeHtml";
 import type { AccountEmailLookup } from "./types";
 
 /** payload 型 */
@@ -66,9 +67,9 @@ export class ProjectForceUnpublishedNotifyProcessor
 
     const html = [
       "<p>運営によりプロジェクトが非公開になりました。</p>",
-      `<p><strong>プロジェクト名:</strong> ${projectTitle}</p>`,
+      `<p><strong>プロジェクト名:</strong> ${escapeHtml(projectTitle)}</p>`,
       "<p><strong>理由:</strong></p>",
-      `<p style="padding:12px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">${reviewerNote}</p>`,
+      `<p style="padding:12px;background:#fef2f2;border-left:4px solid #ef4444;border-radius:4px;">${escapeHtml(reviewerNote)}</p>`,
       "<p>ご不明な点がございましたら、運営までお問い合わせください。</p>",
       `<p><a href="${projectUrl}" style="display:inline-block;padding:12px 24px;background:#6b7280;color:#fff;text-decoration:none;border-radius:6px;">プロジェクトを確認する</a></p>`,
       "<hr>",

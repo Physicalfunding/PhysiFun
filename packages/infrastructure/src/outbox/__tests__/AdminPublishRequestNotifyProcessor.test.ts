@@ -74,4 +74,15 @@ describe("AdminPublishRequestNotifyProcessor", () => {
       expect(result.error.retriable).toBe(true);
     }
   });
+
+  it("メール送信失敗 (retriable: false) 時に retriable: false の err を返す", async () => {
+    mailSender.nextResult = err({ message: "無効な宛先", retriable: false });
+
+    const result = await processor.process(makeMessage());
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.retriable).toBe(false);
+    }
+  });
 });

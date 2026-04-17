@@ -1,6 +1,7 @@
 import { ok, err, type Result } from "@physifun/domain";
 import type { MailSender } from "../../mail/types";
 import type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "../types";
+import { escapeHtml } from "./escapeHtml";
 
 /** payload 型 */
 export interface AdminPublishRequestNotifyPayload {
@@ -57,8 +58,8 @@ export class AdminPublishRequestNotifyProcessor
     const html = [
       "<p>PhysiFun 運営チーム各位</p>",
       "<p>新しいプロジェクト公開申請が届きました。</p>",
-      `<p><strong>プロジェクト名:</strong> ${projectTitle}</p>`,
-      `<p><strong>申請日時:</strong> ${requestedAt}</p>`,
+      `<p><strong>プロジェクト名:</strong> ${escapeHtml(projectTitle)}</p>`,
+      `<p><strong>申請日時:</strong> ${escapeHtml(requestedAt)}</p>`,
       `<p><a href="${reviewUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">審査する</a></p>`,
       "<hr>",
       "<p>PhysiFun 自動通知</p>",

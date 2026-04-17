@@ -1,6 +1,7 @@
 import { ok, err, type Result } from "@physifun/domain";
 import type { MailSender } from "../../mail/types";
 import type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "../types";
+import { escapeHtml } from "./escapeHtml";
 import type { AccountEmailLookup } from "./types";
 
 /** payload 型 */
@@ -62,7 +63,7 @@ export class ProjectPublishApprovedNotifyProcessor
 
     const html = [
       "<p>プロジェクトが承認され、公開されました。</p>",
-      `<p><strong>プロジェクト名:</strong> ${projectTitle}</p>`,
+      `<p><strong>プロジェクト名:</strong> ${escapeHtml(projectTitle)}</p>`,
       `<p><a href="${projectUrl}" style="display:inline-block;padding:12px 24px;background:#16a34a;color:#fff;text-decoration:none;border-radius:6px;">プロジェクトを確認する</a></p>`,
       "<hr>",
       "<p>PhysiFun 運営チーム</p>",
