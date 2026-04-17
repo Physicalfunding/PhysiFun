@@ -31,7 +31,6 @@ export {
   type ProjectAdminListResult,
   type ProjectAdminDetail,
   type ProjectReviewFeedbackHistoryItem,
-  type ProjectPublicDetail,
 } from "./project/PrismaProjectQueryService";
 
 export { PrismaProjectCommandAdapter } from "./project/PrismaProjectCommandAdapter";

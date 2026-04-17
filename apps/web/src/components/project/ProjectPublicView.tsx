@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { ProjectPublicDetail } from "@physifun/infrastructure";
+import type { ProjectPublicDetailDTO } from "@physifun/application";
+import type { ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { PREFECTURES } from "@/lib/prefectures";
@@ -28,7 +29,7 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 interface Props {
-  project: ProjectPublicDetail;
+  project: ProjectPublicDetailDTO;
 }
 
 export function ProjectPublicView({ project }: Props) {
@@ -54,9 +55,9 @@ export function ProjectPublicView({ project }: Props) {
       {/* ヘッダーセクション */}
       <div>
         {/* カバー画像 */}
-        {/* eslint-disable-next-line @next/next/no-img-element -- Issue #120 で next/image + allowlist 移行予定 */}
         <div className="h-48 w-full overflow-hidden rounded-xl bg-gray-100 sm:h-64">
-          {project.coverImageUrl ? (
+          {project.coverImageUrl && isSafeHttpUrl(project.coverImageUrl) ? (
+            /* eslint-disable-next-line @next/next/no-img-element -- Issue #120 で next/image + allowlist 移行予定 */
             <img
               src={project.coverImageUrl}
               alt={project.title}
@@ -80,7 +81,7 @@ export function ProjectPublicView({ project }: Props) {
         <div className="mt-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-              {PROJECT_PHASE_LABEL[project.phase]}
+              {PROJECT_PHASE_LABEL[project.phase as ProjectPhase]}
             </span>
             {project.category && (
               <span className="text-sm text-gray-500">
@@ -100,10 +101,14 @@ export function ProjectPublicView({ project }: Props) {
 
       {/* タブ */}
       <div className="border-b border-gray-200">
-        <nav className="flex gap-0 -mb-px">
+        <nav className="flex gap-0 -mb-px" role="tablist" aria-label="プロジェクト情報">
           {TABS.map((tab) => (
             <button
               key={tab.key}
+              role="tab"
+              id={`tab-${tab.key}`}
+              aria-selected={activeTab === tab.key}
+              aria-controls={`tabpanel-${tab.key}`}
               onClick={() => setActiveTab(tab.key)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.key
@@ -119,7 +124,7 @@ export function ProjectPublicView({ project }: Props) {
 
       {/* タブコンテンツ */}
       {activeTab === "home" && (
-        <div className="space-y-6">
+        <div id="tabpanel-home" role="tabpanel" aria-labelledby="tab-home" className="space-y-6">
           {project.body && (
             <Card>
               <CardContent>
@@ -182,7 +187,7 @@ export function ProjectPublicView({ project }: Props) {
                           rel="noopener noreferrer"
                           className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
                         >
-                          {SNS_LABEL[key] || key}: {url}
+                          {SNS_LABEL[key] || key}
                         </a>
                       ) : (
                         <span className="text-sm text-red-600">
@@ -199,36 +204,42 @@ export function ProjectPublicView({ project }: Props) {
       )}
 
       {activeTab === "support" && (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <p className="text-gray-400 text-lg">準備中</p>
-            <p className="text-gray-400 text-sm mt-2">
-              サポート募集機能は今後公開予定です
-            </p>
-          </CardContent>
-        </Card>
+        <div id="tabpanel-support" role="tabpanel" aria-labelledby="tab-support">
+          <Card>
+            <CardContent className="py-16 text-center">
+              <p className="text-gray-400 text-lg">準備中</p>
+              <p className="text-gray-400 text-sm mt-2">
+                サポート募集機能は今後公開予定です
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {activeTab === "report" && (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <p className="text-gray-400 text-lg">準備中</p>
-            <p className="text-gray-400 text-sm mt-2">
-              活動報告機能は今後公開予定です
-            </p>
-          </CardContent>
-        </Card>
+        <div id="tabpanel-report" role="tabpanel" aria-labelledby="tab-report">
+          <Card>
+            <CardContent className="py-16 text-center">
+              <p className="text-gray-400 text-lg">準備中</p>
+              <p className="text-gray-400 text-sm mt-2">
+                活動報告機能は今後公開予定です
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {activeTab === "supporters" && (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <p className="text-gray-400 text-lg">準備中</p>
-            <p className="text-gray-400 text-sm mt-2">
-              サポーター一覧は今後公開予定です
-            </p>
-          </CardContent>
-        </Card>
+        <div id="tabpanel-supporters" role="tabpanel" aria-labelledby="tab-supporters">
+          <Card>
+            <CardContent className="py-16 text-center">
+              <p className="text-gray-400 text-lg">準備中</p>
+              <p className="text-gray-400 text-sm mt-2">
+                サポーター一覧は今後公開予定です
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

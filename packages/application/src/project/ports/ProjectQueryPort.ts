@@ -59,6 +59,39 @@ export interface ProjectDetailDTO {
   } | null;
 }
 
+// ==================== 公開ページ向け DTO ====================
+
+/**
+ * 公開ページ向け DTO
+ *
+ * 認証不要。PUBLISHED プロジェクトのみ返す。
+ * owner の email など機密情報は含めない。
+ */
+export interface ProjectPublicDetailDTO {
+  readonly slug: string;
+  readonly title: string;
+  readonly summary: string | null;
+  readonly body: string | null;
+  readonly leaderIntroduction: string | null;
+  readonly coverImageUrl: string | null;
+  readonly category: string | null;
+  readonly prefectureCode: string | null;
+  readonly municipality: string | null;
+  readonly snsLinks: {
+    readonly x: string | null;
+    readonly instagram: string | null;
+    readonly facebook: string | null;
+    readonly website: string | null;
+  } | null;
+  readonly activityPlan: string | null;
+  readonly phase: string;
+  readonly publishedAt: Date | null;
+  readonly leader: {
+    readonly displayName: string;
+    readonly bio: string | null;
+  };
+}
+
 // ==================== ポートインターフェース ====================
 
 /**
@@ -79,4 +112,16 @@ export interface ProjectQueryPort {
    * accountId がオーナーでない場合は null を返す。
    */
   findProjectDetailForOwner(projectId: string, accountId: string): Promise<ProjectDetailDTO | null>;
+}
+
+/**
+ * 公開ページ向けプロジェクトクエリポート
+ */
+export interface PublicProjectQueryPort {
+  /**
+   * slug で PUBLISHED プロジェクトを取得する。
+   *
+   * PUBLISHED 以外または存在しない場合は null を返す。
+   */
+  findPublishedBySlug(slug: string): Promise<ProjectPublicDetailDTO | null>;
 }

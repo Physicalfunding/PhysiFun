@@ -1,5 +1,11 @@
 import type { PublishStatus, ProjectPhase, ReviewAction } from "@physifun/domain";
-import type { ProjectQueryPort, ProjectListResult, ProjectDetailDTO } from "@physifun/application";
+import type {
+  ProjectQueryPort,
+  PublicProjectQueryPort,
+  ProjectListResult,
+  ProjectDetailDTO,
+  ProjectPublicDetailDTO,
+} from "@physifun/application";
 import { prisma } from "../database/client";
 
 // ==================== ADMIN 向け DTO ====================
@@ -84,39 +90,6 @@ export interface ProjectAdminDetail {
   readonly reviewFeedbacks: ProjectReviewFeedbackHistoryItem[];
 }
 
-// ==================== 公開ページ向け DTO ====================
-
-/**
- * 公開ページ向け DTO
- *
- * 認証不要。PUBLISHED プロジェクトのみ返す。
- * owner の email など機密情報は含めない。
- */
-export interface ProjectPublicDetail {
-  readonly slug: string;
-  readonly title: string;
-  readonly summary: string | null;
-  readonly body: string | null;
-  readonly leaderIntroduction: string | null;
-  readonly coverImageUrl: string | null;
-  readonly category: string | null;
-  readonly prefectureCode: string | null;
-  readonly municipality: string | null;
-  readonly snsLinks: {
-    x: string | null;
-    instagram: string | null;
-    facebook: string | null;
-    website: string | null;
-  } | null;
-  readonly activityPlan: string | null;
-  readonly phase: ProjectPhase;
-  readonly publishedAt: Date | null;
-  readonly leader: {
-    readonly displayName: string;
-    readonly bio: string | null;
-  };
-}
-
 // ==================== 定数 ====================
 
 const DEFAULT_PAGE = 1;
@@ -137,7 +110,7 @@ const ADMIN_REVIEW_FEEDBACK_HISTORY_LIMIT = 5;
  * - リーダー向け: findProjectsByOwner / findProjectDetailForOwner (owner-check あり)
  * - 運営向け    : findManyForAdmin / findDetailForAdmin / countByStatus (owner-check なし)
  */
-export class PrismaProjectQueryService implements ProjectQueryPort {
+export class PrismaProjectQueryService implements ProjectQueryPort, PublicProjectQueryPort {
   async findProjectsByOwner(
     accountId: string,
     params?: { page?: number; perPage?: number }
@@ -355,11 +328,12 @@ export class PrismaProjectQueryService implements ProjectQueryPort {
   /**
    * slug で PUBLISHED プロジェクトを取得する（公開ページ用）。
    *
-   * PUBLISHED 以外は null を返す。
+   * where 条件で status: PUBLISHED を含めることで、
+   * DRAFT / PENDING_REVIEW のレコードは取得しない。
    */
-  async findPublishedBySlug(slug: string): Promise<ProjectPublicDetail | null> {
-    const row = await prisma.project.findUnique({
-      where: { slug },
+  async findPublishedBySlug(slug: string): Promise<ProjectPublicDetailDTO | null> {
+    const row = await prisma.project.findFirst({
+      where: { slug, status: "PUBLISHED" },
       include: {
         owner: {
           select: { displayName: true, bio: true },
@@ -367,9 +341,7 @@ export class PrismaProjectQueryService implements ProjectQueryPort {
       },
     });
 
-    if (!row) return null;
-    if (row.status !== "PUBLISHED") return null;
-    if (!row.slug) return null;
+    if (!row || !row.slug) return null;
 
     return {
       slug: row.slug,
