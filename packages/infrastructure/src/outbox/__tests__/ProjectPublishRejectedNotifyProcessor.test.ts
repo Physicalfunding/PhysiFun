@@ -55,9 +55,7 @@ describe("ProjectPublishRejectedNotifyProcessor", () => {
   });
 
   it("本文に差戻理由を含む", async () => {
-    await processor.process(
-      makeMessage({ reviewerNote: "概要が短すぎます" })
-    );
+    await processor.process(makeMessage({ reviewerNote: "概要が短すぎます" }));
 
     const sent = mailSender.sentMessages[0];
     expect(sent.text).toContain("概要が短すぎます");
@@ -87,9 +85,7 @@ describe("ProjectPublishRejectedNotifyProcessor", () => {
   });
 
   it("リーダーのメールが見つからない場合は retriable: false の err を返す", async () => {
-    const result = await processor.process(
-      makeMessage({ leaderAccountId: "unknown-id" })
-    );
+    const result = await processor.process(makeMessage({ leaderAccountId: "unknown-id" }));
 
     expect(result.ok).toBe(false);
     if (!result.ok) {

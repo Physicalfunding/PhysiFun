@@ -111,6 +111,10 @@ function mapApproveError(error: ApproveProjectPublicationError) {
       );
     case "REVIEW_FEEDBACK_ERROR":
       return unprocessableEntityResponse("審査フィードバックの登録に失敗しました");
+    case "REVIEWER_NOTE_TOO_LONG":
+      return validationErrorResponse(`コメントは ${error.maxLength} 文字以内で入力してください`, {
+        note: [`${error.maxLength} 文字以内`],
+      });
     default: {
       const _exhaustive: never = error;
       return internalErrorResponse();

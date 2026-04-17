@@ -394,12 +394,16 @@ function pickAdminOrderBy(status: PublishStatus) {
  */
 function parseSnsLinks(
   raw: unknown
-): { x: string | null; instagram: string | null; facebook: string | null; website: string | null } | null {
+): {
+  x: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  website: string | null;
+} | null {
   if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return null;
 
   const obj = raw as Record<string, unknown>;
-  const asStringOrNull = (v: unknown): string | null =>
-    typeof v === "string" ? v : null;
+  const asStringOrNull = (v: unknown): string | null => (typeof v === "string" ? v : null);
 
   return {
     x: asStringOrNull(obj.x),

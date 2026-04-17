@@ -22,9 +22,7 @@ export { LEADER_PUBLISH_REJECTED_NOTIFY_TYPE };
  *
  * 運営がプロジェクト公開申請を差戻した際にリーダーへ通知する。差戻理由を本文に含む。
  */
-export class ProjectPublishRejectedNotifyProcessor
-  implements OutboxProcessor<ProjectPublishRejectedPayload>
-{
+export class ProjectPublishRejectedNotifyProcessor implements OutboxProcessor<ProjectPublishRejectedPayload> {
   readonly type = LEADER_PUBLISH_REJECTED_NOTIFY_TYPE;
 
   constructor(
@@ -49,7 +47,8 @@ export class ProjectPublishRejectedNotifyProcessor
     const editUrl = `${this.baseUrl}/my/projects/${projectId}/edit`;
 
     // TODO: A-4 で正式テンプレートに差し替え
-    const subject = `【PhysiFun】プロジェクト公開申請が差し戻されました: ${projectTitle}`;
+    const safeTitle = projectTitle.replace(/[\r\n]/g, " ");
+    const subject = `【PhysiFun】プロジェクト公開申請が差し戻されました: ${safeTitle}`;
     const text = [
       "プロジェクトの公開申請が差し戻されました。",
       "",

@@ -55,9 +55,7 @@ describe("ProjectForceUnpublishedNotifyProcessor", () => {
   });
 
   it("本文に非公開理由を含む", async () => {
-    await processor.process(
-      makeMessage({ reviewerNote: "不適切な内容が含まれています" })
-    );
+    await processor.process(makeMessage({ reviewerNote: "不適切な内容が含まれています" }));
 
     const sent = mailSender.sentMessages[0];
     expect(sent.text).toContain("不適切な内容が含まれています");
@@ -72,9 +70,7 @@ describe("ProjectForceUnpublishedNotifyProcessor", () => {
   });
 
   it("リーダーのメールが見つからない場合は retriable: false の err を返す", async () => {
-    const result = await processor.process(
-      makeMessage({ leaderAccountId: "unknown-id" })
-    );
+    const result = await processor.process(makeMessage({ leaderAccountId: "unknown-id" }));
 
     expect(result.ok).toBe(false);
     if (!result.ok) {

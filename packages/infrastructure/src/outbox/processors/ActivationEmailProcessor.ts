@@ -1,6 +1,7 @@
 import { ok, err, type Result } from "@physifun/domain";
 import type { MailSender } from "../../mail/types";
 import type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "../types";
+import { escapeHtml } from "./escapeHtml";
 
 /** ACTIVATION_EMAIL メッセージの payload 型 */
 export interface ActivationEmailPayload {
@@ -51,12 +52,12 @@ export class ActivationEmailProcessor implements OutboxProcessor<ActivationEmail
     ].join("\n");
 
     const html = [
-      `<p>${displayName} さん</p>`,
+      `<p>${escapeHtml(displayName)} さん</p>`,
       "<p>PhysiFun へのリーダー応募ありがとうございます。</p>",
       "<p>以下のボタンをクリックしてアカウントを有効化してください。</p>",
-      `<p><a href="${activationUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">アカウントを有効化する</a></p>`,
+      `<p><a href="${escapeHtml(activationUrl)}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">アカウントを有効化する</a></p>`,
       "<p>ボタンが機能しない場合は、以下の URL をブラウザに貼り付けてください。</p>",
-      `<p>${activationUrl}</p>`,
+      `<p>${escapeHtml(activationUrl)}</p>`,
       "<p>このリンクの有効期限は 24 時間です。</p>",
       "<p>心当たりがない場合はこのメールを無視してください。</p>",
       "<hr>",

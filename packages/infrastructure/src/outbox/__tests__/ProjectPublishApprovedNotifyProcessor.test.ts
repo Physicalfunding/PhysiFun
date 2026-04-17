@@ -68,9 +68,7 @@ describe("ProjectPublishApprovedNotifyProcessor", () => {
   });
 
   it("リーダーのメールが見つからない場合は retriable: false の err を返す", async () => {
-    const result = await processor.process(
-      makeMessage({ leaderAccountId: "unknown-id" })
-    );
+    const result = await processor.process(makeMessage({ leaderAccountId: "unknown-id" }));
 
     expect(result.ok).toBe(false);
     if (!result.ok) {

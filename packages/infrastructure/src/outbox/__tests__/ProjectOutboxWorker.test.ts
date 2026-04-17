@@ -105,7 +105,7 @@ describe("ProjectOutboxWorker", () => {
       expect.objectContaining({
         where: { id: "msg-1" },
         data: expect.objectContaining({
-          attempts: 3,
+          attempts: { increment: 1 },
           lastError: "送信タイムアウト",
         }),
       })
@@ -203,7 +203,7 @@ describe("ProjectOutboxWorker", () => {
     expect(mockUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          attempts: 10,
+          attempts: { increment: 1 },
           lastError: "送信タイムアウト",
           nextRetryAt: null,
         }),

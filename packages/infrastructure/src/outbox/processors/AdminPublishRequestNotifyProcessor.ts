@@ -20,9 +20,7 @@ export { ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE };
  * リーダーが公開申請した際に運営チームへ「新しい公開申請が届いた」旨を通知する。
  * 宛先は環境変数 `ADMIN_NOTIFICATION_EMAIL` で設定する。
  */
-export class AdminPublishRequestNotifyProcessor
-  implements OutboxProcessor<AdminPublishRequestNotifyPayload>
-{
+export class AdminPublishRequestNotifyProcessor implements OutboxProcessor<AdminPublishRequestNotifyPayload> {
   readonly type = ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE;
 
   constructor(
@@ -39,7 +37,8 @@ export class AdminPublishRequestNotifyProcessor
     const reviewUrl = `${this.baseUrl}/projects/${projectId}`;
 
     // TODO: A-4 で正式テンプレートに差し替え
-    const subject = `【PhysiFun 運営】公開申請: ${projectTitle}`;
+    const safeTitle = projectTitle.replace(/[\r\n]/g, " ");
+    const subject = `【PhysiFun 運営】公開��請: ${safeTitle}`;
     const text = [
       "PhysiFun 運営チーム各位",
       "",

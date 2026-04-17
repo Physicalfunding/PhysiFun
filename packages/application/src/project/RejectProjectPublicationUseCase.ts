@@ -63,7 +63,11 @@ export type RejectProjectPublicationError =
   | { readonly type: "INVALID_PROJECT_ID" }
   | { readonly type: "REVIEWER_NOT_FOUND" }
   | { readonly type: "REVIEWER_NOT_ADMIN" }
-  | { readonly type: "REVIEWER_NOTE_TOO_LONG"; readonly maxLength: number };
+  | {
+      readonly type: "REVIEWER_NOTE_TOO_LONG";
+      readonly maxLength: number;
+      readonly actualLength: number;
+    };
 
 // ==================== 入力 DTO ====================
 
@@ -112,6 +116,13 @@ export class RejectProjectPublicationUseCase {
     if (trimmedNote.length === 0) {
       return err({ type: "REVIEWER_NOTE_REQUIRED" });
     }
+    if (trimmedNote.length > REVIEW_FEEDBACK_NOTE_MAX_LENGTH) {
+      return err({
+        type: "REVIEWER_NOTE_TOO_LONG",
+        maxLength: REVIEW_FEEDBACK_NOTE_MAX_LENGTH,
+        actualLength: trimmedNote.length,
+      });
+    }
 
     // 2. reviewerId / projectId VO 生成
     const reviewerIdResult = AccountId.from(input.reviewerId);
@@ -139,7 +150,7 @@ export class RejectProjectPublicationUseCase {
       return err({ type: "PROJECT_NOT_FOUND" });
     }
 
-    // 4. 差戻（ドメインロジック: PENDING_REVIEW チェック + 状態遷移）
+    // 5. 差戻（ドメインロジック: PENDING_REVIEW チェック + 状態遷移）
     const rejectResult = project.rejectByAdmin();
     if (!rejectResult.ok) {
       // rejectByAdmin() は現状 CANNOT_REJECT_NON_PENDING のみ返すが、
@@ -168,16 +179,8 @@ export class RejectProjectPublicationUseCase {
       reviewedAt,
     });
     if (!feedbackResult.ok) {
-      // 上流で trim 済みの note を渡しているため NOTE_REQUIRED_FOR_ACTION は発生しない。
-      // NOTE_TOO_LONG は専用エラー（REVIEWER_NOTE_TOO_LONG）にマッピングし、
-      // Route Handler 側で 400 バリデーションエラーとして maxLength を返せるようにする。
-      if (feedbackResult.error.type === "NOTE_TOO_LONG") {
-        return err({
-          type: "REVIEWER_NOTE_TOO_LONG",
-          maxLength: REVIEW_FEEDBACK_NOTE_MAX_LENGTH,
-        });
-      }
-      // NOTE_REQUIRED_FOR_ACTION は到達不可能だが、安全側で REQUIRED に集約する。
+      // 上流で trim + 長さチェック済みのため NOTE_TOO_LONG / NOTE_REQUIRED_FOR_ACTION は
+      // 到達不可能だが、安全側でフォールバック。
       return err({ type: "REVIEWER_NOTE_REQUIRED" });
     }
 

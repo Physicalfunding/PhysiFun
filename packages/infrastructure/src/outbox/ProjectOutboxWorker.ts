@@ -61,7 +61,7 @@ export class ProjectOutboxWorker {
           await this.prisma.projectOutboxMessage.update({
             where: { id: msg.id },
             data: {
-              attempts: msg.attempts + 1,
+              attempts: { increment: 1 },
               lastError: `未知のメッセージ種別: ${msg.type}`,
             },
           });
@@ -96,20 +96,19 @@ export class ProjectOutboxWorker {
           await this.prisma.projectOutboxMessage.update({
             where: { id: msg.id },
             data: {
-              attempts: newAttempts,
+              attempts: { increment: 1 },
               lastError: result.error.message,
               nextRetryAt,
             },
           });
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         try {
           await this.prisma.projectOutboxMessage.update({
             where: { id: msg.id },
             data: {
-              attempts: msg.attempts + 1,
+              attempts: { increment: 1 },
               lastError: `unexpected: ${errorMessage}`,
             },
           });

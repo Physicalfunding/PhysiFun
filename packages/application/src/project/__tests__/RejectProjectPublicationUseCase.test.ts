@@ -416,6 +416,7 @@ describe("RejectProjectPublicationUseCase", () => {
     expect(result.error.type).toBe("REVIEWER_NOTE_TOO_LONG");
     if (result.error.type !== "REVIEWER_NOTE_TOO_LONG") return;
     expect(result.error.maxLength).toBe(REVIEW_FEEDBACK_NOTE_MAX_LENGTH);
+    expect(result.error.actualLength).toBe(REVIEW_FEEDBACK_NOTE_MAX_LENGTH + 1);
     expect(port.executeRejectInTransactionCallCount).toBe(0);
   });
 });

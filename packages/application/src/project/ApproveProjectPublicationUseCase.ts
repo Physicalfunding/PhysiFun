@@ -7,6 +7,7 @@ import {
   ProjectId,
   ProjectReviewFeedback,
   ReviewAction,
+  REVIEW_FEEDBACK_NOTE_MAX_LENGTH,
   type ProjectStateError,
   type ReviewFeedbackError,
 } from "@physifun/domain";
@@ -82,6 +83,11 @@ export type ApproveProjectPublicationError =
   | {
       readonly type: "REVIEW_FEEDBACK_ERROR";
       readonly feedbackError: ReviewFeedbackError;
+    }
+  | {
+      readonly type: "REVIEWER_NOTE_TOO_LONG";
+      readonly maxLength: number;
+      readonly actualLength: number;
     };
 
 // ==================== 入力 DTO ====================
@@ -127,6 +133,15 @@ export class ApproveProjectPublicationUseCase {
     const reviewerIdResult = AccountId.from(input.reviewerId);
     if (!reviewerIdResult.ok) {
       return err({ type: "INVALID_REVIEWER_ID" });
+    }
+
+    // 1b. note の長さチェック（optional だが渡された場合は上限チェック）
+    if (input.note != null && input.note.trim().length > REVIEW_FEEDBACK_NOTE_MAX_LENGTH) {
+      return err({
+        type: "REVIEWER_NOTE_TOO_LONG",
+        maxLength: REVIEW_FEEDBACK_NOTE_MAX_LENGTH,
+        actualLength: input.note.trim().length,
+      });
     }
 
     // 2. 審査者の ADMIN ロールチェック（Route Handler と二重防御）

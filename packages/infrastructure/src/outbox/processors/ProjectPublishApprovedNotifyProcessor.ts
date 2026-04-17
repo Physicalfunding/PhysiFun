@@ -21,9 +21,7 @@ export { PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE };
  *
  * 運営がプロジェクトを承認した際にリーダーへ「プロジェクトが公開されました」旨を通知する。
  */
-export class ProjectPublishApprovedNotifyProcessor
-  implements OutboxProcessor<ProjectPublishApprovedPayload>
-{
+export class ProjectPublishApprovedNotifyProcessor implements OutboxProcessor<ProjectPublishApprovedPayload> {
   readonly type = PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE;
 
   constructor(
@@ -48,7 +46,8 @@ export class ProjectPublishApprovedNotifyProcessor
     const projectUrl = `${this.baseUrl}/my/projects/${projectId}`;
 
     // TODO: A-4 で正式テンプレートに差し替え
-    const subject = `【PhysiFun】プロジェクトが公開されました: ${projectTitle}`;
+    const safeTitle = projectTitle.replace(/[\r\n]/g, " ");
+    const subject = `【PhysiFun】プロジェクトが公開されました: ${safeTitle}`;
     const text = [
       "プロジェクトが承認され、公開されました。",
       "",

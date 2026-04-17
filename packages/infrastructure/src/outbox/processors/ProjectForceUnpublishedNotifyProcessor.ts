@@ -22,9 +22,7 @@ export { PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE };
  *
  * 運営がプロジェクトを強制非公開にした際にリーダーへ通知する。理由を本文に含む。
  */
-export class ProjectForceUnpublishedNotifyProcessor
-  implements OutboxProcessor<ProjectForceUnpublishedPayload>
-{
+export class ProjectForceUnpublishedNotifyProcessor implements OutboxProcessor<ProjectForceUnpublishedPayload> {
   readonly type = PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE;
 
   constructor(
@@ -49,7 +47,8 @@ export class ProjectForceUnpublishedNotifyProcessor
     const projectUrl = `${this.baseUrl}/my/projects/${projectId}`;
 
     // TODO: A-4 で正式テンプレートに差し替え
-    const subject = `【PhysiFun】プロジェクトが非公開になりました: ${projectTitle}`;
+    const safeTitle = projectTitle.replace(/[\r\n]/g, " ");
+    const subject = `【PhysiFun】プロジェクトが非公開になりました: ${safeTitle}`;
     const text = [
       "運営によりプロジェクトが非公開になりました。",
       "",
