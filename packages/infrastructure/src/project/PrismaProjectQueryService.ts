@@ -369,9 +369,10 @@ export class PrismaProjectQueryService implements ProjectQueryPort {
 
     if (!row) return null;
     if (row.status !== "PUBLISHED") return null;
+    if (!row.slug) return null;
 
     return {
-      slug: row.slug!,
+      slug: row.slug,
       title: row.title,
       summary: row.summary,
       body: row.story,
@@ -380,7 +381,7 @@ export class PrismaProjectQueryService implements ProjectQueryPort {
       category: row.category,
       prefectureCode: row.prefectureCode,
       municipality: row.municipality,
-      snsLinks: row.snsLinks as ProjectPublicDetail["snsLinks"],
+      snsLinks: parseSnsLinks(row.snsLinks),
       activityPlan: row.activityPlan,
       phase: row.phase as ProjectPhase,
       publishedAt: row.publishedAt,
@@ -411,6 +412,29 @@ function pickAdminOrderBy(status: PublishStatus) {
     default:
       return [{ updatedAt: "desc" as const }];
   }
+}
+
+/**
+ * Prisma の Json? フィールドを snsLinks DTO にランタイム変換する。
+ *
+ * 構造が期待と異なる場合は null を返す。
+ * 各 value が string でなければ null に落とす。
+ */
+function parseSnsLinks(
+  raw: unknown
+): { x: string | null; instagram: string | null; facebook: string | null; website: string | null } | null {
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return null;
+
+  const obj = raw as Record<string, unknown>;
+  const asStringOrNull = (v: unknown): string | null =>
+    typeof v === "string" ? v : null;
+
+  return {
+    x: asStringOrNull(obj.x),
+    instagram: asStringOrNull(obj.instagram),
+    facebook: asStringOrNull(obj.facebook),
+    website: asStringOrNull(obj.website),
+  };
 }
 
 function pickAdminSortedAt(

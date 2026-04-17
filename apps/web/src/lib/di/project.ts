@@ -13,6 +13,16 @@ export function getProjectQueryService(): ProjectQueryPort {
   return new PrismaProjectQueryService();
 }
 
+/**
+ * 公開ページ向けクエリサービス。
+ *
+ * findPublishedBySlug は公開専用メソッドで ProjectQueryPort に含まれないため、
+ * 具象型 PrismaProjectQueryService を返す。
+ */
+export function getPublicProjectQueryService(): PrismaProjectQueryService {
+  return new PrismaProjectQueryService();
+}
+
 export function getProjectCommandAdapter() {
   return new PrismaProjectCommandAdapter();
 }

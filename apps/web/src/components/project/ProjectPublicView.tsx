@@ -5,10 +5,18 @@ import type { ProjectPublicDetail } from "@physifun/infrastructure";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { PREFECTURES } from "@/lib/prefectures";
+import { isSafeHttpUrl } from "@/lib/isSafeHttpUrl";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
   PREFECTURES.map((p) => [p.code, p.name])
 );
+
+const SNS_LABEL: Record<string, string> = {
+  x: "X (Twitter)",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  website: "ウェブサイト",
+};
 
 const TABS = [
   { key: "home", label: "ホーム" },
@@ -46,6 +54,7 @@ export function ProjectPublicView({ project }: Props) {
       {/* ヘッダーセクション */}
       <div>
         {/* カバー画像 */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- Issue #120 で next/image + allowlist 移行予定 */}
         <div className="h-48 w-full overflow-hidden rounded-xl bg-gray-100 sm:h-64">
           {project.coverImageUrl ? (
             <img
@@ -158,7 +167,7 @@ export function ProjectPublicView({ project }: Props) {
             </CardContent>
           </Card>
 
-          {/* SNS リンク */}
+          {/* SNS リンク — defense-in-depth: isSafeHttpUrl で javascript: 等を遮断 */}
           {snsEntries.length > 0 && (
             <Card>
               <CardContent>
@@ -166,14 +175,20 @@ export function ProjectPublicView({ project }: Props) {
                 <ul className="space-y-2">
                   {snsEntries.map(([key, url]) => (
                     <li key={key}>
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
-                      >
-                        {SNS_LABEL[key] || key}: {url}
-                      </a>
+                      {isSafeHttpUrl(url) ? (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
+                        >
+                          {SNS_LABEL[key] || key}: {url}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-red-600">
+                          {SNS_LABEL[key] || key}: 表示できない URL 形式です
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -218,10 +233,3 @@ export function ProjectPublicView({ project }: Props) {
     </div>
   );
 }
-
-const SNS_LABEL: Record<string, string> = {
-  x: "X (Twitter)",
-  instagram: "Instagram",
-  facebook: "Facebook",
-  website: "ウェブサイト",
-};
