@@ -96,19 +96,25 @@ export type { UpdateProjectDraftPort } from "./project/ports/UpdateProjectDraftP
 // ProjectQueryPort
 export type {
   ProjectQueryPort,
+  PublicProjectQueryPort,
   ProjectListItem,
   ProjectListResult,
   ProjectDetailDTO,
+  ProjectPublicDetailDTO,
 } from "./project/ports/ProjectQueryPort";
 
 // RequestPublishUseCase
 export {
   RequestPublishUseCase,
+  ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE,
   type RequestPublishInput,
   type RequestPublishOutput,
   type RequestPublishError,
 } from "./project/RequestPublishUseCase";
-export type { RequestPublishPort } from "./project/ports/RequestPublishPort";
+export type {
+  RequestPublishPort,
+  CreateProjectOutboxMessageParams,
+} from "./project/ports/RequestPublishPort";
 
 // WithdrawProjectUseCase
 export {
@@ -127,3 +133,39 @@ export {
   type UnpublishProjectError,
 } from "./project/UnpublishProjectUseCase";
 export type { UnpublishProjectPort } from "./project/ports/UnpublishProjectPort";
+
+// ApproveProjectPublicationUseCase
+export {
+  ApproveProjectPublicationUseCase,
+  OwnerPublishedLimitExceededError,
+  MAX_PUBLISHED_PROJECTS_PER_OWNER,
+  PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE,
+  type ApproveProjectPublicationInput,
+  type ApproveProjectPublicationOutput,
+  type ApproveProjectPublicationError,
+} from "./project/ApproveProjectPublicationUseCase";
+export type {
+  ApproveProjectPublicationPort,
+  AccountForProjectApproval,
+} from "./project/ports/ApproveProjectPublicationPort";
+// RejectProjectPublicationUseCase
+export {
+  RejectProjectPublicationUseCase,
+  LEADER_PUBLISH_REJECTED_NOTIFY_TYPE,
+  type RejectProjectPublicationInput,
+  type RejectProjectPublicationOutput,
+  type RejectProjectPublicationError,
+  type ReviewerNoteRequiredError,
+  type ProjectNotFoundError,
+  type InvalidProjectStatusError,
+} from "./project/RejectProjectPublicationUseCase";
+export type { RejectProjectPublicationPort } from "./project/ports/RejectProjectPublicationPort";
+// ForceUnpublishProjectUseCase
+export {
+  ForceUnpublishProjectUseCase,
+  PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE,
+  type ForceUnpublishProjectInput,
+  type ForceUnpublishProjectOutput,
+  type ForceUnpublishProjectError,
+} from "./project/ForceUnpublishProjectUseCase";
+export type { ForceUnpublishProjectPort } from "./project/ports/ForceUnpublishProjectPort";

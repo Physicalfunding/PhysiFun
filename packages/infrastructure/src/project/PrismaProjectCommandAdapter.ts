@@ -1,5 +1,13 @@
+import type { Prisma, ReviewAction } from "@prisma/client";
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
-import { ProjectLimitExceededError } from "@physifun/application";
+import {
+  OwnerPublishedLimitExceededError,
+  ProjectLimitExceededError,
+  type CreateProjectOutboxMessageParams,
+  type ApproveProjectPublicationPort,
+  type RejectProjectPublicationPort,
+  type ForceUnpublishProjectPort,
+} from "@physifun/application";
 import { prisma } from "../database/client";
 import { reconstructProject } from "./reconstructProject";
 
@@ -26,7 +34,9 @@ export interface AccountForProjectCreation {
  * CreateProjectDraftPort と UpdateProjectDraftPort の両方を実装する。
  * 構造的部分型で Port インターフェースに適合する。
  */
-export class PrismaProjectCommandAdapter {
+export class PrismaProjectCommandAdapter
+  implements ApproveProjectPublicationPort, RejectProjectPublicationPort, ForceUnpublishProjectPort
+{
   /**
    * アカウント ID でアカウントを検索する。
    * ロールを AccountRole 型にマッピングして返す。
@@ -107,6 +117,175 @@ export class PrismaProjectCommandAdapter {
   }
 
   /**
+   * Project 集約の更新と ProjectOutboxMessage 書き込みを
+   * 単一トランザクションで実行する。
+   *
+   * RequestPublishUseCase（公開申請: DRAFT → PENDING_REVIEW）が使用する。
+   * 運営への公開申請通知タスクを Outbox に積み、後段ワーカーがメール配信する。
+   */
+  async executeInTransaction(params: {
+    project: Project;
+    outboxMessage: CreateProjectOutboxMessageParams;
+  }): Promise<void> {
+    const p = params.project;
+    await prisma.$transaction([
+      prisma.project.update({
+        where: { id: p.id.toString() },
+        data: {
+          title: p.title,
+          coverImageUrl: p.coverImageUrl,
+          category: p.category,
+          prefectureCode: p.location?.prefectureCode ?? null,
+          municipality: p.location?.municipality ?? null,
+          phase: p.phase,
+          status: p.publishStatus,
+          summary: p.summary,
+          story: p.body,
+          leaderIntro: p.leaderIntroduction,
+          snsLinks: p.snsLinks.isEmpty()
+            ? {}
+            : {
+                x: p.snsLinks.x,
+                instagram: p.snsLinks.instagram,
+                facebook: p.snsLinks.facebook,
+                website: p.snsLinks.website,
+              },
+          activityPlan: p.activityPlan,
+          updatedAt: p.updatedAt,
+        },
+      }),
+      prisma.projectOutboxMessage.create({
+        data: {
+          id: params.outboxMessage.id,
+          type: params.outboxMessage.type,
+          payload: params.outboxMessage.payload as Prisma.InputJsonValue,
+        },
+      }),
+    ]);
+  }
+
+  /**
+   * 運営差戻: Project 更新 + ProjectReviewFeedback 作成 + ProjectOutboxMessage 書き込みを
+   * 単一トランザクションで実行する。
+   *
+   * RejectProjectPublicationUseCase（PENDING_REVIEW → DRAFT）が使用する。
+   * リーダーへの差戻通知メール送信タスクを Outbox に積み、後段ワーカーが配信する。
+   */
+  async executeRejectInTransaction(params: {
+    project: Project;
+    reviewFeedback: ProjectReviewFeedback;
+    outboxMessage: CreateProjectOutboxMessageParams;
+  }): Promise<void> {
+    const p = params.project;
+    const fb = params.reviewFeedback;
+    await prisma.$transaction([
+      prisma.project.update({
+        where: { id: p.id.toString() },
+        data: {
+          title: p.title,
+          coverImageUrl: p.coverImageUrl,
+          category: p.category,
+          prefectureCode: p.location?.prefectureCode ?? null,
+          municipality: p.location?.municipality ?? null,
+          phase: p.phase,
+          status: p.publishStatus,
+          summary: p.summary,
+          story: p.body,
+          leaderIntro: p.leaderIntroduction,
+          snsLinks: p.snsLinks.isEmpty()
+            ? {}
+            : {
+                x: p.snsLinks.x,
+                instagram: p.snsLinks.instagram,
+                facebook: p.snsLinks.facebook,
+                website: p.snsLinks.website,
+              },
+          activityPlan: p.activityPlan,
+          updatedAt: p.updatedAt,
+        },
+      }),
+      prisma.projectReviewFeedback.create({
+        data: {
+          id: fb.id.toString(),
+          projectId: fb.projectId.toString(),
+          reviewerId: fb.reviewerId.toString(),
+          action: fb.action as ReviewAction,
+          note: fb.note,
+          reviewedAt: fb.reviewedAt,
+        },
+      }),
+      prisma.projectOutboxMessage.create({
+        data: {
+          id: params.outboxMessage.id,
+          type: params.outboxMessage.type,
+          payload: params.outboxMessage.payload as Prisma.InputJsonValue,
+        },
+      }),
+    ]);
+  }
+
+  /**
+   * 運営による強制非公開 (PUBLISHED → DRAFT) を 1 トランザクションで永続化する。
+   *
+   * ForceUnpublishProjectUseCase が使用する。
+   *  1. Project.update (status=DRAFT, updatedAt=project.updatedAt)
+   *  2. ProjectReviewFeedback.create (action=FORCE_UNPUBLISHED, note=理由)
+   *  3. ProjectOutboxMessage.create (リーダーへの通知メール)
+   */
+  async executeForceUnpublishInTransaction(params: {
+    project: Project;
+    reviewFeedback: ProjectReviewFeedback;
+    outboxMessage: CreateProjectOutboxMessageParams;
+  }): Promise<void> {
+    const p = params.project;
+    const fb = params.reviewFeedback;
+    await prisma.$transaction([
+      prisma.project.update({
+        where: { id: p.id.toString() },
+        data: {
+          title: p.title,
+          coverImageUrl: p.coverImageUrl,
+          category: p.category,
+          prefectureCode: p.location?.prefectureCode ?? null,
+          municipality: p.location?.municipality ?? null,
+          phase: p.phase,
+          status: p.publishStatus,
+          summary: p.summary,
+          story: p.body,
+          leaderIntro: p.leaderIntroduction,
+          snsLinks: p.snsLinks.isEmpty()
+            ? {}
+            : {
+                x: p.snsLinks.x,
+                instagram: p.snsLinks.instagram,
+                facebook: p.snsLinks.facebook,
+                website: p.snsLinks.website,
+              },
+          activityPlan: p.activityPlan,
+          updatedAt: p.updatedAt,
+        },
+      }),
+      prisma.projectReviewFeedback.create({
+        data: {
+          id: fb.id.toString(),
+          projectId: fb.projectId.toString(),
+          reviewerId: fb.reviewerId.toString(),
+          action: fb.action as ReviewAction,
+          note: fb.note,
+          reviewedAt: fb.reviewedAt,
+        },
+      }),
+      prisma.projectOutboxMessage.create({
+        data: {
+          id: params.outboxMessage.id,
+          type: params.outboxMessage.type,
+          payload: params.outboxMessage.payload as Prisma.InputJsonValue,
+        },
+      }),
+    ]);
+  }
+
+  /**
    * Project 集約と（任意の）審査フィードバックをアトミックに永続化する。
    *
    * 自動取下げ時は reviewFeedback が渡される。
@@ -118,7 +297,7 @@ export class PrismaProjectCommandAdapter {
   }): Promise<void> {
     const p = params.project;
 
-    const operations: import("@prisma/client").Prisma.PrismaPromise<unknown>[] = [
+    const operations: Prisma.PrismaPromise<unknown>[] = [
       prisma.project.update({
         where: { id: p.id.toString() },
         data: {
@@ -154,7 +333,7 @@ export class PrismaProjectCommandAdapter {
             id: fb.id.toString(),
             projectId: fb.projectId.toString(),
             reviewerId: fb.reviewerId.toString(),
-            action: fb.action as import("@prisma/client").ReviewAction,
+            action: fb.action as ReviewAction,
             note: fb.note,
             reviewedAt: fb.reviewedAt,
           },
@@ -163,5 +342,74 @@ export class PrismaProjectCommandAdapter {
     }
 
     await prisma.$transaction(operations);
+  }
+
+  /**
+   * プロジェクト公開承認をアトミックに実行する。
+   *
+   * ApproveProjectPublicationUseCase（PENDING_REVIEW → PUBLISHED）が使用する。
+   * interactive transaction 内で
+   * - 同一オーナーの PUBLISHED 件数を count し上限チェック（Case A、TOCTOU 解消）
+   *   超過時は OwnerPublishedLimitExceededError を throw
+   * - Project.status / publishedAt / updatedAt を更新
+   *   （publishedAt は UseCase から渡される project.updatedAt と同一値）
+   * - ProjectReviewFeedback (action=APPROVED) を作成
+   * - ProjectOutboxMessage (承認通知メール) を作成
+   * をまとめて永続化する。
+   *
+   * NOTE: project の update は status / publishedAt / updatedAt のみ更新する最小フィールド設計。
+   * その他のフィールドは approveByAdmin() で変化しないため触らない。
+   */
+  async executeApproveInTransaction(params: {
+    project: Project;
+    reviewFeedback: ProjectReviewFeedback;
+    outboxMessage: CreateProjectOutboxMessageParams;
+    publishedAt: Date;
+    maxPublishedPerOwner: number;
+  }): Promise<void> {
+    const p = params.project;
+    const fb = params.reviewFeedback;
+
+    await prisma.$transaction(async (tx) => {
+      // Case A: 同一オーナーの PUBLISHED 件数チェック（同一 tx 内で実施して TOCTOU 解消）
+      const count = await tx.project.count({
+        where: {
+          ownerAccountId: p.ownerAccountId.toString(),
+          status: "PUBLISHED",
+        },
+      });
+      if (count >= params.maxPublishedPerOwner) {
+        throw new OwnerPublishedLimitExceededError();
+      }
+
+      // Project の最小更新: status / publishedAt / updatedAt のみ
+      await tx.project.update({
+        where: { id: p.id.toString() },
+        data: {
+          status: p.publishStatus,
+          publishedAt: params.publishedAt,
+          updatedAt: p.updatedAt,
+        },
+      });
+
+      await tx.projectReviewFeedback.create({
+        data: {
+          id: fb.id.toString(),
+          projectId: fb.projectId.toString(),
+          reviewerId: fb.reviewerId.toString(),
+          action: fb.action as ReviewAction,
+          note: fb.note,
+          reviewedAt: fb.reviewedAt,
+        },
+      });
+
+      await tx.projectOutboxMessage.create({
+        data: {
+          id: params.outboxMessage.id,
+          type: params.outboxMessage.type,
+          payload: params.outboxMessage.payload as Prisma.InputJsonValue,
+        },
+      });
+    });
   }
 }
