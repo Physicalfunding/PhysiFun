@@ -92,6 +92,21 @@ describe("OutboxWorker", () => {
     );
   });
 
+  it("ポーリング時に deadLetteredAt: null を条件に含める", async () => {
+    mockFindMany.mockResolvedValue([]);
+
+    await worker.tick();
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          sentAt: null,
+          deadLetteredAt: null,
+        }),
+      })
+    );
+  });
+
   it("失敗時に attempts をインクリメントし lastError を記録する", async () => {
     mockFindMany.mockResolvedValue([makeDbMessage({ attempts: 2 })]);
     processor.result = err({
@@ -105,7 +120,7 @@ describe("OutboxWorker", () => {
       expect.objectContaining({
         where: { id: "msg-1" },
         data: expect.objectContaining({
-          attempts: 3,
+          attempts: { increment: 1 },
           lastError: "送信タイムアウト",
         }),
       })
@@ -133,7 +148,7 @@ describe("OutboxWorker", () => {
     expect(diffMs).toBeLessThan(65_000);
   });
 
-  it("retriable: false のエラー時は nextRetryAt を null にする (dead-letter)", async () => {
+  it("retriable: false のエラー時は dead-letter 化する", async () => {
     mockFindMany.mockResolvedValue([makeDbMessage()]);
     processor.result = err({
       message: "宛先不正",
@@ -146,12 +161,13 @@ describe("OutboxWorker", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           nextRetryAt: null,
+          deadLetteredAt: expect.any(Date),
         }),
       })
     );
   });
 
-  it("未知のメッセージ種別は lastError に記録してスキップする", async () => {
+  it("未知のメッセージ種別は dead-letter 化してスキップする", async () => {
     mockFindMany.mockResolvedValue([makeDbMessage({ type: "UNKNOWN_TYPE" })]);
 
     await worker.tick();
@@ -161,6 +177,7 @@ describe("OutboxWorker", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           lastError: expect.stringContaining("未知のメッセージ種別"),
+          deadLetteredAt: expect.any(Date),
         }),
       })
     );

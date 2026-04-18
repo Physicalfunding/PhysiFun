@@ -67,7 +67,7 @@ export class OutboxWorker {
         await this.prisma.leaderApplicationOutboxMessage.update({
           where: { id: msg.id },
           data: {
-            attempts: msg.attempts + 1,
+            attempts: { increment: 1 },
             lastError: `未知のメッセージ種別: ${msg.type}`,
             deadLetteredAt: new Date(),
           },
@@ -103,7 +103,7 @@ export class OutboxWorker {
         await this.prisma.leaderApplicationOutboxMessage.update({
           where: { id: msg.id },
           data: {
-            attempts: newAttempts,
+            attempts: { increment: 1 },
             lastError: result.error.message,
             nextRetryAt,
             ...(isDeadLetter ? { deadLetteredAt: new Date() } : {}),
