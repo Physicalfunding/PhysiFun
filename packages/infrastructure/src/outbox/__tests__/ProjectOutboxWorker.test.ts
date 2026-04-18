@@ -77,6 +77,21 @@ describe("ProjectOutboxWorker", () => {
     expect(processor.processedMessages[0].id).toBe("msg-1");
   });
 
+  it("ポーリング時に deadLetteredAt: null を条件に含める", async () => {
+    mockFindMany.mockResolvedValue([]);
+
+    await worker.tick();
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          sentAt: null,
+          deadLetteredAt: null,
+        }),
+      })
+    );
+  });
+
   it("成功時に sentAt を更新する", async () => {
     mockFindMany.mockResolvedValue([makeDbMessage()]);
 
@@ -132,7 +147,7 @@ describe("ProjectOutboxWorker", () => {
     expect(diffMs).toBeLessThan(65_000);
   });
 
-  it("retriable: false のエラー時は nextRetryAt を null にする (dead-letter)", async () => {
+  it("retriable: false のエラー時は dead-letter 化する", async () => {
     mockFindMany.mockResolvedValue([makeDbMessage()]);
     processor.result = err({
       message: "宛先不正",
@@ -145,12 +160,13 @@ describe("ProjectOutboxWorker", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           nextRetryAt: null,
+          deadLetteredAt: expect.any(Date),
         }),
       })
     );
   });
 
-  it("未知のメッセージ種別は lastError に記録してスキップする", async () => {
+  it("未知のメッセージ種別は dead-letter 化してスキップする", async () => {
     mockFindMany.mockResolvedValue([makeDbMessage({ type: "UNKNOWN_TYPE" })]);
 
     await worker.tick();
@@ -160,6 +176,7 @@ describe("ProjectOutboxWorker", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           lastError: expect.stringContaining("未知のメッセージ種別"),
+          deadLetteredAt: expect.any(Date),
         }),
       })
     );
@@ -186,7 +203,7 @@ describe("ProjectOutboxWorker", () => {
     expect(mockUpdate).toHaveBeenCalledTimes(2);
   });
 
-  it("maxAttempts 到達時は retriable: true でも nextRetryAt を null にする (dead-letter)", async () => {
+  it("maxAttempts 到達時は retriable: true でも dead-letter 化する", async () => {
     mockFindMany.mockResolvedValue([makeDbMessage({ attempts: 9 })]);
     processor.result = err({
       message: "送信タイムアウト",
@@ -206,6 +223,7 @@ describe("ProjectOutboxWorker", () => {
           attempts: { increment: 1 },
           lastError: "送信タイムアウト",
           nextRetryAt: null,
+          deadLetteredAt: expect.any(Date),
         }),
       })
     );

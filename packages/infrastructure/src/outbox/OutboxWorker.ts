@@ -52,6 +52,7 @@ export class OutboxWorker {
     const messages = await this.prisma.leaderApplicationOutboxMessage.findMany({
       where: {
         sentAt: null,
+        deadLetteredAt: null,
         OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
       },
       orderBy: { createdAt: "asc" },
@@ -62,12 +63,13 @@ export class OutboxWorker {
       const processor = this.processors.get(msg.type);
 
       if (!processor) {
-        // 未知のメッセージ種別 — lastError に記録して再試行しない
+        // 未知のメッセージ種別 — dead-letter 化して再処理を防止
         await this.prisma.leaderApplicationOutboxMessage.update({
           where: { id: msg.id },
           data: {
             attempts: msg.attempts + 1,
             lastError: `未知のメッセージ種別: ${msg.type}`,
+            deadLetteredAt: new Date(),
           },
         });
         continue;
@@ -95,10 +97,8 @@ export class OutboxWorker {
       } else {
         // 失敗: attempts インクリメント + backoff 計算
         const newAttempts = msg.attempts + 1;
-        const nextRetryAt =
-          result.error.retriable && newAttempts < this.maxAttempts
-            ? this.calculateNextRetry(newAttempts)
-            : null; // retriable でない or 上限超過 → dead-letter 扱い
+        const isDeadLetter = !result.error.retriable || newAttempts >= this.maxAttempts;
+        const nextRetryAt = isDeadLetter ? null : this.calculateNextRetry(newAttempts);
 
         await this.prisma.leaderApplicationOutboxMessage.update({
           where: { id: msg.id },
@@ -106,6 +106,7 @@ export class OutboxWorker {
             attempts: newAttempts,
             lastError: result.error.message,
             nextRetryAt,
+            ...(isDeadLetter ? { deadLetteredAt: new Date() } : {}),
           },
         });
       }

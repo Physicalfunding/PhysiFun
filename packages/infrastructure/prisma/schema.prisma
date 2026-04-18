@@ -275,14 +275,15 @@ enum SupportTicketStatus {
 // ==================== LeaderApplicationOutboxMessage ====================
 // リーダー応募ドメイン専用 Outbox (アカウント.md / プロジェクト.md「Outbox テーブル」)
 model LeaderApplicationOutboxMessage {
-  id          String    @id @default(uuid())
-  type        String // LeaderApplicationOutboxType
-  payload     Json
-  createdAt   DateTime  @default(now())
-  sentAt      DateTime? // 送信完了時刻 (null = 未送信)
-  attempts    Int       @default(0)
-  lastError   String?   @db.Text
-  nextRetryAt DateTime?
+  id             String    @id @default(uuid())
+  type           String // LeaderApplicationOutboxType
+  payload        Json
+  createdAt      DateTime  @default(now())
+  sentAt         DateTime? // 送信完了時刻 (null = 未送信)
+  attempts       Int       @default(0)
+  lastError      String?   @db.Text
+  nextRetryAt    DateTime?
+  deadLetteredAt DateTime? // dead-letter 化された時刻 (non-null = 再処理対象外)
 
   @@index([sentAt, nextRetryAt])
   @@map("leader_application_outbox_messages")
@@ -291,14 +292,15 @@ model LeaderApplicationOutboxMessage {
 // ==================== ProjectOutboxMessage ====================
 // プロジェクトドメイン専用 Outbox
 model ProjectOutboxMessage {
-  id          String    @id @default(uuid())
-  type        String // ProjectOutboxType
-  payload     Json
-  createdAt   DateTime  @default(now())
-  sentAt      DateTime?
-  attempts    Int       @default(0)
-  lastError   String?   @db.Text
-  nextRetryAt DateTime?
+  id             String    @id @default(uuid())
+  type           String // ProjectOutboxType
+  payload        Json
+  createdAt      DateTime  @default(now())
+  sentAt         DateTime?
+  attempts       Int       @default(0)
+  lastError      String?   @db.Text
+  nextRetryAt    DateTime?
+  deadLetteredAt DateTime? // dead-letter 化された時刻 (non-null = 再処理対象外)
 
   @@index([sentAt, nextRetryAt])
   @@map("project_outbox_messages")

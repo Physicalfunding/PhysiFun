@@ -51,6 +51,7 @@ export class ProjectOutboxWorker {
     const messages = await this.prisma.projectOutboxMessage.findMany({
       where: {
         sentAt: null,
+        deadLetteredAt: null,
         OR: [{ nextRetryAt: null }, { nextRetryAt: { lte: now } }],
       },
       orderBy: { createdAt: "asc" },
@@ -62,11 +63,13 @@ export class ProjectOutboxWorker {
         const processor = this.processors.get(msg.type);
 
         if (!processor) {
+          // 未知のメッセージ種別 — dead-letter 化して再処理を防止
           await this.prisma.projectOutboxMessage.update({
             where: { id: msg.id },
             data: {
               attempts: { increment: 1 },
               lastError: `未知のメッセージ種別: ${msg.type}`,
+              deadLetteredAt: new Date(),
             },
           });
           continue;
@@ -92,10 +95,8 @@ export class ProjectOutboxWorker {
           });
         } else {
           const newAttempts = msg.attempts + 1;
-          const nextRetryAt =
-            result.error.retriable && newAttempts < this.maxAttempts
-              ? this.calculateNextRetry(newAttempts)
-              : null;
+          const isDeadLetter = !result.error.retriable || newAttempts >= this.maxAttempts;
+          const nextRetryAt = isDeadLetter ? null : this.calculateNextRetry(newAttempts);
 
           await this.prisma.projectOutboxMessage.update({
             where: { id: msg.id },
@@ -103,6 +104,7 @@ export class ProjectOutboxWorker {
               attempts: { increment: 1 },
               lastError: result.error.message,
               nextRetryAt,
+              ...(isDeadLetter ? { deadLetteredAt: new Date() } : {}),
             },
           });
         }
