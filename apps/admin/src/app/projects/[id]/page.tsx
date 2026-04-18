@@ -119,9 +119,7 @@ export default async function AdminProjectDetailPage({
           </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">活動計画</dt>
-            <dd className="mt-1 whitespace-pre-wrap text-gray-900">
-              {detail.activityPlan ?? "-"}
-            </dd>
+            <dd className="mt-1 whitespace-pre-wrap text-gray-900">{detail.activityPlan ?? "-"}</dd>
           </div>
           {detail.snsLinks && (
             <div>
@@ -189,27 +187,20 @@ export default async function AdminProjectDetailPage({
         ) : (
           <ul className="space-y-4">
             {detail.reviewFeedbacks.map((feedback) => (
-              <li
-                key={feedback.id}
-                className="rounded-md border border-gray-200 bg-gray-50 p-4"
-              >
+              <li key={feedback.id} className="rounded-md border border-gray-200 bg-gray-50 p-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <span
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${REVIEW_ACTION_STYLES[feedback.action]}`}
                   >
                     {REVIEW_ACTION_LABELS[feedback.action]}
                   </span>
-                  <span className="text-sm text-gray-700">
-                    {feedback.reviewerDisplayName}
-                  </span>
+                  <span className="text-sm text-gray-700">{feedback.reviewerDisplayName}</span>
                   <span className="text-xs text-gray-500">
                     {formatDateTime(feedback.reviewedAt)}
                   </span>
                 </div>
                 {feedback.note && (
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-gray-900">
-                    {feedback.note}
-                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-gray-900">{feedback.note}</p>
                 )}
               </li>
             ))}

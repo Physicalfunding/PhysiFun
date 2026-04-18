@@ -134,8 +134,7 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
     maxPublishedPerOwner: number;
   }): Promise<void> {
     // 同一 tx 内 count → 上限チェックをシミュレート
-    const count =
-      this.publishedCountByOwner.get(params.project.ownerAccountId.toString()) ?? 0;
+    const count = this.publishedCountByOwner.get(params.project.ownerAccountId.toString()) ?? 0;
     if (count >= params.maxPublishedPerOwner) {
       throw new OwnerPublishedLimitExceededError();
     }
@@ -207,9 +206,7 @@ describe("ApproveProjectPublicationUseCase", () => {
 
     expect(result.ok).toBe(true);
     expect(port.savedPublishedAt).toHaveLength(1);
-    expect(port.savedProjects[0].updatedAt.getTime()).toBe(
-      port.savedPublishedAt[0].getTime()
-    );
+    expect(port.savedProjects[0].updatedAt.getTime()).toBe(port.savedPublishedAt[0].getTime());
   });
 
   it("Outbox メッセージの type と payload が正しい", async () => {

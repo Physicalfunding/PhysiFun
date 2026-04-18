@@ -392,9 +392,7 @@ function pickAdminOrderBy(status: PublishStatus) {
  * 構造が期待と異なる場合は null を返す。
  * 各 value が string でなければ null に落とす。
  */
-function parseSnsLinks(
-  raw: unknown
-): {
+function parseSnsLinks(raw: unknown): {
   x: string | null;
   instagram: string | null;
   facebook: string | null;
