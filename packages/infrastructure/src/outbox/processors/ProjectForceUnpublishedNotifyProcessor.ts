@@ -47,7 +47,7 @@ export class ProjectForceUnpublishedNotifyProcessor implements OutboxProcessor<P
     const projectUrl = `${this.baseUrl}/my/projects/${projectId}`;
 
     // TODO: A-4 で正式テンプレートに差し替え
-    const safeTitle = projectTitle.replace(/[\r\n]/g, " ");
+    const safeTitle = projectTitle.replace(/[\r\n\t]/g, " ");
     const subject = `【PhysiFun】プロジェクトが非公開になりました: ${safeTitle}`;
     const text = [
       "運営によりプロジェクトが非公開になりました。",

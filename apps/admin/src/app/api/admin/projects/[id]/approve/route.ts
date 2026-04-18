@@ -4,7 +4,7 @@ import {
   ApproveProjectPublicationUseCase,
   type ApproveProjectPublicationError,
 } from "@physifun/application";
-import { PrismaProjectCommandAdapter } from "@physifun/infrastructure";
+import { getApproveProjectPublicationPort } from "@/lib/di/project";
 import {
   successResponse,
   unauthorizedResponse,
@@ -66,8 +66,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    const adapter = new PrismaProjectCommandAdapter();
-    const useCase = new ApproveProjectPublicationUseCase(adapter);
+    const port = getApproveProjectPublicationPort();
+    const useCase = new ApproveProjectPublicationUseCase(port);
     const result = await useCase.execute({
       projectId: id,
       reviewerId,

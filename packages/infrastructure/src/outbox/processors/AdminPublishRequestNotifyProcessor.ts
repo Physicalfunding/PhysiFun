@@ -37,7 +37,7 @@ export class AdminPublishRequestNotifyProcessor implements OutboxProcessor<Admin
     const reviewUrl = `${this.baseUrl}/projects/${projectId}`;
 
     // TODO: A-4 で正式テンプレートに差し替え
-    const safeTitle = projectTitle.replace(/[\r\n]/g, " ");
+    const safeTitle = projectTitle.replace(/[\r\n\t]/g, " ");
     const subject = `【PhysiFun 運営】公開��請: ${safeTitle}`;
     const text = [
       "PhysiFun 運営チーム各位",

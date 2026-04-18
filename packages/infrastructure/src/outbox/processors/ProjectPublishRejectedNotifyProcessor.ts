@@ -47,7 +47,7 @@ export class ProjectPublishRejectedNotifyProcessor implements OutboxProcessor<Pr
     const editUrl = `${this.baseUrl}/my/projects/${projectId}/edit`;
 
     // TODO: A-4 で正式テンプレートに差し替え
-    const safeTitle = projectTitle.replace(/[\r\n]/g, " ");
+    const safeTitle = projectTitle.replace(/[\r\n\t]/g, " ");
     const subject = `【PhysiFun】プロジェクト公開申請が差し戻されました: ${safeTitle}`;
     const text = [
       "プロジェクトの公開申請が差し戻されました。",

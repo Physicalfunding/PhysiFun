@@ -3,11 +3,8 @@ import { getToken } from "next-auth/jwt";
 import {
   ForceUnpublishProjectUseCase,
   type ForceUnpublishProjectError,
-  type ForceUnpublishProjectPort,
-  type CreateProjectOutboxMessageParams,
 } from "@physifun/application";
-import { PrismaProjectCommandAdapter } from "@physifun/infrastructure";
-import type { Project, ProjectReviewFeedback } from "@physifun/domain";
+import { getForceUnpublishProjectPort } from "@/lib/di/project";
 import {
   successResponse,
   unauthorizedResponse,
@@ -64,20 +61,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
     }
 
-    // DI: apps/web と同様に Port を直接組み立てる
-    //  - PrismaProjectCommandAdapter は stateless なためリクエスト毎にインスタンス化
-    //  - 構造的部分型で findAccountById / findProjectById / executeForceUnpublishInTransaction に適合する
-    const adapter = new PrismaProjectCommandAdapter();
-    const port: ForceUnpublishProjectPort = {
-      findAccountById: (accountId: string) => adapter.findAccountById(accountId),
-      findProjectById: (projectId: string) => adapter.findProjectById(projectId),
-      executeForceUnpublishInTransaction: (p: {
-        project: Project;
-        reviewFeedback: ProjectReviewFeedback;
-        outboxMessage: CreateProjectOutboxMessageParams;
-      }) => adapter.executeForceUnpublishInTransaction(p),
-    };
-
+    const port = getForceUnpublishProjectPort();
     const useCase = new ForceUnpublishProjectUseCase(port);
     const result = await useCase.execute({
       projectId: id,

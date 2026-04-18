@@ -285,7 +285,7 @@ function ReviewerNoteModal({
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
         <p className="mt-1 text-right text-xs text-gray-400">
-          {reviewerNote.length} / {REVIEWER_NOTE_MAX_LENGTH} 文字
+          {reviewerNote.trim().length} / {REVIEWER_NOTE_MAX_LENGTH} 文字
         </p>
 
         <div className="mt-4 flex justify-end gap-3">

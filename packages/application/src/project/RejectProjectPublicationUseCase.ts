@@ -151,6 +151,7 @@ export class RejectProjectPublicationUseCase {
     }
 
     // 5. 差戻（ドメインロジック: PENDING_REVIEW チェック + 状態遷移）
+    //    rejectByAdmin() は PENDING_REVIEW 以外ならエラーを返す。
     const rejectResult = project.rejectByAdmin();
     if (!rejectResult.ok) {
       // rejectByAdmin() は現状 CANNOT_REJECT_NON_PENDING のみ返すが、
@@ -168,7 +169,7 @@ export class RejectProjectPublicationUseCase {
       });
     }
 
-    // 5. ProjectReviewFeedback を生成
+    // 6. ProjectReviewFeedback を生成
     // rejectByAdmin() 内で updatedAt が差戻日時にセット済み
     const reviewedAt = project.updatedAt;
     const feedbackResult = ProjectReviewFeedback.create({
@@ -184,7 +185,7 @@ export class RejectProjectPublicationUseCase {
       return err({ type: "REVIEWER_NOTE_REQUIRED" });
     }
 
-    // 6. Outbox メッセージ生成（差戻通知メール）
+    // 7. Outbox メッセージ生成（差戻通知メール）
     const outboxMessage = {
       id: randomUUID(),
       type: LEADER_PUBLISH_REJECTED_NOTIFY_TYPE,
@@ -198,7 +199,7 @@ export class RejectProjectPublicationUseCase {
       },
     };
 
-    // 7. トランザクション内で永続化
+    // 8. トランザクション内で永続化
     await this.port.executeRejectInTransaction({
       project,
       reviewFeedback: feedbackResult.value,

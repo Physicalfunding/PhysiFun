@@ -4,6 +4,9 @@ import {
   OwnerPublishedLimitExceededError,
   ProjectLimitExceededError,
   type CreateProjectOutboxMessageParams,
+  type ApproveProjectPublicationPort,
+  type RejectProjectPublicationPort,
+  type ForceUnpublishProjectPort,
 } from "@physifun/application";
 import { prisma } from "../database/client";
 import { reconstructProject } from "./reconstructProject";
@@ -31,7 +34,9 @@ export interface AccountForProjectCreation {
  * CreateProjectDraftPort と UpdateProjectDraftPort の両方を実装する。
  * 構造的部分型で Port インターフェースに適合する。
  */
-export class PrismaProjectCommandAdapter {
+export class PrismaProjectCommandAdapter
+  implements ApproveProjectPublicationPort, RejectProjectPublicationPort, ForceUnpublishProjectPort
+{
   /**
    * アカウント ID でアカウントを検索する。
    * ロールを AccountRole 型にマッピングして返す。
@@ -392,7 +397,7 @@ export class PrismaProjectCommandAdapter {
           id: fb.id.toString(),
           projectId: fb.projectId.toString(),
           reviewerId: fb.reviewerId.toString(),
-          action: fb.action as import("@prisma/client").ReviewAction,
+          action: fb.action as ReviewAction,
           note: fb.note,
           reviewedAt: fb.reviewedAt,
         },
