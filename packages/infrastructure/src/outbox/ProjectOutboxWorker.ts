@@ -84,6 +84,7 @@ export class ProjectOutboxWorker {
           attempts: msg.attempts,
           lastError: msg.lastError,
           nextRetryAt: msg.nextRetryAt,
+          deadLetteredAt: msg.deadLetteredAt,
         };
 
         const result = await processor.process(outboxMessage);
@@ -110,12 +111,18 @@ export class ProjectOutboxWorker {
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
+        const newAttempts = msg.attempts + 1;
+        const isDeadLetter = newAttempts >= this.maxAttempts;
+        const nextRetryAt = isDeadLetter ? null : this.calculateNextRetry(newAttempts);
+
         try {
           await this.prisma.projectOutboxMessage.update({
             where: { id: msg.id },
             data: {
               attempts: { increment: 1 },
               lastError: `unexpected: ${errorMessage}`,
+              nextRetryAt,
+              ...(isDeadLetter ? { deadLetteredAt: new Date() } : {}),
             },
           });
         } catch {

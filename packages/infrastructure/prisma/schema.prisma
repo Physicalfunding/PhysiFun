@@ -285,7 +285,7 @@ model LeaderApplicationOutboxMessage {
   nextRetryAt    DateTime?
   deadLetteredAt DateTime? // dead-letter 化された時刻 (non-null = 再処理対象外)
 
-  @@index([sentAt, nextRetryAt])
+  @@index([sentAt, deadLetteredAt, nextRetryAt])
   @@map("leader_application_outbox_messages")
 }
 
@@ -302,6 +302,6 @@ model ProjectOutboxMessage {
   nextRetryAt    DateTime?
   deadLetteredAt DateTime? // dead-letter 化された時刻 (non-null = 再処理対象外)
 
-  @@index([sentAt, nextRetryAt])
+  @@index([sentAt, deadLetteredAt, nextRetryAt])
   @@map("project_outbox_messages")
 }

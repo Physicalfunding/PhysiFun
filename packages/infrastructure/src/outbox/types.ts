@@ -23,6 +23,8 @@ export interface OutboxMessage<T = unknown> {
   readonly lastError: string | null;
   /** 次回再試行予定時刻。null なら即時実行可。 */
   readonly nextRetryAt: Date | null;
+  /** dead-letter 化された時刻。non-null なら再処理対象外。 */
+  readonly deadLetteredAt: Date | null;
 }
 
 /**
