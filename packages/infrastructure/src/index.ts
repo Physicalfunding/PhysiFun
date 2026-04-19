@@ -13,6 +13,16 @@ export { ResendMailSender } from "./mail";
 export { NoopMailSender } from "./mail";
 
 export { PrismaCleanupExpiredAccountsAdapter } from "./account/PrismaCleanupExpiredAccountsAdapter";
+export {
+  PrismaActivateAccountAdapter,
+  type AccountForActivation,
+} from "./account/PrismaActivateAccountAdapter";
+export {
+  PrismaAuthenticateAdapter,
+  type AuthenticatedAccount,
+} from "./account/PrismaAuthenticateAdapter";
+
+export { BcryptPasswordHasher } from "./security/BcryptPasswordHasher";
 
 export {
   PrismaLeaderApplicationQueryService,
@@ -24,6 +34,10 @@ export {
 
 export { PrismaApproveLeaderApplicationAdapter } from "./leader-application/PrismaApproveLeaderApplicationAdapter";
 export { PrismaRejectLeaderApplicationAdapter } from "./leader-application/PrismaRejectLeaderApplicationAdapter";
+export {
+  PrismaSubmitLeaderApplicationAdapter,
+  type AccountRow as SubmitLeaderApplicationAccountRow,
+} from "./leader-application/PrismaSubmitLeaderApplicationAdapter";
 
 export {
   PrismaProjectQueryService,
