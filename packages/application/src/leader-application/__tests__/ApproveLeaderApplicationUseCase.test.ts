@@ -6,6 +6,7 @@ import {
 import type {
   ApproveLeaderApplicationPort,
   AccountForApproval,
+  ReviewerAccount,
 } from "../ports/ApproveLeaderApplicationPort";
 import {
   LeaderApplication,
@@ -45,6 +46,7 @@ function createTestProjectDraft(): ProjectDraft {
 // テスト用の固定 UUID
 const APP_ID_STR = "00000000-0000-4000-a000-000000000001";
 const ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000002";
+const REVIEWER_ID_STR = "00000000-0000-4000-a000-000000000003";
 
 /** PENDING 状態のリーダー応募エンティティを生成 */
 function pendingApplication(overrides?: {
@@ -95,6 +97,9 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
   /** 保存済みアカウント */
   accounts: AccountForApproval[] = [];
 
+  /** 保存済み reviewer */
+  reviewers: ReviewerAccount[] = [];
+
   /** executeApproval で渡されたパラメータを記録 */
   approvalParams: Parameters<ApproveLeaderApplicationPort["executeApproval"]>[0][] = [];
 
@@ -104,6 +109,10 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
 
   async findAccountById(accountId: string): Promise<AccountForApproval | null> {
     return this.accounts.find((a) => a.id === accountId) ?? null;
+  }
+
+  async findReviewerById(reviewerId: string): Promise<ReviewerAccount | null> {
+    return this.reviewers.find((r) => r.id === reviewerId) ?? null;
   }
 
   async executeApproval(
@@ -121,6 +130,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
 
   beforeEach(() => {
     port = new InMemoryApproveLeaderApplicationPort();
+    port.reviewers.push({ id: REVIEWER_ID_STR, roles: ["ADMIN"] });
     useCase = new ApproveLeaderApplicationUseCase(port);
   });
 
@@ -130,7 +140,10 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
-    const result = await useCase.execute({ applicationId: APP_ID_STR });
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -143,7 +156,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
-    await useCase.execute({ applicationId: APP_ID_STR });
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
 
     expect(port.approvalParams).toHaveLength(1);
     const params = port.approvalParams[0];
@@ -157,7 +170,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount({ roles: ["SUPPORTER"] }));
 
-    await useCase.execute({ applicationId: APP_ID_STR });
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
 
     const params = port.approvalParams[0];
     expect(params.newRoles).toEqual(["SUPPORTER", "LEADER"]);
@@ -167,7 +180,10 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount({ status: "PENDING_EMAIL_CONFIRMATION" }));
 
-    const result = await useCase.execute({ applicationId: APP_ID_STR });
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
 
     expect(result.ok).toBe(true);
   });
@@ -176,7 +192,10 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount({ status: "ACTIVE" }));
 
-    const result = await useCase.execute({ applicationId: APP_ID_STR });
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
 
     expect(result.ok).toBe(true);
   });
@@ -187,7 +206,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
-    await useCase.execute({ applicationId: APP_ID_STR });
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
 
     const outbox = port.approvalParams[0].outboxMessage;
     expect(outbox.type).toBe("approved.notify_applicant");
@@ -197,7 +216,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount({ email: "leader@example.com" }));
 
-    await useCase.execute({ applicationId: APP_ID_STR });
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
 
     const payload = port.approvalParams[0].outboxMessage.payload as {
       applicationId: string;
@@ -213,7 +232,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
-    await useCase.execute({ applicationId: APP_ID_STR });
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
 
     const outbox = port.approvalParams[0].outboxMessage;
     expect(outbox.id).toMatch(
@@ -221,10 +240,54 @@ describe("ApproveLeaderApplicationUseCase", () => {
     );
   });
 
+  // ---- ADMIN 二重防御 ----
+
+  it("reviewer が存在しない場合 REVIEWER_NOT_FOUND", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: "00000000-0000-4000-a000-000000000099",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
+  });
+
+  it("reviewer が ADMIN ロールを持たない場合 REVIEWER_NOT_ADMIN", async () => {
+    port.reviewers = [{ id: REVIEWER_ID_STR, roles: ["SUPPORTER"] }];
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOT_ADMIN");
+  });
+
+  it("REVIEWER_NOT_ADMIN の場合は executeApproval が呼ばれない", async () => {
+    port.reviewers = [{ id: REVIEWER_ID_STR, roles: ["SUPPORTER"] }];
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
+
+    expect(port.approvalParams).toHaveLength(0);
+  });
+
   // ---- エラーケース ----
 
   it("存在しない応募 ID で APPLICATION_NOT_FOUND", async () => {
-    const result = await useCase.execute({ applicationId: "00000000-0000-4000-a000-000000000099" });
+    const result = await useCase.execute({
+      applicationId: "00000000-0000-4000-a000-000000000099",
+      reviewerId: REVIEWER_ID_STR,
+    });
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -236,7 +299,10 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     // アカウントは追加しない
 
-    const result = await useCase.execute({ applicationId: APP_ID_STR });
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -248,7 +314,10 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication({ status: "APPROVED" }));
     port.accounts.push(supporterAccount());
 
-    const result = await useCase.execute({ applicationId: APP_ID_STR });
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -260,7 +329,10 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication({ status: "REJECTED" }));
     port.accounts.push(supporterAccount());
 
-    const result = await useCase.execute({ applicationId: APP_ID_STR });
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -272,7 +344,10 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount({ roles: ["SUPPORTER", "LEADER"] }));
 
-    const result = await useCase.execute({ applicationId: APP_ID_STR });
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -284,7 +359,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication({ status: "APPROVED" }));
     port.accounts.push(supporterAccount());
 
-    await useCase.execute({ applicationId: APP_ID_STR });
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
 
     expect(port.approvalParams).toHaveLength(0);
   });
@@ -293,7 +368,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount({ roles: ["SUPPORTER", "LEADER"] }));
 
-    await useCase.execute({ applicationId: APP_ID_STR });
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
 
     expect(port.approvalParams).toHaveLength(0);
   });
