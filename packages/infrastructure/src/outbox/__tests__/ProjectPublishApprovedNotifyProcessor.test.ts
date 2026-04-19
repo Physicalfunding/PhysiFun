@@ -33,6 +33,7 @@ describe("ProjectPublishApprovedNotifyProcessor", () => {
     attempts: 0,
     lastError: null,
     nextRetryAt: null,
+    deadLetteredAt: null,
   });
 
   beforeEach(() => {

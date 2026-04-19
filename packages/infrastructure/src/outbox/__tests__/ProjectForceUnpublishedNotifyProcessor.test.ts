@@ -34,6 +34,7 @@ describe("ProjectForceUnpublishedNotifyProcessor", () => {
     attempts: 0,
     lastError: null,
     nextRetryAt: null,
+    deadLetteredAt: null,
   });
 
   beforeEach(() => {
