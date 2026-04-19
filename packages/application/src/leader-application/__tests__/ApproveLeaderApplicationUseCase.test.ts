@@ -6,7 +6,6 @@ import {
 import type {
   ApproveLeaderApplicationPort,
   AccountForApproval,
-  ReviewerAccount,
 } from "../ports/ApproveLeaderApplicationPort";
 import {
   LeaderApplication,
@@ -94,11 +93,8 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
   /** 保存済みリーダー応募 */
   applications: LeaderApplication[] = [];
 
-  /** 保存済みアカウント */
+  /** 保存済みアカウント（応募者 + reviewer 共用） */
   accounts: AccountForApproval[] = [];
-
-  /** 保存済み reviewer */
-  reviewers: ReviewerAccount[] = [];
 
   /** executeApproval で渡されたパラメータを記録 */
   approvalParams: Parameters<ApproveLeaderApplicationPort["executeApproval"]>[0][] = [];
@@ -109,10 +105,6 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
 
   async findAccountById(accountId: string): Promise<AccountForApproval | null> {
     return this.accounts.find((a) => a.id === accountId) ?? null;
-  }
-
-  async findReviewerById(reviewerId: string): Promise<ReviewerAccount | null> {
-    return this.reviewers.find((r) => r.id === reviewerId) ?? null;
   }
 
   async executeApproval(
@@ -130,7 +122,9 @@ describe("ApproveLeaderApplicationUseCase", () => {
 
   beforeEach(() => {
     port = new InMemoryApproveLeaderApplicationPort();
-    port.reviewers.push({ id: REVIEWER_ID_STR, roles: ["ADMIN"] });
+    port.accounts.push(
+      supporterAccount({ id: REVIEWER_ID_STR, roles: ["ADMIN"], email: "admin@example.com" })
+    );
     useCase = new ApproveLeaderApplicationUseCase(port);
   });
 
@@ -257,7 +251,13 @@ describe("ApproveLeaderApplicationUseCase", () => {
   });
 
   it("reviewer が ADMIN ロールを持たない場合 REVIEWER_NOT_ADMIN", async () => {
-    port.reviewers = [{ id: REVIEWER_ID_STR, roles: ["SUPPORTER"] }];
+    port.accounts = [
+      supporterAccount({
+        id: REVIEWER_ID_STR,
+        roles: ["SUPPORTER"],
+        email: "nonadmin@example.com",
+      }),
+    ];
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
@@ -272,7 +272,13 @@ describe("ApproveLeaderApplicationUseCase", () => {
   });
 
   it("REVIEWER_NOT_ADMIN の場合は executeApproval が呼ばれない", async () => {
-    port.reviewers = [{ id: REVIEWER_ID_STR, roles: ["SUPPORTER"] }];
+    port.accounts = [
+      supporterAccount({
+        id: REVIEWER_ID_STR,
+        roles: ["SUPPORTER"],
+        email: "nonadmin@example.com",
+      }),
+    ];
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 

@@ -47,18 +47,6 @@ export class PrismaApproveLeaderApplicationAdapter {
     };
   }
 
-  async findReviewerById(reviewerId: string): Promise<{ id: string; roles: AccountRole[] } | null> {
-    const row = await prisma.account.findUnique({
-      where: { id: reviewerId },
-      select: { id: true, roles: true },
-    });
-    if (!row) return null;
-    return {
-      id: row.id,
-      roles: row.roles as AccountRole[],
-    };
-  }
-
   async executeApproval(params: {
     application: LeaderApplication;
     accountId: string;

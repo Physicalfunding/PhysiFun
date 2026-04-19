@@ -59,7 +59,7 @@ export class ApproveLeaderApplicationUseCase {
     input: ApproveLeaderApplicationInput
   ): Promise<Result<ApproveLeaderApplicationOutput, ApproveLeaderApplicationError>> {
     // 1. reviewer の ADMIN ロール検証（二重防御: Route 層 + UseCase 層）
-    const reviewer = await this.port.findReviewerById(input.reviewerId);
+    const reviewer = await this.port.findAccountById(input.reviewerId);
     if (!reviewer) {
       return err({ type: "REVIEWER_NOT_FOUND" });
     }

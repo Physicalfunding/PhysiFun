@@ -10,6 +10,8 @@ import type { AccountRole } from "../../shared/AccountRole";
 
 /**
  * 承認対象のアカウント情報
+ *
+ * 応募者のアカウント検索と、reviewer の ADMIN ロール検証の両方に使用する。
  */
 export interface AccountForApproval {
   readonly id: string;
@@ -24,14 +26,6 @@ export interface AccountForApproval {
  * トランザクション境界を含むすべての永続化操作をカプセル化する。
  * インフラ層が Prisma トランザクション等で実装する。
  */
-/**
- * reviewer (ADMIN) の最小限の情報
- */
-export interface ReviewerAccount {
-  readonly id: string;
-  readonly roles: AccountRole[];
-}
-
 export interface ApproveLeaderApplicationPort {
   /**
    * 応募 ID でリーダー応募を検索する。
@@ -39,14 +33,10 @@ export interface ApproveLeaderApplicationPort {
   findApplicationById(id: string): Promise<LeaderApplication | null>;
 
   /**
-   * アカウント ID でアカウントを検索する（応募者のアカウント）。
+   * アカウント ID でアカウントを検索する。
+   * 応募者のアカウント検索と reviewer の ADMIN ロール検証の両方に使用。
    */
   findAccountById(accountId: string): Promise<AccountForApproval | null>;
-
-  /**
-   * reviewer ID で ADMIN アカウントを検索する（二重防御用）。
-   */
-  findReviewerById(reviewerId: string): Promise<ReviewerAccount | null>;
 
   /**
    * 承認処理をトランザクションで実行する。
