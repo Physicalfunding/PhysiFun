@@ -5,6 +5,10 @@ import { PrismaClient } from "@prisma/client";
  *
  * - globalSetup で DATABASE_URL が注入された後に参照されるため、テストファイルから遅延生成する
  * - 各テストの独立性を担保するため、主要テーブルを truncate するユーティリティを提供する
+ *
+ * NOTE: このシングルトン PrismaClient と `resetDatabase` による DB 状態共有は、
+ *   `vitest.config.ts` の `fileParallelism: false` でテストファイルが直列実行されることを前提としている。
+ *   並列実行を有効化する場合は worker ごとに PrismaClient を隔離する仕組みが必要になる。
  */
 let client: PrismaClient | undefined;
 
