@@ -148,9 +148,10 @@ export default async function AdminProjectDetailPage({
                     />
                   </>
                 ) : (
-                  <p className="text-sm text-red-600">
-                    表示できない URL 形式です: {detail.coverImageUrl}
-                  </p>
+                  // 生の URL を画面に出力すると javascript:/data: など悪意のある URL や
+                  // 機密を含む URL がそのまま管理画面に露出するため、固定文言のみ表示する
+                  // (PR #142 Major-1 対応)
+                  <p className="text-sm text-red-600">表示できない URL 形式です</p>
                 )}
               </dd>
             </div>
