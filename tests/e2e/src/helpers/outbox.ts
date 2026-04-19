@@ -11,10 +11,7 @@ import { ACTIVATION_EMAIL_TYPE } from "@physifun/infrastructure";
  * @param email 宛先メールアドレス (念のため検証する)
  * @param timeoutMs Outbox レコード作成を待つ最大時間 (ms)
  */
-export async function getActivationToken(
-  email: string,
-  timeoutMs = 10_000
-): Promise<string> {
+export async function getActivationToken(email: string, timeoutMs = 10_000): Promise<string> {
   const normalizedEmail = email.trim().toLowerCase();
   const deadline = Date.now() + timeoutMs;
 

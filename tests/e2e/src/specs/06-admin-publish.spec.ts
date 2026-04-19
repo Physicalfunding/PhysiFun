@@ -12,9 +12,7 @@ test.use({ storageState: ADMIN_STORAGE });
  *
  * 事後状態: Project.status = PUBLISHED, slug が発行される
  */
-test("admin が PENDING_REVIEW のプロジェクトを承認でき、PUBLISHED に遷移する", async ({
-  page,
-}) => {
+test("admin が PENDING_REVIEW のプロジェクトを承認でき、PUBLISHED に遷移する", async ({ page }) => {
   await page.goto(`${ADMIN_BASE_URL}/projects?status=PENDING_REVIEW`);
 
   await page.getByRole("link", { name: TEST_LEADER.projectTitle }).first().click();

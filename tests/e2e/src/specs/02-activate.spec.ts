@@ -21,5 +21,7 @@ test("Outbox からトークンを取得し、アカウントを有効化でき�
 
   await page.getByRole("button", { name: "アカウントを有効化" }).click();
 
-  await expect(page.getByText("アカウントが有効化されました。ログインしてください。")).toBeVisible();
+  await expect(
+    page.getByText("アカウントが有効化されました。ログインしてください。")
+  ).toBeVisible();
 });

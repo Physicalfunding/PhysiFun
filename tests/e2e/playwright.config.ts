@@ -23,6 +23,7 @@ const ADMIN_BASE_URL = `http://localhost:${ADMIN_PORT}`;
 const E2E_NEXTAUTH_SECRET = "e2e-test-secret-do-not-use-in-production";
 
 const webServerEnv = {
+  PORT: String(WEB_PORT),
   NEXTAUTH_SECRET: E2E_NEXTAUTH_SECRET,
   NEXTAUTH_URL: WEB_BASE_URL,
   DATABASE_URL: process.env.DATABASE_URL ?? "",
@@ -35,6 +36,7 @@ const webServerEnv = {
 
 const adminServerEnv = {
   ...webServerEnv,
+  PORT: String(ADMIN_PORT),
   NEXTAUTH_URL: ADMIN_BASE_URL,
 };
 

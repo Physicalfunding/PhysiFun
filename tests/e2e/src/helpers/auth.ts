@@ -7,11 +7,7 @@ import { WEB_BASE_URL } from "../fixtures";
  * /login ページで NextAuth の credential プロバイダを叩き、
  * ログイン後の遷移先を待つ。
  */
-export async function loginAsLeader(
-  page: Page,
-  email: string,
-  password: string
-): Promise<void> {
+export async function loginAsLeader(page: Page, email: string, password: string): Promise<void> {
   await page.goto(`${WEB_BASE_URL}/login`);
   await page.getByLabel("メールアドレス").fill(email);
   await page.getByLabel("パスワード").fill(password);
