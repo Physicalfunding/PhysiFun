@@ -1,4 +1,5 @@
 export { ok, err, type Result } from "./result";
+export { UUID_V4_REGEX, isUuidV4 } from "./uuid";
 export {
   CATEGORY_MASTER,
   isProjectCategory,

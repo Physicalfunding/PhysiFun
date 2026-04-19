@@ -5,6 +5,7 @@ import {
   type ForceUnpublishProjectError,
 } from "@physifun/application";
 import { getForceUnpublishProjectPort } from "@/lib/di/project";
+import { isUuidV4 } from "@physifun/domain";
 import {
   successResponse,
   unauthorizedResponse,
@@ -13,8 +14,6 @@ import {
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-
-const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * POST /api/admin/projects/:id/force-unpublish
@@ -42,7 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
 
     // UUID 形式バリデーション
-    if (!UUID_V4_REGEX.test(id)) {
+    if (!isUuidV4(id)) {
       return validationErrorResponse("無効なプロジェクト ID です", {
         id: ["UUID v4 形式で指定してください"],
       });
