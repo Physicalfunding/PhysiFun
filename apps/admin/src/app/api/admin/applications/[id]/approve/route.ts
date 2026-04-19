@@ -33,6 +33,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const roles = (token.roles as string[] | undefined) ?? [];
     if (!roles.includes("ADMIN")) return unauthorizedResponse("ADMIN 権限が必要です");
 
+    const reviewerId = typeof token.sub === "string" ? token.sub : undefined;
+    if (!reviewerId) return unauthorizedResponse();
+
     const { id } = await params;
 
     // UUID 形式バリデーション
@@ -44,7 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const adapter = new PrismaApproveLeaderApplicationAdapter();
     const useCase = new ApproveLeaderApplicationUseCase(adapter);
-    const result = await useCase.execute({ applicationId: id });
+    const result = await useCase.execute({ applicationId: id, reviewerId });
 
     if (!result.ok) {
       return mapApproveError(result.error);
@@ -70,6 +73,14 @@ function mapApproveError(error: ApproveLeaderApplicationError) {
       return unprocessableEntityResponse("この応募は審査待ち状態ではありません");
     case "ALREADY_LEADER":
       return unprocessableEntityResponse("このアカウントは既にリーダーです");
+    case "INVALID_REVIEWER_ID":
+      return validationErrorResponse("無効な審査者 ID です", {
+        reviewerId: ["UUID v4 形式で指定してください"],
+      });
+    case "REVIEWER_NOT_FOUND":
+      return notFoundResponse("アカウント");
+    case "REVIEWER_NOT_ADMIN":
+      return unauthorizedResponse("ADMIN 権限が必要です");
     default: {
       const _exhaustive: never = error;
       return internalErrorResponse();

@@ -10,11 +10,13 @@ import type { AccountRole } from "../../shared/AccountRole";
 
 /**
  * 承認対象のアカウント情報
+ *
+ * 応募者のアカウント検索と、reviewer の ADMIN ロール検証の両方に使用する。
  */
 export interface AccountForApproval {
   readonly id: string;
   readonly status: "PENDING_EMAIL_CONFIRMATION" | "ACTIVE" | "SUSPENDED";
-  readonly roles: AccountRole[];
+  readonly roles: readonly AccountRole[];
   readonly email: string;
 }
 
@@ -32,6 +34,7 @@ export interface ApproveLeaderApplicationPort {
 
   /**
    * アカウント ID でアカウントを検索する。
+   * 応募者のアカウント検索と reviewer の ADMIN ロール検証の両方に使用。
    */
   findAccountById(accountId: string): Promise<AccountForApproval | null>;
 
