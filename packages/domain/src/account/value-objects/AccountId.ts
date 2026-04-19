@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
+import { isUuidV4 } from "../../shared/uuid";
 
 /**
  * AccountId 値オブジェクト
@@ -29,7 +30,7 @@ export class AccountId {
    * UUID v4 形式でない場合は `InvalidAccountIdError` を返す。
    */
   static from(value: string): Result<AccountId, InvalidAccountIdError> {
-    if (!UUID_V4_REGEX.test(value)) {
+    if (!isUuidV4(value)) {
       return err({ type: "INVALID_ACCOUNT_ID_FORMAT", value });
     }
     return ok(new AccountId(value));
@@ -48,5 +49,3 @@ export interface InvalidAccountIdError {
   readonly type: "INVALID_ACCOUNT_ID_FORMAT";
   readonly value: string;
 }
-
-const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

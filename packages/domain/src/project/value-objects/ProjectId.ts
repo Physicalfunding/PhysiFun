@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
+import { isUuidV4 } from "../../shared/uuid";
 
 /**
  * ProjectId 値オブジェクト
@@ -14,7 +15,7 @@ export class ProjectId {
   }
 
   static from(value: string): Result<ProjectId, InvalidProjectIdError> {
-    if (!UUID_V4_REGEX.test(value)) {
+    if (!isUuidV4(value)) {
       return err({ type: "INVALID_PROJECT_ID_FORMAT", value });
     }
     return ok(new ProjectId(value));
@@ -33,5 +34,3 @@ export interface InvalidProjectIdError {
   readonly type: "INVALID_PROJECT_ID_FORMAT";
   readonly value: string;
 }
-
-const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

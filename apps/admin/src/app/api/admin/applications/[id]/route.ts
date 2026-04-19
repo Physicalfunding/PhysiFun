@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
+import { isUuidV4 } from "@physifun/domain";
 import {
   successResponse,
   unauthorizedResponse,
@@ -10,8 +11,6 @@ import {
 } from "@/lib/api/response";
 
 const queryService = new PrismaLeaderApplicationQueryService();
-
-const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * GET /api/admin/applications/:id
@@ -34,7 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
 
     // UUID 形式バリデーション
-    if (!UUID_V4_REGEX.test(id)) {
+    if (!isUuidV4(id)) {
       return validationErrorResponse("無効な応募 ID です", {
         id: ["UUID v4 形式で指定してください"],
       });

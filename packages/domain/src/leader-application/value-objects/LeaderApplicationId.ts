@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
+import { isUuidV4 } from "../../shared/uuid";
 
 /**
  * LeaderApplicationId 値オブジェクト
@@ -16,7 +17,7 @@ export class LeaderApplicationId {
 
   /** 既存文字列から復元 */
   static from(value: string): Result<LeaderApplicationId, InvalidLeaderApplicationIdError> {
-    if (!UUID_V4_REGEX.test(value)) {
+    if (!isUuidV4(value)) {
       return err({ type: "INVALID_LEADER_APPLICATION_ID_FORMAT", value });
     }
     return ok(new LeaderApplicationId(value));
@@ -35,5 +36,3 @@ export interface InvalidLeaderApplicationIdError {
   readonly type: "INVALID_LEADER_APPLICATION_ID_FORMAT";
   readonly value: string;
 }
-
-const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
