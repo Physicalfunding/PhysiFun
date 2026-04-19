@@ -17,6 +17,19 @@ const SNS_LABEL: Record<string, string> = {
   website: "ウェブサイト",
 };
 
+/**
+ * 未実装タブ向けの「準備中」プレースホルダパネル。
+ * モジュールスコープに配置することで、render のたびに関数を再生成しないようにしている。
+ */
+const placeholderPanel = (title: string) => (
+  <Card>
+    <CardContent className="py-16 text-center">
+      <p className="text-gray-400 text-lg">準備中</p>
+      <p className="text-gray-400 text-sm mt-2">{title}</p>
+    </CardContent>
+  </Card>
+);
+
 interface Props {
   project: ProjectPublicDetailDTO;
 }
@@ -120,15 +133,6 @@ export function ProjectPublicView({ project }: Props) {
         </Card>
       )}
     </>
-  );
-
-  const placeholderPanel = (title: string) => (
-    <Card>
-      <CardContent className="py-16 text-center">
-        <p className="text-gray-400 text-lg">準備中</p>
-        <p className="text-gray-400 text-sm mt-2">{title}</p>
-      </CardContent>
-    </Card>
   );
 
   return (
