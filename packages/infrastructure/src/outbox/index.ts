@@ -1,4 +1,10 @@
 export type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "./types";
+export {
+  OutboxWorkerBase,
+  type OutboxDelegate,
+  type OutboxRow,
+  type OutboxWorkerOptions,
+} from "./OutboxWorkerBase";
 export { OutboxWorker } from "./OutboxWorker";
 export { ProjectOutboxWorker } from "./ProjectOutboxWorker";
 export {
