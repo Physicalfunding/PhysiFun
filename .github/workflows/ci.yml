@@ -91,7 +91,34 @@ jobs:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Run tests
-        run: bun test
+        # tests/e2e の Playwright spec は bun test が拾わないよう apps/packages のみを対象にする
+        run: bun test apps packages
+
+  test-infrastructure:
+    # packages/infrastructure の integration test (Testcontainers + vitest)
+    # ubuntu-latest には Docker があらかじめ入っており、testcontainers がそのまま動く。
+    name: Test (infrastructure integration)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+
+      - name: Run infrastructure integration tests
+        run: bun --filter @physifun/infrastructure test
+        env:
+          # globalSetup が Testcontainers を起動するため、ここでは dummy で十分。
+          # globalSetup 内で動的に上書きされる。
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
   build:
     name: Build

@@ -16,6 +16,7 @@
     "test": "bun --filter @physifun/web test",
     "test:watch": "bun --filter @physifun/web test:watch",
     "test:coverage": "bun --filter @physifun/web test:coverage",
+    "test:infra": "bun --filter @physifun/infrastructure test",
     "db:generate": "bun --filter @physifun/infrastructure db:generate",
     "db:migrate": "bun --filter @physifun/infrastructure db:migrate",
     "db:migrate:deploy": "bun --filter @physifun/infrastructure db:migrate:deploy",
