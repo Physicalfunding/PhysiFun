@@ -16,7 +16,7 @@ import type { AccountRole } from "../../shared/AccountRole";
 export interface AccountForApproval {
   readonly id: string;
   readonly status: "PENDING_EMAIL_CONFIRMATION" | "ACTIVE" | "SUSPENDED";
-  readonly roles: AccountRole[];
+  readonly roles: readonly AccountRole[];
   readonly email: string;
 }
 

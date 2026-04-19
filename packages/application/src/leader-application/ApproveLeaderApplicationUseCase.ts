@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type Result, err, ok } from "@physifun/domain";
+import { AccountId, type Result, err, ok } from "@physifun/domain";
 import type { ApproveLeaderApplicationPort } from "./ports/ApproveLeaderApplicationPort";
 import type { AccountRole } from "../shared/AccountRole";
 
@@ -19,6 +19,7 @@ export interface ApproveLeaderApplicationOutput {
  * ユースケースのエラー型（判別共用体）
  */
 export type ApproveLeaderApplicationError =
+  | { readonly type: "INVALID_REVIEWER_ID" }
   | { readonly type: "APPLICATION_NOT_FOUND" }
   | { readonly type: "ACCOUNT_NOT_FOUND" }
   | { readonly type: "NOT_PENDING" }
@@ -58,7 +59,15 @@ export class ApproveLeaderApplicationUseCase {
   async execute(
     input: ApproveLeaderApplicationInput
   ): Promise<Result<ApproveLeaderApplicationOutput, ApproveLeaderApplicationError>> {
+    // 0. reviewerId の UUID 形式バリデーション
+    const reviewerIdResult = AccountId.from(input.reviewerId);
+    if (!reviewerIdResult.ok) {
+      return err({ type: "INVALID_REVIEWER_ID" });
+    }
+
     // 1. reviewer の ADMIN ロール検証（二重防御: Route 層 + UseCase 層）
+    // NOTE: この検証はトランザクション外で実行される（TOCTOU の可能性があるが、
+    // ADMIN ロール剥奪は極めて稀なため、project 側と同様に許容する）
     const reviewer = await this.port.findAccountById(input.reviewerId);
     if (!reviewer) {
       return err({ type: "REVIEWER_NOT_FOUND" });

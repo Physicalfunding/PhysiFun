@@ -271,6 +271,33 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(result.error.type).toBe("REVIEWER_NOT_ADMIN");
   });
 
+  it("REVIEWER_NOT_FOUND の場合は早期リターンする（executeApproval が呼ばれない）", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: "00000000-0000-4000-a000-000000000099",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
+    expect(port.approvalParams).toHaveLength(0);
+  });
+
+  it("不正な reviewerId 形式で INVALID_REVIEWER_ID", async () => {
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: "not-a-uuid",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("INVALID_REVIEWER_ID");
+    expect(port.approvalParams).toHaveLength(0);
+  });
+
   it("REVIEWER_NOT_ADMIN の場合は executeApproval が呼ばれない", async () => {
     port.accounts = [
       supporterAccount({
