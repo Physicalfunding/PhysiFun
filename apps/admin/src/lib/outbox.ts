@@ -20,6 +20,7 @@ export interface OutboxItemDto {
 }
 
 const VALID_SOURCES: readonly OutboxSource[] = ["leaderApplication", "project"];
+const VALID_STATUSES: readonly OutboxStatus[] = ["pending", "retrying", "dead-lettered", "sent"];
 
 const SOURCE_LABELS: Record<OutboxSource, string> = {
   leaderApplication: "リーダー応募",
@@ -32,6 +33,10 @@ export function isValidSource(value: string): value is OutboxSource {
 
 export function getSourceLabel(source: OutboxSource): string {
   return SOURCE_LABELS[source];
+}
+
+export function isValidStatus(value: string): value is OutboxStatus {
+  return VALID_STATUSES.includes(value as OutboxStatus);
 }
 
 // ==================== ステータス導出 ====================
@@ -167,35 +172,41 @@ export async function countOutboxIncomplete(source: OutboxSource): Promise<numbe
   return prisma.projectOutboxMessage.count({ where });
 }
 
-export async function findOutboxMessage(source: OutboxSource, id: string) {
-  if (source === "leaderApplication") {
-    return prisma.leaderApplicationOutboxMessage.findUnique({
-      where: { id },
-      select: selectFields,
-    });
-  }
-  return prisma.projectOutboxMessage.findUnique({
-    where: { id },
-    select: selectFields,
-  });
-}
-
-export async function retryOutboxMessage(source: OutboxSource, id: string) {
+/**
+ * 手動リトライ: deadLetteredAt / nextRetryAt / lastError をクリアしてワーカー再処理対象に戻す。
+ * attempts は意図的にリセットしない（監査証跡として保持し、過去の試行回数を確認可能にする）。
+ *
+ * sentAt が既に設定済みの場合は更新せず 0 件を返す（TOCTOU 防止）。
+ */
+export async function retryOutboxMessage(
+  source: OutboxSource,
+  id: string
+): Promise<{ count: number }> {
+  const where = { id, sentAt: null };
   const data = {
     deadLetteredAt: null,
     nextRetryAt: null,
     lastError: null,
   };
   if (source === "leaderApplication") {
-    return prisma.leaderApplicationOutboxMessage.update({ where: { id }, data });
+    return prisma.leaderApplicationOutboxMessage.updateMany({ where, data });
   }
-  return prisma.projectOutboxMessage.update({ where: { id }, data });
+  return prisma.projectOutboxMessage.updateMany({ where, data });
 }
 
-export async function completeOutboxMessage(source: OutboxSource, id: string) {
+/**
+ * 手動完了マーク: sentAt を設定して処理済みにする。
+ *
+ * sentAt が既に設定済みの場合は更新せず 0 件を返す（TOCTOU 防止）。
+ */
+export async function completeOutboxMessage(
+  source: OutboxSource,
+  id: string
+): Promise<{ count: number }> {
+  const where = { id, sentAt: null };
   const data = { sentAt: new Date() };
   if (source === "leaderApplication") {
-    return prisma.leaderApplicationOutboxMessage.update({ where: { id }, data });
+    return prisma.leaderApplicationOutboxMessage.updateMany({ where, data });
   }
-  return prisma.projectOutboxMessage.update({ where: { id }, data });
+  return prisma.projectOutboxMessage.updateMany({ where, data });
 }

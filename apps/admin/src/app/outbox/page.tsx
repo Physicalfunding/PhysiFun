@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   queryOutboxItems,
   countOutboxByStatus,
+  isValidStatus,
   type OutboxSource,
   type OutboxStatus,
 } from "@/lib/outbox";
@@ -33,14 +34,17 @@ export default async function OutboxListPage({
 }) {
   const params = await searchParams;
   const currentSource: OutboxSource = params.source === "project" ? "project" : "leaderApplication";
-  const currentStatusFilter = params.status ?? "incomplete";
+  // ステータスバリデーション: 無効な値は "incomplete" にフォールバック
+  const rawStatus = params.status ?? "incomplete";
+  const currentStatusFilter =
+    rawStatus === "incomplete" || isValidStatus(rawStatus) ? rawStatus : "incomplete";
   const page = Math.max(1, Number(params.page) || 1);
   const perPage = 20;
 
   // ステータスを Prisma クエリ用に変換
   // "incomplete" = デフォルト（sentAt IS NULL）、それ以外はそのまま
   const queryStatus: OutboxStatus | undefined =
-    currentStatusFilter === "incomplete" ? undefined : (currentStatusFilter as OutboxStatus);
+    currentStatusFilter === "incomplete" ? undefined : currentStatusFilter;
 
   // データ取得 + 各ステータスのカウント（並列）
   const [result, pendingCount, retryingCount, deadLetteredCount, sentCount] = await Promise.all([

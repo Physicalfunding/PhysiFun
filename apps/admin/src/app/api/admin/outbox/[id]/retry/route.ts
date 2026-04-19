@@ -5,16 +5,10 @@ import {
   successResponse,
   unauthorizedResponse,
   validationErrorResponse,
-  notFoundResponse,
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-import {
-  isValidSource,
-  findOutboxMessage,
-  retryOutboxMessage,
-  type OutboxSource,
-} from "@/lib/outbox";
+import { isValidSource, retryOutboxMessage, type OutboxSource } from "@/lib/outbox";
 
 /**
  * POST /api/admin/outbox/:id/retry
@@ -54,16 +48,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     const source: OutboxSource = body.source;
 
-    const message = await findOutboxMessage(source, id);
-    if (!message) {
-      return notFoundResponse("Outbox メッセージ");
-    }
+    // updateMany with sentAt: null で TOCTOU を防止
+    const result = await retryOutboxMessage(source, id);
 
-    if (message.sentAt !== null) {
-      return unprocessableEntityResponse("送信済みメッセージはリトライできません");
+    if (result.count === 0) {
+      return unprocessableEntityResponse("対象メッセージが見つからないか、既に送信済みです");
     }
-
-    await retryOutboxMessage(source, id);
 
     return successResponse({ id, message: "リトライ対象に戻しました" });
   } catch (e) {

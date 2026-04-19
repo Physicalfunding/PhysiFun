@@ -5,16 +5,10 @@ import {
   successResponse,
   unauthorizedResponse,
   validationErrorResponse,
-  notFoundResponse,
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-import {
-  isValidSource,
-  findOutboxMessage,
-  completeOutboxMessage,
-  type OutboxSource,
-} from "@/lib/outbox";
+import { isValidSource, completeOutboxMessage, type OutboxSource } from "@/lib/outbox";
 
 /**
  * POST /api/admin/outbox/:id/complete
@@ -53,16 +47,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     const source: OutboxSource = body.source;
 
-    const message = await findOutboxMessage(source, id);
-    if (!message) {
-      return notFoundResponse("Outbox メッセージ");
-    }
+    // updateMany with sentAt: null で TOCTOU を防止
+    const result = await completeOutboxMessage(source, id);
 
-    if (message.sentAt !== null) {
-      return unprocessableEntityResponse("既に送信済みです");
+    if (result.count === 0) {
+      return unprocessableEntityResponse("対象メッセージが見つからないか、既に送信済みです");
     }
-
-    await completeOutboxMessage(source, id);
 
     return successResponse({ id, message: "完了としてマークしました" });
   } catch (e) {
