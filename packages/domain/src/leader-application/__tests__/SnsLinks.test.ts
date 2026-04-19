@@ -73,11 +73,12 @@ describe("SnsLinks", () => {
       expect(result.ok).toBe(true);
     });
 
-    it("http:// で始まる URL も ok (HTTPS 未対応サイト配慮)", () => {
+    it("http:// で始まる URL は拒否 (Mixed Content 回避)", () => {
       const result = SnsLinks.create({ website: "http://example.local" });
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.website).toBe("http://example.local");
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe("INVALID_URL_SCHEME");
+        expect(result.error.field).toBe("website");
       }
     });
 
@@ -160,7 +161,7 @@ describe("SnsLinks", () => {
       const result = SnsLinks.create({ x: "javascript:alert(1)" });
       expect(result.ok).toBe(false);
       if (!result.ok && result.error.type === "INVALID_URL_SCHEME") {
-        expect(result.error.allowedSchemes).toEqual(["https://", "http://"]);
+        expect(result.error.allowedSchemes).toEqual(["https://"]);
       }
     });
   });

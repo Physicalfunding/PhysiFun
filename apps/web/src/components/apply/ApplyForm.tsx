@@ -15,7 +15,7 @@ import { CATEGORY_MASTER, PROJECT_DRAFT_LIMITS } from "@physifun/domain";
  *
  * - 任意入力 (空文字 or undefined は通す)
  * - 最大 500 文字
- * - `https://` / `http://` スキームのみ許可 (XSS 対策)
+ * - `https://` スキームのみ許可 (XSS 対策 + Mixed Content 回避)
  *
  * ドメイン層 (`SnsLinks.create`) で同等のスキーム検証を行うが、
  * フォーム段階で弾くことでユーザー体験を損なわないようにする。
@@ -25,8 +25,8 @@ function snsUrlField(label: string) {
     .string()
     .max(500, `${label} の URL は 500 文字以内です`)
     .refine(
-      (v) => v === "" || /^https?:\/\//i.test(v),
-      `${label} は https:// または http:// で始まる URL を入力してください`
+      (v) => v === "" || /^https:\/\//i.test(v),
+      `${label} は https:// で始まる URL を入力してください`
     )
     .optional();
 }
