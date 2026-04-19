@@ -91,7 +91,8 @@ jobs:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Run tests
-        run: bun test
+        # tests/e2e の Playwright spec は bun test が拾わないよう apps/packages のみを対象にする
+        run: bun test apps packages
 
   build:
     name: Build

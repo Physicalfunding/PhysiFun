@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "tests/*"
   ],
   "scripts": {
     "dev": "bun --filter @physifun/web dev",
@@ -24,6 +25,8 @@
     "db:studio": "bun --filter @physifun/infrastructure db:studio",
     "dev:admin": "bun --filter @physifun/admin dev",
     "build:admin": "bun --filter @physifun/admin build",
+    "test:e2e": "bun --filter @physifun/e2e test",
+    "test:e2e:ui": "bun --filter @physifun/e2e test:ui",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

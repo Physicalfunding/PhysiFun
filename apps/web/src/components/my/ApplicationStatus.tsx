@@ -105,7 +105,11 @@ export function ApplicationStatus() {
       {/* ステータスカード */}
       <Card>
         <CardContent>
-          <div className={`rounded-lg p-6 ${config.bgClass}`}>
+          <div
+            className={`rounded-lg p-6 ${config.bgClass}`}
+            data-testid="application-status"
+            data-status={application.status}
+          >
             <div className="flex items-center gap-3">
               <span className="text-3xl">{config.icon}</span>
               <div>

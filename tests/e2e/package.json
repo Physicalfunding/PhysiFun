@@ -1,0 +1,22 @@
+{
+  "name": "@physifun/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@physifun/domain": "workspace:*",
+    "@physifun/infrastructure": "workspace:*",
+    "bcryptjs": "^3.0.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}
