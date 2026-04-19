@@ -13,6 +13,7 @@ type MockMessage = {
   attempts: number;
   lastError: string | null;
   nextRetryAt: Date | null;
+  deadLetteredAt: Date | null;
 };
 
 const mockFindMany = jest.fn<() => Promise<MockMessage[]>>();
@@ -51,6 +52,7 @@ const makeDbMessage = (overrides?: Partial<MockMessage>): MockMessage => ({
   attempts: 0,
   lastError: null,
   nextRetryAt: null,
+  deadLetteredAt: null,
   ...overrides,
 });
 
