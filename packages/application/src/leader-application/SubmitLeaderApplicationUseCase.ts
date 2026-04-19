@@ -40,7 +40,13 @@ const snsLinksSchema = z
  * 文字数上限はドメイン層の PROJECT_DRAFT_LIMITS を参照し、Single Source of Truth を維持する。
  */
 export const submitLeaderApplicationInputSchema = z.object({
-  email: z.string().email("有効なメールアドレスを入力してください"),
+  email: z
+    .string()
+    .email("有効なメールアドレスを入力してください")
+    // メールアドレスはケースインセンシティブで扱う必要があるため、
+    // 入力段で trim + toLowerCase して正規化する。
+    // 以降の重複チェック / Account.email 保存 / Outbox payload に一貫した形で伝播する。
+    .transform((value) => value.trim().toLowerCase()),
   displayName: z.string().min(1, "表示名は必須です").max(50, "表示名は 50 文字以内です"),
   projectTitle: z
     .string()

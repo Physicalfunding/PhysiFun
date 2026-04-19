@@ -35,7 +35,10 @@ export const authOptions: NextAuthOptions = {
         const adapter = getAuthenticateAdapter();
         const hasher = getBcryptPasswordHasher();
 
-        const account = await adapter.findActiveAccountByEmail(credentials.email);
+        // Account.email は登録時に trim + toLowerCase で正規化しているため、
+        // ログイン側も同じ正規化を行わないと大文字小文字差でログイン不能になる
+        const normalizedEmail = credentials.email.trim().toLowerCase();
+        const account = await adapter.findActiveAccountByEmail(normalizedEmail);
 
         // タイミング攻撃対策: アカウントが無い場合もダミーハッシュで compare を実行して
         // レスポンスタイムを均一化する
