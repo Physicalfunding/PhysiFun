@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { OutboxSource, OutboxStatus } from "@/lib/outbox";
+import type { OutboxSource, OutboxStatus } from "@physifun/infrastructure";
 
 interface OutboxActionsProps {
   id: string;
@@ -16,7 +16,8 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (status === "sent") return null;
+  // pending（未処理）と sent（送信済み）はアクション不要
+  if (status === "sent" || status === "pending") return null;
 
   async function handleRetry() {
     if (!window.confirm("このメッセージをリトライ対象に戻しますか？")) return;

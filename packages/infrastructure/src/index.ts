@@ -35,6 +35,17 @@ export {
 
 export { PrismaProjectCommandAdapter } from "./project/PrismaProjectCommandAdapter";
 
+export {
+  PrismaOutboxQueryService,
+  deriveOutboxStatus,
+  isValidSource as isValidOutboxSource,
+  isValidStatus as isValidOutboxStatus,
+  type OutboxSource,
+  type OutboxStatus,
+  type OutboxListItem,
+} from "./outbox/admin/PrismaOutboxQueryService";
+export { PrismaOutboxCommandAdapter } from "./outbox/admin/PrismaOutboxCommandAdapter";
+
 // Prisma Client のクラスや runtime 値は再エクスポートしない
 // (`PrismaClient` を apps/web 側で new できないようにするため)。
 // モデル型・enum 値は必要になった時点で type-only 再エクスポートを追加する。

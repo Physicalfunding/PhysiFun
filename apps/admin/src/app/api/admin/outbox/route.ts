@@ -1,19 +1,21 @@
 import { type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import {
+  PrismaOutboxQueryService,
+  deriveOutboxStatus,
+  isValidOutboxSource,
+  isValidOutboxStatus,
+  type OutboxSource,
+  type OutboxStatus,
+} from "@physifun/infrastructure";
+import {
   successResponse,
   unauthorizedResponse,
   validationErrorResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-import {
-  isValidSource,
-  queryOutboxItems,
-  type OutboxSource,
-  type OutboxStatus,
-} from "@/lib/outbox";
 
-const VALID_STATUSES: readonly OutboxStatus[] = ["pending", "retrying", "dead-lettered", "sent"];
+const queryService = new PrismaOutboxQueryService();
 
 /**
  * GET /api/admin/outbox
@@ -40,7 +42,7 @@ export async function GET(request: NextRequest) {
     const perPageParam = searchParams.get("perPage");
 
     // source バリデーション（必須）
-    if (!sourceParam || !isValidSource(sourceParam)) {
+    if (!sourceParam || !isValidOutboxSource(sourceParam)) {
       return validationErrorResponse("source パラメータが必要です", {
         source: ["leaderApplication, project のいずれかを指定してください"],
       });
@@ -50,21 +52,32 @@ export async function GET(request: NextRequest) {
     // status バリデーション
     let status: OutboxStatus | undefined;
     if (statusParam) {
-      if (!VALID_STATUSES.includes(statusParam as OutboxStatus)) {
+      if (!isValidOutboxStatus(statusParam)) {
         return validationErrorResponse("無効なステータスです", {
-          status: [`${VALID_STATUSES.join(", ")} のいずれかを指定してください`],
+          status: ["pending, retrying, dead-lettered, sent のいずれかを指定してください"],
         });
       }
-      status = statusParam as OutboxStatus;
+      status = statusParam;
     }
 
     const page = Math.max(1, Number(pageParam) || 1);
     const perPage = Math.min(100, Math.max(1, Number(perPageParam) || 20));
 
-    const result = await queryOutboxItems(source, { status, page, perPage });
+    const result = await queryService.findMany(source, { status, page, perPage });
 
     return successResponse({
-      items: result.items,
+      items: result.items.map((item) => ({
+        id: item.id,
+        type: item.type,
+        createdAt: item.createdAt.toISOString(),
+        sentAt: item.sentAt?.toISOString() ?? null,
+        attempts: item.attempts,
+        lastError: item.lastError,
+        nextRetryAt: item.nextRetryAt?.toISOString() ?? null,
+        deadLetteredAt: item.deadLetteredAt?.toISOString() ?? null,
+        status: deriveOutboxStatus(item),
+        source,
+      })),
       totalCount: result.totalCount,
       page,
       perPage,

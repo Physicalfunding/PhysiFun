@@ -2,14 +2,15 @@ import Link from "next/link";
 import {
   PrismaLeaderApplicationQueryService,
   PrismaProjectQueryService,
+  PrismaOutboxQueryService,
 } from "@physifun/infrastructure";
-import { countOutboxIncomplete } from "@/lib/outbox";
 
 // ADMIN 認証が必要な動的ページのため、ビルド時の静的生成を無効化する
 export const dynamic = "force-dynamic";
 
 const leaderApplicationQueryService = new PrismaLeaderApplicationQueryService();
 const projectQueryService = new PrismaProjectQueryService();
+const outboxQueryService = new PrismaOutboxQueryService();
 
 /**
  * 運営管理トップページ
@@ -19,8 +20,8 @@ export default async function AdminTopPage() {
     leaderApplicationQueryService.countByStatus("PENDING"),
     projectQueryService.countByStatus("PENDING_REVIEW"),
     Promise.all([
-      countOutboxIncomplete("leaderApplication"),
-      countOutboxIncomplete("project"),
+      outboxQueryService.countIncomplete("leaderApplication"),
+      outboxQueryService.countIncomplete("project"),
     ]).then(([a, b]) => a + b),
   ]);
 

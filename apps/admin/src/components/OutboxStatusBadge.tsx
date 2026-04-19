@@ -1,4 +1,4 @@
-import type { OutboxStatus } from "@/lib/outbox";
+import type { OutboxStatus } from "@physifun/infrastructure";
 
 const BADGE_STYLES: Record<OutboxStatus, string> = {
   pending: "bg-yellow-100 text-yellow-800",

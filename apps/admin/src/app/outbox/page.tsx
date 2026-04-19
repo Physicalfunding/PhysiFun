@@ -1,15 +1,18 @@
 import Link from "next/link";
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 import {
-  queryOutboxItems,
-  countOutboxByStatus,
-  isValidStatus,
+  PrismaOutboxQueryService,
+  deriveOutboxStatus,
+  isValidOutboxStatus,
   type OutboxSource,
   type OutboxStatus,
-} from "@/lib/outbox";
+} from "@physifun/infrastructure";
 import { OutboxStatusBadge } from "@/components/OutboxStatusBadge";
 import { OutboxActions } from "@/components/OutboxActions";
 
 export const dynamic = "force-dynamic";
+
+const queryService = new PrismaOutboxQueryService();
 
 const SOURCE_TABS: { source: OutboxSource; label: string }[] = [
   { source: "leaderApplication", label: "リーダー応募" },
@@ -37,7 +40,7 @@ export default async function OutboxListPage({
   // ステータスバリデーション: 無効な値は "incomplete" にフォールバック
   const rawStatus = params.status ?? "incomplete";
   const currentStatusFilter =
-    rawStatus === "incomplete" || isValidStatus(rawStatus) ? rawStatus : "incomplete";
+    rawStatus === "incomplete" || isValidOutboxStatus(rawStatus) ? rawStatus : "incomplete";
   const page = Math.max(1, Number(params.page) || 1);
   const perPage = 20;
 
@@ -48,11 +51,11 @@ export default async function OutboxListPage({
 
   // データ取得 + 各ステータスのカウント（並列）
   const [result, pendingCount, retryingCount, deadLetteredCount, sentCount] = await Promise.all([
-    queryOutboxItems(currentSource, { status: queryStatus, page, perPage }),
-    countOutboxByStatus(currentSource, "pending"),
-    countOutboxByStatus(currentSource, "retrying"),
-    countOutboxByStatus(currentSource, "dead-lettered"),
-    countOutboxByStatus(currentSource, "sent"),
+    queryService.findMany(currentSource, { status: queryStatus, page, perPage }),
+    queryService.countByStatus(currentSource, "pending"),
+    queryService.countByStatus(currentSource, "retrying"),
+    queryService.countByStatus(currentSource, "dead-lettered"),
+    queryService.countByStatus(currentSource, "sent"),
   ]);
 
   const totalPages = Math.ceil(result.totalCount / perPage);
@@ -142,48 +145,51 @@ export default async function OutboxListPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {result.items.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                    {new Date(item.createdAt).toLocaleString("ja-JP", {
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </td>
-                  <td className="px-4 py-3 text-sm font-mono text-gray-900">{item.type}</td>
-                  <td className="px-4 py-3">
-                    <OutboxStatusBadge status={item.status} />
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{item.attempts}</td>
-                  <td className="max-w-xs px-4 py-3 text-sm text-gray-600">
-                    {item.lastError ? (
-                      <span className="block truncate" title={item.lastError}>
-                        {item.lastError}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
-                    {item.nextRetryAt ? (
-                      new Date(item.nextRetryAt).toLocaleString("ja-JP", {
+              {result.items.map((item) => {
+                const status = deriveOutboxStatus(item);
+                return (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                      {item.createdAt.toLocaleString("ja-JP", {
+                        year: "numeric",
                         month: "2-digit",
                         day: "2-digit",
                         hour: "2-digit",
                         minute: "2-digit",
-                      })
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <OutboxActions id={item.id} source={item.source} status={item.status} />
-                  </td>
-                </tr>
-              ))}
+                      })}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sm text-gray-900">{item.type}</td>
+                    <td className="px-4 py-3">
+                      <OutboxStatusBadge status={status} />
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{item.attempts}</td>
+                    <td className="max-w-xs px-4 py-3 text-sm text-gray-600">
+                      {item.lastError ? (
+                        <span className="block truncate" title={item.lastError}>
+                          {item.lastError}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
+                      {item.nextRetryAt ? (
+                        item.nextRetryAt.toLocaleString("ja-JP", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <OutboxActions id={item.id} source={currentSource} status={status} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

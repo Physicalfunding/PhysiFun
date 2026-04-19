@@ -2,13 +2,19 @@ import { type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { isUuidV4 } from "@physifun/domain";
 import {
+  PrismaOutboxCommandAdapter,
+  isValidOutboxSource,
+  type OutboxSource,
+} from "@physifun/infrastructure";
+import {
   successResponse,
   unauthorizedResponse,
   validationErrorResponse,
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-import { isValidSource, completeOutboxMessage, type OutboxSource } from "@/lib/outbox";
+
+const commandAdapter = new PrismaOutboxCommandAdapter();
 
 /**
  * POST /api/admin/outbox/:id/complete
@@ -40,7 +46,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return validationErrorResponse("リクエストボディが不正です", {});
     }
 
-    if (typeof body.source !== "string" || !isValidSource(body.source)) {
+    if (typeof body.source !== "string" || !isValidOutboxSource(body.source)) {
       return validationErrorResponse("source パラメータが必要です", {
         source: ["leaderApplication, project のいずれかを指定してください"],
       });
@@ -48,7 +54,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const source: OutboxSource = body.source;
 
     // updateMany with sentAt: null で TOCTOU を防止
-    const result = await completeOutboxMessage(source, id);
+    const result = await commandAdapter.complete(source, id);
 
     if (result.count === 0) {
       return unprocessableEntityResponse("対象メッセージが見つからないか、既に送信済みです");
