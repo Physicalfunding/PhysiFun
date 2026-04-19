@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import {
   SubmitLeaderApplicationUseCase,
-  type SubmitLeaderApplicationPort,
   type SubmitLeaderApplicationError,
 } from "@physifun/application";
 import {
@@ -11,22 +10,7 @@ import {
   errorResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-
-/**
- * SubmitLeaderApplicationPort のスタブ実装
- *
- * TODO: infrastructure 層に Prisma 実装を作成し、このスタブを置き換える
- */
-const stubPort: SubmitLeaderApplicationPort = {
-  async findAccountByEmail(_email: string) {
-    // TODO: Prisma で Account を検索する実装に置き換え
-    return null;
-  },
-  async executeInTransaction(_params) {
-    // TODO: Prisma トランザクションで Account + LeaderApplication + OutboxMessage を作成する実装に置き換え
-    return;
-  },
-};
+import { getSubmitLeaderApplicationPort } from "@/lib/di/leader-application";
 
 /**
  * UseCase のエラー型に応じた HTTP レスポンスを返す
@@ -65,7 +49,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 
-    const useCase = new SubmitLeaderApplicationUseCase(stubPort);
+    const useCase = new SubmitLeaderApplicationUseCase(getSubmitLeaderApplicationPort());
     const result = await useCase.execute({
       ...body,
       ipAddress,

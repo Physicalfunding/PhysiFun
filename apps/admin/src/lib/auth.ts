@@ -1,5 +1,14 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { getAuthenticateAdapter, getBcryptPasswordHasher } from "./di/auth";
+
+/**
+ * ユーザーが存在しない / passwordHash が無い場合のタイミング攻撃対策用ダミーハッシュ。
+ *
+ * bcrypt.compare を必ず 1 回実行することで、存在しないユーザーと
+ * パスワード不一致の応答時間差をなくす。
+ */
+const DUMMY_BCRYPT_HASH = "$2b$10$xayTtqBxF8k.DEBoqEFA0O6QFFGFVLTB.sp4jrtA7KCnVKkvlcRFa";
 
 /**
  * 運営管理アプリ用 NextAuth.js 設定
@@ -7,7 +16,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
  * Credentials プロバイダーでメール + パスワード認証を行い、
  * ADMIN ロールを持つ Account のみログインを許可する。
  *
- * TODO: Account ベース認証が Issue #61 で実装されたら authorize を接続する
+ * 1. Prisma で Account を取得（ACTIVE かつ passwordHash あり）
+ * 2. bcrypt でパスワード検証
+ * 3. roles に ADMIN が含まれるか確認
  */
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,18 +28,34 @@ export const authOptions: NextAuthOptions = {
         email: { label: "メールアドレス", type: "email" },
         password: { label: "パスワード", type: "password" },
       },
-      /**
-       * 認証処理
-       *
-       * 1. Prisma で Account を取得
-       * 2. bcrypt でパスワード検証
-       * 3. roles に ADMIN が含まれるか確認
-       *
-       * TODO: infrastructure 層の認証サービスと接続する
-       */
-      async authorize() {
-        // Phase 1 スタブ: Account ベース認証が実装されるまでログイン不可
-        return null;
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials.password) {
+          return null;
+        }
+
+        const adapter = getAuthenticateAdapter();
+        const hasher = getBcryptPasswordHasher();
+
+        const account = await adapter.findActiveAccountByEmail(credentials.email);
+
+        // タイミング攻撃対策: アカウントが無い場合もダミーハッシュで compare を実行
+        const hashToCompare = account?.passwordHash ?? DUMMY_BCRYPT_HASH;
+        const passwordOk = await hasher.compare(credentials.password, hashToCompare);
+
+        if (!account || !passwordOk) {
+          return null;
+        }
+
+        // ADMIN ロール検証: ADMIN が含まれない場合はログイン拒否
+        if (!account.roles.includes("ADMIN")) {
+          return null;
+        }
+
+        return {
+          id: account.id,
+          email: account.email,
+          roles: [...account.roles],
+        };
       },
     }),
   ],
@@ -54,8 +81,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        // TODO: roles を token に保存する
-        // token.roles = (user as any).roles;
+        token.roles = user.roles;
       }
       return token;
     },
@@ -63,8 +89,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id;
-        // TODO: roles を session に公開する
-        // session.user.roles = token.roles;
+        session.user.roles = token.roles;
       }
       return session;
     },

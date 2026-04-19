@@ -18,10 +18,12 @@
     "@physifun/application": "workspace:*",
     "@physifun/domain": "workspace:*",
     "@prisma/client": "^6.9.0",
+    "bcryptjs": "^3.0.3",
     "resend": "^6.9.3"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "dotenv": "^16.4.5",
     "prisma": "^6.9.0",
