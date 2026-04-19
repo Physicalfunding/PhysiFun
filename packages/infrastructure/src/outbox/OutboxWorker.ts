@@ -1,6 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 import type { OutboxProcessor } from "./types";
-import { OutboxWorkerBase, type OutboxWorkerOptions } from "./OutboxWorkerBase";
+import {
+  OutboxWorkerBase,
+  type OutboxDelegate,
+  type OutboxWorkerOptions,
+} from "./OutboxWorkerBase";
 
 /**
  * LeaderApplication 用 Outbox ワーカー。
@@ -13,7 +17,7 @@ export class OutboxWorker {
 
   constructor(prisma: PrismaClient, processors: OutboxProcessor[], options?: OutboxWorkerOptions) {
     this.base = new OutboxWorkerBase(
-      prisma.leaderApplicationOutboxMessage as any,
+      prisma.leaderApplicationOutboxMessage as unknown as OutboxDelegate,
       processors,
       options
     );

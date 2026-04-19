@@ -5,6 +5,10 @@ import type { OutboxProcessor } from "./types";
  *
  * Prisma の `leaderApplicationOutboxMessage` / `projectOutboxMessage` のように
  * `findMany` / `update` を提供するモデルを抽象化する。
+ *
+ * **NOTE**: `where` / `data` を `Record<string, unknown>` で受けるため、
+ * Prisma 固有のクエリ構造 (OR, lte 等) の型安全性はコンパイル時に保証されない。
+ * クエリ構造の変更時は `OutboxWorkerBase.tick()` 内の呼び出しを手動で確認すること。
  */
 export interface OutboxDelegate {
   findMany(args: {
