@@ -13,11 +13,11 @@ import type { OutboxProcessor } from "./types";
 export interface OutboxDelegate {
   findMany(args: {
     where: Record<string, unknown>;
-    orderBy: Record<string, string>;
+    orderBy: Record<string, "asc" | "desc">;
     take: number;
   }): Promise<OutboxRow[]>;
 
-  update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<unknown>;
+  update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<void>;
 }
 
 /** Prisma から取得した Outbox 行の共通型 */
@@ -111,7 +111,7 @@ export class OutboxWorkerBase {
         const outboxMessage = {
           id: msg.id,
           type: msg.type,
-          payload: msg.payload as Record<string, unknown>,
+          payload: msg.payload,
           createdAt: msg.createdAt,
           sentAt: msg.sentAt,
           attempts: msg.attempts,
