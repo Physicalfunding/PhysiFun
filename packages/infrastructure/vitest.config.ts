@@ -18,7 +18,13 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 120_000,
     // 1 つの PostgreSQL コンテナをテスト間で共有する。並列実行時の DB 競合を避けるため
-    // fileParallelism を無効にしてテストファイルを直列実行する (初回導入時点の設計)。
+    // fileParallelism を無効にしてテストファイルを直列実行する。
+    // vitest v4 では `fileParallelism: false` を設定すると `maxWorkers` が 1 に強制されるため、
+    // ワーカーは 1 つのフォークに固定され、globalSetup で `process.env` に注入した
+    // `DATABASE_URL` がフォーク起動時に継承される (Node の child_process.fork は親の env を継承する)。
+    // v3 時代の `poolOptions.forks.singleFork` 相当の挙動を、v4 では fileParallelism: false
+    // + pool: "forks" (デフォルト明示) で表現している。
+    pool: "forks",
     fileParallelism: false,
   },
 });

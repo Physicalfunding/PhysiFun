@@ -21,7 +21,16 @@ export async function setup(): Promise<void> {
   // 既に Docker 外で DB が用意されている場合 (例: docker-compose) はそれを使う
   if (process.env.INFRA_TEST_DATABASE_URL) {
     process.env.DATABASE_URL = process.env.INFRA_TEST_DATABASE_URL;
-    runMigrateDeploy(process.env.DATABASE_URL);
+    // コンテナ起動パスと同様、migrate deploy の失敗は明示的に検知してテスト全体を失敗させる。
+    // コンテナを起動していないパスなので teardown は不要だが、原因を特定しやすいようにラップして再 throw する。
+    try {
+      runMigrateDeploy(process.env.DATABASE_URL);
+    } catch (err) {
+      throw new Error(
+        `prisma migrate deploy が失敗しました (INFRA_TEST_DATABASE_URL 使用時): ${err instanceof Error ? err.message : String(err)}`,
+        { cause: err },
+      );
+    }
     return;
   }
 
