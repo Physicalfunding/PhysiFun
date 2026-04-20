@@ -3,7 +3,7 @@ import type { ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { PREFECTURES } from "@/lib/prefectures";
-import { isSafeHttpsUrl } from "@/lib/isSafeHttpsUrl";
+import { SafeSnsLink, isSafeHttpsUrl } from "@physifun/ui-shared";
 import { ProjectPublicTabs } from "./ProjectPublicTabs";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
@@ -104,7 +104,7 @@ export function ProjectPublicView({ project }: Props) {
         </CardContent>
       </Card>
 
-      {/* SNS リンク — defense-in-depth: isSafeHttpsUrl で javascript: 等を遮断 */}
+      {/* SNS リンク — defense-in-depth: SafeSnsLink 内部で javascript: 等を遮断 */}
       {snsEntries.length > 0 && (
         <Card>
           <CardContent>
@@ -112,20 +112,7 @@ export function ProjectPublicView({ project }: Props) {
             <ul className="space-y-2">
               {snsEntries.map(([key, url]) => (
                 <li key={key}>
-                  {isSafeHttpsUrl(url) ? (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
-                    >
-                      {SNS_LABEL[key] || key}
-                    </a>
-                  ) : (
-                    <span className="text-sm text-red-600">
-                      {SNS_LABEL[key] || key}: 表示できない URL 形式です
-                    </span>
-                  )}
+                  <SafeSnsLink label={SNS_LABEL[key] || key} url={url} variant="listItem" />
                 </li>
               ))}
             </ul>

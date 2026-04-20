@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
 import { ReviewActions } from "@/components/ReviewActions";
-import { SafeSnsLink } from "@/components/SafeSnsLink";
+import { SafeSnsLink } from "@physifun/ui-shared";
 import { getCategoryLabel } from "@/lib/category";
 import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
 import { getPrefectureName } from "@/lib/prefecture";
