@@ -28,7 +28,7 @@ export async function setup(): Promise<void> {
     } catch (err) {
       throw new Error(
         `prisma migrate deploy が失敗しました (INFRA_TEST_DATABASE_URL 使用時): ${err instanceof Error ? err.message : String(err)}`,
-        { cause: err },
+        { cause: err }
       );
     }
     return;
