@@ -1,11 +1,12 @@
 /**
  * @jest-environment node
  *
- * middleware 全体の統合テスト (CSRF 層のみ)。
+ * middleware 全体の統合テスト (CSRF 層 + `/my/*` 委譲)。
  *
  * `/my/*` 配下のテストは NextAuth の `withAuth` ラッパー (cookie / JWT 検証) に
- * 依存するためここでは扱わない。代わりに `/api/*` 系の body-less POST エンドポイント
- * (Issue #109 の対象: request-publish / withdraw / unpublish) に対して、
+ * 依存する。認証トークンが無い場合の挙動 (サインイン画面へのリダイレクト) を
+ * 含めて確認する。また、`/api/*` 系の body-less POST エンドポイント
+ * (Issue #109 の対象: request-publish / withdraw / unpublish) に対して
  * CSRF OK / NG でどのように応答されるかを検証する。
  */
 import middleware from "../middleware";
@@ -18,9 +19,11 @@ function buildRequest(options: {
 }): NextRequest {
   const method = options.method ?? "POST";
   const pathname = options.pathname ?? "/api/my/projects/abc/request-publish";
-  const headers = new Map(
-    Object.entries(options.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v])
-  );
+  // グローバル `Headers` を使うことで `get` / `has` / `entries` 等の標準挙動を満たす。
+  const headers = new Headers();
+  for (const [k, v] of Object.entries(options.headers ?? {})) {
+    headers.set(k, v);
+  }
   const url = `https://app.example.com${pathname}`;
   return {
     method,
@@ -35,8 +38,12 @@ function buildRequest(options: {
       searchParams: new URLSearchParams(),
       clone: () => new URL(url),
     },
-    headers: {
-      get: (name: string) => headers.get(name.toLowerCase()) ?? null,
+    headers,
+    // withAuth が cookie 系 API を参照するため、空オブジェクトで満たしておく。
+    cookies: {
+      get: () => undefined,
+      getAll: () => [],
+      has: () => false,
     },
   } as unknown as NextRequest;
 }
@@ -123,11 +130,9 @@ describe("middleware (CSRF 層)", () => {
     expect(res?.status).not.toBe(403);
   });
 
-  it("`/my/*` は CSRF 検証の対象外 (pathname 非 /api/ のため通過)", async () => {
-    // /my/* はページ遷移で form POST 対象ではないが、matcher で拾っているため
-    // middleware は呼ばれる。ただし CSRF 検証は /api/* のみなので、ここでは
-    // NextAuth の withAuth に委譲される。認証トークンが無ければ 403 ではなく
-    // サインインへのリダイレクトになる想定。
+  it("`/my/*` は未ログインだと NextAuth のサインイン画面へリダイレクトされる (307 or 302)", async () => {
+    // /my/* はページ遷移なので CSRF の対象ではない (evil origin でも通す)。
+    // NextAuth の withAuth が token を確認し、無ければサインインへリダイレクトする。
     const req = buildRequest({
       method: "POST",
       pathname: "/my/projects/abc/edit",
@@ -137,9 +142,15 @@ describe("middleware (CSRF 層)", () => {
       },
     });
     const res = await middleware(req, mockEvent);
-    // 403 (CSRF 拒否) ではないことを確認する。
-    // withAuth は通常未ログインならリダイレクト (307/302) を返す。
-    expect(res?.status).not.toBe(403);
+    expect(res).toBeDefined();
+    // NextAuth v4 系は 307 (Temporary Redirect) を返す実装だが、バージョンによっては
+    // 302 (Found) もありうるため両方を許容する。
+    expect([302, 307]).toContain(res!.status);
+    // CSRF による 403 ではないことを明示的に再確認。
+    expect(res!.status).not.toBe(403);
+    // Location ヘッダーに sign-in 系の URL が含まれることを確認 (NextAuth 既定)。
+    const location = res!.headers.get("location");
+    expect(location).toBeTruthy();
   });
 
   it("`/api/auth/*` はクロスオリジンでも通過する (NextAuth 管理)", async () => {

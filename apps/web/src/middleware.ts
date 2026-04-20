@@ -1,6 +1,7 @@
 import { withAuth } from "next-auth/middleware";
+import type { NextRequestWithAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import type { NextFetchEvent, NextMiddleware, NextRequest } from "next/server";
+import type { NextFetchEvent, NextRequest } from "next/server";
 import { verifyCsrf } from "@/lib/csrf";
 
 /**
@@ -24,11 +25,18 @@ import { verifyCsrf } from "@/lib/csrf";
  * `/my/*` 配下の認証チェック付きミドルウェア。
  * NextAuth の `withAuth` を利用し、token が無ければ自動でログインページにリダイレクトする。
  *
- * 型メモ: `withAuth` の戻り値は `(req, ev) => ...` の NextMiddleware 互換だが、
- * next-auth の型定義が若干ゆるく、拡張 req (`token` 付き) を前提とするため、
- * ここでは `NextMiddleware` として扱って通常の NextRequest 側から呼び出す。
+ * 型メモ (next-auth@^4.24.11, next@16.1.1):
+ * - `withAuth` の戻り値は `NextMiddlewareWithAuth` (`req` に `nextauth.token` が生える
+ *   拡張 NextRequest を受ける) だが、呼び出し側で通常の `NextRequest` を渡すだけで
+ *   内部的に cookie から token を復元してくれるため、`NextRequest` を渡しても実行上は
+ *   問題なく動く。
+ * - 無理に `NextMiddleware` へキャストせず、`ReturnType<typeof withAuth>` で戻り値型を
+ *   そのまま保持する (型キャストは使わない)。呼び出し側で `request as any` 等も避ける。
+ *
+ * CSRF を「認証前に」走らせる設計を維持したいので、`authorized` コールバック内で CSRF を
+ * 混ぜる案は採用しない。ここでは withAuth を純粋に認証判定のみに使う。
  */
-const authMiddleware: NextMiddleware = withAuth(
+const authMiddleware: ReturnType<typeof withAuth> = withAuth(
   function middleware() {
     return NextResponse.next();
   },
@@ -37,7 +45,7 @@ const authMiddleware: NextMiddleware = withAuth(
       authorized: ({ token }) => !!token,
     },
   }
-) as unknown as NextMiddleware;
+);
 
 /**
  * Next.js middleware 本体。
@@ -54,8 +62,16 @@ export default async function middleware(request: NextRequest, event: NextFetchE
   }
 
   // 2. `/my/*` は認証必須。NextAuth の withAuth に委譲する。
+  //
+  // `withAuth` の戻り値シグネチャは `NextRequestWithAuth` (nextauth.token 付き) を
+  // 要求するが、ここでは token を middleware 自身では使わないため (authorized
+  // callback 側で判定する)、最低限の `nextauth` プロパティだけを補って渡す。
+  // 実体の token は withAuth 内部で cookie から復元される。
   if (request.nextUrl.pathname.startsWith("/my")) {
-    return authMiddleware(request, event);
+    const reqWithAuth = Object.assign(request, {
+      nextauth: { token: null },
+    }) as NextRequestWithAuth;
+    return authMiddleware(reqWithAuth, event);
   }
 
   return NextResponse.next();

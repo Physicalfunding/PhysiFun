@@ -52,13 +52,19 @@ export function shouldCheckCsrf(method: string, pathname: string): boolean {
  * 期待されるオリジン (scheme + host[:port]) のセットを組み立てる。
  *
  * 優先順位 (セキュリティ最優先):
- * 1. `NEXTAUTH_URL` が設定されていればそれのみを信頼する (本番推奨)。
- * 2. `NEXTAUTH_URL` が未設定 or パース失敗のときだけ、開発 fallback として
+ * 1. `NEXTAUTH_URL` が設定されていて正しい URL ならそれのみを信頼する (本番推奨)。
+ * 2. `NEXTAUTH_URL` が設定されているがパース失敗なら、誤設定の誤検知を避けるため
+ *    `console.error` で警告したうえで空配列を返し、呼び出し側で `origin_unresolved`
+ *    として 403 を返す (fail-safe)。`X-Forwarded-Host` へは fallback しない。
+ * 3. `NEXTAUTH_URL` が完全に未設定のときのみ、開発 fallback として
  *    `X-Forwarded-Host` / `Host` ヘッダーから導出する。
  *
- * 注意: `X-Forwarded-Host` をリクエストから無条件に信頼すると、攻撃者が任意の
- * ヘッダーを送ってきた際にオリジンをすり替えられる余地がある。そのため本番では
- * `NEXTAUTH_URL` を必ず設定する前提とする。
+ * 設計意図: `NEXTAUTH_URL` が存在する = 運用者は明示的にオリジンを宣言している、と
+ * みなす。そこで不正値を放置して `X-Forwarded-Host` に落ちると、攻撃者が任意の
+ * ヘッダーを送ってオリジンをすり替えられてしまう。そのため不正値は必ず拒否する。
+ *
+ * 開発 fallback (3) は `NEXTAUTH_URL` 未設定時のローカル動作のためだけに残している。
+ * 本番では必ず `NEXTAUTH_URL` を正しく設定する前提。
  *
  * @param request NextRequest (ヘッダーと nextUrl から自ホストを推定する)
  */
@@ -69,16 +75,25 @@ export function getAllowedOrigins(request: NextRequest): string[] {
       const u = new URL(envUrl);
       return [`${u.protocol}//${u.host}`];
     } catch {
-      // NEXTAUTH_URL が不正値の場合は開発 fallback へ
+      // NEXTAUTH_URL は設定されているが値が不正。
+      // fail-open で X-Forwarded-Host に落ちるとオリジン詐称の余地ができるため、
+      // ここでは明示的に空配列を返し、呼び出し側で 403 (origin_unresolved) にする。
+      console.error("[csrf] NEXTAUTH_URL is set but not a valid URL; refusing to fall back", {
+        NEXTAUTH_URL_length: envUrl.length,
+      });
+      return [];
     }
   }
 
-  // 開発 fallback: NEXTAUTH_URL が無い / 不正な場合のみ、リクエストのホストヘッダーを使う。
+  // 開発 fallback: NEXTAUTH_URL が完全に未設定のときのみ、リクエストのホストヘッダーを使う。
   const origins = new Set<string>();
 
-  const forwardedProto = request.headers.get("x-forwarded-proto");
+  // X-Forwarded-Proto もカンマ区切りで複数値を持つことがある (例: "https, http")。
+  // 先頭 (最も外側のプロキシが観測した値) のみを採用する。
+  const forwardedProtoRaw = request.headers.get("x-forwarded-proto");
+  const forwardedProto = forwardedProtoRaw?.split(",")[0]?.trim() || null;
 
-  // X-Forwarded-Host はカンマ区切りで複数値を持つことがある (例: "a.example.com, b.example.com")
+  // X-Forwarded-Host もカンマ区切りで複数値を持つことがある (例: "a.example.com, b.example.com")
   // 先頭の値だけを使う。
   const forwardedHostRaw = request.headers.get("x-forwarded-host");
   const forwardedHost = forwardedHostRaw?.split(",")[0]?.trim();
@@ -136,6 +151,15 @@ export function verifyCsrf(request: NextRequest): NextResponse | null {
   }
 
   // Origin が無い / "null" の場合は Referer をフォールバックとして検証する。
+  //
+  // `Origin: null` が発生しうる主なケース:
+  //  - `<iframe sandbox>` からのリクエスト
+  //  - `meta referrer=no-referrer` や一部のプライバシーツールによるヘッダー除去
+  //
+  // 本アプリは現時点で `<iframe sandbox>` を使っていないため、`Origin: null` + Referer
+  // が一致するケースは実運用ではほぼ発生しない想定。ただし将来的に sandbox iframe を
+  // 導入すると本 fallback が正常系として動くため、方針を再検討すること (例: sandbox
+  // からの state-changing 呼び出しを全面禁止するなど)。
   const refererOrigin = originFromUrl(request.headers.get("referer"));
   if (refererOrigin && allowed.includes(refererOrigin)) {
     return null;
@@ -160,6 +184,14 @@ function csrfForbiddenResponse(request: NextRequest, reason: string): NextRespon
     ip: request.headers.get("x-forwarded-for") ?? null,
   });
 
+  // `x-csrf-reason` は開発時のデバッグ用途のみ付与する。
+  // 本番ではクライアント (攻撃者含む) に対して CSRF 判定の内部事由を公開したくないため
+  // ヘッダーを付けず、監査ログ (console.warn) のみに残す。
+  const headers: Record<string, string> = {};
+  if (process.env.NODE_ENV !== "production") {
+    headers["x-csrf-reason"] = reason;
+  }
+
   return NextResponse.json(
     {
       success: false,
@@ -170,10 +202,7 @@ function csrfForbiddenResponse(request: NextRequest, reason: string): NextRespon
     },
     {
       status: 403,
-      headers: {
-        // デバッグ・監査ログ用途の内部ヒント。
-        "x-csrf-reason": reason,
-      },
+      headers,
     }
   );
 }
