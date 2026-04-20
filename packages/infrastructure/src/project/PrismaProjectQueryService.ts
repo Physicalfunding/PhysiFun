@@ -48,7 +48,7 @@ export interface ProjectReviewFeedbackHistoryItem {
   readonly action: ReviewAction;
   readonly note: string | null;
   readonly reviewerId: string;
-  readonly reviewerDisplayName: string;
+  readonly reviewerEmail: string;
   readonly reviewedAt: Date;
 }
 
@@ -270,7 +270,7 @@ export class PrismaProjectQueryService implements ProjectQueryPort, PublicProjec
         reviewFeedbacks: {
           include: {
             reviewer: {
-              select: { displayName: true },
+              select: { email: true },
             },
           },
           orderBy: { reviewedAt: "desc" },
@@ -310,7 +310,7 @@ export class PrismaProjectQueryService implements ProjectQueryPort, PublicProjec
         action: f.action as ReviewAction,
         note: f.note,
         reviewerId: f.reviewerId,
-        reviewerDisplayName: f.reviewer.displayName,
+        reviewerEmail: f.reviewer.email,
         reviewedAt: f.reviewedAt,
       })),
     };

@@ -131,13 +131,13 @@ describe("PrismaProjectQueryService (admin) integration", () => {
           bio: "bio テキスト",
         },
       });
-      const reviewer = await prisma.account.create({
+      const reviewer = await prisma.adminAccount.create({
         data: {
           email: "admin@example.com",
-          displayName: "運営レビュワー",
-          status: "ACTIVE",
-          roles: ["ADMIN"],
           passwordHash: "dummy",
+          status: "ACTIVE",
+          totpEnabled: false,
+          recoveryCodes: [],
         },
       });
       const project = await prisma.project.create({
@@ -176,7 +176,7 @@ describe("PrismaProjectQueryService (admin) integration", () => {
         "フィードバック 2",
         "フィードバック 1",
       ]);
-      expect(detail!.reviewFeedbacks[0].reviewerDisplayName).toBe("運営レビュワー");
+      expect(detail!.reviewFeedbacks[0].reviewerEmail).toBe("admin@example.com");
     });
 
     it("存在しない projectId では null を返す", async () => {

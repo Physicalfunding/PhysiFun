@@ -20,16 +20,21 @@ export async function truncateAll(): Promise<void> {
   await prisma.leaderApplicationOutboxMessage.deleteMany();
   await prisma.leaderApplication.deleteMany();
   await prisma.account.deleteMany();
+  // AdminAccount 系は Account から独立 (#140 / #144)
+  await prisma.adminAuditLog.deleteMany();
+  await prisma.adminSession.deleteMany();
+  await prisma.adminAccount.deleteMany();
 }
 
 /**
- * E2E 用の admin アカウントを seed する。
+ * E2E 用の運営アカウント (AdminAccount) を seed する (#140 / #144)。
+ *
+ * Phase 2 準備で Admin は Account から完全に分離された。
+ * ここでは apps/admin 側の認証基盤で使う AdminAccount を直接作成する。
  *
  * - status: ACTIVE
- * - roles: [SUPPORTER, ADMIN] (admin アプリは ADMIN 必須)
- * - passwordHash: bcrypt でハッシュ化
- *
- * email は NextAuth 側で toLowerCase されるため、seed も小文字で揃える。
+ * - TOTP は未設定 (本来は #146 で初回ログイン時にセットアップ。E2E では現状スキップ)
+ * - NextAuth が toLowerCase するので seed も小文字で揃える
  */
 export async function seedAdminAccount(): Promise<{
   id: string;
@@ -38,13 +43,13 @@ export async function seedAdminAccount(): Promise<{
 }> {
   const passwordHash = await bcrypt.hash(TEST_ADMIN.password, 10);
 
-  const admin = await prisma.account.create({
+  const admin = await prisma.adminAccount.create({
     data: {
       email: TEST_ADMIN.email,
-      displayName: TEST_ADMIN.displayName,
-      status: "ACTIVE",
       passwordHash,
-      roles: ["SUPPORTER", "ADMIN"],
+      status: "ACTIVE",
+      totpEnabled: false,
+      recoveryCodes: [],
     },
   });
 

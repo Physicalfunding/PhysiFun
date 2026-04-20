@@ -42,10 +42,9 @@ model Account {
   updatedAt DateTime @updatedAt
 
   // Relations
-  leaderApplications  LeaderApplication[]
-  projects            Project[]
-  projectReviews      ProjectReviewFeedback[]
-  supportTickets      SupportTicket[]
+  leaderApplications LeaderApplication[]
+  projects           Project[]
+  supportTickets     SupportTicket[]
 
   @@index([status])
   @@map("accounts")
@@ -56,10 +55,10 @@ enum AccountStatus {
   ACTIVE
 }
 
+// SUPPORTER / LEADER の 2 値。運営権限は AdminAccount で分離管理するため ADMIN は含まない。
 enum Role {
   SUPPORTER
   LEADER
-  ADMIN
 }
 
 // ==================== LeaderApplication ====================
@@ -67,10 +66,11 @@ enum Role {
 // 1 Account につき PENDING は常に 1 件以下。Phase 1 ではアプリケーション層で担保し、
 // 必要に応じて後続 PR で raw SQL の部分 unique index (WHERE status = 'PENDING') を追加する。
 model LeaderApplication {
-  id           String                   @id @default(uuid())
+  id           String                  @id @default(uuid())
   accountId    String
   status       LeaderApplicationStatus
-  reviewerNote String?                  @db.Text // 却下理由等、運営が付与
+  reviewerNote String?                 @db.Text // 却下理由等、運営が付与
+  reviewedBy   String? // 審査を行った AdminAccount.id。PENDING 時は null。
 
   // ProjectDraft 値オブジェクト (B-3 仮値の上限)
   projectTitle      String // 〜100
@@ -88,11 +88,13 @@ model LeaderApplication {
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account  Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  reviewer AdminAccount? @relation("AdminLeaderApplicationReview", fields: [reviewedBy], references: [id], onDelete: Restrict)
 
   @@index([accountId])
   @@index([status])
   @@index([submittedAt])
+  @@index([reviewedBy])
   @@map("leader_applications")
 }
 
@@ -106,25 +108,29 @@ enum LeaderApplicationStatus {
 // プロジェクト (プロジェクト.md)
 // Phase 1 では 3 値 PublishStatus + ProjectPhase の 2 軸で管理。
 model Project {
-  id             String        @id @default(uuid())
+  id             String  @id @default(uuid())
   ownerAccountId String
-  slug           String?       @unique // 公開時に発行
+  slug           String? @unique // 公開時に発行
 
   // ヘッダー情報
   title          String // 〜100 (B-3 仮値)
-  summary        String?       @db.Text // 〜300 (B-3 仮値)。DRAFT 時は null 許容
-  story          String?       @db.Text // プロジェクト本文 Markdown (B-3 仮値)。DRAFT 時は null 許容
-  leaderIntro    String?       @db.Text // リーダー紹介 Markdown。DRAFT 時は null 許容
+  summary        String? @db.Text // 〜300 (B-3 仮値)。DRAFT 時は null 許容
+  story          String? @db.Text // プロジェクト本文 Markdown (B-3 仮値)。DRAFT 時は null 許容
+  leaderIntro    String? @db.Text // リーダー紹介 Markdown。DRAFT 時は null 許容
   coverImageUrl  String?
   category       String? // CATEGORY_MASTER の値 (string 保持)。DRAFT 時は null 許容
   prefectureCode String? // JIS X 0401 "01"〜"47"。DRAFT 時は null 許容
   municipality   String? // 任意
   snsLinks       Json? // { x, instagram, facebook, website }
-  activityPlan   String?       @db.Text // 活動計画 〜1000。任意
+  activityPlan   String? @db.Text // 活動計画 〜1000。任意
 
   // ステータス (2 軸)
   status PublishStatus @default(DRAFT)
   phase  ProjectPhase  @default(VISION)
+
+  // 運営審査メタ (AdminAccount.id 参照)
+  reviewedBy          String? // 直近の審査者 (APPROVED/REJECTED 時に記録)
+  forcedUnpublishedBy String? // 強制非公開を実施した運営者
 
   // 公開タイムスタンプ
   publishRequestedAt DateTime?
@@ -134,6 +140,8 @@ model Project {
 
   // Relations
   owner               Account                 @relation(fields: [ownerAccountId], references: [id], onDelete: Cascade)
+  reviewer            AdminAccount?           @relation("AdminProjectReview", fields: [reviewedBy], references: [id], onDelete: Restrict)
+  forcedUnpublisher   AdminAccount?           @relation("AdminProjectForceUnpublish", fields: [forcedUnpublishedBy], references: [id], onDelete: Restrict)
   reviewFeedbacks     ProjectReviewFeedback[]
   supportRecruitments SupportRecruitment[]
 
@@ -142,6 +150,8 @@ model Project {
   @@index([category])
   @@index([prefectureCode])
   @@index([publishedAt])
+  @@index([reviewedBy])
+  @@index([forcedUnpublishedBy])
   @@map("projects")
 }
 
@@ -164,15 +174,15 @@ enum ProjectPhase {
 model ProjectReviewFeedback {
   id         String       @id @default(uuid())
   projectId  String
-  reviewerId String // ADMIN ロールの Account id
+  reviewerId String // AdminAccount.id
   action     ReviewAction
   note       String? // 差戻・強制非公開時は必須
   reviewedAt DateTime     @default(now())
   createdAt  DateTime     @default(now())
 
   // Relations
-  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  reviewer Account @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
+  project  Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reviewer AdminAccount @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
 
   @@index([projectId])
   @@index([reviewerId])
@@ -200,7 +210,7 @@ model SupportRecruitment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  project   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project   Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
   schedules RecruitmentSchedule[]
 
   @@index([projectId])
@@ -304,4 +314,78 @@ model ProjectOutboxMessage {
 
   @@index([sentAt, deadLetteredAt, nextRetryAt])
   @@map("project_outbox_messages")
+}
+
+// ==================== AdminAccount ====================
+// 運営アカウント (Phase 2 準備 #140 / #144)
+// apps/admin 用の認証基盤。apps/web の Account とは完全に分離する。
+model AdminAccount {
+  id            String             @id @default(uuid())
+  email         String             @unique
+  passwordHash  String
+  totpSecret    String? // 暗号化済み TOTP シークレット (暗号化は application 層)
+  totpEnabled   Boolean            @default(false)
+  recoveryCodes String[] // ハッシュ化済みリカバリコード (bcrypt 等)
+  status        AdminAccountStatus @default(ACTIVE)
+  lastLoginAt   DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  // Relations
+  sessions                   AdminSession[]
+  auditLogs                  AdminAuditLog[]
+  reviewedLeaderApplications LeaderApplication[]     @relation("AdminLeaderApplicationReview")
+  reviewedProjects           Project[]               @relation("AdminProjectReview")
+  forcedUnpublishedProjects  Project[]               @relation("AdminProjectForceUnpublish")
+  projectReviewFeedbacks     ProjectReviewFeedback[]
+
+  @@index([status])
+  @@map("admin_accounts")
+}
+
+enum AdminAccountStatus {
+  ACTIVE
+  DISABLED
+}
+
+// ==================== AdminSession ====================
+// 運営セッション (NextAuth Database 戦略、#140-2 で接続)
+// DB レコード削除 = 強制 revoke。
+model AdminSession {
+  id             String   @id @default(uuid())
+  sessionToken   String   @unique
+  adminAccountId String
+  expires        DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  adminAccount AdminAccount    @relation(fields: [adminAccountId], references: [id], onDelete: Cascade)
+  auditLogs    AdminAuditLog[]
+
+  @@index([adminAccountId])
+  @@index([expires])
+  @@map("admin_sessions")
+}
+
+// ==================== AdminAuditLog ====================
+// 運営操作の監査ログ (#140-6 で UI 接続)
+// セッションが失効・削除された後も履歴を残すため adminSessionId は SetNull。
+model AdminAuditLog {
+  id             String   @id @default(uuid())
+  adminAccountId String
+  adminSessionId String?
+  action         String // "leader_application.approve" / "project.force_unpublish" 等
+  targetType     String // "LeaderApplication" / "Project" 等
+  targetId       String? // 対象エンティティ ID (任意操作は null)
+  metadata       Json? // アクション固有のペイロード
+  createdAt      DateTime @default(now())
+
+  adminAccount AdminAccount  @relation(fields: [adminAccountId], references: [id], onDelete: Restrict)
+  adminSession AdminSession? @relation(fields: [adminSessionId], references: [id], onDelete: SetNull)
+
+  @@index([adminAccountId])
+  @@index([adminSessionId])
+  @@index([createdAt])
+  @@index([targetType, targetId])
+  @@map("admin_audit_logs")
 }

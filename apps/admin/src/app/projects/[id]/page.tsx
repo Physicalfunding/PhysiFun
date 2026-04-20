@@ -194,7 +194,7 @@ export default async function AdminProjectDetailPage({
                   >
                     {REVIEW_ACTION_LABELS[feedback.action]}
                   </span>
-                  <span className="text-sm text-gray-700">{feedback.reviewerDisplayName}</span>
+                  <span className="text-sm text-gray-700">{feedback.reviewerEmail}</span>
                   <span className="text-xs text-gray-500">
                     {formatDateTime(feedback.reviewedAt)}
                   </span>
