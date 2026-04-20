@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { PublishStatus, ProjectPhase } from "@physifun/domain";
+import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { Button, Card, CardContent, LoadingSpinner, ConfirmModal } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
@@ -172,13 +174,15 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
       <Card>
         <CardContent>
           <div className="flex flex-col gap-4 sm:flex-row">
-            {/* カバー画像 */}
-            <div className="h-48 w-full flex-shrink-0 overflow-hidden rounded-lg bg-gray-100 sm:h-36 sm:w-48">
-              {project.coverImageUrl ? (
-                <img
+            {/* カバー画像 — Supabase Storage ホスト allowlist + SSRF 防御（Issue #120） */}
+            <div className="relative h-48 w-full flex-shrink-0 overflow-hidden rounded-lg bg-gray-100 sm:h-36 sm:w-48">
+              {project.coverImageUrl && isAllowedImageUrl(project.coverImageUrl) ? (
+                <Image
                   src={project.coverImageUrl}
                   alt={project.title}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="(min-width: 640px) 192px, 100vw"
+                  className="object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-gray-400">

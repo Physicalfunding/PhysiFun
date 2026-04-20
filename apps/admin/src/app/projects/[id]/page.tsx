@@ -1,10 +1,11 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReviewAction } from "@physifun/domain";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { ProjectPhaseBadge } from "@/components/ProjectPhaseBadge";
 import { ProjectReviewActions } from "@/components/ProjectReviewActions";
-import { SafeSnsLink, isSafeHttpsUrl } from "@physifun/ui-shared";
+import { SafeSnsLink, isAllowedImageUrl } from "@physifun/ui-shared";
 import { getCategoryLabel } from "@/lib/category";
 import { getProjectQueryService } from "@/lib/di/queryServices";
 import { getPrefectureName } from "@/lib/prefecture";
@@ -135,21 +136,20 @@ export default async function AdminProjectDetailPage({
             <div>
               <dt className="text-sm font-medium text-gray-500">カバー画像</dt>
               <dd className="mt-1">
-                {isSafeHttpsUrl(detail.coverImageUrl) ? (
-                  <>
-                    {/* next/image を使わず素の img で表示 (外部ホスト許可リスト設定を避けるため) */}
-                    {/* Issue #120 で Supabase Storage ドメイン allowlist + next/image 移行予定 */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={detail.coverImageUrl}
-                      alt="カバー画像"
-                      className="max-h-80 w-auto rounded-md border border-gray-200"
-                    />
-                  </>
+                {isAllowedImageUrl(detail.coverImageUrl) ? (
+                  // Issue #120: Supabase Storage ホスト allowlist + SSRF 防御 + next/image 移行
+                  <Image
+                    src={detail.coverImageUrl}
+                    alt="カバー画像"
+                    width={640}
+                    height={320}
+                    sizes="(min-width: 768px) 640px, 100vw"
+                    className="h-auto max-h-80 w-auto rounded-md border border-gray-200 object-contain"
+                  />
                 ) : (
                   // 生の URL を画面に出力すると javascript:/data: など悪意のある URL や
                   // 機密を含む URL がそのまま管理画面に露出するため、固定文言のみ表示する
-                  // (PR #142 Major-1 対応)
+                  // (PR #142 Major-1 対応 / Issue #120 allowlist 拒否時も同挙動)
                   <p className="text-sm text-red-600">表示できない URL 形式です</p>
                 )}
               </dd>

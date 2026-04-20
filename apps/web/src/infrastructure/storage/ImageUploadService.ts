@@ -42,6 +42,11 @@ export interface ImageUploadService {
  * SupabaseImageUploadService
  * Supabase Storageを使用した画像アップロードサービス
  *
+ * 返却する `publicUrl` は `NEXT_PUBLIC_SUPABASE_URL` 配下の
+ * `*.supabase.co`（または環境変数で指定された独自ドメイン）となり、
+ * `@physifun/ui-shared` の `isAllowedImageUrl` allowlist に合致する想定
+ * (Issue #120)。
+ *
  * @see https://supabase.com/docs/guides/storage
  */
 export class SupabaseImageUploadService implements ImageUploadService {
