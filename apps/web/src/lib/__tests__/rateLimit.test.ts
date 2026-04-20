@@ -28,6 +28,8 @@ describe("rateLimit", () => {
           expect(result.ok).toBe(true);
           expect(result.limit).toBe(config.limit);
           expect(result.remaining).toBe(config.limit - (i + 1));
+          // 今回のタイムスタンプがウィンドウから外れる時刻 (秒)
+          expect(result.reset).toBe(Math.ceil((now + i + config.windowMs) / 1000));
         }
       });
 
@@ -43,6 +45,8 @@ describe("rateLimit", () => {
         expect(result.ok).toBe(false);
         expect(result.remaining).toBe(0);
         expect(result.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+        // 最古のタイムスタンプ (= now) がウィンドウから外れる時刻 (秒)
+        expect(result.reset).toBe(Math.ceil((now + config.windowMs) / 1000));
       });
 
       it("ウィンドウ経過後はカウンタがリセットされる", () => {
@@ -141,18 +145,20 @@ describe("rateLimit", () => {
   });
 
   describe("rateLimitExceededResponse", () => {
-    it("429 + Retry-After ヘッダーを返す", async () => {
+    it("429 + Retry-After / X-RateLimit-* ヘッダーを返す", async () => {
       const response = rateLimitExceededResponse({
         ok: false,
         limit: 10,
         remaining: 0,
         retryAfterSeconds: 42,
+        reset: 1_700_000_042,
       });
 
       expect(response.status).toBe(429);
       expect(response.headers.get("Retry-After")).toBe("42");
       expect(response.headers.get("X-RateLimit-Limit")).toBe("10");
       expect(response.headers.get("X-RateLimit-Remaining")).toBe("0");
+      expect(response.headers.get("X-RateLimit-Reset")).toBe("1700000042");
 
       const body = await response.json();
       expect(body).toEqual({
@@ -182,6 +188,40 @@ describe("rateLimit", () => {
 
       const response = enforceRateLimit("createProject", userId);
       expect(response).not.toBeNull();
+      expect(response?.status).toBe(429);
+    });
+
+    it("now を渡してテスト内で時間を固定できる", async () => {
+      const userId = "user-fixed-now";
+      const action = "projectStatusTransition" as const;
+      const config = RATE_LIMIT_CONFIGS[action];
+      const now = 1_700_000_000_000;
+
+      for (let i = 0; i < config.limit; i++) {
+        expect(enforceRateLimit(action, userId, now + i)).toBeNull();
+      }
+
+      const response = enforceRateLimit(action, userId, now + config.limit);
+      expect(response).not.toBeNull();
+      expect(response?.status).toBe(429);
+      // X-RateLimit-Reset は最古のタイムスタンプがウィンドウから外れる時刻 (秒)
+      expect(response?.headers.get("X-RateLimit-Reset")).toBe(
+        String(Math.ceil((now + config.windowMs) / 1000))
+      );
+    });
+
+    it("projectStatusTransition は request-publish/withdraw/unpublish 合算で 10 req/min", () => {
+      // アプリ側が 3 ルートとも同じ "projectStatusTransition" キーで enforceRateLimit を呼ぶ。
+      // ここでは同一ユーザー・同一キーで 10 回消費すれば 11 回目で弾かれることを保証する。
+      const userId = "user-status-shared";
+      const action = "projectStatusTransition" as const;
+      const config = RATE_LIMIT_CONFIGS[action];
+      const now = 1_700_000_000_000;
+
+      for (let i = 0; i < config.limit; i++) {
+        expect(enforceRateLimit(action, userId, now + i)).toBeNull();
+      }
+      const response = enforceRateLimit(action, userId, now + config.limit);
       expect(response?.status).toBe(429);
     });
   });
