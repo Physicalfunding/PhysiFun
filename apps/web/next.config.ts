@@ -26,7 +26,10 @@ const isDevelopment = process.env.NODE_ENV === "development";
  * - Next.js Dev 環境は HMR のために `'unsafe-eval'` / `'unsafe-inline'` が必要。
  * - img-src は Supabase Storage / Unsplash / data URL を明示的に許可 (最小化)。
  * - connect-src はクライアントから直叩きする外部 API が無いので `'self'` 基本。
- *   (Supabase はサーバー側でのみ利用、ブラウザからは API Route を経由する)
+ *   (Supabase はサーバー側 infrastructure 層からのみ `@supabase/supabase-js` を呼び、
+ *    ブラウザ側では `createBrowserClient` 等を一切使用していないことを確認済み。
+ *    もし将来的にブラウザから Supabase SDK を直接叩くようになったら、
+ *    `https://*.supabase.co` と `wss://*.supabase.co` を connect-src に追加すること)
  * - frame-ancestors は `X-Frame-Options: DENY` と整合するように `'none'`。
  */
 function buildContentSecurityPolicy(): string {
@@ -46,7 +49,8 @@ function buildContentSecurityPolicy(): string {
     "font-src": ["'self'", "data:"],
     "style-src": ["'self'", "'unsafe-inline'"],
     "script-src": ["'self'"],
-    // クライアントから直接叩く外部 API は現状なし。NextAuth / API Routes は同一オリジン。
+    // クライアントから直接叩く外部 API は現状なし (Supabase SDK はサーバー側のみ)。
+    // NextAuth / API Routes は同一オリジン。
     "connect-src": ["'self'"],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],
