@@ -8,6 +8,9 @@ describe("isSafeHttpsUrl", () => {
   });
 
   it("大文字の HTTPS も許可する", () => {
+    // `new URL()` は scheme (protocol) を小文字に正規化するため、
+    // `HTTPS://...` は `parsed.protocol === "https:"` の比較で自動的に許可される。
+    // ここでは明示的にその挙動が回帰しないことを担保する。
     expect(isSafeHttpsUrl("HTTPS://example.com")).toBe(true);
   });
 
