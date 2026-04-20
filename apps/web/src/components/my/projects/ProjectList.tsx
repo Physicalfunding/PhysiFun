@@ -95,7 +95,12 @@ export function ProjectList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">マイプロジェクト</h2>
-        <Button variant="primary" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => setIsCreateModalOpen(true)}
+          data-testid="create-project-button"
+        >
           新規プロジェクト作成
         </Button>
       </div>
@@ -154,6 +159,7 @@ export function ProjectList() {
               onClick={handleCreate}
               disabled={!newTitle.trim()}
               isLoading={isCreating}
+              data-testid="confirm-create-project"
             >
               作成
             </Button>

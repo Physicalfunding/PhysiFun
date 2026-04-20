@@ -129,6 +129,7 @@ export function ProjectReviewActions({ projectId, status }: ProjectReviewActions
               onClick={() => openModal("approve")}
               disabled={isAnyPending}
               className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              data-testid="approve-project-button"
             >
               承認する
             </button>
@@ -304,6 +305,7 @@ function ReviewerNoteModal({
             className={`rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
               kind === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
             }`}
+            data-testid={`confirm-${kind}-project`}
           >
             {isSubmitting ? submittingLabel : submitLabel}
           </button>

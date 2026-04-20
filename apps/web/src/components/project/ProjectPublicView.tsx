@@ -1,12 +1,10 @@
-"use client";
-
-import { useState } from "react";
 import type { ProjectPublicDetailDTO } from "@physifun/application";
 import type { ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { PREFECTURES } from "@/lib/prefectures";
 import { isSafeHttpUrl } from "@/lib/isSafeHttpUrl";
+import { ProjectPublicTabs } from "./ProjectPublicTabs";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
   PREFECTURES.map((p) => [p.code, p.name])
@@ -19,22 +17,29 @@ const SNS_LABEL: Record<string, string> = {
   website: "ウェブサイト",
 };
 
-const TABS = [
-  { key: "home", label: "ホーム" },
-  { key: "support", label: "サポート募集" },
-  { key: "report", label: "活動報告" },
-  { key: "supporters", label: "サポーター" },
-] as const;
-
-type TabKey = (typeof TABS)[number]["key"];
+/**
+ * 未実装タブ向けの「準備中」プレースホルダパネル。
+ * モジュールスコープに配置することで、render のたびに関数を再生成しないようにしている。
+ */
+const placeholderPanel = (title: string) => (
+  <Card>
+    <CardContent className="py-16 text-center">
+      <p className="text-gray-400 text-lg">準備中</p>
+      <p className="text-gray-400 text-sm mt-2">{title}</p>
+    </CardContent>
+  </Card>
+);
 
 interface Props {
   project: ProjectPublicDetailDTO;
 }
 
+/**
+ * プロジェクト公開ページの Server Component。
+ * データ整形と各タブの表示 JSX を生成し、タブ切り替え UI は子 Client Component
+ * (ProjectPublicTabs) に委譲することでハイドレーションコストを抑える。
+ */
 export function ProjectPublicView({ project }: Props) {
-  const [activeTab, setActiveTab] = useState<TabKey>("home");
-
   const locationParts: string[] = [];
   if (project.prefectureCode && PREFECTURE_MAP[project.prefectureCode]) {
     locationParts.push(PREFECTURE_MAP[project.prefectureCode]);
@@ -49,6 +54,86 @@ export function ProjectPublicView({ project }: Props) {
         (entry): entry is [string, string] => entry[1] != null && entry[1] !== ""
       )
     : [];
+
+  const homePanel = (
+    <>
+      {project.body && (
+        <Card>
+          <CardContent>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">プロジェクト詳細</h3>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+              {project.body}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {project.activityPlan && (
+        <Card>
+          <CardContent>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">活動計画</h3>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+              {project.activityPlan}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* リーダー紹介 */}
+      <Card>
+        <CardContent>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">リーダー紹介</h3>
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 font-bold text-sm">
+              {project.leader.displayName.charAt(0)}
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-gray-900">{project.leader.displayName}</p>
+              {project.leaderIntroduction && (
+                <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">
+                  {project.leaderIntroduction}
+                </p>
+              )}
+              {project.leader.bio && !project.leaderIntroduction && (
+                <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">
+                  {project.leader.bio}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* SNS リンク — defense-in-depth: isSafeHttpUrl で javascript: 等を遮断 */}
+      {snsEntries.length > 0 && (
+        <Card>
+          <CardContent>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">SNS / ウェブサイト</h3>
+            <ul className="space-y-2">
+              {snsEntries.map(([key, url]) => (
+                <li key={key}>
+                  {isSafeHttpUrl(url) ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
+                    >
+                      {SNS_LABEL[key] || key}
+                    </a>
+                  ) : (
+                    <span className="text-sm text-red-600">
+                      {SNS_LABEL[key] || key}: 表示できない URL 形式です
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+    </>
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
@@ -95,155 +180,12 @@ export function ProjectPublicView({ project }: Props) {
         </div>
       </div>
 
-      {/* タブ */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-0 -mb-px" role="tablist" aria-label="プロジェクト情報">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              role="tab"
-              id={`tab-${tab.key}`}
-              aria-selected={activeTab === tab.key}
-              aria-controls={`tabpanel-${tab.key}`}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.key
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* タブコンテンツ */}
-      <div
-        id="tabpanel-home"
-        role="tabpanel"
-        aria-labelledby="tab-home"
-        className="space-y-6"
-        hidden={activeTab !== "home"}
-      >
-        {project.body && (
-          <Card>
-            <CardContent>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">プロジェクト詳細</h3>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                {project.body}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {project.activityPlan && (
-          <Card>
-            <CardContent>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">活動計画</h3>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                {project.activityPlan}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* リーダー紹介 */}
-        <Card>
-          <CardContent>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">リーダー紹介</h3>
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 font-bold text-sm">
-                {project.leader.displayName.charAt(0)}
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">{project.leader.displayName}</p>
-                {project.leaderIntroduction && (
-                  <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">
-                    {project.leaderIntroduction}
-                  </p>
-                )}
-                {project.leader.bio && !project.leaderIntroduction && (
-                  <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">
-                    {project.leader.bio}
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* SNS リンク — defense-in-depth: isSafeHttpUrl で javascript: 等を遮断 */}
-        {snsEntries.length > 0 && (
-          <Card>
-            <CardContent>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">SNS / ウェブサイト</h3>
-              <ul className="space-y-2">
-                {snsEntries.map(([key, url]) => (
-                  <li key={key}>
-                    {isSafeHttpUrl(url) ? (
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline break-all"
-                      >
-                        {SNS_LABEL[key] || key}
-                      </a>
-                    ) : (
-                      <span className="text-sm text-red-600">
-                        {SNS_LABEL[key] || key}: 表示できない URL 形式です
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <div
-        id="tabpanel-support"
-        role="tabpanel"
-        aria-labelledby="tab-support"
-        hidden={activeTab !== "support"}
-      >
-        <Card>
-          <CardContent className="py-16 text-center">
-            <p className="text-gray-400 text-lg">準備中</p>
-            <p className="text-gray-400 text-sm mt-2">サポート募集機能は今後公開予定です</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div
-        id="tabpanel-report"
-        role="tabpanel"
-        aria-labelledby="tab-report"
-        hidden={activeTab !== "report"}
-      >
-        <Card>
-          <CardContent className="py-16 text-center">
-            <p className="text-gray-400 text-lg">準備中</p>
-            <p className="text-gray-400 text-sm mt-2">活動報告機能は今後公開予定です</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div
-        id="tabpanel-supporters"
-        role="tabpanel"
-        aria-labelledby="tab-supporters"
-        hidden={activeTab !== "supporters"}
-      >
-        <Card>
-          <CardContent className="py-16 text-center">
-            <p className="text-gray-400 text-lg">準備中</p>
-            <p className="text-gray-400 text-sm mt-2">サポーター一覧は今後公開予定です</p>
-          </CardContent>
-        </Card>
-      </div>
+      <ProjectPublicTabs
+        home={homePanel}
+        support={placeholderPanel("サポート募集機能は今後公開予定です")}
+        report={placeholderPanel("活動報告機能は今後公開予定です")}
+        supporters={placeholderPanel("サポーター一覧は今後公開予定です")}
+      />
     </div>
   );
 }
