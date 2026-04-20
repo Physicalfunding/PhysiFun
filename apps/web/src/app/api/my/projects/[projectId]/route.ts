@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { UpdateProjectDraftUseCase, type UpdateProjectDraftError } from "@physifun/application";
 import { getProjectQueryService, getProjectCommandAdapter } from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
+import { enforceRateLimit } from "@/lib/rateLimit";
 import {
   successResponse,
   unauthorizedResponse,
@@ -88,6 +89,10 @@ export async function PATCH(
     if (!userId) {
       return unauthorizedResponse();
     }
+
+    // レート制限: 30 req / min / user
+    const limited = enforceRateLimit("updateProject", userId);
+    if (limited) return limited;
 
     const { projectId } = await params;
     const body = await request.json();
