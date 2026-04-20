@@ -1,6 +1,7 @@
 import { RequestPublishUseCase, type RequestPublishError } from "@physifun/application";
 import { getRequestPublishPort } from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
+import { enforceRateLimit } from "@/lib/rateLimit";
 import {
   successResponse,
   unauthorizedResponse,
@@ -47,6 +48,11 @@ export async function POST(
     if (!userId) {
       return unauthorizedResponse();
     }
+
+    // レート制限: ステータス遷移系は request-publish / withdraw / unpublish の 3 ルート
+    // 合算で 10 req/min/user を消費する (Issue #108 原文「Status transitions: 10 req / min / user」に従う)。
+    const limited = enforceRateLimit("projectStatusTransition", userId);
+    if (limited) return limited;
 
     const { projectId } = await params;
     const port = getRequestPublishPort();

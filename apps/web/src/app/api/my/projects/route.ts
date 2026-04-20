@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CreateProjectDraftUseCase, type CreateProjectDraftError } from "@physifun/application";
 import { getProjectQueryService, getProjectCommandAdapter } from "@/lib/di/project";
 import { getCurrentUserId } from "@/lib/session";
+import { enforceRateLimit } from "@/lib/rateLimit";
 import {
   successResponse,
   unauthorizedResponse,
@@ -70,6 +71,10 @@ export async function POST(request: NextRequest) {
     if (!userId) {
       return unauthorizedResponse();
     }
+
+    // レート制限: 10 req / 10 min / user
+    const limited = enforceRateLimit("createProject", userId);
+    if (limited) return limited;
 
     const body = await request.json();
     const parsed = createProjectBody.safeParse(body);
