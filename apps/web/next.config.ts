@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
-import { buildImageRemotePatterns } from "@physifun/ui-shared";
+// `@physifun/ui-shared` の index 経由だと SafeSnsLink.tsx (JSX) を巻き込むため、
+// `next.config.ts` ローダ (Node, JSX 非対応) がビルドに失敗する。
+// JSX を含まない純粋な設定モジュールのみを subpath export から読み込む。
+import { buildImageRemotePatterns } from "@physifun/ui-shared/config/image-remote-patterns";
 
 /**
  * Next.js 設定
