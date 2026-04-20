@@ -24,8 +24,9 @@ const isDevelopment = process.env.NODE_ENV === "development";
  *   導入していないので `'self'` + 本番で `'strict-dynamic'` を入れずに
  *   外部依存なしの最小許可としている。
  * - Next.js Dev 環境は HMR のために `'unsafe-eval'` / `'unsafe-inline'` が必要。
- * - img-src は Supabase Storage とローカル開発 URL 用に `data:` / `https:` / `http:` (dev) を許可。
- * - connect-src は Supabase API (`*.supabase.co`) を許可。
+ * - img-src は Supabase Storage / Unsplash / data URL を明示的に許可 (最小化)。
+ * - connect-src はクライアントから直叩きする外部 API が無いので `'self'` 基本。
+ *   (Supabase はサーバー側でのみ利用、ブラウザからは API Route を経由する)
  * - frame-ancestors は `X-Frame-Options: DENY` と整合するように `'none'`。
  */
 function buildContentSecurityPolicy(): string {
@@ -36,11 +37,17 @@ function buildContentSecurityPolicy(): string {
     "form-action": ["'self'"],
     "frame-ancestors": ["'none'"],
     "object-src": ["'none'"],
-    "img-src": ["'self'", "data:", "blob:", "https:"],
+    // img-src は必要なホストだけ明示的に許可する (`https:` 全面許可はやめる)。
+    // - self: 自ドメインのアセット
+    // - data: / blob: Next.js Image の placeholder / プレビュー
+    // - *.supabase.co: アップロード画像の公開 URL
+    // - images.unsplash.com: モック / サンプル画像
+    "img-src": ["'self'", "data:", "blob:", "https://*.supabase.co", "https://images.unsplash.com"],
     "font-src": ["'self'", "data:"],
     "style-src": ["'self'", "'unsafe-inline'"],
     "script-src": ["'self'"],
-    "connect-src": ["'self'", "https://*.supabase.co", "wss://*.supabase.co"],
+    // クライアントから直接叩く外部 API は現状なし。NextAuth / API Routes は同一オリジン。
+    "connect-src": ["'self'"],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],
   };
@@ -48,10 +55,16 @@ function buildContentSecurityPolicy(): string {
   if (isDevelopment) {
     // 開発環境: Next.js dev server の HMR / React Refresh が `eval` / inline を使う。
     directives["script-src"].push("'unsafe-eval'", "'unsafe-inline'");
-    // ローカル Supabase (http://127.0.0.1:54321) への接続を許可。
-    directives["connect-src"].push("http://127.0.0.1:54321", "http://localhost:54321");
-    // ローカル Supabase Storage の画像もあり得るので HTTP を広めに許可。
-    directives["img-src"].push("http:");
+    // ローカル Supabase (http://127.0.0.1:54321) への接続を許可 (Storage URL 等)。
+    directives["connect-src"].push(
+      "http://127.0.0.1:54321",
+      "http://localhost:54321",
+      // Next.js dev server の HMR (websocket)
+      "ws://localhost:*",
+      "ws://127.0.0.1:*"
+    );
+    // ローカル Supabase Storage の画像もあり得るので localhost/127.0.0.1 を許可。
+    directives["img-src"].push("http://127.0.0.1:54321", "http://localhost:54321");
   } else {
     // 本番環境: Next.js の App Router ランタイムがインラインスクリプトを出力するため、
     // nonce middleware 導入までの暫定として `'unsafe-inline'` を維持する。
@@ -102,7 +115,8 @@ const securityHeaders = [
       "midi=()",
       "payment=()",
       "picture-in-picture=()",
-      "publickey-credentials-get=()",
+      // 将来的に Passkey / WebAuthn を使う可能性を残して self のみ許可する。
+      "publickey-credentials-get=(self)",
       "screen-wake-lock=()",
       "sync-xhr=()",
       "usb=()",
