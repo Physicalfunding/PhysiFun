@@ -22,6 +22,9 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 /** CSRF チェックをスキップするパス prefix。 */
 const CSRF_SKIP_PATH_PREFIXES = ["/api/auth/"] as const;
 
+/** CSRF チェックをスキップするパス完全一致。 */
+const CSRF_SKIP_PATH_EXACT = ["/api/auth"] as const;
+
 /**
  * リクエストが CSRF チェック対象かどうかを判定する。
  *
@@ -31,6 +34,11 @@ const CSRF_SKIP_PATH_PREFIXES = ["/api/auth/"] as const;
 export function shouldCheckCsrf(method: string, pathname: string): boolean {
   if (SAFE_METHODS.has(method.toUpperCase())) {
     return false;
+  }
+  for (const exact of CSRF_SKIP_PATH_EXACT) {
+    if (pathname === exact) {
+      return false;
+    }
   }
   for (const prefix of CSRF_SKIP_PATH_PREFIXES) {
     if (pathname.startsWith(prefix)) {
@@ -43,28 +51,37 @@ export function shouldCheckCsrf(method: string, pathname: string): boolean {
 /**
  * 期待されるオリジン (scheme + host[:port]) のセットを組み立てる。
  *
- * 優先順位:
- * 1. `NEXTAUTH_URL` (本番で最も信頼できる)
- * 2. `X-Forwarded-Proto` + `X-Forwarded-Host` (Vercel 等のリバースプロキシ配下)
- * 3. `Host` + リクエストの `nextUrl.protocol`
+ * 優先順位 (セキュリティ最優先):
+ * 1. `NEXTAUTH_URL` が設定されていればそれのみを信頼する (本番推奨)。
+ * 2. `NEXTAUTH_URL` が未設定 or パース失敗のときだけ、開発 fallback として
+ *    `X-Forwarded-Host` / `Host` ヘッダーから導出する。
+ *
+ * 注意: `X-Forwarded-Host` をリクエストから無条件に信頼すると、攻撃者が任意の
+ * ヘッダーを送ってきた際にオリジンをすり替えられる余地がある。そのため本番では
+ * `NEXTAUTH_URL` を必ず設定する前提とする。
  *
  * @param request NextRequest (ヘッダーと nextUrl から自ホストを推定する)
  */
 export function getAllowedOrigins(request: NextRequest): string[] {
-  const origins = new Set<string>();
-
   const envUrl = process.env.NEXTAUTH_URL;
   if (envUrl) {
     try {
       const u = new URL(envUrl);
-      origins.add(`${u.protocol}//${u.host}`);
+      return [`${u.protocol}//${u.host}`];
     } catch {
-      // NEXTAUTH_URL が不正値の場合は無視して次の候補へフォールバック
+      // NEXTAUTH_URL が不正値の場合は開発 fallback へ
     }
   }
 
-  const forwardedHost = request.headers.get("x-forwarded-host");
+  // 開発 fallback: NEXTAUTH_URL が無い / 不正な場合のみ、リクエストのホストヘッダーを使う。
+  const origins = new Set<string>();
+
   const forwardedProto = request.headers.get("x-forwarded-proto");
+
+  // X-Forwarded-Host はカンマ区切りで複数値を持つことがある (例: "a.example.com, b.example.com")
+  // 先頭の値だけを使う。
+  const forwardedHostRaw = request.headers.get("x-forwarded-host");
+  const forwardedHost = forwardedHostRaw?.split(",")[0]?.trim();
   if (forwardedHost) {
     const proto = forwardedProto ?? "https";
     origins.add(`${proto}://${forwardedHost}`);
@@ -107,7 +124,7 @@ export function verifyCsrf(request: NextRequest): NextResponse | null {
   const allowed = getAllowedOrigins(request);
   if (allowed.length === 0) {
     // 自ホストも NEXTAUTH_URL も判定できない異常系: 安全側に倒して拒否。
-    return csrfForbiddenResponse("origin_unresolved");
+    return csrfForbiddenResponse(request, "origin_unresolved");
   }
 
   const originHeader = request.headers.get("origin");
@@ -115,7 +132,7 @@ export function verifyCsrf(request: NextRequest): NextResponse | null {
     if (allowed.includes(originHeader)) {
       return null;
     }
-    return csrfForbiddenResponse("origin_mismatch");
+    return csrfForbiddenResponse(request, "origin_mismatch");
   }
 
   // Origin が無い / "null" の場合は Referer をフォールバックとして検証する。
@@ -124,16 +141,25 @@ export function verifyCsrf(request: NextRequest): NextResponse | null {
     return null;
   }
 
-  return csrfForbiddenResponse("origin_missing");
+  return csrfForbiddenResponse(request, "origin_missing");
 }
 
 /**
  * CSRF 拒否時の 403 レスポンス。
  * 既存の `apiResponse` 形式に合わせた JSON を返す。
  *
+ * @param request 監査ログ出力用に reason 以外の情報 (pathname/method/ip) を参照する。
  * @param reason 内部ログ用の理由識別子 (クライアントには露出させない詳細は含めない)。
  */
-function csrfForbiddenResponse(reason: string): NextResponse {
+function csrfForbiddenResponse(request: NextRequest, reason: string): NextResponse {
+  // 監査用ログ。ヘッダー値はクライアントに露出させず、サーバー側 console にだけ出す。
+  console.warn("[csrf] blocked", {
+    reason,
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+    ip: request.headers.get("x-forwarded-for") ?? null,
+  });
+
   return NextResponse.json(
     {
       success: false,

@@ -56,8 +56,12 @@ describe("shouldCheckCsrf", () => {
     expect(shouldCheckCsrf("POST", "/api/auth/signin")).toBe(false);
   });
 
-  it("`/api/auth` 完全一致は prefix 判定の外なのでチェック対象", () => {
-    // 仕様上 `/api/auth/` プレフィックスのみスキップする。
+  it("`/api/auth` 完全一致もスキップされる (NextAuth 管理)", () => {
+    expect(shouldCheckCsrf("POST", "/api/auth")).toBe(false);
+  });
+
+  it("`/api/authorize` のような別パスはチェック対象", () => {
+    // `/api/auth/` プレフィックス / `/api/auth` 完全一致のみスキップし、類似パスは対象。
     expect(shouldCheckCsrf("POST", "/api/authorize")).toBe(true);
   });
 });
@@ -73,14 +77,21 @@ describe("getAllowedOrigins", () => {
     }
   });
 
-  it("NEXTAUTH_URL を最優先で含める", () => {
+  it("NEXTAUTH_URL が設定されていれば、それのみを返す (リクエストヘッダーは無視)", () => {
     process.env.NEXTAUTH_URL = "https://app.example.com";
-    const req = buildMockRequest({ headers: { host: "app.example.com" } });
+    const req = buildMockRequest({
+      headers: {
+        host: "app.example.com",
+        "x-forwarded-host": "attacker.example.com",
+        "x-forwarded-proto": "https",
+      },
+    });
     const allowed = getAllowedOrigins(req);
-    expect(allowed).toContain("https://app.example.com");
+    // NEXTAUTH_URL のみ信頼する。攻撃者が X-Forwarded-Host を詐称しても origins に混入しない。
+    expect(allowed).toEqual(["https://app.example.com"]);
   });
 
-  it("NEXTAUTH_URL が不正値でも host ヘッダーから導出できる", () => {
+  it("NEXTAUTH_URL が不正値のとき host ヘッダーから fallback する", () => {
     process.env.NEXTAUTH_URL = "::invalid::";
     const req = buildMockRequest({
       headers: { host: "localhost:3000" },
@@ -90,7 +101,7 @@ describe("getAllowedOrigins", () => {
     expect(allowed).toContain("http://localhost:3000");
   });
 
-  it("X-Forwarded-Host / X-Forwarded-Proto から origin を導出できる", () => {
+  it("NEXTAUTH_URL 未設定の開発 fallback として X-Forwarded-Host / X-Forwarded-Proto を使う", () => {
     delete process.env.NEXTAUTH_URL;
     const req = buildMockRequest({
       headers: {
@@ -102,16 +113,34 @@ describe("getAllowedOrigins", () => {
     const allowed = getAllowedOrigins(req);
     expect(allowed).toContain("https://public.example.com");
   });
+
+  it("X-Forwarded-Host がカンマ区切りの場合、先頭の値を使う", () => {
+    delete process.env.NEXTAUTH_URL;
+    const req = buildMockRequest({
+      headers: {
+        host: "internal:3000",
+        "x-forwarded-host": "first.example.com, second.example.com",
+        "x-forwarded-proto": "https",
+      },
+    });
+    const allowed = getAllowedOrigins(req);
+    expect(allowed).toContain("https://first.example.com");
+    expect(allowed).not.toContain("https://second.example.com");
+  });
 });
 
 describe("verifyCsrf", () => {
   const origEnv = process.env.NEXTAUTH_URL;
+  let warnSpy: ReturnType<typeof jest.spyOn>;
 
   beforeEach(() => {
     process.env.NEXTAUTH_URL = "https://app.example.com";
+    // 拒否時の監査ログ (console.warn) はテストでは抑制する。
+    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
+    warnSpy.mockRestore();
     if (origEnv === undefined) {
       delete process.env.NEXTAUTH_URL;
     } else {

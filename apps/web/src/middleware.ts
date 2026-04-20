@@ -1,6 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import type { NextFetchEvent, NextMiddleware, NextRequest } from "next/server";
 import { verifyCsrf } from "@/lib/csrf";
 
 /**
@@ -15,7 +15,7 @@ import { verifyCsrf } from "@/lib/csrf";
  *
  * 実装メモ:
  * - `/my/*` のみ `withAuth` を適用するため、パスに応じて適用を分岐している。
- * - CSRF チェックはすべての matcher 対象で最初に走らせる (認証前でも拒否して問題ない)。
+ * - CSRF チェックは `/api/*` のみに限定 (ページ遷移 `/my/*` は form POST しないため対象外)。
  *
  * @see https://next-auth.js.org/configuration/nextjs#middleware
  */
@@ -23,8 +23,12 @@ import { verifyCsrf } from "@/lib/csrf";
 /**
  * `/my/*` 配下の認証チェック付きミドルウェア。
  * NextAuth の `withAuth` を利用し、token が無ければ自動でログインページにリダイレクトする。
+ *
+ * 型メモ: `withAuth` の戻り値は `(req, ev) => ...` の NextMiddleware 互換だが、
+ * next-auth の型定義が若干ゆるく、拡張 req (`token` 付き) を前提とするため、
+ * ここでは `NextMiddleware` として扱って通常の NextRequest 側から呼び出す。
  */
-const authMiddleware = withAuth(
+const authMiddleware: NextMiddleware = withAuth(
   function middleware() {
     return NextResponse.next();
   },
@@ -33,24 +37,25 @@ const authMiddleware = withAuth(
       authorized: ({ token }) => !!token,
     },
   }
-);
+) as unknown as NextMiddleware;
 
 /**
  * Next.js middleware 本体。
  * CSRF を先に検証し、その後 `/my/*` のみ `withAuth` へ委譲する。
  */
-export default async function middleware(request: NextRequest) {
-  // 1. CSRF 検証 (safe methods と `/api/auth/*` は内部でスキップされる)
-  const csrfResponse = verifyCsrf(request);
-  if (csrfResponse) {
-    return csrfResponse;
+export default async function middleware(request: NextRequest, event: NextFetchEvent) {
+  // 1. CSRF 検証は `/api/*` だけに限定する。
+  //    (matcher で `/my/:path*` も拾っているが、これはページ遷移なので CSRF の対象にしない)
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    const csrfResponse = verifyCsrf(request);
+    if (csrfResponse) {
+      return csrfResponse;
+    }
   }
 
   // 2. `/my/*` は認証必須。NextAuth の withAuth に委譲する。
   if (request.nextUrl.pathname.startsWith("/my")) {
-    // NextAuth の withAuth は (req, ev) シグネチャで呼ばれるため、そのまま委譲する。
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (authMiddleware as unknown as (req: NextRequest) => any)(request);
+    return authMiddleware(request, event);
   }
 
   return NextResponse.next();
