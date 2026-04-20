@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { PublishStatus, ProjectPhase } from "@physifun/domain";
@@ -68,7 +68,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
   const { showToast } = useToast();
   const router = useRouter();
 
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       const res = await fetch(`/api/my/projects/${projectId}`);
       if (!res.ok) {
@@ -82,12 +82,11 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [projectId]);
 
   useEffect(() => {
     fetchProject();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [fetchProject]);
 
   const handleRequestPublish = async () => {
     setIsActionLoading(true);

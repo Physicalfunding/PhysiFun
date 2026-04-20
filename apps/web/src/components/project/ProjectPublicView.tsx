@@ -86,7 +86,7 @@ export function ProjectPublicView({ project }: Props) {
           <h3 className="text-sm font-semibold text-gray-900 mb-3">リーダー紹介</h3>
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 font-bold text-sm">
-              {project.leader.displayName.charAt(0)}
+              {project.leader.displayName.charAt(0) || "?"}
             </div>
             <div className="flex-1">
               <p className="font-medium text-gray-900">{project.leader.displayName}</p>
