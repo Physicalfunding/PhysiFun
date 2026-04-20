@@ -8,6 +8,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./config/image-remote-patterns": {
+      "types": "./src/config/imageRemotePatterns.ts",
+      "default": "./src/config/imageRemotePatterns.ts"
     }
   },
   "scripts": {

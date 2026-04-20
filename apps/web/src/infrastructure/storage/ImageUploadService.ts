@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { isAllowedImageUrl } from "@physifun/ui-shared";
 
 /**
  * アップロード結果の型定義
@@ -41,6 +42,11 @@ export interface ImageUploadService {
 /**
  * SupabaseImageUploadService
  * Supabase Storageを使用した画像アップロードサービス
+ *
+ * 返却する `publicUrl` は `NEXT_PUBLIC_SUPABASE_URL` 配下の
+ * `*.supabase.co`（または環境変数で指定された独自ドメイン）となり、
+ * `@physifun/ui-shared` の `isAllowedImageUrl` allowlist に合致する想定
+ * (Issue #120)。
  *
  * @see https://supabase.com/docs/guides/storage
  */
@@ -167,9 +173,29 @@ export class SupabaseImageUploadService implements ImageUploadService {
 
 /**
  * モック用のImageUploadService実装
- * テスト環境やSupabase未設定時に使用
+ * テスト環境やSupabase未設定時に使用。
+ *
+ * Issue #120 / PR #155 レビュー対応:
+ * - `publicUrl` は `isAllowedImageUrl` の allowlist（Unsplash `images.unsplash.com/photo-*`）
+ *   に合致する URL を返す。これにより Mock 経路でも後段の allowlist チェックを
+ *   通過可能にする（旧: `mock-storage.example.com` は allowlist 外で画像が表示されない）。
+ * - `uploadImage` で fail-safe として `isAllowedImageUrl(publicUrl)` ガードを追加。
+ *   万一 Mock の URL が allowlist から外れた場合は例外 throw で早期検出する。
+ * - production では Mock の利用自体を throw で禁止し、Supabase 未設定のまま
+ *   本番デプロイされる事故を防ぐ。
  */
+const MOCK_PUBLIC_URL_BASE = "https://images.unsplash.com/photo-mock";
+
 export class MockImageUploadService implements ImageUploadService {
+  constructor() {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "MockImageUploadService must not be used in production. " +
+          "Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set."
+      );
+    }
+  }
+
   async uploadImage(
     file: { buffer: Buffer; name: string; type: string },
     folder: string
@@ -178,9 +204,18 @@ export class MockImageUploadService implements ImageUploadService {
     const extension = file.name.split(".").pop() || "jpg";
     const path = `${folder}/${timestamp}.${extension}`;
 
+    const publicUrl = this.buildMockPublicUrl(path);
+
+    // fail-safe: 生成した URL が allowlist に合致しない場合は早期に失敗させる。
+    if (!isAllowedImageUrl(publicUrl)) {
+      throw new Error(
+        `MockImageUploadService produced a URL that is not in the image allowlist: ${publicUrl}`
+      );
+    }
+
     return {
       path,
-      publicUrl: `https://mock-storage.example.com/${path}`,
+      publicUrl,
     };
   }
 
@@ -189,7 +224,18 @@ export class MockImageUploadService implements ImageUploadService {
   }
 
   getPublicUrl(path: string): string {
-    return `https://mock-storage.example.com/${path}`;
+    return this.buildMockPublicUrl(path);
+  }
+
+  /**
+   * `https://images.unsplash.com/photo-mock/<path>` 形式の URL を生成する。
+   * Unsplash 画像 CDN のホストに擬似パスを載せる形で allowlist（Unsplash
+   * ホスト + `/photo-` プレフィックス）に合致させる。実際に fetch しても
+   * 404 になるが、UI 表示は Unsplash CDN に委ねるため問題ない想定。
+   */
+  private buildMockPublicUrl(path: string): string {
+    // パスに含まれるスラッシュなどはそのまま連結（ファイル名は拡張子のみ）。
+    return `${MOCK_PUBLIC_URL_BASE}/${path}`;
   }
 }
 

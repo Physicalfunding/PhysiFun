@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { PublishStatus, ProjectPhase } from "@physifun/domain";
+import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { Card } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { ProjectStatusBadge } from "./ProjectStatusBadge";
@@ -31,13 +33,15 @@ export function ProjectCard({ project }: ProjectCardProps) {
     <Link href={`/my/projects/${project.id}`}>
       <Card hover className="cursor-pointer">
         <div className="flex gap-4">
-          {/* カバー画像 */}
-          <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
-            {project.coverImageUrl ? (
-              <img
+          {/* カバー画像 — Supabase Storage ホスト allowlist + SSRF 防御（Issue #120） */}
+          <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-gray-100">
+            {project.coverImageUrl && isAllowedImageUrl(project.coverImageUrl) ? (
+              <Image
                 src={project.coverImageUrl}
                 alt={project.title}
-                className="h-full w-full object-cover"
+                fill
+                sizes="96px"
+                className="object-cover"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-gray-400">
