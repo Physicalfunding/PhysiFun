@@ -13,6 +13,7 @@
     "@physifun/application": "workspace:*",
     "@physifun/domain": "workspace:*",
     "@physifun/infrastructure": "workspace:*",
+    "@physifun/ui-shared": "workspace:*",
     "next": "16.1.1",
     "next-auth": "^4.24.11",
     "react": "19.2.3",

@@ -3,7 +3,7 @@ import type { ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { PREFECTURES } from "@/lib/prefectures";
-import { isSafeHttpsUrl } from "@/lib/isSafeHttpsUrl";
+import { isSafeHttpsUrl } from "@physifun/ui-shared";
 import { ProjectPublicTabs } from "./ProjectPublicTabs";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(

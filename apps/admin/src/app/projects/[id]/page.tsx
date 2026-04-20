@@ -6,7 +6,7 @@ import type { ReviewAction } from "@physifun/domain";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { ProjectPhaseBadge } from "@/components/ProjectPhaseBadge";
 import { ProjectReviewActions } from "@/components/ProjectReviewActions";
-import { SafeSnsLink, isSafeHttpsUrl } from "@/components/SafeSnsLink";
+import { SafeSnsLink, isSafeHttpsUrl } from "@physifun/ui-shared";
 import { getCategoryLabel } from "@/lib/category";
 import { getPrefectureName } from "@/lib/prefecture";
 
