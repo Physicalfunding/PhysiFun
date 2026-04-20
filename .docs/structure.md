@@ -104,6 +104,10 @@ export async function POST(request: Request) {
 - **ここ以外で Supabase SDK・Prisma を直接呼ばない**
 - 環境変数の読み込みはこの層で完結させる
 
+### admin アプリの Server Component 規約（#119 / #131 Min-8）
+- admin ページは `export const dynamic = "force-dynamic"` を必ず宣言（認証必須 + 常に最新表示のため、ビルド時の静的生成を無効化）。ただし Client Component (`"use client"`) は対象外。
+- `QueryService` は `apps/admin/src/lib/di/queryServices.ts` のファクトリ経由でリクエストスコープに生成し、モジュールレベルで `new` しない（モック差し替えや将来のリクエスト単位 Prisma 切替を阻害しないため）。
+
 ### `components/`（UI）
 - サーバーコンポーネント・クライアントコンポーネントを適切に使い分ける
 - `common/` は再利用可能な汎用コンポーネントのみ

@@ -1,7 +1,6 @@
 import Link from "next/link";
 // NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 import {
-  PrismaOutboxQueryService,
   deriveOutboxStatus,
   isValidOutboxStatus,
   type OutboxSource,
@@ -9,10 +8,10 @@ import {
 } from "@physifun/infrastructure";
 import { OutboxStatusBadge } from "@/components/OutboxStatusBadge";
 import { OutboxActions } from "@/components/OutboxActions";
+import { getOutboxQueryService } from "@/lib/di/queryServices";
 
+// ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）
 export const dynamic = "force-dynamic";
-
-const queryService = new PrismaOutboxQueryService();
 
 const SOURCE_TABS: { source: OutboxSource; label: string }[] = [
   { source: "leaderApplication", label: "リーダー応募" },
@@ -49,6 +48,7 @@ export default async function OutboxListPage({
   const queryStatus: OutboxStatus | undefined =
     currentStatusFilter === "incomplete" ? undefined : currentStatusFilter;
 
+  const queryService = getOutboxQueryService();
   // データ取得 + 各ステータスのカウント（並列）
   const [result, pendingCount, retryingCount, deadLetteredCount, sentCount] = await Promise.all([
     queryService.findMany(currentSource, { status: queryStatus, page, perPage }),
