@@ -1,14 +1,12 @@
 import { type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
 import {
   successResponse,
   unauthorizedResponse,
   validationErrorResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-
-const queryService = new PrismaLeaderApplicationQueryService();
+import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
 
 const VALID_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
 type Status = (typeof VALID_STATUSES)[number];
@@ -57,6 +55,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, Number(pageParam) || 1);
     const perPage = Math.min(100, Math.max(1, Number(perPageParam) || 20));
 
+    const queryService = getLeaderApplicationQueryService();
     const result = await queryService.findMany({ status, page, perPage });
 
     return successResponse({

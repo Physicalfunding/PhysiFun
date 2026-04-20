@@ -1,7 +1,6 @@
 import { type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import {
-  PrismaOutboxQueryService,
   deriveOutboxStatus,
   isValidOutboxSource,
   isValidOutboxStatus,
@@ -14,8 +13,7 @@ import {
   validationErrorResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-
-const queryService = new PrismaOutboxQueryService();
+import { getOutboxQueryService } from "@/lib/di/queryServices";
 
 /**
  * GET /api/admin/outbox
@@ -63,6 +61,7 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, Number(pageParam) || 1);
     const perPage = Math.min(100, Math.max(1, Number(perPageParam) || 20));
 
+    const queryService = getOutboxQueryService();
     const result = await queryService.findMany(source, { status, page, perPage });
 
     return successResponse({

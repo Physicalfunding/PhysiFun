@@ -106,7 +106,9 @@ export async function POST(request: Request) {
 
 ### admin アプリの Server Component 規約（#119 / #131 Min-8）
 - admin ページは `export const dynamic = "force-dynamic"` を必ず宣言（認証必須 + 常に最新表示のため、ビルド時の静的生成を無効化）。ただし Client Component (`"use client"`) は対象外。
-- `QueryService` は `apps/admin/src/lib/di/queryServices.ts` のファクトリ経由でリクエストスコープに生成し、モジュールレベルで `new` しない（モック差し替えや将来のリクエスト単位 Prisma 切替を阻害しないため）。
+- `force-dynamic` 宣言はファイル先頭の import 群の直後にまとめて記述する（宣言位置の揺れを避け、静的生成無効化の意図を一目で確認できるようにするため）。
+- `layout.tsx` は現状 state を持たない前提のため `force-dynamic` は宣言しない。動的データ取得 (認証ユーザー情報の埋め込み等) を始める場合は page と同様に追加する。
+- `QueryService` は `apps/admin/src/lib/di/queryServices.ts` のファクトリ経由でリクエストスコープに生成し、モジュールレベルで `new` しない（モック差し替えや将来のリクエスト単位 Prisma 切替を阻害しないため）。Server Component だけでなく Route Handler (`app/api/**/route.ts`) も同様。
 
 ### `components/`（UI）
 - サーバーコンポーネント・クライアントコンポーネントを適切に使い分ける

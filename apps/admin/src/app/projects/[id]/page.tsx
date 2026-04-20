@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReviewAction } from "@physifun/domain";
-// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { ProjectPhaseBadge } from "@/components/ProjectPhaseBadge";
 import { ProjectReviewActions } from "@/components/ProjectReviewActions";
@@ -10,6 +9,7 @@ import { getCategoryLabel } from "@/lib/category";
 import { getProjectQueryService } from "@/lib/di/queryServices";
 import { getPrefectureName } from "@/lib/prefecture";
 
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 // ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）
 export const dynamic = "force-dynamic";
 

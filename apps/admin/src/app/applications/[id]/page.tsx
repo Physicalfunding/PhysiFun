@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
 import { ReviewActions } from "@/components/ReviewActions";
 import { SafeSnsLink } from "@/components/SafeSnsLink";
@@ -8,6 +7,7 @@ import { getCategoryLabel } from "@/lib/category";
 import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
 import { getPrefectureName } from "@/lib/prefecture";
 
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 // ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）
 export const dynamic = "force-dynamic";
 

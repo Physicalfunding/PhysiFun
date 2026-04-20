@@ -1,6 +1,5 @@
 import { type NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
 import { isUuidV4 } from "@physifun/domain";
 import {
   successResponse,
@@ -9,8 +8,7 @@ import {
   validationErrorResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
-
-const queryService = new PrismaLeaderApplicationQueryService();
+import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
 
 /**
  * GET /api/admin/applications/:id
@@ -39,6 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       });
     }
 
+    const queryService = getLeaderApplicationQueryService();
     const detail = await queryService.findById(id);
 
     if (!detail) {

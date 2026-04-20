@@ -1,5 +1,4 @@
 import Link from "next/link";
-// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 import {
   deriveOutboxStatus,
   isValidOutboxStatus,
@@ -10,6 +9,7 @@ import { OutboxStatusBadge } from "@/components/OutboxStatusBadge";
 import { OutboxActions } from "@/components/OutboxActions";
 import { getOutboxQueryService } from "@/lib/di/queryServices";
 
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 // ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）
 export const dynamic = "force-dynamic";
 
