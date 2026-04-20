@@ -3,7 +3,7 @@ import type { ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { PREFECTURES } from "@/lib/prefectures";
-import { isSafeHttpUrl } from "@/lib/isSafeHttpUrl";
+import { isSafeHttpsUrl } from "@/lib/isSafeHttpsUrl";
 import { ProjectPublicTabs } from "./ProjectPublicTabs";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
@@ -104,7 +104,7 @@ export function ProjectPublicView({ project }: Props) {
         </CardContent>
       </Card>
 
-      {/* SNS リンク — defense-in-depth: isSafeHttpUrl で javascript: 等を遮断 */}
+      {/* SNS リンク — defense-in-depth: isSafeHttpsUrl で javascript: 等を遮断 */}
       {snsEntries.length > 0 && (
         <Card>
           <CardContent>
@@ -112,7 +112,7 @@ export function ProjectPublicView({ project }: Props) {
             <ul className="space-y-2">
               {snsEntries.map(([key, url]) => (
                 <li key={key}>
-                  {isSafeHttpUrl(url) ? (
+                  {isSafeHttpsUrl(url) ? (
                     <a
                       href={url}
                       target="_blank"
@@ -141,7 +141,7 @@ export function ProjectPublicView({ project }: Props) {
       <div>
         {/* カバー画像 */}
         <div className="h-48 w-full overflow-hidden rounded-xl bg-gray-100 sm:h-64">
-          {project.coverImageUrl && isSafeHttpUrl(project.coverImageUrl) ? (
+          {project.coverImageUrl && isSafeHttpsUrl(project.coverImageUrl) ? (
             /* eslint-disable-next-line @next/next/no-img-element -- Issue #120 で next/image + allowlist 移行予定 */
             <img
               src={project.coverImageUrl}

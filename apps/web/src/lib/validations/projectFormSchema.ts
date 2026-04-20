@@ -8,7 +8,7 @@ const PROJECT_PHASE_VALUES = Object.values(ProjectPhase) as [string, ...string[]
 const httpsUrl = z
   .string()
   .url("有効なURLを入力してください")
-  .regex(/^https:\/\//, "https:// で始まるURLを入力してください");
+  .regex(/^https:\/\//i, "https:// で始まるURLを入力してください");
 
 /**
  * プロジェクト編集フォームの Zod スキーマ

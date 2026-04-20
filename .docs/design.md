@@ -1521,6 +1521,8 @@ model Message {
 
 - **React 自動エスケープ**: React のデフォルトエスケープ処理を使用
 - **dangerouslySetInnerHTML 禁止**: 使用しない（リッチテキストは将来実装時に対策）
+- **外部 URL スキーム制限**: SNS リンク等の外部 URL は `https://` スキームのみ許可する（ドメイン層 `SnsLinks`・応募フォーム `ApplyForm`・編集フォーム `projectFormSchema` の全レイヤーで統一）。`javascript:` / `data:` / `vbscript:` など XSS 誘発スキームを拒否し、`http://` は Mixed Content 回避のため許可しない。
+- **既存 DB データのマイグレーション方針**: 既存 DB に `http://` の SNS URL が残っている場合、編集フォームで開いた際にバリデーションエラーとなる。ユーザーには `https://` への書き換えを促し、読み取り専用の公開表示用途では `isSafeHttpsUrl` により該当リンクが非表示になるため既存値を保持したままで実害はない。必要に応じて将来的に一括書き換えのデータパッチを実施する。
 
 #### CSRF (Cross-Site Request Forgery)
 

@@ -6,7 +6,7 @@ import type { ReviewAction } from "@physifun/domain";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { ProjectPhaseBadge } from "@/components/ProjectPhaseBadge";
 import { ProjectReviewActions } from "@/components/ProjectReviewActions";
-import { SafeSnsLink, isSafeHttpUrl } from "@/components/SafeSnsLink";
+import { SafeSnsLink, isSafeHttpsUrl } from "@/components/SafeSnsLink";
 import { getCategoryLabel } from "@/lib/category";
 import { getPrefectureName } from "@/lib/prefecture";
 
@@ -136,7 +136,7 @@ export default async function AdminProjectDetailPage({
             <div>
               <dt className="text-sm font-medium text-gray-500">カバー画像</dt>
               <dd className="mt-1">
-                {isSafeHttpUrl(detail.coverImageUrl) ? (
+                {isSafeHttpsUrl(detail.coverImageUrl) ? (
                   <>
                     {/* next/image を使わず素の img で表示 (外部ホスト許可リスト設定を避けるため) */}
                     {/* Issue #120 で Supabase Storage ドメイン allowlist + next/image 移行予定 */}
@@ -148,9 +148,10 @@ export default async function AdminProjectDetailPage({
                     />
                   </>
                 ) : (
-                  <p className="text-sm text-red-600">
-                    表示できない URL 形式です: {detail.coverImageUrl}
-                  </p>
+                  // 生の URL を画面に出力すると javascript:/data: など悪意のある URL や
+                  // 機密を含む URL がそのまま管理画面に露出するため、固定文言のみ表示する
+                  // (PR #142 Major-1 対応)
+                  <p className="text-sm text-red-600">表示できない URL 形式です</p>
                 )}
               </dd>
             </div>
