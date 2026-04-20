@@ -7,6 +7,5 @@
  */
 export type AdminAccountStateError =
   | { readonly type: "CANNOT_DISABLE_ALREADY_DISABLED" }
-  | { readonly type: "CANNOT_ENABLE_TOTP_WITHOUT_SECRET" }
   | { readonly type: "TOTP_ALREADY_ENABLED" }
   | { readonly type: "ACCOUNT_DISABLED" };

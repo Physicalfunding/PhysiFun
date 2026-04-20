@@ -19,8 +19,20 @@ export class RecoveryCodeHash {
     return ok(new RecoveryCodeHash(raw));
   }
 
-  toString(): string {
+  /**
+   * 永続化のために生ハッシュ値を取り出す。
+   * Repository 実装からのみ呼ぶこと。ログやエラーメッセージでは使わない。
+   */
+  unwrap(): string {
     return this.value;
+  }
+
+  /**
+   * 誤ってログに値が漏れないようマスク文字列を返す。
+   * 永続化は {@link unwrap} を使うこと。
+   */
+  toString(): string {
+    return "[RecoveryCodeHash]";
   }
 
   equals(other: RecoveryCodeHash): boolean {

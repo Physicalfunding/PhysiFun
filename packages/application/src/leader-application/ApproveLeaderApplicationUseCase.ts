@@ -68,6 +68,12 @@ export class ApproveLeaderApplicationUseCase {
     // 1. reviewer の ADMIN ロール検証（二重防御: Route 層 + UseCase 層）
     // NOTE: この検証はトランザクション外で実行される（TOCTOU の可能性があるが、
     // ADMIN ロール剥奪は極めて稀なため、project 側と同様に許容する）
+    //
+    // TODO(#145): Phase 2 で Admin を AdminAccount に分離したため、
+    // Account.roles から "ADMIN" が除去され、このチェックは常に false を返す。
+    // Route 層 (apps/admin) の AdminAccount 認証切り替えと合わせて、
+    // reviewerId を AdminAccount.id として検証するポートに差し替える。
+    // 現状 apps/admin 側の認証が繋がっていないため、この UseCase は到達不能。
     const reviewer = await this.port.findAccountById(input.reviewerId);
     if (!reviewer) {
       return err({ type: "REVIEWER_NOT_FOUND" });

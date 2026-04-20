@@ -77,6 +77,17 @@ describe("AdminAccount", () => {
       account.enable();
       expect(account.status).toBe(AdminAccountStatus.ACTIVE);
     });
+
+    it("ACTIVE を再度 enable() しても冪等で副作用がない", () => {
+      // enable() は disable() と意図的に非対称 (Result を返さず void)。
+      // 運営 UI で既に ACTIVE の AdminAccount を再有効化してもエラーにしない。
+      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      const before = account.updatedAt;
+      account.enable();
+      expect(account.status).toBe(AdminAccountStatus.ACTIVE);
+      // updatedAt は変化しない (既に ACTIVE なので touch しない)
+      expect(account.updatedAt).toBe(before);
+    });
   });
 
   describe("enableTotp", () => {
@@ -116,6 +127,37 @@ describe("AdminAccount", () => {
       account.recordLogin({ at });
       expect(account.lastLoginAt).toBe(at);
       expect(account.updatedAt).toBe(at);
+    });
+
+    it("DISABLED 状態でも lastLoginAt を更新できる (呼び出し側が status を確認する責務)", () => {
+      // recordLogin は状態ガードを持たず、認証成功後の記録にのみ使う。
+      // DISABLED アカウントでの認証拒否は application 層 / 認証基盤の責務。
+      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      account.disable();
+      const at = new Date("2026-04-21T05:00:00Z");
+      account.recordLogin({ at });
+      expect(account.lastLoginAt).toBe(at);
+    });
+  });
+
+  describe("changePassword", () => {
+    it("passwordHash と updatedAt を更新する", () => {
+      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      const newHash = hash("$2b$10$zzzzzzzzzzzzzzzzzzzzzzzz");
+      const at = new Date("2026-04-21T06:00:00Z");
+      account.changePassword({ passwordHash: newHash, now: at });
+      expect(account.passwordHash.equals(newHash)).toBe(true);
+      expect(account.updatedAt).toBe(at);
+    });
+
+    it("DISABLED 状態でも passwordHash を変更できる (運営による強制リセット用途)", () => {
+      // changePassword は状態ガードを持たない。DISABLED 中のパスワード変更を
+      // 許容することで、運営 UI から強制リセット → 再有効化のフローを成立させる。
+      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      account.disable();
+      const newHash = hash("$2b$10$yyyyyyyyyyyyyyyyyyyyyy");
+      account.changePassword({ passwordHash: newHash });
+      expect(account.passwordHash.equals(newHash)).toBe(true);
     });
   });
 

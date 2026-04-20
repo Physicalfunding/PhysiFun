@@ -319,6 +319,16 @@ model ProjectOutboxMessage {
 // ==================== AdminAccount ====================
 // 運営アカウント (Phase 2 準備 #140 / #144)
 // apps/admin 用の認証基盤。apps/web の Account とは完全に分離する。
+//
+// ## 削除ポリシー
+// AdminAccount は**物理削除しない**運用（監査証跡を永続保持するため）。
+// 無効化は `status: DISABLED` で論理削除する (AdminAccount.disable())。
+// これに伴い、FK は全て `onDelete: Restrict` にしている:
+// - LeaderApplication.reviewedBy / Project.reviewedBy / forcedUnpublishedBy
+//   → nullable だが、過去の審査履歴を辿れるよう SET NULL は採用しない
+// - ProjectReviewFeedback.reviewerId → 非 null の監査レコードなので Restrict 一択
+// - AdminAuditLog.adminAccountId → 監査証跡。Restrict
+// - AdminSession.adminAccountId → 失効はアプリケーション層で行うため Cascade
 model AdminAccount {
   id            String             @id @default(uuid())
   email         String             @unique

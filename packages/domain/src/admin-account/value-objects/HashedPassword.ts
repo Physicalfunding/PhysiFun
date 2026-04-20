@@ -19,10 +19,27 @@ export class HashedPassword {
     return ok(new HashedPassword(raw));
   }
 
-  toString(): string {
+  /**
+   * 永続化のために生ハッシュ値を取り出す。
+   * Repository 実装からのみ呼ぶこと。ログやエラーメッセージでは使わない。
+   */
+  unwrap(): string {
     return this.value;
   }
 
+  /**
+   * 誤ってログ / template literal / JSON.stringify で値が漏れないよう
+   * マスク文字列を返す。永続化は {@link unwrap} を使うこと。
+   */
+  toString(): string {
+    return "[HashedPassword]";
+  }
+
+  /**
+   * ハッシュ文字列同士の同一性チェック (重複登録検知など)。
+   * ログイン認証には使わない (infrastructure 層の `bcrypt.compare()` を使う)。
+   * タイミング攻撃耐性は不要な用途のみを想定。
+   */
   equals(other: HashedPassword): boolean {
     return this.value === other.value;
   }

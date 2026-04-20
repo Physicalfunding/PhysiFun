@@ -136,6 +136,10 @@ export class RejectProjectPublicationUseCase {
     }
 
     // 3. ADMIN ロール二重防御（Route Handler 側の認可とは独立に UseCase 単体でも担保）
+    // TODO(#145): Phase 2 で Account.roles から "ADMIN" を除去したため
+    // このチェックは常に false を返す。AdminAccount 認証移行と合わせて、
+    // reviewerId を AdminAccount.id として検証するポートに差し替える。
+    // 現状 apps/admin 側の認証が繋がっていないため、この UseCase は到達不能。
     const reviewer = await this.port.findAccountById(input.reviewerId);
     if (!reviewer) {
       return err({ type: "REVIEWER_NOT_FOUND" });

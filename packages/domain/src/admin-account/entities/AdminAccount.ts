@@ -141,6 +141,9 @@ export class AdminAccount {
   /**
    * アカウントを無効化する (管理 UI から強制無効化)。
    * 既存の AdminSession は別途 DELETE して revoke する。
+   *
+   * DISABLED → DISABLED は運営 UI でエラーフィードバックしたいため
+   * `Result` で返す (enable() が冪等 void なのと非対称なのは意図的)。
    */
   disable(input?: { now?: Date }): Result<void, AdminAccountStateError> {
     if (this._status === AdminAccountStatus.DISABLED) {
@@ -153,6 +156,10 @@ export class AdminAccount {
 
   /**
    * 無効化されたアカウントを再有効化する (管理 UI から復活)。
+   *
+   * 既に ACTIVE な場合は冪等に何もしない (void)。
+   * 運営 UI 側では ACTIVE 再有効化で失敗表示が不要なため
+   * disable() とは意図的に API が非対称。
    */
   enable(input?: { now?: Date }): void {
     if (this._status === AdminAccountStatus.ACTIVE) {

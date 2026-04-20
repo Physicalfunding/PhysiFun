@@ -19,8 +19,20 @@ export class TotpSecret {
     return ok(new TotpSecret(raw));
   }
 
-  toString(): string {
+  /**
+   * 永続化のために暗号化済み ciphertext を取り出す。
+   * Repository 実装からのみ呼ぶこと。ログやエラーメッセージでは使わない。
+   */
+  unwrap(): string {
     return this.value;
+  }
+
+  /**
+   * 誤ってログ / template literal / JSON.stringify で ciphertext が漏れないよう
+   * マスク文字列を返す。永続化は {@link unwrap} を使うこと。
+   */
+  toString(): string {
+    return "[TotpSecret]";
   }
 
   equals(other: TotpSecret): boolean {

@@ -14,13 +14,17 @@ export async function truncateAll(): Promise<void> {
   await prisma.supportTicket.deleteMany();
   await prisma.recruitmentSchedule.deleteMany();
   await prisma.supportRecruitment.deleteMany();
+  // Project / LeaderApplication は AdminAccount を reviewer として参照する (onDelete: Restrict)
+  // ため、AdminAccount 削除より先に消す必要がある。
   await prisma.projectReviewFeedback.deleteMany();
   await prisma.projectOutboxMessage.deleteMany();
   await prisma.project.deleteMany();
   await prisma.leaderApplicationOutboxMessage.deleteMany();
   await prisma.leaderApplication.deleteMany();
   await prisma.account.deleteMany();
-  // AdminAccount 系は Account から独立 (#140 / #144)
+  // AdminAccount 系は Account から独立 (#140 / #144)。
+  // auditLog は adminAccountId を Restrict 参照しているため adminAccount より先に消す。
+  // session も cascade ではあるが明示的に消して順序をわかりやすくする。
   await prisma.adminAuditLog.deleteMany();
   await prisma.adminSession.deleteMany();
   await prisma.adminAccount.deleteMany();

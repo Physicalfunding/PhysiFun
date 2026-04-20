@@ -22,7 +22,14 @@ import path from "node:path";
 import bcrypt from "bcryptjs";
 import { config as loadEnv } from "dotenv";
 
-// DATABASE_URL は apps/web/.env.local と共有している (prisma.config.ts と同じ方針)
+// DATABASE_URL は apps/web/.env.local と共有している (prisma.config.ts と同じ方針)。
+// `dotenv` は既存の環境変数を上書きしない (override: false がデフォルト) ため、
+// shell で DATABASE_URL 等が設定済みならそちらを優先する。
+// .env.local → .env の順に読むのは、.env.local の方が優先度高と見做すため
+// (最初にロードされた値が残るのを利用)。
+//
+// NOTE: monorepo ルートが変わるとこの相対パスは壊れる。
+// CI や Docker 等で実行する場合は DATABASE_URL を明示的に env で渡すこと。
 loadEnv({ path: path.resolve(__dirname, "../../../apps/web/.env.local") });
 loadEnv({ path: path.resolve(__dirname, "../../../apps/web/.env") });
 
