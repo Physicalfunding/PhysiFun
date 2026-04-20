@@ -20,7 +20,7 @@
  * - RFC1918 プライベート IP：`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
  * - `0.0.0.0` / IPv6 unspecified `::`
  * - IPv6 ループバック `[::1]`
- * - IPv4-mapped IPv6 `::ffff:0:0/96`（内包する IPv4 を再帰的に評価）
+ * - IPv4-mapped IPv6 `::ffff:0:0/96`（内包 IPv4 の値に関わらず全拒否）
  * - IPv6 ULA `fc00::/7`、link-local `fe80::/10`
  * - 多階層サブドメイン（`a.b.supabase.co` 等）
  * - 独自 Supabase ドメイン時の多階層サブドメイン（env のホスト完全一致のみ許可）
@@ -28,6 +28,13 @@
  *
  * ここで許可される URL のみ `next/image` の `remotePatterns` に合致する想定。
  * 2 重防御として `next.config.ts` 側でも remotePatterns を絞り込む。
+ *
+ * ## dev 環境での防御層について
+ *
+ * `next.config.ts` の `images.unoptimized` は `isDevelopment` で true となり、
+ * dev では next/image の server-side 最適化（`remotePatterns` による fetch
+ * ガードを含む）がバイパスされる。よって dev では本関数 `isAllowedImageUrl`
+ * が唯一の SSRF 防御層となる。production では `remotePatterns` との 2 重防御。
  *
  * 注意：本モジュールは Client Component からも import される。そのため、
  * `process.env.NODE_ENV` の評価は Next.js のバンドル時に定数展開され、
@@ -58,14 +65,18 @@ function isPrivateOrMetadataIPv4(hostname: string): boolean {
   const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
   if (!match) return false;
 
-  const octets = match.slice(1, 5).map((v) => Number(v));
+  // 正規表現の capture group に一致しているので ?? "0" は実質デッドだが、
+  // noUncheckedIndexedAccess などの lint を満たすための明示的フォールバック。
+  const a = Number(match[1] ?? "0");
+  const b = Number(match[2] ?? "0");
+  const c = Number(match[3] ?? "0");
+  const d = Number(match[4] ?? "0");
+
   // 防御的プログラミング：正規表現で 1-3 桁を許容しているため 300 等が通る。
   // `new URL` パス側の検証と重複するが、ここで再度弾いておく。
-  if (octets.some((v) => Number.isNaN(v) || v < 0 || v > 255)) {
+  if ([a, b, c, d].some((v) => Number.isNaN(v) || v < 0 || v > 255)) {
     return true;
   }
-
-  const [a, b] = octets as [number, number, number, number];
 
   // 0.0.0.0
   if (a === 0) return true;
@@ -122,12 +133,10 @@ function isPrivateOrMetadataHost(hostname: string): boolean {
 
     // IPv4-mapped IPv6 (::ffff:a.b.c.d 形式)
     // 例: ::ffff:127.0.0.1, ::ffff:169.254.169.254
-    // 内包 IPv4 をプライベート判定するが、IPv4-mapped 自体が内部→外部境界を
-    // 曖昧にする攻撃面なので、allowlist 対象外ホストとして常に拒否する。
-    const mappedDotted = /^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i.exec(stripped);
-    if (mappedDotted) {
-      // 内包 IPv4 の形式チェックを兼ねて再帰評価（副作用的に不正値も弾く）
-      isPrivateOrMetadataIPv4(mappedDotted[1] as string);
+    // IPv4-mapped IPv6 は内包 IPv4 の値に関わらず全拒否する。
+    // 理由: IPv4-mapped は「外形は IPv6 だが実体は IPv4」という境界曖昧化が
+    // 発生するため、allowlist 未登録ホストとして一括で SSRF 攻撃ベクタを完全遮断する。
+    if (/^::ffff:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/i.test(stripped)) {
       return true;
     }
     // ::ffff:H:L 形式（16 進 2 グループで IPv4 を表現。例: ::ffff:7f00:1）
@@ -135,7 +144,10 @@ function isPrivateOrMetadataHost(hostname: string): boolean {
       return true;
     }
 
-    // 最初の 16bit グループを取り出して範囲判定（省略時のゼロもケア）
+    // 最初の 16bit グループを取り出して範囲判定する。
+    // `::` 省略形の場合、先頭の 16bit グループは常に 0 であるため "0" とみなす
+    // （ULA `fc00::/7` や link-local `fe80::/10` は実運用上先頭が非ゼロなので
+    // 省略形では書かれず、下の範囲判定は明示形で評価される）。
     const firstGroup = lower.startsWith("::") ? "0" : lower.split(":")[0] || "0";
     const firstHex = parseInt(firstGroup, 16);
     if (!Number.isNaN(firstHex)) {
@@ -158,16 +170,29 @@ function isPrivateOrMetadataHost(hostname: string): boolean {
 }
 
 /**
- * ホスト名が許可リスト（Supabase Storage / Unsplash / 環境変数で指定された Supabase）
- * に合致するかを判定する。
+ * ホスト + パスが許可リスト（Supabase Storage / Unsplash / 環境変数で指定された
+ * Supabase）に合致するかを判定する。
  *
  * Supabase ホストの扱い:
  * - `*.supabase.co` は「1 階層サブドメインのみ」を許可（`abc.supabase.co` は可、
  *   `a.b.supabase.co` は不可）。Supabase の実運用は単階層のため、安全寄りに倒す。
  * - env の独自ドメイン（`NEXT_PUBLIC_SUPABASE_URL`）は env のホストと完全一致のみ許可。
+ *
+ * パス粒度の検証:
+ * - `images.unsplash.com` は `remotePatterns` と揃えて `/photo-` で始まるパスのみ許可。
+ * - Supabase / env ホストは `remotePatterns` で `/storage/v1/object/public/**` を
+ *   指定しているが、本関数では Supabase 側の URL 生成ロジックに委任してホスト粒度
+ *   のみ検証する（Supabase の内部パス変更に追従しやすいよう）。
  */
-function isAllowedHost(hostname: string, envSupabaseHost: string | null): boolean {
-  if (hostname === UNSPLASH_HOST) return true;
+function isAllowedHostAndPath(
+  hostname: string,
+  pathname: string,
+  envSupabaseHost: string | null
+): boolean {
+  if (hostname === UNSPLASH_HOST) {
+    // Unsplash は `remotePatterns` と整合させ、`/photo-` プレフィックスのみ許可。
+    return pathname.startsWith("/photo-");
+  }
 
   // `<label>.supabase.co`。サブドメインが空 or ドット含み（= 多階層）は拒否。
   if (
@@ -256,9 +281,10 @@ export function isAllowedImageUrl(url: string): boolean {
     return false;
   }
 
-  // https の標準ポートのみ許可（空文字 = デフォルト 443、または明示 "443"）。
-  // `:8443` など非標準ポート経由の SSRF / 内部サービスへの間接アクセスを遮断。
-  if (parsed.port !== "" && parsed.port !== "443") {
+  // https の標準ポートのみ許可。`new URL` はデフォルトポート（https:443）を
+  // 空文字に正規化するため、明示的な非空ポートが来た時点で SSRF 警戒のため拒否。
+  // `:8443` など非標準ポート経由の内部サービスへの間接アクセスを遮断する。
+  if (parsed.port !== "") {
     return false;
   }
 
@@ -268,5 +294,5 @@ export function isAllowedImageUrl(url: string): boolean {
   }
 
   const envSupabaseHost = resolveEnvSupabaseHost();
-  return isAllowedHost(hostname, envSupabaseHost);
+  return isAllowedHostAndPath(hostname, parsed.pathname, envSupabaseHost);
 }

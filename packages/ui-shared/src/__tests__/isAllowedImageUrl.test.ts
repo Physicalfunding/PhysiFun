@@ -1,24 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { isAllowedImageUrl } from "../isAllowedImageUrl";
 
 /**
  * Issue #120: カバー画像 URL allowlist + SSRF 防御のテスト。
  *
  * NODE_ENV / NEXT_PUBLIC_SUPABASE_URL を切り替えるため、
- * 各テスト前後で環境変数をバックアップ / 復元する。
+ * `jest.replaceProperty` で一時的に値を差し替えて jest が自動復元する。
  */
 describe("isAllowedImageUrl", () => {
-  const originalNodeEnv = process.env.NODE_ENV;
   const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   beforeEach(() => {
     // 既定: production 相当（= 開発例外なし）
-    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    jest.replaceProperty(process.env, "NODE_ENV", "production");
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
   });
 
   afterEach(() => {
-    (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv;
+    // NODE_ENV は jest.replaceProperty が自動で復元するので手動操作不要。
     if (originalSupabaseUrl === undefined) {
       delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     } else {
@@ -45,8 +44,15 @@ describe("isAllowedImageUrl", () => {
       expect(isAllowedImageUrl("https://fakesupabase.co/image.png")).toBe(false);
     });
 
-    it("Unsplash（モック画像）は許可する", () => {
+    it("Unsplash（モック画像）は `/photo-` で始まるパスを許可する", () => {
       expect(isAllowedImageUrl("https://images.unsplash.com/photo-1.jpg")).toBe(true);
+      expect(isAllowedImageUrl("https://images.unsplash.com/photo-abcxyz/-/thumb.jpg")).toBe(true);
+    });
+
+    it("Unsplash で `/photo-` 以外のパスは拒否する（`remotePatterns` と整合）", () => {
+      expect(isAllowedImageUrl("https://images.unsplash.com/profile/x.jpg")).toBe(false);
+      expect(isAllowedImageUrl("https://images.unsplash.com/")).toBe(false);
+      expect(isAllowedImageUrl("https://images.unsplash.com/other-path.jpg")).toBe(false);
     });
 
     it("未知のホストは拒否する", () => {
@@ -164,7 +170,9 @@ describe("isAllowedImageUrl", () => {
       expect(isAllowedImageUrl("https://abc.supabase.co:0/x.png")).toBe(false);
     });
 
-    it("明示 :443 は許可する", () => {
+    it("明示 :443 は `new URL` で空文字に正規化されるため許可される", () => {
+      // `new URL("https://abc.supabase.co:443/")` の .port は "" になる。
+      // よって本関数はデフォルトポートの URL として許可する。
       expect(isAllowedImageUrl("https://abc.supabase.co:443/x.png")).toBe(true);
     });
   });
@@ -237,13 +245,13 @@ describe("isAllowedImageUrl", () => {
     });
 
     it("development 環境でのみ 127.0.0.1:54321 のローカル Supabase を許可する", () => {
-      (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+      jest.replaceProperty(process.env, "NODE_ENV", "development");
       expect(isAllowedImageUrl("http://127.0.0.1:54321/storage/v1/object/public/x.png")).toBe(true);
       expect(isAllowedImageUrl("http://localhost:54321/storage/v1/object/public/x.png")).toBe(true);
     });
 
     it("development でもポートが違えば拒否する（誤許可防止）", () => {
-      (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+      jest.replaceProperty(process.env, "NODE_ENV", "development");
       expect(isAllowedImageUrl("http://127.0.0.1:8080/x.png")).toBe(false);
     });
 
