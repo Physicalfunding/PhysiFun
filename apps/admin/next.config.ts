@@ -32,10 +32,20 @@ const remotePatterns: NonNullable<NonNullable<NextConfig["images"]>["remotePatte
   {
     protocol: "https",
     hostname: "images.unsplash.com",
+    pathname: "/photo-**",
   },
 ];
 
-if (envSupabaseHost && !envSupabaseHost.endsWith(".supabase.co")) {
+// 環境変数から Supabase ホストを読み、`*.supabase.co` の 1 階層サブドメインで
+// 網羅できないケース（独自ドメイン or 多階層サブドメイン）のみ remotePatterns に追加。
+function isSingleLabelSupabaseHost(host: string): boolean {
+  const suffix = ".supabase.co";
+  if (!host.endsWith(suffix)) return false;
+  const label = host.slice(0, -suffix.length);
+  return label.length > 0 && !label.includes(".");
+}
+
+if (envSupabaseHost && !isSingleLabelSupabaseHost(envSupabaseHost)) {
   remotePatterns.push({
     protocol: "https",
     hostname: envSupabaseHost,

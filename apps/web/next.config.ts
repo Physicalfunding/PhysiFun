@@ -42,16 +42,25 @@ const remotePatterns: NonNullable<NonNullable<NextConfig["images"]>["remotePatte
     hostname: "*.supabase.co",
     pathname: "/storage/v1/object/public/**",
   },
-  // Unsplash（モック画像用）
+  // Unsplash（モック画像用） — pathname を `/photo-**` に限定
   {
     protocol: "https",
     hostname: "images.unsplash.com",
+    pathname: "/photo-**",
   },
 ];
 
-// 環境変数から Supabase ホストを読み、`*.supabase.co` に該当しない独自ドメインも許可する。
-// 同一ホストが既に `*.supabase.co` でカバーされている場合も重複許可は無害。
-if (envSupabaseHost && !envSupabaseHost.endsWith(".supabase.co")) {
+// 環境変数から Supabase ホストを読み、`*.supabase.co` の 1 階層サブドメインで
+// 網羅できないケース（独自ドメイン or 多階層サブドメイン）のみ remotePatterns に追加。
+// 1 階層の `<label>.supabase.co` は既存のワイルドカードでカバー済み。
+function isSingleLabelSupabaseHost(host: string): boolean {
+  const suffix = ".supabase.co";
+  if (!host.endsWith(suffix)) return false;
+  const label = host.slice(0, -suffix.length);
+  return label.length > 0 && !label.includes(".");
+}
+
+if (envSupabaseHost && !isSingleLabelSupabaseHost(envSupabaseHost)) {
   remotePatterns.push({
     protocol: "https",
     hostname: envSupabaseHost,
