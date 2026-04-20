@@ -1,23 +1,36 @@
-import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { isAllowedImageUrl } from "../isAllowedImageUrl";
 
 /**
  * Issue #120: カバー画像 URL allowlist + SSRF 防御のテスト。
  *
  * NODE_ENV / NEXT_PUBLIC_SUPABASE_URL を切り替えるため、
- * `jest.replaceProperty` で一時的に値を差し替えて jest が自動復元する。
+ * テスト開始前の値をバックアップしておき、afterEach で手動復元する。
+ * （bun test と jest の両方で動く形にしている。`jest.replaceProperty` は
+ *  bun test では未実装のため使わない）
  */
 describe("isAllowedImageUrl", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
   const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  // `NODE_ENV` は Node の型定義上 readonly 相当のため、Record キャストで書き換える。
+  const setNodeEnv = (value: string | undefined) => {
+    const env = process.env as Record<string, string | undefined>;
+    if (value === undefined) {
+      delete env.NODE_ENV;
+    } else {
+      env.NODE_ENV = value;
+    }
+  };
 
   beforeEach(() => {
     // 既定: production 相当（= 開発例外なし）
-    jest.replaceProperty(process.env, "NODE_ENV", "production");
+    setNodeEnv("production");
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
   });
 
   afterEach(() => {
-    // NODE_ENV は jest.replaceProperty が自動で復元するので手動操作不要。
+    setNodeEnv(originalNodeEnv);
     if (originalSupabaseUrl === undefined) {
       delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     } else {
@@ -245,13 +258,13 @@ describe("isAllowedImageUrl", () => {
     });
 
     it("development 環境でのみ 127.0.0.1:54321 のローカル Supabase を許可する", () => {
-      jest.replaceProperty(process.env, "NODE_ENV", "development");
+      setNodeEnv("development");
       expect(isAllowedImageUrl("http://127.0.0.1:54321/storage/v1/object/public/x.png")).toBe(true);
       expect(isAllowedImageUrl("http://localhost:54321/storage/v1/object/public/x.png")).toBe(true);
     });
 
     it("development でもポートが違えば拒否する（誤許可防止）", () => {
-      jest.replaceProperty(process.env, "NODE_ENV", "development");
+      setNodeEnv("development");
       expect(isAllowedImageUrl("http://127.0.0.1:8080/x.png")).toBe(false);
     });
 

@@ -5,30 +5,42 @@
  * - 生成する `publicUrl` が `isAllowedImageUrl` allowlist に合致する
  * - fail-safe ガード: allowlist 外の URL を返すサブクラスでは uploadImage が reject
  */
-import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { MockImageUploadService } from "../ImageUploadService";
 
 describe("MockImageUploadService", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  // `NODE_ENV` は型定義上 readonly 相当のため Record キャストで書き換える。
+  // `jest.replaceProperty` は bun test では未実装のため手動 backup/restore 方式を採用。
+  const setNodeEnv = (value: string | undefined) => {
+    const env = process.env as Record<string, string | undefined>;
+    if (value === undefined) {
+      delete env.NODE_ENV;
+    } else {
+      env.NODE_ENV = value;
+    }
+  };
+
   beforeEach(() => {
-    // production 以外の既定状態にしておく（jest.replaceProperty で自動復元）
-    jest.replaceProperty(process.env, "NODE_ENV", "test");
+    setNodeEnv("test");
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    setNodeEnv(originalNodeEnv);
   });
 
   describe("production guard", () => {
     it("NODE_ENV=production では構築時に throw する", () => {
-      jest.replaceProperty(process.env, "NODE_ENV", "production");
+      setNodeEnv("production");
       expect(() => new MockImageUploadService()).toThrow(
         /MockImageUploadService must not be used in production/
       );
     });
 
     it("NODE_ENV=development では構築できる", () => {
-      jest.replaceProperty(process.env, "NODE_ENV", "development");
+      setNodeEnv("development");
       expect(() => new MockImageUploadService()).not.toThrow();
     });
 
