@@ -1,9 +1,10 @@
 import Link from "next/link";
-// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
-import { PrismaLeaderApplicationQueryService } from "@physifun/infrastructure";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
+import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
 
-const queryService = new PrismaLeaderApplicationQueryService();
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
+// ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）
+export const dynamic = "force-dynamic";
 
 const TABS = [
   { status: "PENDING" as const, label: "審査待ち" },
@@ -25,6 +26,7 @@ export default async function ApplicationsListPage({
   const page = Math.max(1, Number(params.page) || 1);
   const perPage = 20;
 
+  const queryService = getLeaderApplicationQueryService();
   const [result, pendingCount, approvedCount, rejectedCount] = await Promise.all([
     queryService.findMany({ status: currentStatus, page, perPage }),
     queryService.countByStatus("PENDING"),

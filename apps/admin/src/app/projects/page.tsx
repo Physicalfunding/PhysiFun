@@ -1,15 +1,13 @@
 import Link from "next/link";
 import type { PublishStatus } from "@physifun/domain";
-// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
-import { PrismaProjectQueryService } from "@physifun/infrastructure";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { getCategoryLabel } from "@/lib/category";
+import { getProjectQueryService } from "@/lib/di/queryServices";
 import { getPrefectureName } from "@/lib/prefecture";
 
-// ADMIN 認証が必要な動的ページのため、ビルド時の静的生成を無効化する
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
+// ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）
 export const dynamic = "force-dynamic";
-
-const queryService = new PrismaProjectQueryService();
 
 const TABS: { status: PublishStatus; label: string }[] = [
   { status: "PENDING_REVIEW", label: "審査待ち" },
@@ -40,6 +38,7 @@ export default async function AdminProjectsListPage({
   const currentStatus = toPublishStatus(params.status);
   const page = Math.max(1, Number(params.page) || 1);
 
+  const queryService = getProjectQueryService();
   // 現在アクティブなタブの count は findManyForAdmin の totalCount を再利用し、他 2 タブのみ countByStatus を発行する
   const otherStatuses = TABS.map((tab) => tab.status).filter((s) => s !== currentStatus);
   const [result, otherCountA, otherCountB] = await Promise.all([

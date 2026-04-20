@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   description: "フィジファン 運営管理画面",
 };
 
+// NOTE (#119): `layout.tsx` は state を持たない前提のため `force-dynamic` は宣言しない。
+// 将来ここで動的データ取得 (認証ユーザー情報の埋め込み等) を始める場合は、
+// 各 page.tsx と同様に `export const dynamic = "force-dynamic"` を追加する。
+
 /**
  * 運営管理アプリのルートレイアウト
  */

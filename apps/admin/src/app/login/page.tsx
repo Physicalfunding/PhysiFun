@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
  *
  * メールアドレス + パスワードで認証し、ADMIN ロールを持つアカウントのみログイン可能。
  */
+// NOTE (#119): Client Component のため `force-dynamic` 不要 (フォーム UI のみ SSR、認証処理はブラウザ側 next-auth)。
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");

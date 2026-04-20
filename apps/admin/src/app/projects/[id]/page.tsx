@@ -1,19 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
-import { PrismaProjectQueryService } from "@physifun/infrastructure";
 import type { ReviewAction } from "@physifun/domain";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { ProjectPhaseBadge } from "@/components/ProjectPhaseBadge";
 import { ProjectReviewActions } from "@/components/ProjectReviewActions";
 import { SafeSnsLink, isSafeHttpsUrl } from "@/components/SafeSnsLink";
 import { getCategoryLabel } from "@/lib/category";
+import { getProjectQueryService } from "@/lib/di/queryServices";
 import { getPrefectureName } from "@/lib/prefecture";
 
-// ADMIN 認証が必要な動的ページのため、ビルド時の静的生成を無効化する
+// NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
+// ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）
 export const dynamic = "force-dynamic";
-
-const queryService = new PrismaProjectQueryService();
 
 const REVIEW_ACTION_LABELS: Record<ReviewAction, string> = {
   APPROVED: "承認",
@@ -47,6 +45,7 @@ export default async function AdminProjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const queryService = getProjectQueryService();
   const detail = await queryService.findDetailForAdmin(id);
 
   if (!detail) {

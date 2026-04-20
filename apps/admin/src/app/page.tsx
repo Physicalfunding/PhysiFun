@@ -1,21 +1,20 @@
 import Link from "next/link";
 import {
-  PrismaLeaderApplicationQueryService,
-  PrismaProjectQueryService,
-  PrismaOutboxQueryService,
-} from "@physifun/infrastructure";
+  getLeaderApplicationQueryService,
+  getOutboxQueryService,
+  getProjectQueryService,
+} from "@/lib/di/queryServices";
 
-// ADMIN 認証が必要な動的ページのため、ビルド時の静的生成を無効化する
+// ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）
 export const dynamic = "force-dynamic";
-
-const leaderApplicationQueryService = new PrismaLeaderApplicationQueryService();
-const projectQueryService = new PrismaProjectQueryService();
-const outboxQueryService = new PrismaOutboxQueryService();
 
 /**
  * 運営管理トップページ
  */
 export default async function AdminTopPage() {
+  const leaderApplicationQueryService = getLeaderApplicationQueryService();
+  const projectQueryService = getProjectQueryService();
+  const outboxQueryService = getOutboxQueryService();
   const [pendingApplicationCount, pendingProjectCount, outboxIncompleteCount] = await Promise.all([
     leaderApplicationQueryService.countByStatus("PENDING"),
     projectQueryService.countByStatus("PENDING_REVIEW"),
