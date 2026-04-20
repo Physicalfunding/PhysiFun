@@ -226,6 +226,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
                   size="sm"
                   onClick={() => setIsPublishConfirmOpen(true)}
                   isLoading={isActionLoading}
+                  data-testid="request-publish-button"
                 >
                   公開申請
                 </Button>
