@@ -1,0 +1,208 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+/**
+ * CSRF 保護の同一オリジン検証ユーティリティ。
+ *
+ * body-less POST や state-changing 系リクエストに対して、
+ * `Origin` / `Referer` ヘッダーが自サイトと一致するかを検査する。
+ *
+ * 方針 (Issue #109):
+ * - `Origin` ヘッダーを第一候補として検証する。
+ * - `Origin` が存在しない / `null` の場合は `Referer` を fallback として検証する。
+ * - どちらも無い場合は拒否 (same-origin リクエストでもブラウザは通常どちらかを送る)。
+ * - 許可オリジンは `NEXTAUTH_URL` を第一に、無ければリクエスト自身のホスト (`X-Forwarded-Host` / `Host`) から導出する。
+ *
+ * 同期的な純関数として実装し、middleware から呼び出す。
+ */
+
+/** CSRF チェックをスキップするメソッド (safe methods)。 */
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/** CSRF チェックをスキップするパス prefix。 */
+const CSRF_SKIP_PATH_PREFIXES = ["/api/auth/"] as const;
+
+/** CSRF チェックをスキップするパス完全一致。 */
+const CSRF_SKIP_PATH_EXACT = ["/api/auth"] as const;
+
+/**
+ * リクエストが CSRF チェック対象かどうかを判定する。
+ *
+ * @param method HTTP メソッド
+ * @param pathname リクエストパス (ex. `/api/my/projects`)
+ */
+export function shouldCheckCsrf(method: string, pathname: string): boolean {
+  if (SAFE_METHODS.has(method.toUpperCase())) {
+    return false;
+  }
+  for (const exact of CSRF_SKIP_PATH_EXACT) {
+    if (pathname === exact) {
+      return false;
+    }
+  }
+  for (const prefix of CSRF_SKIP_PATH_PREFIXES) {
+    if (pathname.startsWith(prefix)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * 期待されるオリジン (scheme + host[:port]) のセットを組み立てる。
+ *
+ * 優先順位 (セキュリティ最優先):
+ * 1. `NEXTAUTH_URL` が設定されていて正しい URL ならそれのみを信頼する (本番推奨)。
+ * 2. `NEXTAUTH_URL` が設定されているがパース失敗なら、誤設定の誤検知を避けるため
+ *    `console.error` で警告したうえで空配列を返し、呼び出し側で `origin_unresolved`
+ *    として 403 を返す (fail-safe)。`X-Forwarded-Host` へは fallback しない。
+ * 3. `NEXTAUTH_URL` が完全に未設定のときのみ、開発 fallback として
+ *    `X-Forwarded-Host` / `Host` ヘッダーから導出する。
+ *
+ * 設計意図: `NEXTAUTH_URL` が存在する = 運用者は明示的にオリジンを宣言している、と
+ * みなす。そこで不正値を放置して `X-Forwarded-Host` に落ちると、攻撃者が任意の
+ * ヘッダーを送ってオリジンをすり替えられてしまう。そのため不正値は必ず拒否する。
+ *
+ * 開発 fallback (3) は `NEXTAUTH_URL` 未設定時のローカル動作のためだけに残している。
+ * 本番では必ず `NEXTAUTH_URL` を正しく設定する前提。
+ *
+ * @param request NextRequest (ヘッダーと nextUrl から自ホストを推定する)
+ */
+export function getAllowedOrigins(request: NextRequest): string[] {
+  const envUrl = process.env.NEXTAUTH_URL;
+  if (envUrl) {
+    try {
+      const u = new URL(envUrl);
+      return [`${u.protocol}//${u.host}`];
+    } catch {
+      // NEXTAUTH_URL は設定されているが値が不正。
+      // fail-open で X-Forwarded-Host に落ちるとオリジン詐称の余地ができるため、
+      // ここでは明示的に空配列を返し、呼び出し側で 403 (origin_unresolved) にする。
+      console.error("[csrf] NEXTAUTH_URL is set but not a valid URL; refusing to fall back", {
+        NEXTAUTH_URL_length: envUrl.length,
+      });
+      return [];
+    }
+  }
+
+  // 開発 fallback: NEXTAUTH_URL が完全に未設定のときのみ、リクエストのホストヘッダーを使う。
+  const origins = new Set<string>();
+
+  // X-Forwarded-Proto もカンマ区切りで複数値を持つことがある (例: "https, http")。
+  // 先頭 (最も外側のプロキシが観測した値) のみを採用する。
+  const forwardedProtoRaw = request.headers.get("x-forwarded-proto");
+  const forwardedProto = forwardedProtoRaw?.split(",")[0]?.trim() || null;
+
+  // X-Forwarded-Host もカンマ区切りで複数値を持つことがある (例: "a.example.com, b.example.com")
+  // 先頭の値だけを使う。
+  const forwardedHostRaw = request.headers.get("x-forwarded-host");
+  const forwardedHost = forwardedHostRaw?.split(",")[0]?.trim();
+  if (forwardedHost) {
+    const proto = forwardedProto ?? "https";
+    origins.add(`${proto}://${forwardedHost}`);
+  }
+
+  const host = request.headers.get("host");
+  if (host) {
+    // nextUrl.protocol は "https:" のような末尾コロン付き
+    const proto = (forwardedProto ?? request.nextUrl.protocol.replace(/:$/, "")) || "https";
+    origins.add(`${proto}://${host}`);
+  }
+
+  return Array.from(origins);
+}
+
+/**
+ * URL 文字列から origin (scheme + host[:port]) を抽出する。
+ * 不正な URL の場合は null。
+ */
+function originFromUrl(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const u = new URL(value);
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * CSRF チェックを実行する。
+ *
+ * @returns `null` のとき許可、`NextResponse` (403) のとき拒否。
+ */
+export function verifyCsrf(request: NextRequest): NextResponse | null {
+  if (!shouldCheckCsrf(request.method, request.nextUrl.pathname)) {
+    return null;
+  }
+
+  const allowed = getAllowedOrigins(request);
+  if (allowed.length === 0) {
+    // 自ホストも NEXTAUTH_URL も判定できない異常系: 安全側に倒して拒否。
+    return csrfForbiddenResponse(request, "origin_unresolved");
+  }
+
+  const originHeader = request.headers.get("origin");
+  if (originHeader && originHeader !== "null") {
+    if (allowed.includes(originHeader)) {
+      return null;
+    }
+    return csrfForbiddenResponse(request, "origin_mismatch");
+  }
+
+  // Origin が無い / "null" の場合は Referer をフォールバックとして検証する。
+  //
+  // `Origin: null` が発生しうる主なケース:
+  //  - `<iframe sandbox>` からのリクエスト
+  //  - `meta referrer=no-referrer` や一部のプライバシーツールによるヘッダー除去
+  //
+  // 本アプリは現時点で `<iframe sandbox>` を使っていないため、`Origin: null` + Referer
+  // が一致するケースは実運用ではほぼ発生しない想定。ただし将来的に sandbox iframe を
+  // 導入すると本 fallback が正常系として動くため、方針を再検討すること (例: sandbox
+  // からの state-changing 呼び出しを全面禁止するなど)。
+  const refererOrigin = originFromUrl(request.headers.get("referer"));
+  if (refererOrigin && allowed.includes(refererOrigin)) {
+    return null;
+  }
+
+  return csrfForbiddenResponse(request, "origin_missing");
+}
+
+/**
+ * CSRF 拒否時の 403 レスポンス。
+ * 既存の `apiResponse` 形式に合わせた JSON を返す。
+ *
+ * @param request 監査ログ出力用に reason 以外の情報 (pathname/method/ip) を参照する。
+ * @param reason 内部ログ用の理由識別子 (クライアントには露出させない詳細は含めない)。
+ */
+function csrfForbiddenResponse(request: NextRequest, reason: string): NextResponse {
+  // 監査用ログ。ヘッダー値はクライアントに露出させず、サーバー側 console にだけ出す。
+  console.warn("[csrf] blocked", {
+    reason,
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+    ip: request.headers.get("x-forwarded-for") ?? null,
+  });
+
+  // `x-csrf-reason` は開発時のデバッグ用途のみ付与する。
+  // 本番ではクライアント (攻撃者含む) に対して CSRF 判定の内部事由を公開したくないため
+  // ヘッダーを付けず、監査ログ (console.warn) のみに残す。
+  const headers: Record<string, string> = {};
+  if (process.env.NODE_ENV !== "production") {
+    headers["x-csrf-reason"] = reason;
+  }
+
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code: "FORBIDDEN",
+        message: "CSRF 検証に失敗しました",
+      },
+    },
+    {
+      status: 403,
+      headers,
+    }
+  );
+}
