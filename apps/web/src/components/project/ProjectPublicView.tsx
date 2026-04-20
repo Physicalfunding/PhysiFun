@@ -1,9 +1,10 @@
+import Image from "next/image";
 import type { ProjectPublicDetailDTO } from "@physifun/application";
 import type { ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { PREFECTURES } from "@/lib/prefectures";
-import { SafeSnsLink, isSafeHttpsUrl } from "@physifun/ui-shared";
+import { SafeSnsLink, isAllowedImageUrl } from "@physifun/ui-shared";
 import { ProjectPublicTabs } from "./ProjectPublicTabs";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
@@ -85,7 +86,7 @@ export function ProjectPublicView({ project }: Props) {
           <h3 className="text-sm font-semibold text-gray-900 mb-3">リーダー紹介</h3>
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 font-bold text-sm">
-              {project.leader.displayName.charAt(0)}
+              {project.leader.displayName.charAt(0) || "?"}
             </div>
             <div className="flex-1">
               <p className="font-medium text-gray-900">{project.leader.displayName}</p>
@@ -126,14 +127,16 @@ export function ProjectPublicView({ project }: Props) {
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
       {/* ヘッダーセクション */}
       <div>
-        {/* カバー画像 */}
-        <div className="h-48 w-full overflow-hidden rounded-xl bg-gray-100 sm:h-64">
-          {project.coverImageUrl && isSafeHttpsUrl(project.coverImageUrl) ? (
-            /* eslint-disable-next-line @next/next/no-img-element -- Issue #120 で next/image + allowlist 移行予定 */
-            <img
+        {/* カバー画像 — Supabase Storage ホスト allowlist + SSRF 防御（Issue #120） */}
+        <div className="relative h-48 w-full overflow-hidden rounded-xl bg-gray-100 sm:h-64">
+          {project.coverImageUrl && isAllowedImageUrl(project.coverImageUrl) ? (
+            <Image
               src={project.coverImageUrl}
               alt={project.title}
-              className="h-full w-full object-cover"
+              fill
+              sizes="(min-width: 768px) 768px, 100vw"
+              className="object-cover"
+              priority
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-gray-400">
