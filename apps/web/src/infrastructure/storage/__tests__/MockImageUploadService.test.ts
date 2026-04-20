@@ -60,15 +60,12 @@ describe("MockImageUploadService", () => {
 
   describe("fail-safe guard", () => {
     it("uploadImage が allowlist 外の URL を生成すると reject する", async () => {
-      // buildMockPublicUrl をサブクラスでオーバーライドして allowlist 外の
-      // URL を返すようにする（private を型で緩めつつ上書き）。
-      class BrokenMock extends MockImageUploadService {
-        // @ts-expect-error override private method for test
-        protected buildMockPublicUrl(path: string): string {
-          return `https://evil.example.com/${path}`;
-        }
-      }
-      const svc = new BrokenMock();
+      const svc = new MockImageUploadService();
+      // private メソッド `buildMockPublicUrl` をランタイムで差し替え、
+      // allowlist 外の URL を返すようにする（fail-safe ガード検証）。
+      (svc as unknown as { buildMockPublicUrl: (p: string) => string }).buildMockPublicUrl = (
+        path: string
+      ) => `https://evil.example.com/${path}`;
 
       await expect(
         svc.uploadImage(
