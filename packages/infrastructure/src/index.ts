@@ -28,6 +28,7 @@ export {
   writeAdminAuditLog,
   type WriteAdminAuditLogParams,
 } from "./admin-account/PrismaAdminAuditLogAdapter";
+export { PrismaAdminAuthGcAdapter } from "./admin-account/PrismaAdminAuthGcAdapter";
 
 export { BcryptPasswordHasher } from "./security/BcryptPasswordHasher";
 
