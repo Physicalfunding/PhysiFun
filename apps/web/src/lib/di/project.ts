@@ -81,7 +81,7 @@ export function getRequestPublishPort(): RequestPublishPort {
  * - ProjectOutboxMessage 書き込み
  * を単一トランザクション（interactive tx）で実行する必要があるため、
  * executeApproveInTransaction を提供する。
- * ADMIN ロール二重防御のために findAccountById も提供する。
+ * 運営の二重防御のために findAdminReviewerById も提供する（#145 以降は AdminAccount 参照）。
  *
  * NOTE: 他の DI ヘルパーと同様に PrismaProjectCommandAdapter を独自インスタンス化し、
  * Port ごとの依存関係を明示的に分離する。
@@ -89,7 +89,7 @@ export function getRequestPublishPort(): RequestPublishPort {
 export function getApproveProjectPublicationPort(): ApproveProjectPublicationPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
-    findAccountById: (accountId: string) => adapter.findAccountById(accountId),
+    findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
     executeApproveInTransaction: (params: {
       project: Project;
@@ -114,7 +114,7 @@ export function getApproveProjectPublicationPort(): ApproveProjectPublicationPor
 export function getRejectProjectPublicationPort(): RejectProjectPublicationPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
-    findAccountById: (accountId: string) => adapter.findAccountById(accountId),
+    findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
     executeRejectInTransaction: (params: {
       project: Project;
@@ -140,7 +140,7 @@ export function getRejectProjectPublicationPort(): RejectProjectPublicationPort 
 export function getForceUnpublishProjectPort(): ForceUnpublishProjectPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
-    findAccountById: (id: string) => adapter.findAccountById(id),
+    findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
     executeForceUnpublishInTransaction: (params: {
       project: Project;

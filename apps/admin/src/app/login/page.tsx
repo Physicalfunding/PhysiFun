@@ -2,20 +2,18 @@
 
 import { signIn } from "next-auth/react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 /**
- * 運営管理ログインページ
+ * 運営管理ログインページ (#145)
  *
- * メールアドレス + パスワードで認証し、ADMIN ロールを持つアカウントのみログイン可能。
+ * マジックリンク認証。メールアドレスを入力するとワンタイムリンクが送られる。
+ * AdminAccount が存在し ACTIVE な場合のみリンクが有効化される。
  */
-// NOTE (#119): Client Component のため `force-dynamic` 不要 (フォーム UI のみ SSR、認証処理はブラウザ側 next-auth)。
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,20 +21,17 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
+      // NextAuth が検証後 /login/verify-request にリダイレクトする (pages.verifyRequest)。
+      const result = await signIn("email", {
+        email: email.trim().toLowerCase(),
         redirect: false,
       });
 
       if (result?.error) {
-        setError("メールアドレスまたはパスワードが正しくないか、管理者権限がありません。");
+        setError("メール送信に失敗しました。時間をおいて再度お試しください。");
         return;
       }
-
-      // ログイン成功 → トップへ遷移
-      router.push("/");
-      router.refresh();
+      setSent(true);
     } catch {
       setError("ログイン中にエラーが発生しました。");
     } finally {
@@ -49,45 +44,43 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-sm">
         <h1 className="text-center text-2xl font-bold">運営管理ログイン</h1>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          {error && <div className="rounded bg-red-50 p-3 text-sm text-red-600">{error}</div>}
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium">
-              メールアドレス
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+        {sent ? (
+          <div className="mt-8 space-y-4 text-sm">
+            <div className="rounded bg-blue-50 p-3 text-blue-800">
+              入力されたメールアドレス宛にログインリンクを送信しました。
+              10 分以内にリンクをクリックしてください。
+            </div>
+            <p className="text-gray-600">
+              メールが届かない場合、AdminAccount が未登録または無効化されている可能性があります。
+            </p>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            {error && <div className="rounded bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium">
-              パスワード
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium">
+                メールアドレス
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isLoading ? "ログイン中..." : "ログイン"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isLoading ? "送信中..." : "ログインリンクを送信"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

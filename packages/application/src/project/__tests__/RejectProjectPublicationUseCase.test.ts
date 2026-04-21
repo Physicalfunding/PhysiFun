@@ -16,6 +16,7 @@ import {
   RejectProjectPublicationUseCase,
 } from "../RejectProjectPublicationUseCase";
 import type { RejectProjectPublicationPort } from "../ports/RejectProjectPublicationPort";
+import type { AdminReviewer } from "../../shared/AdminReviewer";
 import type { CreateProjectOutboxMessageParams } from "../ports/RequestPublishPort";
 
 // ==================== テストヘルパー ====================
@@ -76,20 +77,15 @@ function createProjectWithStatus(
 
 // ==================== インメモリ実装 ====================
 
-interface InMemoryAccountRow {
-  readonly id: string;
-  readonly roles: readonly string[];
-}
-
 class InMemoryRejectProjectPublicationPort implements RejectProjectPublicationPort {
   /** 保存済みプロジェクト（findProjectById 用） */
   projects: Project[] = [];
 
   /**
-   * 保存済みアカウント（findAccountById 用）。
-   * 明示的にセットされていない場合は「ADMIN ロールを持つ常に見つかるアカウント」として振る舞う。
+   * 保存済み AdminReviewer（findAdminReviewerById 用）。
+   * 明示的にセットされていない場合は「常に見つかる ACTIVE な AdminAccount」として振る舞う。
    */
-  accounts: InMemoryAccountRow[] | null = null;
+  adminReviewers: AdminReviewer[] | null = null;
 
   /** executeRejectInTransaction で保存された Project */
   savedProjects: Project[] = [];
@@ -103,12 +99,12 @@ class InMemoryRejectProjectPublicationPort implements RejectProjectPublicationPo
   /** executeRejectInTransaction の呼び出し回数 */
   executeRejectInTransactionCallCount = 0;
 
-  async findAccountById(accountId: string): Promise<InMemoryAccountRow | null> {
-    if (this.accounts === null) {
-      // デフォルトは ADMIN ロール付きの有効なアカウントとして応答する
-      return { id: accountId, roles: ["ADMIN"] };
+  async findAdminReviewerById(id: string): Promise<AdminReviewer | null> {
+    if (this.adminReviewers === null) {
+      // デフォルトは該当 id の ACTIVE な AdminAccount として応答する
+      return { id, email: `admin-${id}@example.com` };
     }
-    return this.accounts.find((a) => a.id === accountId) ?? null;
+    return this.adminReviewers.find((r) => r.id === id) ?? null;
   }
 
   async findProjectById(projectId: string): Promise<Project | null> {
@@ -365,10 +361,10 @@ describe("RejectProjectPublicationUseCase", () => {
     expect(port.executeRejectInTransactionCallCount).toBe(0);
   });
 
-  // ---- REVIEWER_NOT_FOUND / REVIEWER_NOT_ADMIN（UseCase 層の二重防御） ----
+  // ---- REVIEWER_NOT_FOUND（UseCase 層の二重防御） ----
 
-  it("reviewer アカウントが存在しない場合 REVIEWER_NOT_FOUND（永続化は走らない）", async () => {
-    port.accounts = []; // 空リスト: 指定 reviewerId は見つからない
+  it("reviewer (AdminAccount) が存在しない場合 REVIEWER_NOT_FOUND（永続化は走らない）", async () => {
+    port.adminReviewers = []; // 空リスト: 指定 reviewerId は見つからない
     port.projects.push(createProjectWithStatus(PublishStatus.PENDING_REVIEW));
 
     const result = await useCase.execute({
@@ -383,8 +379,9 @@ describe("RejectProjectPublicationUseCase", () => {
     expect(port.executeRejectInTransactionCallCount).toBe(0);
   });
 
-  it("reviewer が ADMIN ロールを持たない場合 REVIEWER_NOT_ADMIN（永続化は走らない）", async () => {
-    port.accounts = [{ id: REVIEWER_ACCOUNT_ID_STR, roles: ["LEADER"] }];
+  it("AdminAccount が無効化済み（adapter が null 返却）の場合 REVIEWER_NOT_FOUND（永続化は走らない）", async () => {
+    // adapter 層で status !== "ACTIVE" の AdminAccount は null にマップされる想定。
+    port.adminReviewers = [];
     port.projects.push(createProjectWithStatus(PublishStatus.PENDING_REVIEW));
 
     const result = await useCase.execute({
@@ -395,7 +392,7 @@ describe("RejectProjectPublicationUseCase", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.type).toBe("REVIEWER_NOT_ADMIN");
+    expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
     expect(port.executeRejectInTransactionCallCount).toBe(0);
   });
 

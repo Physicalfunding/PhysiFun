@@ -18,6 +18,16 @@ export interface AccountForApproval {
 }
 
 /**
+ * AdminAccount reviewer の最小情報
+ *
+ * application 層の AdminReviewer と構造的に適合する。
+ */
+export interface AdminReviewer {
+  readonly id: string;
+  readonly email: string;
+}
+
+/**
  * Prisma ベースの ApproveLeaderApplicationPort 実装
  *
  * application 層の ApproveLeaderApplicationPort インターフェースに準拠。
@@ -33,6 +43,12 @@ export class PrismaApproveLeaderApplicationAdapter {
     return reconstructLeaderApplication(row);
   }
 
+  /**
+   * 応募者のアカウントを検索する。
+   *
+   * Issue #145 以降、reviewer は AdminAccount として別メソッド findAdminReviewerById で
+   * 取得するため、このメソッドは応募者（APPLICANT）の lookup 専用となった。
+   */
   async findAccountById(accountId: string): Promise<AccountForApproval | null> {
     const row = await prisma.account.findUnique({
       where: { id: accountId },
@@ -45,6 +61,22 @@ export class PrismaApproveLeaderApplicationAdapter {
       roles: row.roles as AccountRole[],
       email: row.email,
     };
+  }
+
+  /**
+   * AdminAccount ID で reviewer を検索する。
+   *
+   * status !== "ACTIVE" の AdminAccount は null にマップする（呼び出し側は
+   * 「未存在」と「無効化済み」を区別せず REVIEWER_NOT_FOUND として扱う）。
+   */
+  async findAdminReviewerById(id: string): Promise<AdminReviewer | null> {
+    const row = await prisma.adminAccount.findUnique({
+      where: { id },
+      select: { id: true, email: true, status: true },
+    });
+    if (!row) return null;
+    if (row.status !== "ACTIVE") return null;
+    return { id: row.id, email: row.email };
   }
 
   async executeApproval(params: {

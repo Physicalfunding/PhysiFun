@@ -317,8 +317,13 @@ model ProjectOutboxMessage {
 }
 
 // ==================== AdminAccount ====================
-// 運営アカウント (Phase 2 準備 #140 / #144)
+// 運営アカウント (Phase 2 準備 #140 / #144 / #145)
 // apps/admin 用の認証基盤。apps/web の Account とは完全に分離する。
+//
+// ## 認証方式 (#145)
+// NextAuth EmailProvider (マジックリンク) + Database セッション戦略。
+// パスワード / TOTP は採用せず、メール到達性と AdminSession の強制 revoke で
+// セキュリティ要件を満たす。
 //
 // ## 削除ポリシー
 // AdminAccount は**物理削除しない**運用（監査証跡を永続保持するため）。
@@ -330,16 +335,12 @@ model ProjectOutboxMessage {
 // - AdminAuditLog.adminAccountId → 監査証跡。Restrict
 // - AdminSession.adminAccountId → 失効はアプリケーション層で行うため Cascade
 model AdminAccount {
-  id            String             @id @default(uuid())
-  email         String             @unique
-  passwordHash  String
-  totpSecret    String? // 暗号化済み TOTP シークレット (暗号化は application 層)
-  totpEnabled   Boolean            @default(false)
-  recoveryCodes String[] // ハッシュ化済みリカバリコード (bcrypt 等)
-  status        AdminAccountStatus @default(ACTIVE)
-  lastLoginAt   DateTime?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id          String             @id @default(uuid())
+  email       String             @unique
+  status      AdminAccountStatus @default(ACTIVE)
+  lastLoginAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   // Relations
   sessions                   AdminSession[]
@@ -398,4 +399,19 @@ model AdminAuditLog {
   @@index([createdAt])
   @@index([targetType, targetId])
   @@map("admin_audit_logs")
+}
+
+// ==================== AdminVerificationToken ====================
+// NextAuth EmailProvider 用ワンタイムトークン (#145)
+// マジックリンクの token を保管。useVerificationToken で 1 回消費したら削除される。
+// 有効期限は EmailProvider.maxAge (NextAuth 設定) により決まるが通常 10 分。
+// 型は NextAuth v4 Adapter の VerificationToken IF に揃える (identifier = email)。
+model AdminVerificationToken {
+  identifier String // 宛先 email
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@index([expires])
+  @@map("admin_verification_tokens")
 }

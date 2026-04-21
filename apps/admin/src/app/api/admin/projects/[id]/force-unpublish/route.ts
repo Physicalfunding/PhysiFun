@@ -1,5 +1,4 @@
 import { type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import {
   ForceUnpublishProjectUseCase,
   type ForceUnpublishProjectError,
@@ -14,6 +13,7 @@ import {
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
 
 /**
  * POST /api/admin/projects/:id/force-unpublish
@@ -23,19 +23,13 @@ import {
  *
  * 認証の注意:
  * - middleware.ts は /api パスを除外しているため、この Route Handler が第一防衛線
- * - UseCase 層でも findAccountById → roles.includes("ADMIN") で二重防御している
- * - token.roles は auth.ts の jwt コールバックで設定される
+ * - UseCase 層でも findAdminReviewerById (ACTIVE な AdminAccount) で二重防御している
+ * - 運営認証は `@/lib/api/auth#getAuthenticatedAdminId` で AdminSession 経由の Database 戦略 (#145)
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // 第一防衛線: ADMIN ロールチェック（token ベース）
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) return unauthorizedResponse();
-    const roles = (token.roles as string[] | undefined) ?? [];
-    if (!roles.includes("ADMIN")) return unauthorizedResponse("ADMIN 権限が必要です");
-
-    // token.sub は reviewer の AccountId
-    const reviewerId = token.sub;
+    // 第一防衛線: AdminSession による運営認証 (#145)
+    const reviewerId = await getAuthenticatedAdminId();
     if (!reviewerId) return unauthorizedResponse();
 
     const { id } = await params;
@@ -103,8 +97,6 @@ function mapForceUnpublishError(error: ForceUnpublishProjectError) {
       return notFoundResponse("プロジェクト");
     case "REVIEWER_NOT_FOUND":
       return notFoundResponse("アカウント");
-    case "REVIEWER_NOT_ADMIN":
-      return unauthorizedResponse("ADMIN 権限が必要です");
     case "DOMAIN_ERROR":
       return unprocessableEntityResponse("このプロジェクトは現在の状態では強制非公開にできません");
     case "FEEDBACK_ERROR":

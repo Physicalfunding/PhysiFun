@@ -1,5 +1,4 @@
 import { type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import {
   deriveOutboxStatus,
   isValidOutboxSource,
@@ -14,6 +13,7 @@ import {
   internalErrorResponse,
 } from "@/lib/api/response";
 import { getOutboxQueryService } from "@/lib/di/queryServices";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
 
 /**
  * GET /api/admin/outbox
@@ -28,10 +28,9 @@ import { getOutboxQueryService } from "@/lib/di/queryServices";
  */
 export async function GET(request: NextRequest) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) return unauthorizedResponse();
-    const roles = (token.roles as string[] | undefined) ?? [];
-    if (!roles.includes("ADMIN")) return unauthorizedResponse("ADMIN 権限が必要です");
+    // 運営認証は `@/lib/api/auth#getAuthenticatedAdminId` で AdminSession 経由の Database 戦略 (#145)
+    const reviewerId = await getAuthenticatedAdminId();
+    if (!reviewerId) return unauthorizedResponse();
 
     const { searchParams } = request.nextUrl;
     const sourceParam = searchParams.get("source");

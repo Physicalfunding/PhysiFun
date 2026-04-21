@@ -1,11 +1,10 @@
 /**
- * AdminAccount 集約の状態遷移エラー (#140 / #144)
+ * AdminAccount 集約の状態遷移エラー (#140 / #144 / #145)
  *
  * 値オブジェクト生成時のフォーマット / 長さバリデーション失敗は
  * 各 value-object の固有エラー型で表現する。本ファイルでは集約ルートの
  * 状態遷移で起き得るエラーを列挙する。
+ *
+ * #145 でマジックリンク方式に切替し TOTP 関連エラーは削除した。
  */
-export type AdminAccountStateError =
-  | { readonly type: "CANNOT_DISABLE_ALREADY_DISABLED" }
-  | { readonly type: "TOTP_ALREADY_ENABLED" }
-  | { readonly type: "ACCOUNT_DISABLED" };
+export type AdminAccountStateError = { readonly type: "CANNOT_DISABLE_ALREADY_DISABLED" };

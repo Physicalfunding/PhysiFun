@@ -19,11 +19,21 @@ import { reconstructProject } from "./reconstructProject";
  * application 層の AccountForProjectCreation と構造的に適合する。
  * 循環依存 (infrastructure → application) を避けるためここで定義する。
  */
-export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
+export type AccountRole = "SUPPORTER" | "LEADER";
 
 export interface AccountForProjectCreation {
   readonly id: string;
   readonly roles: AccountRole[];
+}
+
+/**
+ * AdminAccount reviewer の最小情報
+ *
+ * application 層の AdminReviewer と構造的に適合する。
+ */
+export interface AdminReviewer {
+  readonly id: string;
+  readonly email: string;
 }
 
 // ==================== Prisma 実装 ====================
@@ -40,6 +50,10 @@ export class PrismaProjectCommandAdapter
   /**
    * アカウント ID でアカウントを検索する。
    * ロールを AccountRole 型にマッピングして返す。
+   *
+   * Issue #145 以降、reviewer は AdminAccount として別メソッド findAdminReviewerById で
+   * 取得するため、このメソッドは CreateProjectDraftUseCase の LEADER ロール検証など、
+   * Account ベースのユースケースでのみ使用される。
    */
   async findAccountById(accountId: string): Promise<AccountForProjectCreation | null> {
     const row = await prisma.account.findUnique({
@@ -51,6 +65,23 @@ export class PrismaProjectCommandAdapter
       id: row.id,
       roles: row.roles as AccountRole[],
     };
+  }
+
+  /**
+   * AdminAccount ID で reviewer を検索する。
+   *
+   * 運営承認・差戻・強制非公開ユースケースの reviewer 同定に使用する。
+   * status !== "ACTIVE" の AdminAccount は null にマップする（呼び出し側は
+   * 「未存在」と「無効化済み」を区別せず REVIEWER_NOT_FOUND として扱う）。
+   */
+  async findAdminReviewerById(id: string): Promise<AdminReviewer | null> {
+    const row = await prisma.adminAccount.findUnique({
+      where: { id },
+      select: { id: true, email: true, status: true },
+    });
+    if (!row) return null;
+    if (row.status !== "ACTIVE") return null;
+    return { id: row.id, email: row.email };
   }
 
   /**

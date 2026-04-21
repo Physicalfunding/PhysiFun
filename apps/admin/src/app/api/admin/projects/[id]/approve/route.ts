@@ -1,5 +1,4 @@
 import { type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import {
   ApproveProjectPublicationUseCase,
   type ApproveProjectPublicationError,
@@ -14,6 +13,7 @@ import {
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
 
 /**
  * POST /api/admin/projects/:id/approve
@@ -27,13 +27,8 @@ import {
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // ADMIN ロールチェック（第一防衛線）
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) return unauthorizedResponse();
-    const roles = (token.roles as string[] | undefined) ?? [];
-    if (!roles.includes("ADMIN")) return unauthorizedResponse("ADMIN 権限が必要です");
-
-    const reviewerId = typeof token.sub === "string" ? token.sub : undefined;
+    // 運営認証は `@/lib/api/auth#getAuthenticatedAdminId` で AdminSession 経由の Database 戦略 (#145)
+    const reviewerId = await getAuthenticatedAdminId();
     if (!reviewerId) return unauthorizedResponse();
 
     const { id } = await params;
@@ -98,8 +93,6 @@ function mapApproveError(error: ApproveProjectPublicationError) {
       return notFoundResponse("プロジェクト");
     case "REVIEWER_NOT_FOUND":
       return notFoundResponse("アカウント");
-    case "REVIEWER_NOT_ADMIN":
-      return unauthorizedResponse("ADMIN 権限が必要です");
     case "INVALID_PROJECT_STATUS":
       return unprocessableEntityResponse(
         "このプロジェクトは承認可能な状態ではありません（PENDING_REVIEW のみ承認可能）"

@@ -21,10 +21,8 @@ export {
   PrismaAuthenticateAdapter,
   type AuthenticatedAccount,
 } from "./account/PrismaAuthenticateAdapter";
-export {
-  PrismaAdminAuthenticateAdapter,
-  type AuthenticatedAdminAccount,
-} from "./admin-account/PrismaAdminAuthenticateAdapter";
+export { createAdminPrismaAdapter } from "./admin-account/AdminPrismaAdapter";
+export { createSendAdminMagicLink } from "./admin-account/sendAdminMagicLink";
 
 export { BcryptPasswordHasher } from "./security/BcryptPasswordHasher";
 
