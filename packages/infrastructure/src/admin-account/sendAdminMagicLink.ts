@@ -2,7 +2,7 @@ import type { SendVerificationRequestParams } from "next-auth/providers/email";
 import type { MailSender } from "../mail/types";
 
 /**
- * NextAuth EmailProvider 用マジックリンク送信関数 (#145)
+ * NextAuth EmailProvider 用マジックリンク送信関数 (#145 / #159 M-4 拡張)
  *
  * apps/admin 側の auth.ts が EmailProvider の `sendVerificationRequest` として
  * このファクトリを呼び出す。nodemailer を使わず、既存の `MailSender`
@@ -11,8 +11,18 @@ import type { MailSender } from "../mail/types";
  * - 送信先は `email` (AdminAccount.email と一致するはず) 単一
  * - 件名 / 本文は日本語固定 (運営管理アプリのみが利用)
  * - マジックリンクの URL は NextAuth が params.url で組み立て済み
+ * - 有効期限 (分) は deps で受け取る。apps/admin 側の `EMAIL_MAGIC_LINK_MAX_AGE_MIN`
+ *   と揃えることで、NextAuth の maxAge / UI 文言 / メール本文の三者が
+ *   単一の定数から駆動される (#159 M-4 拡張)。infrastructure は apps/admin を
+ *   直接 import できないため DI 経由で渡す。
  */
-export function createSendAdminMagicLink(deps: { mailSender: MailSender }) {
+export interface CreateSendAdminMagicLinkDeps {
+  mailSender: MailSender;
+  /** マジックリンクの有効期限 (分)。メール本文に「N 分以内に〜」として差し込む。 */
+  expiresInMin: number;
+}
+
+export function createSendAdminMagicLink(deps: CreateSendAdminMagicLinkDeps) {
   return async function sendAdminMagicLink(params: SendVerificationRequestParams): Promise<void> {
     const { identifier: email, url, expires } = params;
 
@@ -22,12 +32,13 @@ export function createSendAdminMagicLink(deps: { mailSender: MailSender }) {
     assertHttpUrl(url);
 
     const expiresJst = formatJstDateTime(expires);
+    const minutes = deps.expiresInMin;
 
     const subject = "【PhysiFun 運営管理】ログイン用リンク";
     const text = [
       "PhysiFun 運営管理アプリのログインリンクです。",
       "",
-      "下記 URL を 10 分以内にブラウザで開いてください:",
+      `下記 URL を ${minutes} 分以内にブラウザで開いてください:`,
       url,
       "",
       `このリンクは ${expiresJst} まで有効です。`,
@@ -38,7 +49,7 @@ export function createSendAdminMagicLink(deps: { mailSender: MailSender }) {
 
     const html = [
       "<p>PhysiFun 運営管理アプリのログインリンクです。</p>",
-      "<p>下記ボタンを 10 分以内にクリックしてください:</p>",
+      `<p>下記ボタンを ${minutes} 分以内にクリックしてください:</p>`,
       `<p><a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:4px;">ログインする</a></p>`,
       `<p>うまく動作しない場合は以下の URL をブラウザに貼り付けてください:<br><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p>`,
       `<p style="color:#6b7280;font-size:12px;">このリンクは ${escapeHtml(expiresJst)} まで有効です。心当たりがない場合は破棄してください。</p>`,
