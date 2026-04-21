@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import { getAdminPrismaAdapter, getIsActiveAdminByEmail, getSendAdminMagicLink } from "./di/auth";
 import { checkAdminMagicLinkRateLimit } from "./rateLimit";
+import { EMAIL_MAGIC_LINK_MAX_AGE_SEC } from "./auth-constants";
 
 /**
  * 運営管理アプリ用 NextAuth.js 設定 (#145 / #157)
@@ -39,7 +40,7 @@ export const authOptions: NextAuthOptions = {
       // host:"unused" で解決不能になり実害は無いが、変更時は意図を誤解しないこと。
       server: { host: "unused", port: 0, auth: { user: "unused", pass: "unused" } },
       from: process.env.MAIL_FROM ?? "noreply@physifun.com",
-      maxAge: 10 * 60, // マジックリンクの有効期限 10 分
+      maxAge: EMAIL_MAGIC_LINK_MAX_AGE_SEC, // #158 M4: verify-request UI と同じ定数を参照
       async sendVerificationRequest(params) {
         const send = getSendAdminMagicLink();
         await send(params);
