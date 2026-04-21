@@ -3,6 +3,7 @@ import {
   ResendMailSender,
   createAdminPrismaAdapter,
   createSendAdminMagicLink,
+  isActiveAdminByEmail,
   type MailSender,
 } from "@physifun/infrastructure";
 
@@ -13,6 +14,8 @@ import {
  * - MailSender: Resend がある環境では ResendMailSender、無ければ NoopMailSender
  *   (開発時 / テスト時にメール送信基盤無しでも起動できるようにするため)
  * - sendAdminMagicLink: EmailProvider の sendVerificationRequest に差し込む関数
+ * - isActiveAdminByEmail: NextAuth `callbacks.signIn` で「未登録メールへのマジックリンク
+ *   送信」を拒否するためのチェック (#157 C1)
  *
  * 規約 (#119): モジュールレベル new を避け、都度関数呼び出しで生成する。
  */
@@ -32,4 +35,8 @@ export function getAdminMailSender(): MailSender {
 
 export function getSendAdminMagicLink() {
   return createSendAdminMagicLink({ mailSender: getAdminMailSender() });
+}
+
+export function getIsActiveAdminByEmail() {
+  return isActiveAdminByEmail;
 }
