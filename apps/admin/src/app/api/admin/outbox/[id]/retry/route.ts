@@ -70,8 +70,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return unprocessableEntityResponse("対象メッセージが見つからないか、既に送信済みです");
     }
 
-    // #158 M3: outbox 手動操作を監査証跡に残す
-    await logAdminAction({
+    // #158 M3 / #159 H-2: outbox 手動操作を監査証跡に残す。
+    // logAdminAction は内部で try/catch して log-and-continue する設計 (auditLog.ts 参照)。
+    // 監査 DB 書き込みの遅延をレスポンス p99 に載せないよう fire-and-forget で呼ぶ。
+    void logAdminAction({
       adminAccountId: reviewerId,
       action: "outbox.retry",
       targetType: "OutboxMessage",
