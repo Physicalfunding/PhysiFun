@@ -8,7 +8,7 @@ import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
  * application 層の ApproveLeaderApplicationPort.AccountForApproval と同一の型。
  * 循環依存 (infrastructure → application) を避けるためここで定義する。
  */
-export type AccountRole = "SUPPORTER" | "LEADER" | "ADMIN";
+export type AccountRole = "SUPPORTER" | "LEADER";
 
 export interface AccountForApproval {
   readonly id: string;

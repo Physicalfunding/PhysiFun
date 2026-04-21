@@ -33,7 +33,8 @@ src/
 │       └── recruitment/          # サポート募集（活動参加募集）
 │
 ├── domain/                       # ドメイン層（エンティティ・値オブジェクト・リポジトリIF）
-│   ├── account/                  # Account, Role
+│   ├── account/                  # Account, Role（ユーザー: SUPPORTER/LEADER）
+│   ├── admin-account/            # AdminAccount, AdminAccountStatus, TotpSecret, RecoveryCodeHash
 │   ├── leader-application/       # LeaderApplication, ApplicationMode（PRE_ACCOUNT/AUTHENTICATED）
 │   ├── project/                  # Project, ProjectPhase, PublishStatus
 │   ├── recruitment/              # Recruitment, RecruitmentSchedule, SupportTicket
