@@ -1,24 +1,33 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { getAuthenticateAdapter, getBcryptPasswordHasher } from "./di/auth";
+import { getAdminAuthenticateAdapter, getBcryptPasswordHasher } from "./di/auth";
 
 /**
- * ユーザーが存在しない / passwordHash が無い場合のタイミング攻撃対策用ダミーハッシュ。
+ * アカウントが存在しない / passwordHash が無い場合のタイミング攻撃対策用ダミーハッシュ。
  *
- * bcrypt.compare を必ず 1 回実行することで、存在しないユーザーと
+ * bcrypt.compare を必ず 1 回実行することで、存在しないアカウントと
  * パスワード不一致の応答時間差をなくす。
  */
 const DUMMY_BCRYPT_HASH = "$2b$10$xayTtqBxF8k.DEBoqEFA0O6QFFGFVLTB.sp4jrtA7KCnVKkvlcRFa";
 
 /**
- * 運営管理アプリ用 NextAuth.js 設定
+ * 運営管理アプリ用 NextAuth.js 設定 (#144 Phase 2)
  *
  * Credentials プロバイダーでメール + パスワード認証を行い、
- * ADMIN ロールを持つ Account のみログインを許可する。
+ * ACTIVE な AdminAccount のみログインを許可する。
  *
- * 1. Prisma で Account を取得（ACTIVE かつ passwordHash あり）
+ * 1. AdminAccount を email で取得（ACTIVE のみ）
  * 2. bcrypt でパスワード検証
- * 3. roles に ADMIN が含まれるか確認
+ * 3. JWT に adminId と互換用 roles=["ADMIN"] を積む
+ *
+ * NOTE (#145 / #146):
+ *   - middleware / API route / UseCase は現在 `token.roles.includes("ADMIN")` と
+ *     `reviewerId` (Account.id 前提) に依存している。Phase 2 完全移行までの
+ *     ブリッジとして、JWT.roles に ["ADMIN"] を入れて既存チェックを通す。
+ *     UseCase の `findAccountById(reviewerId)` は AdminAccount.id を渡しても
+ *     Account テーブルには存在しないため REVIEWER_NOT_FOUND を返し、承認/却下
+ *     系操作は #145 の UseCase 改修まで実質無効化される。
+ *   - TOTP セットアップ/検証は #146 で後から追加する。
  */
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -33,31 +42,30 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const adapter = getAuthenticateAdapter();
+        const adapter = getAdminAuthenticateAdapter();
         const hasher = getBcryptPasswordHasher();
 
-        // Account.email は登録時に trim + toLowerCase で正規化しているため、
+        // AdminAccount.email は seed / 登録時に trim + toLowerCase で正規化しているため、
         // ログイン側も同じ正規化を行わないと大文字小文字差でログイン不能になる
         const normalizedEmail = credentials.email.trim().toLowerCase();
-        const account = await adapter.findActiveAccountByEmail(normalizedEmail);
+        const admin = await adapter.findActiveAdminAccountByEmail(normalizedEmail);
 
         // タイミング攻撃対策: アカウントが無い場合もダミーハッシュで compare を実行
-        const hashToCompare = account?.passwordHash ?? DUMMY_BCRYPT_HASH;
+        const hashToCompare = admin?.passwordHash ?? DUMMY_BCRYPT_HASH;
         const passwordOk = await hasher.compare(credentials.password, hashToCompare);
 
-        if (!account || !passwordOk) {
+        if (!admin || !passwordOk) {
           return null;
         }
 
-        // ADMIN ロール検証: ADMIN が含まれない場合はログイン拒否
-        if (!account.roles.includes("ADMIN")) {
-          return null;
-        }
+        // TODO(#146): totpEnabled=true の場合は TOTP コード検証を経ないとログイン不可にする。
+        // 現状は Phase 2 移行直後で TOTP 未セットアップの AdminAccount のみ存在する前提。
 
         return {
-          id: account.id,
-          email: account.email,
-          roles: [...account.roles],
+          id: admin.id,
+          email: admin.email,
+          // 互換: middleware / API route の `roles.includes("ADMIN")` を通すためのブリッジ値 (#145)
+          roles: ["ADMIN"],
         };
       },
     }),

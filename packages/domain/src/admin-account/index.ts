@@ -6,17 +6,8 @@ export {
   AdminAccountEmail,
   type AdminAccountEmailError,
 } from "./value-objects/AdminAccountEmail";
-export {
-  AdminAccountId,
-  type InvalidAdminAccountIdError,
-} from "./value-objects/AdminAccountId";
-export {
-  AdminAccountStatus,
-  isAdminAccountStatus,
-} from "./value-objects/AdminAccountStatus";
+export { AdminAccountId, type InvalidAdminAccountIdError } from "./value-objects/AdminAccountId";
+export { AdminAccountStatus, isAdminAccountStatus } from "./value-objects/AdminAccountStatus";
 export { HashedPassword, type HashedPasswordError } from "./value-objects/HashedPassword";
-export {
-  RecoveryCodeHash,
-  type RecoveryCodeHashError,
-} from "./value-objects/RecoveryCodeHash";
+export { RecoveryCodeHash, type RecoveryCodeHashError } from "./value-objects/RecoveryCodeHash";
 export { TotpSecret, type TotpSecretError } from "./value-objects/TotpSecret";

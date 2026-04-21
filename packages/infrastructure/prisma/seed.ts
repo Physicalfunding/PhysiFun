@@ -70,9 +70,7 @@ async function main(): Promise<void> {
   });
 
   console.log(`[seed] Created initial AdminAccount: ${created.email} (id=${created.id})`);
-  console.log(
-    `[seed] 初回ログイン時に TOTP セットアップを必ず行ってください (#146 で実装予定)。`
-  );
+  console.log(`[seed] 初回ログイン時に TOTP セットアップを必ず行ってください (#146 で実装予定)。`);
 }
 
 function requireEnv(name: string): string {
