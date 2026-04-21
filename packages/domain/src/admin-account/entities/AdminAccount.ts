@@ -1,6 +1,6 @@
 import { type Result, err, ok } from "../../shared/result";
 import type { AdminAccountStateError } from "../errors/AdminAccountError";
-import { AdminAccountEmail } from "../value-objects/AdminAccountEmail";
+import { AdminAccountEmail, type AdminAccountEmailError } from "../value-objects/AdminAccountEmail";
 import { AdminAccountId } from "../value-objects/AdminAccountId";
 import { AdminAccountStatus } from "../value-objects/AdminAccountStatus";
 
@@ -52,6 +52,30 @@ export class AdminAccount {
   }
 
   /**
+   * 生のメール文字列から新規 AdminAccount を生成する (#148 / #158 L4)。
+   *
+   * 運営追加 UI や seed から直接呼ぶためのショートカット。
+   * email の正規化・検証は `AdminAccountEmail.from` に委譲するため、
+   * 呼び出し側は "文字列を渡せば集約が整合した状態で作られる" という
+   * 不変条件を得られる (value object を組み立てる責務を集約に閉じる)。
+   */
+  static createFromRawEmail(input: {
+    email: string;
+    id?: AdminAccountId;
+    now?: Date;
+  }): Result<AdminAccount, AdminAccountEmailError> {
+    const emailResult = AdminAccountEmail.from(input.email);
+    if (!emailResult.ok) return emailResult;
+    return ok(
+      AdminAccount.create({
+        email: emailResult.value,
+        id: input.id,
+        now: input.now,
+      })
+    );
+  }
+
+  /**
    * 永続化層から AdminAccount を復元する (Repository 実装が呼ぶ)。
    * DB 値をそのまま復元するのみで、状態遷移ルールは適用しない。
    */
@@ -99,6 +123,18 @@ export class AdminAccount {
     return this._updatedAt;
   }
 
+  // ---- Predicates ----
+
+  /** ACTIVE かどうか (呼び出し側の三項演算を減らすための糖衣)。 */
+  isActive(): boolean {
+    return this._status === AdminAccountStatus.ACTIVE;
+  }
+
+  /** DISABLED かどうか。 */
+  isDisabled(): boolean {
+    return this._status === AdminAccountStatus.DISABLED;
+  }
+
   // ---- State transitions ----
 
   /**
@@ -107,8 +143,19 @@ export class AdminAccount {
    *
    * DISABLED → DISABLED は運営 UI でエラーフィードバックしたいため
    * `Result` で返す (enable() が冪等 void なのと非対称なのは意図的)。
+   *
+   * #148 / #158 L4: 「自分自身は無効化できない」ガードを集約に集約する。
+   * 呼び出し側 (Route Handler) はこの集約メソッドを経由することで
+   * `CANNOT_DISABLE_SELF` エラーをドメイン境界の内側で一元管理できる。
    */
-  disable(input?: { now?: Date }): Result<void, AdminAccountStateError> {
+  disable(input?: {
+    now?: Date;
+    /** 操作者 (ログイン中の運営) の AdminAccount.id。指定時は自己無効化を弾く。 */
+    operatorId?: AdminAccountId;
+  }): Result<void, AdminAccountStateError> {
+    if (input?.operatorId && this._id.equals(input.operatorId)) {
+      return err({ type: "CANNOT_DISABLE_SELF" });
+    }
     if (this._status === AdminAccountStatus.DISABLED) {
       return err({ type: "CANNOT_DISABLE_ALREADY_DISABLED" });
     }

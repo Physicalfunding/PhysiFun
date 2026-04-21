@@ -47,6 +47,27 @@ describe("AdminAccount", () => {
       }
     });
 
+    it("自分自身を disable しようとするとエラー (#148 / #158 L4)", () => {
+      const id = AdminAccountId.generate();
+      const account = AdminAccount.create({ email: email(), id });
+      const result = account.disable({ operatorId: id });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe("CANNOT_DISABLE_SELF");
+      }
+      // 状態は変化していない
+      expect(account.status).toBe(AdminAccountStatus.ACTIVE);
+    });
+
+    it("他人が disable する場合は operatorId を渡しても成功する", () => {
+      const targetId = AdminAccountId.generate();
+      const operatorId = AdminAccountId.generate();
+      const account = AdminAccount.create({ email: email(), id: targetId });
+      const result = account.disable({ operatorId });
+      expect(result.ok).toBe(true);
+      expect(account.status).toBe(AdminAccountStatus.DISABLED);
+    });
+
     it("DISABLED → ACTIVE に再有効化できる", () => {
       const account = AdminAccount.create({ email: email() });
       account.disable();
@@ -63,6 +84,46 @@ describe("AdminAccount", () => {
       expect(account.status).toBe(AdminAccountStatus.ACTIVE);
       // updatedAt は変化しない (既に ACTIVE なので touch しない)
       expect(account.updatedAt).toBe(before);
+    });
+  });
+
+  describe("createFromRawEmail (#148 / #158 L4)", () => {
+    it("正しい email 文字列から AdminAccount を生成する", () => {
+      const result = AdminAccount.createFromRawEmail({ email: "  New@Example.com  " });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // 正規化されている
+        expect(result.value.email.toString()).toBe("new@example.com");
+        expect(result.value.status).toBe(AdminAccountStatus.ACTIVE);
+        expect(result.value.lastLoginAt).toBeNull();
+      }
+    });
+
+    it("空文字は EMAIL_REQUIRED エラー", () => {
+      const result = AdminAccount.createFromRawEmail({ email: "   " });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe("EMAIL_REQUIRED");
+      }
+    });
+
+    it("不正な形式は EMAIL_INVALID_FORMAT エラー", () => {
+      const result = AdminAccount.createFromRawEmail({ email: "not-an-email" });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe("EMAIL_INVALID_FORMAT");
+      }
+    });
+  });
+
+  describe("predicates (#148)", () => {
+    it("isActive / isDisabled は status に応じて切り替わる", () => {
+      const account = AdminAccount.create({ email: email() });
+      expect(account.isActive()).toBe(true);
+      expect(account.isDisabled()).toBe(false);
+      account.disable();
+      expect(account.isActive()).toBe(false);
+      expect(account.isDisabled()).toBe(true);
     });
   });
 
