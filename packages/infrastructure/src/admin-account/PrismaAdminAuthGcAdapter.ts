@@ -12,6 +12,14 @@ import { prisma } from "../database/client";
  * - AdminAuditLog.adminSessionId は SetNull のため履歴は保持される (schema.prisma 参照)
  */
 export class PrismaAdminAuthGcAdapter {
+  /**
+   * 期限切れ行を両テーブルから削除して件数を返す。
+   *
+   * `now` の default は「呼び出しごとに `new Date()` を評価」する。
+   * JavaScript の default parameter は call time で評価されるため、
+   * module load 時の値で固定されることはない (#159 L-5)。
+   * テストでは固定 Date を渡すことで再現性を担保できる。
+   */
   async deleteExpired(now: Date = new Date()): Promise<{
     deletedSessions: number;
     deletedVerificationTokens: number;
