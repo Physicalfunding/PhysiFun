@@ -77,7 +77,14 @@ export const authOptions: NextAuthOptions = {
       if (!email?.verificationRequest) {
         return true;
       }
-      const address = user.email;
+      const rawAddress = user.email;
+      if (!rawAddress) {
+        return false;
+      }
+      // 大文字違い (e.g. "Alice@Example.com" vs "alice@example.com") でレート制限を
+      // バイパスされないよう正規化する (#157 H3)。AdminAccount.email は seed 時点で
+      // 小文字で保存しているので DB 検索も同じ正規化形でマッチする。
+      const address = rawAddress.trim().toLowerCase();
       if (!address) {
         return false;
       }

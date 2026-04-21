@@ -15,6 +15,12 @@ import type { MailSender } from "../mail/types";
 export function createSendAdminMagicLink(deps: { mailSender: MailSender }) {
   return async function sendAdminMagicLink(params: SendVerificationRequestParams): Promise<void> {
     const { identifier: email, url, expires } = params;
+
+    // NEXTAUTH_URL が誤設定/悪意ある値になった場合に javascript: / data: などの
+    // 危険スキームをメール本文に載せないための保険 (#157 H1)。
+    // NextAuth 本体も通常は http(s) URL を生成するが、自衛のため明示的に検査する。
+    assertHttpUrl(url);
+
     const expiresJst = formatJstDateTime(expires);
 
     const subject = "【PhysiFun 運営管理】ログイン用リンク";
@@ -51,6 +57,26 @@ export function createSendAdminMagicLink(deps: { mailSender: MailSender }) {
       throw new Error(`[sendAdminMagicLink] mail send failed: ${result.error.message}`);
     }
   };
+}
+
+/**
+ * マジックリンク URL が http:// または https:// で始まる安全な URL であることを検証する。
+ * それ以外 (javascript:, data:, vbscript: など) は即 throw。
+ *
+ * URL パース自体が失敗するケース (相対パス、空文字列) も弾く。
+ */
+function assertHttpUrl(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(`[sendAdminMagicLink] invalid magic link URL (not a URL)`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(
+      `[sendAdminMagicLink] disallowed URL scheme: ${parsed.protocol} (http/https only)`
+    );
+  }
 }
 
 function formatJstDateTime(date: Date): string {

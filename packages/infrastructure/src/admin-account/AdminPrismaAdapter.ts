@@ -34,7 +34,9 @@ export function createAdminPrismaAdapter(): Adapter {
     },
 
     async getUserByEmail(email: string): Promise<AdapterUser | null> {
-      const row = await prisma.adminAccount.findUnique({ where: { email } });
+      // 大文字違いでマッチ漏れしないよう正規化 (#157 H3)
+      const normalized = email.trim().toLowerCase();
+      const row = await prisma.adminAccount.findUnique({ where: { email: normalized } });
       if (!row) return null;
       if (row.status !== "ACTIVE") return null;
       return toAdapterUser(row);
@@ -46,12 +48,17 @@ export function createAdminPrismaAdapter(): Adapter {
     },
 
     async updateUser(user: Partial<AdapterUser> & Pick<AdapterUser, "id">): Promise<AdapterUser> {
-      // EmailProvider では name/image 等の上書きは発生しない想定だが、
-      // NextAuth 内部から呼ばれる経路があるため最小更新 (updatedAt のみ) を実装する。
-      const row = await prisma.adminAccount.update({
-        where: { id: user.id },
-        data: {},
-      });
+      // EmailProvider では name/image 等の上書きは発生しない想定。
+      // NextAuth 内部から呼ばれる経路がある場合の最小実装。
+      //
+      // 以前は `update({ data: {} })` としていたが、AdminAccount が並行して
+      // 削除/DISABLED 化した場合に P2025 で 500 化するリスクがあった (#157 H2)。
+      // 実更新は行わず findUnique で取得し、存在しない/非 ACTIVE の場合は
+      // NextAuth に throw を返す (サインイン継続不可が正しい挙動)。
+      const row = await prisma.adminAccount.findUnique({ where: { id: user.id } });
+      if (!row || row.status !== "ACTIVE") {
+        throw new Error("[AdminPrismaAdapter] updateUser target not found or not ACTIVE");
+      }
       return toAdapterUser(row);
     },
 
@@ -125,9 +132,11 @@ export function createAdminPrismaAdapter(): Adapter {
       token: string;
       expires: Date;
     }) {
+      // identifier (= email) を正規化して保存 (#157 H3)。大文字違いで token 検索が漏れないよう。
+      const identifier = params.identifier.trim().toLowerCase();
       const row = await prisma.adminVerificationToken.create({
         data: {
-          identifier: params.identifier,
+          identifier,
           token: params.token,
           expires: params.expires,
         },
@@ -141,11 +150,12 @@ export function createAdminPrismaAdapter(): Adapter {
 
     async useVerificationToken(params: { identifier: string; token: string }) {
       // 1 回消費したら削除 (NextAuth v4 の仕様)。
+      const identifier = params.identifier.trim().toLowerCase();
       try {
         const row = await prisma.adminVerificationToken.delete({
           where: {
             identifier_token: {
-              identifier: params.identifier,
+              identifier,
               token: params.token,
             },
           },

@@ -12,8 +12,12 @@ import { prisma } from "../database/client";
  * - ACTIVE -> true
  */
 export async function isActiveAdminByEmail(email: string): Promise<boolean> {
+  // 呼び出し側が正規化し忘れた場合の保険として二重で正規化する (#157 H3)。
+  // AdminAccount.email は seed 時点で lowercase 保存。
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return false;
   const row = await prisma.adminAccount.findUnique({
-    where: { email },
+    where: { email: normalized },
     select: { status: true },
   });
   return row?.status === "ACTIVE";
