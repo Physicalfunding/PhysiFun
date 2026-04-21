@@ -15,6 +15,7 @@ import {
   PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE,
 } from "../ForceUnpublishProjectUseCase";
 import type { ForceUnpublishProjectPort } from "../ports/ForceUnpublishProjectPort";
+import type { AdminReviewer } from "../../shared/AdminReviewer";
 import type { CreateProjectOutboxMessageParams } from "../ports/RequestPublishPort";
 
 // ==================== テストヘルパー ====================
@@ -74,21 +75,16 @@ function createProjectWithStatus(publishStatus: PublishStatus): Project {
 
 // ==================== インメモリ実装 ====================
 
-interface AccountRecord {
-  readonly id: string;
-  readonly roles: readonly string[];
-}
-
 class InMemoryForceUnpublishProjectPort implements ForceUnpublishProjectPort {
   projects: Project[] = [];
-  accounts: AccountRecord[] = [];
+  adminReviewers: AdminReviewer[] = [];
   savedProjects: Project[] = [];
   savedFeedbacks: ProjectReviewFeedback[] = [];
   createdOutboxMessages: CreateProjectOutboxMessageParams[] = [];
   executeInTransactionCallCount = 0;
 
-  async findAccountById(accountId: string): Promise<AccountRecord | null> {
-    return this.accounts.find((a) => a.id === accountId) ?? null;
+  async findAdminReviewerById(id: string): Promise<AdminReviewer | null> {
+    return this.adminReviewers.find((r) => r.id === id) ?? null;
   }
 
   async findProjectById(projectId: string): Promise<Project | null> {
@@ -115,8 +111,11 @@ describe("ForceUnpublishProjectUseCase", () => {
 
   beforeEach(() => {
     port = new InMemoryForceUnpublishProjectPort();
-    // デフォルトで reviewer は ADMIN ロールを持つ（正常系で使う）
-    port.accounts.push({ id: REVIEWER_ACCOUNT_ID_STR, roles: ["ADMIN"] });
+    // デフォルトで ACTIVE な AdminAccount reviewer を登録（正常系で使う）
+    port.adminReviewers.push({
+      id: REVIEWER_ACCOUNT_ID_STR,
+      email: "admin@example.com",
+    });
     useCase = new ForceUnpublishProjectUseCase(port);
   });
 
@@ -313,12 +312,12 @@ describe("ForceUnpublishProjectUseCase", () => {
     expect(port.executeInTransactionCallCount).toBe(0);
   });
 
-  // ---- ADMIN 二重防御 ----
+  // ---- reviewer (AdminAccount) 二重防御 ----
 
-  it("reviewer アカウントが存在しない場合 REVIEWER_NOT_FOUND を返す", async () => {
+  it("reviewer (AdminAccount) が存在しない場合 REVIEWER_NOT_FOUND を返す", async () => {
     port.projects.push(createProjectWithStatus(PublishStatus.PUBLISHED));
-    // デフォルト登録された ADMIN アカウントを取り除いて unknown reviewer を再現
-    port.accounts = [];
+    // デフォルト登録された AdminReviewer を取り除いて unknown reviewer を再現
+    port.adminReviewers = [];
 
     const result = await useCase.execute({
       projectId: PROJECT_ID_STR,
@@ -332,10 +331,10 @@ describe("ForceUnpublishProjectUseCase", () => {
     expect(port.executeInTransactionCallCount).toBe(0);
   });
 
-  it("reviewer が ADMIN ロールを持たない場合 REVIEWER_NOT_ADMIN を返す", async () => {
+  it("AdminAccount が無効化済み（adapter が null 返却）の場合 REVIEWER_NOT_FOUND を返す", async () => {
     port.projects.push(createProjectWithStatus(PublishStatus.PUBLISHED));
-    // ADMIN を含まない roles に上書き
-    port.accounts = [{ id: REVIEWER_ACCOUNT_ID_STR, roles: ["LEADER", "SUPPORTER"] }];
+    // adapter 層で status !== "ACTIVE" の AdminAccount は null にマップされる想定。
+    port.adminReviewers = [];
 
     const result = await useCase.execute({
       projectId: PROJECT_ID_STR,
@@ -345,7 +344,7 @@ describe("ForceUnpublishProjectUseCase", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.type).toBe("REVIEWER_NOT_ADMIN");
+    expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
     expect(port.executeInTransactionCallCount).toBe(0);
   });
 

@@ -12,10 +12,9 @@ test.use({ storageState: ADMIN_STORAGE });
  *
  * 事後状態: Account.roles に LEADER が追加される
  */
-// TODO(#145): Phase 2 で AdminAccount ログインに切替後、ApproveLeaderApplicationUseCase が
-// reviewerId を Account.id として解決するため REVIEWER_NOT_FOUND になる。
-// UseCase を AdminAccount ベースに改修する #145 で再度有効化する。
-test.skip("admin が PENDING 応募を承認でき、ステータスが APPROVED に変わる", async ({ page }) => {
+// #145: AdminAccount ベース認証 + ApproveLeaderApplicationUseCase の reviewer 検証を
+// AdminAccount に切替したため、このテストを有効化する。
+test("admin が PENDING 応募を承認でき、ステータスが APPROVED に変わる", async ({ page }) => {
   // window.confirm を常に承諾する
   page.on("dialog", (dialog) => dialog.accept());
 

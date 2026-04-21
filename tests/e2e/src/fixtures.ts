@@ -31,11 +31,9 @@ export const TEST_LEADER = {
     "E2Eテスト用の活動予定です。毎週土曜日に地域コミュニティの集まりを開催します。",
 } as const;
 
-/** テスト用 admin アカウントデータ (setup で seed される) */
+/** テスト用 admin アカウントデータ (setup で seed される) (#145: magic link 方式のためパスワード不要) */
 export const TEST_ADMIN = {
   email: "admin@e2e-test.local",
-  password: "AdminPass123!",
-  displayName: "E2E Admin",
 } as const;
 
 /** プロジェクト編集時に上書きする内容 (05-project-create で使う) */

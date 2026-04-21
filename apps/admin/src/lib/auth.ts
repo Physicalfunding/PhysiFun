@@ -1,72 +1,44 @@
 import type { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { getAdminAuthenticateAdapter, getBcryptPasswordHasher } from "./di/auth";
+import EmailProvider from "next-auth/providers/email";
+import { getAdminPrismaAdapter, getIsActiveAdminByEmail, getSendAdminMagicLink } from "./di/auth";
+import { checkAdminMagicLinkRateLimit } from "./rateLimit";
 
 /**
- * アカウントが存在しない / passwordHash が無い場合のタイミング攻撃対策用ダミーハッシュ。
+ * 運営管理アプリ用 NextAuth.js 設定 (#145 / #157)
  *
- * bcrypt.compare を必ず 1 回実行することで、存在しないアカウントと
- * パスワード不一致の応答時間差をなくす。
- */
-const DUMMY_BCRYPT_HASH = "$2b$10$xayTtqBxF8k.DEBoqEFA0O6QFFGFVLTB.sp4jrtA7KCnVKkvlcRFa";
-
-/**
- * 運営管理アプリ用 NextAuth.js 設定 (#144 Phase 2)
+ * 認証方式: Magic Link (EmailProvider) + Database セッション戦略
  *
- * Credentials プロバイダーでメール + パスワード認証を行い、
- * ACTIVE な AdminAccount のみログインを許可する。
+ * - AdminAccount テーブルから ACTIVE なアカウントのみをログイン許可 (AdminPrismaAdapter 内で制御)。
+ * - マジックリンク送信は Resend 経由 (sendVerificationRequest で差し込み)。
+ * - 既知の email のみログイン可能。createUser は adapter 側で throw する。
+ * - セッション TTL = 3600s (1h)。DB 側 (admin_sessions) の expires と一致。
+ * - AdminSession 行を DELETE すれば即座に強制 revoke される (deleteSession / getSessionAndUser)。
  *
- * 1. AdminAccount を email で取得（ACTIVE のみ）
- * 2. bcrypt でパスワード検証
- * 3. JWT に adminId と互換用 roles=["ADMIN"] を積む
+ * ## 開放リレー対策 (#157 C1)
+ * NextAuth v4 EmailProvider は `getUserByEmail` が null でも合成ユーザを作って
+ * `sendVerificationRequest` まで流すため、`callbacks.signIn` で AdminAccount 実在 +
+ * ACTIVE をチェックし、未登録 email への送信を遮断する。また `adminMagicLink` アクションの
+ * レート制限 (5 回 / 15 分 / email) で同一 email への連投も抑止する。
  *
- * NOTE (#145 / #146):
- *   - middleware / API route / UseCase は現在 `token.roles.includes("ADMIN")` と
- *     `reviewerId` (Account.id 前提) に依存している。Phase 2 完全移行までの
- *     ブリッジとして、JWT.roles に ["ADMIN"] を入れて既存チェックを通す。
- *     UseCase の `findAccountById(reviewerId)` は AdminAccount.id を渡しても
- *     Account テーブルには存在しないため REVIEWER_NOT_FOUND を返し、承認/却下
- *     系操作は #145 の UseCase 改修まで実質無効化される。
- *   - TOTP セットアップ/検証は #146 で後から追加する。
+ * セキュリティ方針 (#140):
+ *   - パスワード / TOTP は採用しない (#144 で追加した列は #145 migration で削除済み)。
+ *   - 数名の運営のみがアクセスする想定。マジックリンク到達性で本人性を担保。
+ *   - 万一トークン漏洩しても AdminSession の強制削除で即座に revoke 可能。
  */
 export const authOptions: NextAuthOptions = {
+  adapter: getAdminPrismaAdapter(),
+
   providers: [
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "メールアドレス", type: "email" },
-        password: { label: "パスワード", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) {
-          return null;
-        }
-
-        const adapter = getAdminAuthenticateAdapter();
-        const hasher = getBcryptPasswordHasher();
-
-        // AdminAccount.email は seed / 登録時に trim + toLowerCase で正規化しているため、
-        // ログイン側も同じ正規化を行わないと大文字小文字差でログイン不能になる
-        const normalizedEmail = credentials.email.trim().toLowerCase();
-        const admin = await adapter.findActiveAdminAccountByEmail(normalizedEmail);
-
-        // タイミング攻撃対策: アカウントが無い場合もダミーハッシュで compare を実行
-        const hashToCompare = admin?.passwordHash ?? DUMMY_BCRYPT_HASH;
-        const passwordOk = await hasher.compare(credentials.password, hashToCompare);
-
-        if (!admin || !passwordOk) {
-          return null;
-        }
-
-        // TODO(#146): totpEnabled=true の場合は TOTP コード検証を経ないとログイン不可にする。
-        // 現状は Phase 2 移行直後で TOTP 未セットアップの AdminAccount のみ存在する前提。
-
-        return {
-          id: admin.id,
-          email: admin.email,
-          // 互換: middleware / API route の `roles.includes("ADMIN")` を通すためのブリッジ値 (#145)
-          roles: ["ADMIN"],
-        };
+    EmailProvider({
+      // NextAuth の EmailProvider は nodemailer を要求するが、sendVerificationRequest を
+      // 明示指定することで nodemailer 依存を回避して ResendMailSender を使う。
+      // server / from は未使用だがスキーマ上必須なのでダミー値を入れる。
+      server: { host: "unused", port: 0, auth: { user: "unused", pass: "unused" } },
+      from: process.env.MAIL_FROM ?? "noreply@physifun.com",
+      maxAge: 10 * 60, // マジックリンクの有効期限 10 分
+      async sendVerificationRequest(params) {
+        const send = getSendAdminMagicLink();
+        await send(params);
       },
     }),
   ],
@@ -74,33 +46,67 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   session: {
-    strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 管理画面は 1日 で期限切れ（web より短い）
-  },
-
-  jwt: {
-    maxAge: 24 * 60 * 60,
+    strategy: "database",
+    maxAge: 60 * 60, // 1h (運営アプリは web より短い)
+    updateAge: 10 * 60, // 10 分以上経過時のみ expires を更新 (書き込み量削減)
   },
 
   pages: {
     signIn: "/login",
-    signOut: "/login",
+    verifyRequest: "/login/verify-request",
     error: "/login",
   },
 
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.roles = user.roles;
+    /**
+     * signIn callback (#157 C1 / H1)
+     *
+     * Magic Link 送信フロー (`email.verificationRequest === true`) のときのみ:
+     *   1. レート制限 (email 単位 5/15min) を消費。超過なら false を返して送信中断
+     *   2. AdminAccount が ACTIVE に存在するかをチェックし、無ければ false
+     *
+     * false を返すと NextAuth は AccessDenied を投げ、`createVerificationToken` /
+     * `sendVerificationRequest` はいずれも実行されない。エラーは pages.error (/login)
+     * にリダイレクトされるため、クライアントからは「メール送信失敗」の表示になる。
+     *
+     * 非 verificationRequest 経路 (= マジックリンククリック後のコールバック等) は
+     * adapter.getUserByEmail が ACTIVE のみを返す仕様と合わさって弾かれるため、
+     * ここでは true を返す。
+     */
+    async signIn({ user, email }) {
+      if (!email?.verificationRequest) {
+        return true;
       }
-      return token;
+      const rawAddress = user.email;
+      if (!rawAddress) {
+        return false;
+      }
+      // 大文字違い (e.g. "Alice@Example.com" vs "alice@example.com") でレート制限を
+      // バイパスされないよう正規化する (#157 H3)。AdminAccount.email は seed 時点で
+      // 小文字で保存しているので DB 検索も同じ正規化形でマッチする。
+      const address = rawAddress.trim().toLowerCase();
+      if (!address) {
+        return false;
+      }
+
+      const rate = checkAdminMagicLinkRateLimit(address);
+      if (!rate.ok) {
+        // AccessDenied にフォールバック。クライアントは EmailSignin エラーを受け取る。
+        return false;
+      }
+
+      const isAdmin = await getIsActiveAdminByEmail()(address);
+      if (!isAdmin) {
+        return false;
+      }
+      return true;
     },
 
-    async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id;
-        session.user.roles = token.roles;
+    async session({ session, user }) {
+      // Database 戦略では `user` が AdapterUser (= AdminAccount 由来) なので
+      // id を session.user.id にコピーする (Route Handler で参照するため)。
+      if (session.user && user?.id) {
+        session.user.id = user.id;
       }
       return session;
     },

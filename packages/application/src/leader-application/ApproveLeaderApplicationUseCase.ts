@@ -24,8 +24,7 @@ export type ApproveLeaderApplicationError =
   | { readonly type: "ACCOUNT_NOT_FOUND" }
   | { readonly type: "NOT_PENDING" }
   | { readonly type: "ALREADY_LEADER" }
-  | { readonly type: "REVIEWER_NOT_FOUND" }
-  | { readonly type: "REVIEWER_NOT_ADMIN" };
+  | { readonly type: "REVIEWER_NOT_FOUND" };
 
 // ==================== 入力 DTO ====================
 
@@ -43,7 +42,7 @@ export interface ApproveLeaderApplicationInput {
  * リーダー応募を承認するユースケース
  *
  * 処理フロー（単一 DB トランザクション）:
- * 1. reviewer の ADMIN ロール検証（二重防御）
+ * 1. reviewer の存在確認（AdminAccount ACTIVE チェック、二重防御）
  * 2. 前提条件チェック:
  *    - LeaderApplication.status === "PENDING"
  *    - 対応する Account レコードが存在する
@@ -65,21 +64,15 @@ export class ApproveLeaderApplicationUseCase {
       return err({ type: "INVALID_REVIEWER_ID" });
     }
 
-    // 1. reviewer の ADMIN ロール検証（二重防御: Route 層 + UseCase 層）
+    // 1. reviewer (AdminAccount) の存在確認（Route 層と二重防御）
     // NOTE: この検証はトランザクション外で実行される（TOCTOU の可能性があるが、
-    // ADMIN ロール剥奪は極めて稀なため、project 側と同様に許容する）
+    // AdminAccount の無効化は極めて稀なため、project 側と同様に許容する）
     //
-    // TODO(#145): Phase 2 で Admin を AdminAccount に分離したため、
-    // Account.roles から "ADMIN" が除去され、このチェックは常に false を返す。
-    // Route 層 (apps/admin) の AdminAccount 認証切り替えと合わせて、
-    // reviewerId を AdminAccount.id として検証するポートに差し替える。
-    // 現状 apps/admin 側の認証が繋がっていないため、この UseCase は到達不能。
-    const reviewer = await this.port.findAccountById(input.reviewerId);
+    // インフラ側で AdminAccount.status !== "ACTIVE" は null にマップされるため、
+    // 「未存在」と「無効化済み」は REVIEWER_NOT_FOUND に集約される。
+    const reviewer = await this.port.findAdminReviewerById(input.reviewerId);
     if (!reviewer) {
       return err({ type: "REVIEWER_NOT_FOUND" });
-    }
-    if (!reviewer.roles.includes("ADMIN")) {
-      return err({ type: "REVIEWER_NOT_ADMIN" });
     }
 
     // 2-a. 応募の存在チェック

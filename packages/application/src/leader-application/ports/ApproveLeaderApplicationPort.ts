@@ -7,11 +7,12 @@
 
 import type { LeaderApplication } from "@physifun/domain";
 import type { AccountRole } from "../../shared/AccountRole";
+import type { AdminReviewer } from "../../shared/AdminReviewer";
 
 /**
  * 承認対象のアカウント情報
  *
- * 応募者のアカウント検索と、reviewer の ADMIN ロール検証の両方に使用する。
+ * 応募者のアカウント検索に使用する（reviewer は AdminAccount として別メソッドで取得する）。
  */
 export interface AccountForApproval {
   readonly id: string;
@@ -33,10 +34,18 @@ export interface ApproveLeaderApplicationPort {
   findApplicationById(id: string): Promise<LeaderApplication | null>;
 
   /**
-   * アカウント ID でアカウントを検索する。
-   * 応募者のアカウント検索と reviewer の ADMIN ロール検証の両方に使用。
+   * アカウント ID で応募者のアカウントを検索する。
+   * 応募者のアカウント存在確認および LEADER ロール重複チェックに使用する。
    */
   findAccountById(accountId: string): Promise<AccountForApproval | null>;
+
+  /**
+   * AdminAccount ID で reviewer を検索する。
+   *
+   * インフラ側で status !== "ACTIVE" は null にマップされるため、
+   * UseCase は null を「見つからない or 無効化済み」として扱えばよい。
+   */
+  findAdminReviewerById(id: string): Promise<AdminReviewer | null>;
 
   /**
    * 承認処理をトランザクションで実行する。

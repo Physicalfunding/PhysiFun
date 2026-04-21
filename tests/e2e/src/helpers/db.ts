@@ -1,5 +1,5 @@
+import { randomUUID } from "node:crypto";
 import { prisma } from "@physifun/infrastructure";
-import bcrypt from "bcryptjs";
 import { TEST_ADMIN } from "../fixtures";
 
 /**
@@ -22,42 +22,58 @@ export async function truncateAll(): Promise<void> {
   await prisma.leaderApplicationOutboxMessage.deleteMany();
   await prisma.leaderApplication.deleteMany();
   await prisma.account.deleteMany();
-  // AdminAccount 系は Account から独立 (#140 / #144)。
+  // AdminAccount 系は Account から独立 (#140 / #144 / #145)。
   // auditLog は adminAccountId を Restrict 参照しているため adminAccount より先に消す。
-  // session も cascade ではあるが明示的に消して順序をわかりやすくする。
   await prisma.adminAuditLog.deleteMany();
   await prisma.adminSession.deleteMany();
+  await prisma.adminVerificationToken.deleteMany();
   await prisma.adminAccount.deleteMany();
 }
 
 /**
- * E2E 用の運営アカウント (AdminAccount) を seed する (#140 / #144)。
+ * E2E 用の運営アカウント (AdminAccount) を seed する (#140 / #144 / #145)。
  *
- * Phase 2 準備で Admin は Account から完全に分離された。
- * ここでは apps/admin 側の認証基盤で使う AdminAccount を直接作成する。
- *
- * - status: ACTIVE
- * - TOTP は未設定 (本来は #146 で初回ログイン時にセットアップ。E2E では現状スキップ)
- * - NextAuth が toLowerCase するので seed も小文字で揃える
+ * #145 でマジックリンク方式に切替したためパスワードは不要。
+ * E2E ではマジックリンクのメール送信フローを経由せず、`seedAdminSession` で
+ * AdminSession 行を直接 INSERT してログイン済み状態にする。
  */
 export async function seedAdminAccount(): Promise<{
   id: string;
   email: string;
-  password: string;
 }> {
-  const passwordHash = await bcrypt.hash(TEST_ADMIN.password, 10);
-
   const admin = await prisma.adminAccount.create({
     data: {
       email: TEST_ADMIN.email,
-      passwordHash,
       status: "ACTIVE",
-      totpEnabled: false,
-      recoveryCodes: [],
     },
   });
+  return { id: admin.id, email: admin.email };
+}
 
-  return { id: admin.id, email: admin.email, password: TEST_ADMIN.password };
+/**
+ * E2E 用にログイン済みセッションを DB 直接作成する (#145)。
+ *
+ * NextAuth Database 戦略では `next-auth.session-token` Cookie の値が
+ * AdminSession.sessionToken と一致する行を見つけたらログイン済みと判定される。
+ * マジックリンクのメール受信・クリックをテスト内でエミュレートすると複雑になるため、
+ * セッションレコードを直接 INSERT して Cookie 経由でログインを偽装する。
+ *
+ * @returns sessionToken (Playwright の context.addCookies で注入する値)
+ */
+export async function seedAdminSession(params: {
+  adminAccountId: string;
+  expiresInMs?: number;
+}): Promise<{ sessionToken: string; expires: Date }> {
+  const sessionToken = randomUUID();
+  const expires = new Date(Date.now() + (params.expiresInMs ?? 60 * 60 * 1000));
+  await prisma.adminSession.create({
+    data: {
+      sessionToken,
+      adminAccountId: params.adminAccountId,
+      expires,
+    },
+  });
+  return { sessionToken, expires };
 }
 
 export { prisma };

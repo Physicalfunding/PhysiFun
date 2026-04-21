@@ -16,7 +16,7 @@ import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 export function getApproveProjectPublicationPort(): ApproveProjectPublicationPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
-    findAccountById: (accountId: string) => adapter.findAccountById(accountId),
+    findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
     executeApproveInTransaction: (params: {
       project: Project;
@@ -34,7 +34,7 @@ export function getApproveProjectPublicationPort(): ApproveProjectPublicationPor
 export function getRejectProjectPublicationPort(): RejectProjectPublicationPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
-    findAccountById: (accountId: string) => adapter.findAccountById(accountId),
+    findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
     executeRejectInTransaction: (params: {
       project: Project;
@@ -50,7 +50,7 @@ export function getRejectProjectPublicationPort(): RejectProjectPublicationPort 
 export function getForceUnpublishProjectPort(): ForceUnpublishProjectPort {
   const adapter = new PrismaProjectCommandAdapter();
   return {
-    findAccountById: (id: string) => adapter.findAccountById(id),
+    findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
     executeForceUnpublishInTransaction: (params: {
       project: Project;

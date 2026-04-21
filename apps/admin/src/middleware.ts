@@ -1,48 +1,51 @@
-import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * 運営管理アプリ認証ミドルウェア
+ * 運営管理アプリ認証ミドルウェア (#145)
  *
- * 全ページで ADMIN ロールを必須とする。
- * - セッションがなければ /login へリダイレクト
- * - ログイン済みでも ADMIN ロールがなければ /login へリダイレクト
- * - /login と /api パスはミドルウェアから除外
+ * ⚠️ このミドルウェアは **認証の最終防衛線ではない**。
+ *   Edge ランタイムで動作するため Prisma を使えず、ここでは
+ *   「NextAuth セッション Cookie が存在するか」だけしか確認できない。
+ *   Cookie 値は暗号署名されていないため、任意の文字列で通過可能。
+ *
+ * 真の認可は Server Component / Route Handler 側で行う:
+ *   - Server Component: `getServerSession(authOptions)` + AdminSession 検証
+ *   - Route Handler:    `getAuthenticatedAdminId()` (apps/admin/src/lib/api/auth.ts)
+ *                       が AdminSession 行と AdminAccount.status=ACTIVE を DB で確認
+ *
+ * このミドルウェアの責務はあくまで UX のため (未ログインで画面に来たら
+ * /login へリダイレクトする) であり、セキュリティ境界は Route Handler / RSC 側にある。
+ *
+ * 今後このファイルに「role チェック」「権限チェック」等を追加してはならない。
+ * 必ず Server 側で DB 検証付きで行うこと。
+ *
+ * - Cookie 未設定 → /login へリダイレクト
+ * - /login 配下と /api はミドルウェア対象外 (API は各 Route Handler が守る)
+ * - 旧実装 (`token.roles.includes("ADMIN")`) は JWT 戦略専用。Database 戦略に
+ *   切り替えたため role チェックは Route Handler 側で getServerSession 経由で行う。
  */
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // /login と /api はミドルウェアの対象外
   if (pathname.startsWith("/login") || pathname.startsWith("/api")) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  // NextAuth v4 Database 戦略のセッション Cookie 名
+  // - 開発: next-auth.session-token
+  // - 本番 (HTTPS): __Secure-next-auth.session-token
+  const sessionToken =
+    request.cookies.get("next-auth.session-token") ??
+    request.cookies.get("__Secure-next-auth.session-token");
 
-  // 未ログイン → /login へリダイレクト
-  if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // token.roles に ADMIN が含まれない場合はログインページにリダイレクト
-  const roles = (token.roles as string[] | undefined) ?? [];
-  if (!roles.includes("ADMIN")) {
+  if (!sessionToken?.value) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return NextResponse.next();
 }
 
-/**
- * ミドルウェアを適用するパス
- *
- * 静的アセットと Next.js 内部パスを除外する。
- */
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

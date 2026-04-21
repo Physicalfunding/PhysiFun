@@ -1,5 +1,4 @@
 import { type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import {
   ApproveProjectPublicationUseCase,
   type ApproveProjectPublicationError,
@@ -14,6 +13,9 @@ import {
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
+import { logAdminAction } from "@/lib/api/auditLog";
+import { enforceAdminRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/admin/projects/:id/approve
@@ -23,22 +25,20 @@ import {
  *
  * 認証の注意:
  * - middleware.ts は /api パスを除外しているため、この Route Handler が第一防衛線
- * - UseCase 層でも findAccountById + ADMIN ロールチェックを二重に実施する
+ * - UseCase 層でも findAdminReviewerById で二重防御する
+ * - 認証後にレート制限 (adminAccountId 単位 60 req/min) を適用 (#157 H1)
+ * - 成功後に AdminAuditLog へ post-hook 書き込み (#157 H2)
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // ADMIN ロールチェック（第一防衛線）
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) return unauthorizedResponse();
-    const roles = (token.roles as string[] | undefined) ?? [];
-    if (!roles.includes("ADMIN")) return unauthorizedResponse("ADMIN 権限が必要です");
-
-    const reviewerId = typeof token.sub === "string" ? token.sub : undefined;
+    const reviewerId = await getAuthenticatedAdminId();
     if (!reviewerId) return unauthorizedResponse();
+
+    const limited = enforceAdminRateLimit("adminAction", reviewerId);
+    if (limited) return limited;
 
     const { id } = await params;
 
-    // UUID v4 形式バリデーション
     if (!isUuidV4(id)) {
       return validationErrorResponse("無効なプロジェクト ID です", {
         id: ["UUID v4 形式で指定してください"],
@@ -77,6 +77,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return mapApproveError(result.error);
     }
 
+    // #157 H2: 運営オペの監査証跡
+    await logAdminAction({
+      adminAccountId: reviewerId,
+      action: "project.approve",
+      targetType: "Project",
+      targetId: result.value.projectId,
+      metadata: note ? { note } : null,
+    });
+
     return successResponse({ projectId: result.value.projectId });
   } catch (e) {
     console.error("[api] admin/projects/[id]/approve POST error:", e);
@@ -97,9 +106,8 @@ function mapApproveError(error: ApproveProjectPublicationError) {
     case "PROJECT_NOT_FOUND":
       return notFoundResponse("プロジェクト");
     case "REVIEWER_NOT_FOUND":
-      return notFoundResponse("アカウント");
-    case "REVIEWER_NOT_ADMIN":
-      return unauthorizedResponse("ADMIN 権限が必要です");
+      // #157 M3: reviewer が DISABLED に落ちた稀ケース。401 で再ログインを促す。
+      return unauthorizedResponse();
     case "INVALID_PROJECT_STATUS":
       return unprocessableEntityResponse(
         "このプロジェクトは承認可能な状態ではありません（PENDING_REVIEW のみ承認可能）"

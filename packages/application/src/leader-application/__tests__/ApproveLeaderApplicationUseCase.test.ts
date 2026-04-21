@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
-import {
-  ApproveLeaderApplicationUseCase,
-  type ApproveLeaderApplicationError,
-} from "../ApproveLeaderApplicationUseCase";
+import { ApproveLeaderApplicationUseCase } from "../ApproveLeaderApplicationUseCase";
 import type {
   ApproveLeaderApplicationPort,
   AccountForApproval,
 } from "../ports/ApproveLeaderApplicationPort";
+import type { AdminReviewer } from "../../shared/AdminReviewer";
 import {
   LeaderApplication,
   LeaderApplicationId,
@@ -93,8 +91,11 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
   /** 保存済みリーダー応募 */
   applications: LeaderApplication[] = [];
 
-  /** 保存済みアカウント（応募者 + reviewer 共用） */
+  /** 保存済みアカウント（応募者のみ。reviewer は AdminAccount として別管理） */
   accounts: AccountForApproval[] = [];
+
+  /** 保存済み AdminAccount reviewer */
+  adminReviewers: AdminReviewer[] = [];
 
   /** executeApproval で渡されたパラメータを記録 */
   approvalParams: Parameters<ApproveLeaderApplicationPort["executeApproval"]>[0][] = [];
@@ -105,6 +106,10 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
 
   async findAccountById(accountId: string): Promise<AccountForApproval | null> {
     return this.accounts.find((a) => a.id === accountId) ?? null;
+  }
+
+  async findAdminReviewerById(id: string): Promise<AdminReviewer | null> {
+    return this.adminReviewers.find((r) => r.id === id) ?? null;
   }
 
   async executeApproval(
@@ -122,9 +127,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
 
   beforeEach(() => {
     port = new InMemoryApproveLeaderApplicationPort();
-    port.accounts.push(
-      supporterAccount({ id: REVIEWER_ID_STR, roles: ["ADMIN"], email: "admin@example.com" })
-    );
+    port.adminReviewers.push({ id: REVIEWER_ID_STR, email: "admin@example.com" });
     useCase = new ApproveLeaderApplicationUseCase(port);
   });
 
@@ -234,9 +237,9 @@ describe("ApproveLeaderApplicationUseCase", () => {
     );
   });
 
-  // ---- ADMIN 二重防御 ----
+  // ---- reviewer (AdminAccount) 二重防御 ----
 
-  it("reviewer が存在しない場合 REVIEWER_NOT_FOUND", async () => {
+  it("reviewer (AdminAccount) が存在しない場合 REVIEWER_NOT_FOUND", async () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
@@ -250,14 +253,10 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
   });
 
-  it("reviewer が ADMIN ロールを持たない場合 REVIEWER_NOT_ADMIN", async () => {
-    port.accounts = [
-      supporterAccount({
-        id: REVIEWER_ID_STR,
-        roles: ["SUPPORTER"],
-        email: "nonadmin@example.com",
-      }),
-    ];
+  it("AdminAccount が無効化済み（adapter が null 返却）の場合 REVIEWER_NOT_FOUND", async () => {
+    // adapter 層で status !== "ACTIVE" の AdminAccount は null にマップされる想定。
+    // InMemory 実装では reviewer を登録しないことで「無効化済み」相当を再現する。
+    port.adminReviewers = [];
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
@@ -268,7 +267,8 @@ describe("ApproveLeaderApplicationUseCase", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.type).toBe("REVIEWER_NOT_ADMIN");
+    expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
+    expect(port.approvalParams).toHaveLength(0);
   });
 
   it("REVIEWER_NOT_FOUND の場合は早期リターンする（executeApproval が呼ばれない）", async () => {
@@ -295,22 +295,6 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.type).toBe("INVALID_REVIEWER_ID");
-    expect(port.approvalParams).toHaveLength(0);
-  });
-
-  it("REVIEWER_NOT_ADMIN の場合は executeApproval が呼ばれない", async () => {
-    port.accounts = [
-      supporterAccount({
-        id: REVIEWER_ID_STR,
-        roles: ["SUPPORTER"],
-        email: "nonadmin@example.com",
-      }),
-    ];
-    port.applications.push(pendingApplication());
-    port.accounts.push(supporterAccount());
-
-    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
-
     expect(port.approvalParams).toHaveLength(0);
   });
 

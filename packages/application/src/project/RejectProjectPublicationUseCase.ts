@@ -51,8 +51,7 @@ export interface InvalidProjectStatusError {
  *
  * Issue #78 で明示要求された 3 エラー型に加え、入力形式バリデーション用の
  * 2 メンバー（INVALID_REVIEWER_ID / INVALID_PROJECT_ID）、
- * UseCase 層の ADMIN 二重防御で検出される 2 メンバー
- * （REVIEWER_NOT_FOUND / REVIEWER_NOT_ADMIN）、
+ * UseCase 層の reviewer 存在確認で検出される REVIEWER_NOT_FOUND、
  * および reviewerNote の文字数超過を表す REVIEWER_NOTE_TOO_LONG を持つ。
  */
 export type RejectProjectPublicationError =
@@ -62,7 +61,6 @@ export type RejectProjectPublicationError =
   | { readonly type: "INVALID_REVIEWER_ID" }
   | { readonly type: "INVALID_PROJECT_ID" }
   | { readonly type: "REVIEWER_NOT_FOUND" }
-  | { readonly type: "REVIEWER_NOT_ADMIN" }
   | {
       readonly type: "REVIEWER_NOTE_TOO_LONG";
       readonly maxLength: number;
@@ -135,17 +133,12 @@ export class RejectProjectPublicationUseCase {
       return err({ type: "INVALID_PROJECT_ID" });
     }
 
-    // 3. ADMIN ロール二重防御（Route Handler 側の認可とは独立に UseCase 単体でも担保）
-    // TODO(#145): Phase 2 で Account.roles から "ADMIN" を除去したため
-    // このチェックは常に false を返す。AdminAccount 認証移行と合わせて、
-    // reviewerId を AdminAccount.id として検証するポートに差し替える。
-    // 現状 apps/admin 側の認証が繋がっていないため、この UseCase は到達不能。
-    const reviewer = await this.port.findAccountById(input.reviewerId);
+    // 3. 審査者 (AdminAccount) の存在確認（Route Handler 側の認可とは独立に UseCase 単体でも担保）
+    // インフラ側で AdminAccount.status !== "ACTIVE" は null にマップされるため、
+    // 「未存在」と「無効化済み」は REVIEWER_NOT_FOUND に集約される。
+    const reviewer = await this.port.findAdminReviewerById(input.reviewerId);
     if (!reviewer) {
       return err({ type: "REVIEWER_NOT_FOUND" });
-    }
-    if (!reviewer.roles.includes("ADMIN")) {
-      return err({ type: "REVIEWER_NOT_ADMIN" });
     }
 
     // 4. プロジェクトの存在チェック

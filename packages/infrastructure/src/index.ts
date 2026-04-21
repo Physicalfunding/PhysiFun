@@ -21,10 +21,13 @@ export {
   PrismaAuthenticateAdapter,
   type AuthenticatedAccount,
 } from "./account/PrismaAuthenticateAdapter";
+export { createAdminPrismaAdapter } from "./admin-account/AdminPrismaAdapter";
+export { createSendAdminMagicLink } from "./admin-account/sendAdminMagicLink";
+export { isActiveAdminByEmail } from "./admin-account/isActiveAdminByEmail";
 export {
-  PrismaAdminAuthenticateAdapter,
-  type AuthenticatedAdminAccount,
-} from "./admin-account/PrismaAdminAuthenticateAdapter";
+  writeAdminAuditLog,
+  type WriteAdminAuditLogParams,
+} from "./admin-account/PrismaAdminAuditLogAdapter";
 
 export { BcryptPasswordHasher } from "./security/BcryptPasswordHasher";
 

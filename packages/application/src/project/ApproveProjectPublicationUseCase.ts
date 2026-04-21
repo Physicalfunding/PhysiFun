@@ -59,8 +59,7 @@ export interface ApproveProjectPublicationOutput {
  * ユースケースのエラー型（判別共用体）
  *
  * - `INVALID_PROJECT_ID` / `INVALID_REVIEWER_ID`: 入力バリデーション
- * - `REVIEWER_NOT_FOUND`: 審査者アカウントが存在しない
- * - `REVIEWER_NOT_ADMIN`: 審査者が ADMIN ロールを持たない（UseCase 層の第二防衛線）
+ * - `REVIEWER_NOT_FOUND`: 審査者 (AdminAccount) が存在しない、または無効化済み
  * - `PROJECT_NOT_FOUND`: 対象プロジェクトが存在しない
  * - `INVALID_PROJECT_STATUS`: PENDING_REVIEW 以外からの承認 (ドメイン状態違反)
  * - `OWNER_PUBLISHED_LIMIT_EXCEEDED`: Case A - 同一オーナーが既に 3 件 PUBLISHED
@@ -70,7 +69,6 @@ export type ApproveProjectPublicationError =
   | { readonly type: "INVALID_PROJECT_ID" }
   | { readonly type: "INVALID_REVIEWER_ID" }
   | { readonly type: "REVIEWER_NOT_FOUND" }
-  | { readonly type: "REVIEWER_NOT_ADMIN" }
   | { readonly type: "PROJECT_NOT_FOUND" }
   | {
       readonly type: "INVALID_PROJECT_STATUS";
@@ -108,7 +106,7 @@ export interface ApproveProjectPublicationInput {
  *
  * 処理フロー:
  * 1. ProjectId / ReviewerId VO 生成（入力バリデーション）
- * 2. 審査者の ADMIN ロールチェック（Route Handler と二重防御）
+ * 2. 審査者 (AdminAccount) の存在確認（Route Handler と二重防御）
  * 3. プロジェクトの存在チェック
  * 4. project.approveByAdmin() 呼び出し（ドメイン状態遷移チェック）
  * 5. ProjectReviewFeedback (action=APPROVED) を生成
@@ -144,17 +142,12 @@ export class ApproveProjectPublicationUseCase {
       });
     }
 
-    // 2. 審査者の ADMIN ロールチェック（Route Handler と二重防御）
-    // TODO(#145): Phase 2 で Account.roles から "ADMIN" を除去したため
-    // このチェックは常に false を返す。AdminAccount 認証移行と合わせて、
-    // reviewerId を AdminAccount.id として検証するポートに差し替える。
-    // 現状 apps/admin 側の認証が繋がっていないため、この UseCase は到達不能。
-    const reviewer = await this.port.findAccountById(input.reviewerId);
+    // 2. 審査者 (AdminAccount) の存在確認（Route Handler と二重防御）
+    // インフラ側で AdminAccount.status !== "ACTIVE" は null にマップされるため、
+    // 「未存在」と「無効化済み」は REVIEWER_NOT_FOUND に集約される。
+    const reviewer = await this.port.findAdminReviewerById(input.reviewerId);
     if (!reviewer) {
       return err({ type: "REVIEWER_NOT_FOUND" });
-    }
-    if (!reviewer.roles.includes("ADMIN")) {
-      return err({ type: "REVIEWER_NOT_ADMIN" });
     }
 
     // 3. プロジェクトの存在チェック

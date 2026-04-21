@@ -1,5 +1,6 @@
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 import type { CreateProjectOutboxMessageParams } from "./RequestPublishPort";
+import type { AdminReviewer } from "../../shared/AdminReviewer";
 
 /**
  * RejectProjectPublicationUseCase のポートインターフェース
@@ -14,14 +15,12 @@ import type { CreateProjectOutboxMessageParams } from "./RequestPublishPort";
  */
 export interface RejectProjectPublicationPort {
   /**
-   * アカウント ID でアカウント（ロール情報付き）を取得する。
+   * AdminAccount ID で reviewer を検索する。
    *
-   * UseCase 層での ADMIN ロール二重防御に使用する。Route Handler 側でも
-   * 認可チェックを行うが、UseCase 単体の契約としても ADMIN 権限を担保する。
+   * インフラ側で status !== "ACTIVE" は null にマップされるため、
+   * UseCase は null を「見つからない or 無効化済み」として扱えばよい。
    */
-  findAccountById(
-    accountId: string
-  ): Promise<{ readonly id: string; readonly roles: readonly string[] } | null>;
+  findAdminReviewerById(id: string): Promise<AdminReviewer | null>;
 
   /** プロジェクトID で Project 集約を取得する */
   findProjectById(projectId: string): Promise<Project | null>;
