@@ -30,9 +30,13 @@ export const authOptions: NextAuthOptions = {
 
   providers: [
     EmailProvider({
-      // NextAuth の EmailProvider は nodemailer を要求するが、sendVerificationRequest を
-      // 明示指定することで nodemailer 依存を回避して ResendMailSender を使う。
-      // server / from は未使用だがスキーマ上必須なのでダミー値を入れる。
+      // ⚠️ server / from は実際には使われない。
+      // NextAuth の EmailProvider は本来 nodemailer を使って SMTP 送信するが、
+      // ここでは `sendVerificationRequest` を明示指定しているため nodemailer は
+      // 初期化されず、送信は ResendMailSender 経由に差し替わる。
+      // ただし EmailProvider のスキーマ上 server / from が必須 (undefined 不可) なので
+      // 形だけ満たすためのダミー値を入れている。誤って SMTP を叩こうとしても
+      // host:"unused" で解決不能になり実害は無いが、変更時は意図を誤解しないこと。
       server: { host: "unused", port: 0, auth: { user: "unused", pass: "unused" } },
       from: process.env.MAIL_FROM ?? "noreply@physifun.com",
       maxAge: 10 * 60, // マジックリンクの有効期限 10 分
