@@ -3,6 +3,7 @@ import {
   ResendMailSender,
   createAdminPrismaAdapter,
   createSendAdminMagicLink,
+  getAdminMagicLinkHmacSecret,
   isActiveAdminByEmail,
   type MailSender,
 } from "@physifun/infrastructure";
@@ -36,9 +37,11 @@ export function getAdminMailSender(): MailSender {
 
 export function getSendAdminMagicLink() {
   // #159 M-4 拡張: メール本文の「N 分以内に〜」を UI/NextAuth と同じ定数から駆動
+  // #146: URL に HMAC-SHA256 署名を付けるため secret を DI で渡す (未設定時は throw)
   return createSendAdminMagicLink({
     mailSender: getAdminMailSender(),
     expiresInMin: EMAIL_MAGIC_LINK_MAX_AGE_MIN,
+    hmacSecret: getAdminMagicLinkHmacSecret(),
   });
 }
 

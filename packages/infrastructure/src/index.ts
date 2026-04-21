@@ -25,6 +25,15 @@ export { createAdminPrismaAdapter } from "./admin-account/AdminPrismaAdapter";
 export { createSendAdminMagicLink } from "./admin-account/sendAdminMagicLink";
 export { isActiveAdminByEmail } from "./admin-account/isActiveAdminByEmail";
 export {
+  buildMagicLinkHmacPayload,
+  computeMagicLinkSignature,
+  signMagicLinkUrl,
+  verifyMagicLinkSignature,
+  getAdminMagicLinkHmacSecret,
+  MAGIC_LINK_SIGNATURE_PARAM,
+  type MagicLinkVerifyResult,
+} from "./admin-account/magicLinkHmac";
+export {
   writeAdminAuditLog,
   type WriteAdminAuditLogParams,
 } from "./admin-account/PrismaAdminAuditLogAdapter";
