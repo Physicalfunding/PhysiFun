@@ -79,14 +79,29 @@ function assertHttpUrl(url: string): void {
   }
 }
 
+// 日時フォーマッタ (#158 L3)
+// 以前は手作りの UTC+9 加算で日時を組み立てていたが、Intl.DateTimeFormat に寄せて
+// タイムゾーン計算・ゼロ埋め・ロケールを標準ライブラリに委譲する。
+const JST_DATETIME_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
 function formatJstDateTime(date: Date): string {
-  // JST 固定表示 (運営管理アプリは日本国内運用)
-  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
-  const y = jst.getUTCFullYear();
-  const m = String(jst.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(jst.getUTCDate()).padStart(2, "0");
-  const hh = String(jst.getUTCHours()).padStart(2, "0");
-  const mm = String(jst.getUTCMinutes()).padStart(2, "0");
+  // Intl の "ja-JP" 出力例: "2026/04/21 12:34" → 既存と揃えるためハイフン区切りに正規化し JST 接尾辞を付ける。
+  const parts = JST_DATETIME_FORMATTER.formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  const y = get("year");
+  const m = get("month");
+  const d = get("day");
+  const hh = get("hour");
+  const mm = get("minute");
   return `${y}-${m}-${d} ${hh}:${mm} JST`;
 }
 
