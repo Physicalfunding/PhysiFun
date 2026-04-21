@@ -1,4 +1,5 @@
 import {
+  PrismaAdminAuditLogQueryService,
   PrismaLeaderApplicationQueryService,
   PrismaOutboxQueryService,
   PrismaProjectQueryService,
@@ -43,4 +44,14 @@ export function getProjectQueryService(): PrismaProjectQueryService {
  */
 export function getOutboxQueryService(): PrismaOutboxQueryService {
   return new PrismaOutboxQueryService();
+}
+
+/**
+ * AdminAuditLog Query Service を生成 (#149)
+ *
+ * NOTE: 読み取り専用 Query Service のインターフェースは Port 化されていないため
+ * 具象クラスを返す (Outbox と同じ方針)。
+ */
+export function getAdminAuditLogQueryService(): PrismaAdminAuditLogQueryService {
+  return new PrismaAdminAuditLogQueryService();
 }

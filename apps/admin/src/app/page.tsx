@@ -85,6 +85,19 @@ export default async function AdminTopPage() {
               )}
             </Link>
           </li>
+          <li>
+            <Link
+              href="/audit-logs"
+              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:border-blue-300 hover:shadow-md"
+            >
+              <div>
+                <span className="text-lg font-medium">運営操作履歴</span>
+                <p className="mt-1 text-sm text-gray-500">
+                  AdminAuditLog の閲覧・フィルタ (運営者 / action / 日付範囲) を行います
+                </p>
+              </div>
+            </Link>
+          </li>
         </ul>
       </nav>
     </div>
