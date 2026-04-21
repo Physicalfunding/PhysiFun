@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import { getAdminPrismaAdapter, getIsActiveAdminByEmail, getSendAdminMagicLink } from "./di/auth";
 import { checkAdminMagicLinkRateLimit } from "./rateLimit";
+import { EMAIL_MAGIC_LINK_MAX_AGE_SEC } from "./auth-constants";
 
 /**
  * 運営管理アプリ用 NextAuth.js 設定 (#145 / #157)
@@ -30,12 +31,16 @@ export const authOptions: NextAuthOptions = {
 
   providers: [
     EmailProvider({
-      // NextAuth の EmailProvider は nodemailer を要求するが、sendVerificationRequest を
-      // 明示指定することで nodemailer 依存を回避して ResendMailSender を使う。
-      // server / from は未使用だがスキーマ上必須なのでダミー値を入れる。
+      // ⚠️ server / from は実際には使われない。
+      // NextAuth の EmailProvider は本来 nodemailer を使って SMTP 送信するが、
+      // ここでは `sendVerificationRequest` を明示指定しているため nodemailer は
+      // 初期化されず、送信は ResendMailSender 経由に差し替わる。
+      // ただし EmailProvider のスキーマ上 server / from が必須 (undefined 不可) なので
+      // 形だけ満たすためのダミー値を入れている。誤って SMTP を叩こうとしても
+      // host:"unused" で解決不能になり実害は無いが、変更時は意図を誤解しないこと。
       server: { host: "unused", port: 0, auth: { user: "unused", pass: "unused" } },
       from: process.env.MAIL_FROM ?? "noreply@physifun.com",
-      maxAge: 10 * 60, // マジックリンクの有効期限 10 分
+      maxAge: EMAIL_MAGIC_LINK_MAX_AGE_SEC, // #158 M4: verify-request UI と同じ定数を参照
       async sendVerificationRequest(params) {
         const send = getSendAdminMagicLink();
         await send(params);
@@ -59,15 +64,26 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     /**
-     * signIn callback (#157 C1 / H1)
+     * signIn callback (#157 C1 / H1 / #158 L1)
      *
      * Magic Link 送信フロー (`email.verificationRequest === true`) のときのみ:
      *   1. レート制限 (email 単位 5/15min) を消費。超過なら false を返して送信中断
-     *   2. AdminAccount が ACTIVE に存在するかをチェックし、無ければ false
+     *   2. `user` が NextAuth の合成ユーザ (getUserByEmail が null -> {id: email, email} に
+     *      フォールバック) であれば false を返して送信遮断
+     *   3. 念のため isActiveAdminByEmail で再チェック (二重防御)
      *
      * false を返すと NextAuth は AccessDenied を投げ、`createVerificationToken` /
      * `sendVerificationRequest` はいずれも実行されない。エラーは pages.error (/login)
      * にリダイレクトされるため、クライアントからは「メール送信失敗」の表示になる。
+     *
+     * ## 2 回クエリする理由 (#158 L1)
+     * NextAuth は内部で `adapter.getUserByEmail` を呼んだ後に signIn callback を呼ぶため、
+     * isActiveAdminByEmail を追加するとクエリが 2 回走る構図になる。これは意図的:
+     * - 合成ユーザ判定 (`user.id === address`) を高速パスとして手前に置き、
+     *   未登録/DISABLED email は 2 回目のクエリ前に弾く
+     * - 2 回目 (isActiveAdminByEmail) は adapter 実装と signIn callback が別ファイルに
+     *   なっていることに対する防御的チェック。片方を変更しても security invariant を
+     *   保つため残す (adapter がリグレッションで非 ACTIVE を返しても signIn で救える)
      *
      * 非 verificationRequest 経路 (= マジックリンククリック後のコールバック等) は
      * adapter.getUserByEmail が ACTIVE のみを返す仕様と合わさって弾かれるため、
@@ -95,6 +111,14 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
+      // 高速パス: NextAuth が getUserByEmail=null のときに作る合成ユーザは
+      // `id === email` となる。DB 由来の AdminAccount は id が UUID なので、
+      // この等価で合成 / 実 AdminAccount を区別できる (#158 L1)。
+      if (user.id === address || user.id === rawAddress) {
+        return false;
+      }
+
+      // 二重防御: adapter/getUserByEmail が壊れた場合でも非 ACTIVE は弾く。
       const isAdmin = await getIsActiveAdminByEmail()(address);
       if (!isAdmin) {
         return false;

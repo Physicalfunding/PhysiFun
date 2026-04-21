@@ -19,6 +19,29 @@ export async function logAdminAction(params: WriteAdminAuditLogParams): Promise<
   } catch (e) {
     // 書き込み失敗でも運営オペ自体は成功扱いにする。
     // 将来トランザクション化する際に挙動を見直す (#157 H2 コメント参照)。
-    console.error("[admin-audit] failed to write AdminAuditLog:", e, params);
+    //
+    // #158 L2: Error オブジェクトを直接渡すことで stack trace を残す
+    // (エラー直列化形式によっては文字列化で stack が落ちるため、Vercel Functions の
+    //  デフォルト stdout transport で stack を出せるよう本体を 2 引数目に置く)。
+    const message = "[admin-audit] failed to write AdminAuditLog";
+    if (e instanceof Error) {
+      console.error(message, {
+        action: params.action,
+        targetType: params.targetType,
+        targetId: params.targetId ?? null,
+        adminAccountId: params.adminAccountId,
+        error: { name: e.name, message: e.message, stack: e.stack },
+      });
+    } else {
+      // #159 Nit-1: 循環参照や非直列化オブジェクトでも壊れないよう String(e) に寄せる。
+      // 非 Error ブランチに落ちるケースは throw "string" / throw null 等の異常系のみ。
+      console.error(message, {
+        action: params.action,
+        targetType: params.targetType,
+        targetId: params.targetId ?? null,
+        adminAccountId: params.adminAccountId,
+        error: String(e),
+      });
+    }
   }
 }
