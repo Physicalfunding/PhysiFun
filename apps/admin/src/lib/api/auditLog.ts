@@ -33,12 +33,14 @@ export async function logAdminAction(params: WriteAdminAuditLogParams): Promise<
         error: { name: e.name, message: e.message, stack: e.stack },
       });
     } else {
+      // #159 Nit-1: 循環参照や非直列化オブジェクトでも壊れないよう String(e) に寄せる。
+      // 非 Error ブランチに落ちるケースは throw "string" / throw null 等の異常系のみ。
       console.error(message, {
         action: params.action,
         targetType: params.targetType,
         targetId: params.targetId ?? null,
         adminAccountId: params.adminAccountId,
-        error: e,
+        error: String(e),
       });
     }
   }
