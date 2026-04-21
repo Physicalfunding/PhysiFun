@@ -56,6 +56,73 @@ export const authOptions: NextAuthOptions = {
     updateAge: 10 * 60, // 10 分以上経過時のみ expires を更新 (書き込み量削減)
   },
 
+  /**
+   * Cookie 設定 (#147)
+   *
+   * apps/admin は `admin.<本番ドメイン>` 配下の独立 Vercel プロジェクトとしてデプロイする。
+   * apps/web (`<本番ドメイン>` もしくは `app.<本番ドメイン>`) と Cookie が混ざると:
+   *   - 運営セッションが誤って一般ユーザ側に流出する
+   *   - Cookie 名衝突で片方のログイン状態が壊れる
+   * といったリスクがあるため、以下の方針を明示する:
+   *
+   * 1. `domain` 属性を **設定しない** (= host-only cookie)。
+   *    こうすると Cookie は `admin.example.com` に完全一致でしかマッチせず、
+   *    親ドメイン `example.com` や兄弟サブドメイン `app.example.com` には送出されない。
+   *    NextAuth v4 のデフォルトが host-only (domain 未指定) なので、明示的に
+   *    `undefined` を記述して将来の改変に対する invariant を固定している。
+   * 2. `sameSite: "lax"` — マジックリンクのコールバックは別ドメイン (メール内リンク) から
+   *    トップレベルナビゲーションで戻るため、`lax` が必要。`strict` にするとクリック直後の
+   *    セッション確立に失敗する。
+   * 3. `secure` フラグは本番 (NEXTAUTH_URL が https) で自動的に true になる NextAuth の
+   *    既定挙動に委ねる (Cookie 名も `__Secure-` プレフィックス付きが自動選択される)。
+   *
+   * NEXTAUTH_SECRET は apps/web と **別値** を Vercel 環境変数に設定すること
+   * (同一値だと署名付き Cookie を相互に復号できてしまい、ドメイン分離の意味が薄れる)。
+   */
+  cookies: {
+    sessionToken: {
+      name: process.env.NEXTAUTH_URL?.startsWith("https://")
+        ? "__Secure-next-auth.session-token"
+        : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
+        // domain は敢えて指定しない (host-only cookie にして親ドメイン漏れを防止)
+        domain: undefined,
+      },
+    },
+    callbackUrl: {
+      name: process.env.NEXTAUTH_URL?.startsWith("https://")
+        ? "__Secure-next-auth.callback-url"
+        : "next-auth.callback-url",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
+        domain: undefined,
+      },
+    },
+    csrfToken: {
+      // CSRF Cookie は NextAuth 既定で __Host- プレフィックス付き。
+      // __Host- は domain 属性が無いこと + path=/ + secure を要求するため、
+      // サブドメイン分離と相性が良い。
+      name: process.env.NEXTAUTH_URL?.startsWith("https://")
+        ? "__Host-next-auth.csrf-token"
+        : "next-auth.csrf-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
+        // __Host- プレフィックスの仕様上 domain は必ず未指定
+        domain: undefined,
+      },
+    },
+  },
+
   pages: {
     signIn: "/login",
     verifyRequest: "/login/verify-request",
