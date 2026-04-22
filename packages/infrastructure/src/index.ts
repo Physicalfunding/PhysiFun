@@ -40,6 +40,12 @@ export {
   writeAdminAuditLog,
   type WriteAdminAuditLogParams,
 } from "./admin-account/PrismaAdminAuditLogAdapter";
+export {
+  PrismaAdminAuditLogQueryService,
+  type AdminAuditLogListItem,
+  type AdminAuditLogListResult,
+  type AdminAuditLogFilter,
+} from "./admin-account/PrismaAdminAuditLogQueryService";
 export { PrismaAdminAuthGcAdapter } from "./admin-account/PrismaAdminAuthGcAdapter";
 export { PrismaAdminAccountRepository } from "./admin-account/PrismaAdminAccountRepository";
 export { revokeAdminSessions } from "./admin-account/revokeAdminSessions";
