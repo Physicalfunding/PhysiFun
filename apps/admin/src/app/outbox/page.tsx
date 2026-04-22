@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   deriveOutboxStatus,
   isValidOutboxStatus,
@@ -7,6 +8,7 @@ import {
 } from "@physifun/infrastructure";
 import { OutboxStatusBadge } from "@/components/OutboxStatusBadge";
 import { OutboxActions } from "@/components/OutboxActions";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { getOutboxQueryService } from "@/lib/di/queryServices";
 
 // NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
@@ -28,12 +30,22 @@ const STATUS_FILTERS: { status: OutboxStatus | "incomplete"; label: string }[] =
 
 /**
  * /outbox - Outbox 監視一覧
+ *
+ * ## 認可 (#147 C-1)
+ * ACTIVE な AdminAccount 以外は参照不可。middleware の Cookie 判定ではなく
+ * RSC 側で `getAuthenticatedAdminId` により AdminSession 行 + AdminAccount.status
+ * === ACTIVE を DB で再確認する。null なら /login へリダイレクト。
  */
 export default async function OutboxListPage({
   searchParams,
 }: {
   searchParams: Promise<{ source?: string; status?: string; page?: string }>;
 }) {
+  const adminId = await getAuthenticatedAdminId();
+  if (!adminId) {
+    redirect("/login");
+  }
+
   const params = await searchParams;
   const currentSource: OutboxSource = params.source === "project" ? "project" : "leaderApplication";
   // ステータスバリデーション: 無効な値は "incomplete" にフォールバック

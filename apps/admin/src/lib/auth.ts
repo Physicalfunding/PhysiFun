@@ -1,8 +1,27 @@
 import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
+import { getAdminMagicLinkHmacSecret } from "@physifun/infrastructure";
 import { getAdminPrismaAdapter, getIsActiveAdminByEmail, getSendAdminMagicLink } from "./di/auth";
 import { checkAdminMagicLinkRateLimit } from "./rateLimit";
 import { EMAIL_MAGIC_LINK_MAX_AGE_SEC } from "./auth-constants";
+
+/**
+ * 起動時 (authOptions の import 時) に ADMIN_MAGIC_LINK_HMAC_SECRET の設定を検証する (#146)。
+ *
+ * 未設定 / 空 / NEXTAUTH_SECRET と同一値なら throw (fail closed)。
+ * Build 時には env が無い可能性があるため、`NODE_ENV === "test"` と
+ * `NEXT_PHASE === "phase-production-build"` のビルド時相当はスキップする。
+ *
+ * 実行時 (sendVerificationRequest / callback route) では getAdminMagicLinkHmacSecret()
+ * が都度呼ばれるため、起動時に失敗してもランタイムでは fail closed が維持される。
+ */
+function assertAdminMagicLinkHmacSecretOnBoot(): void {
+  if (process.env.NODE_ENV === "test") return;
+  if (process.env.NEXT_PHASE === "phase-production-build") return;
+  // throw されたら Next.js のサーバ起動時に検出される。
+  getAdminMagicLinkHmacSecret();
+}
+assertAdminMagicLinkHmacSecretOnBoot();
 
 /**
  * 運営管理アプリ用 NextAuth.js 設定 (#145 / #157)
@@ -26,6 +45,88 @@ import { EMAIL_MAGIC_LINK_MAX_AGE_SEC } from "./auth-constants";
  *   - 数名の運営のみがアクセスする想定。マジックリンク到達性で本人性を担保。
  *   - 万一トークン漏洩しても AdminSession の強制削除で即座に revoke 可能。
  */
+
+/**
+ * Cookie 設定を生成する純粋関数 (#147 Blocker B-1)
+ *
+ * `authOptions.cookies` は元々 `process.env.NEXTAUTH_URL` を直接参照していたため、
+ * テストでは動的 import (`import("../auth?t=...")`) で module cache をバイパスして
+ * 再評価する必要があった。これを `isHttps: boolean` を引数に取る純粋関数に切り出し、
+ * テストから `buildCookieOptions(true) / buildCookieOptions(false)` を直接呼べるように
+ * している。
+ *
+ * - host-only cookie 方針 (domain 未指定) を invariant として固定
+ * - `isHttps=true` のときのみ `__Secure-` / `__Host-` プレフィックス + secure=true
+ * - sameSite は "lax" で固定 (マジックリンクの戻りナビゲーションを許可)
+ */
+export function buildCookieOptions(isHttps: boolean): NextAuthOptions["cookies"] {
+  const securePrefix = isHttps ? "__Secure-" : "";
+  const hostPrefix = isHttps ? "__Host-" : "";
+  return {
+    sessionToken: {
+      name: `${securePrefix}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isHttps,
+        // domain は敢えて指定しない (host-only cookie にして親ドメイン漏れを防止)
+        domain: undefined,
+      },
+    },
+    callbackUrl: {
+      name: `${securePrefix}next-auth.callback-url`,
+      options: {
+        // `httpOnly: true` を明示して JS アクセス禁止 (#147 H-1)。
+        // NextAuth v4 は `authOptions.cookies` を shallow merge するので、ここで
+        // options オブジェクト全体を渡した時点で callbackUrl エントリは完全に
+        // 上書きされる (NextAuth 内部の defaultCookies は参照されない)。
+        // 以前のコメントは「デフォルトに委ねる」としていたが、実際は `httpOnly`
+        // 未指定 = `undefined` (= false 扱い) で Cookie 発行されていたため、
+        // client-side JS から callbackUrl cookie が読めてしまう状態だった。
+        // apps/admin の signIn 動線は `window.location.href` を使うフォーム /
+        // リンク経由 (サーバーリダイレクト) なので、client-side JS から
+        // callbackUrl cookie を直接読む必要は無く、httpOnly を立てても問題ない。
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isHttps,
+        domain: undefined,
+      },
+    },
+    csrfToken: {
+      // CSRF Cookie は NextAuth 既定で __Host- プレフィックス付き。
+      // __Host- は domain 属性が無いこと + path=/ + secure を要求するため、
+      // サブドメイン分離と相性が良い。
+      name: `${hostPrefix}next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isHttps,
+        // __Host- プレフィックスの仕様上 domain は必ず未指定
+        domain: undefined,
+      },
+    },
+  };
+}
+
+/**
+ * NEXTAUTH_SECRET の fail-closed (#147 M-3)
+ *
+ * 本番環境で `NEXTAUTH_SECRET` が未設定だと NextAuth v4 は起動時に
+ * ランダムな値を生成してログに警告を出すだけで続行してしまう。Database 戦略なら
+ * Session Cookie 自体は DB キーなので直接は致命傷にならないが、verification token
+ * (マジックリンク) の署名 / 復号鍵として使われるため、未設定のまま再デプロイすると
+ * 既発行リンクが全て invalid になる / デプロイ毎に secret が変わってユーザが
+ * サイレントにログアウトされる等の運用リスクが残る。
+ * 本番では起動を失敗させることで、環境変数設定漏れをデプロイ時点で検知する
+ * (ADMIN_MAGIC_LINK_HMAC_SECRET と同じ fail-closed ポリシー)。
+ */
+if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
+  throw new Error("NEXTAUTH_SECRET must be set in production");
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: getAdminPrismaAdapter(),
 
@@ -55,6 +156,31 @@ export const authOptions: NextAuthOptions = {
     maxAge: 60 * 60, // 1h (運営アプリは web より短い)
     updateAge: 10 * 60, // 10 分以上経過時のみ expires を更新 (書き込み量削減)
   },
+
+  /**
+   * Cookie 設定 (#147)
+   *
+   * apps/admin は `admin.<本番ドメイン>` 配下の独立 Vercel プロジェクトとしてデプロイする。
+   * apps/web (`<本番ドメイン>` もしくは `app.<本番ドメイン>`) と Cookie が混ざると:
+   *   - 運営セッションが誤って一般ユーザ側に流出する
+   *   - Cookie 名衝突で片方のログイン状態が壊れる
+   * といったリスクがあるため、以下の方針を明示する:
+   *
+   * 1. `domain` 属性を **設定しない** (= host-only cookie)。
+   *    こうすると Cookie は `admin.example.com` に完全一致でしかマッチせず、
+   *    親ドメイン `example.com` や兄弟サブドメイン `app.example.com` には送出されない。
+   *    NextAuth v4 のデフォルトが host-only (domain 未指定) なので、明示的に
+   *    `undefined` を記述して将来の改変に対する invariant を固定している。
+   * 2. `sameSite: "lax"` — マジックリンクのコールバックは別ドメイン (メール内リンク) から
+   *    トップレベルナビゲーションで戻るため、`lax` が必要。`strict` にするとクリック直後の
+   *    セッション確立に失敗する。
+   * 3. `secure` フラグは本番 (NEXTAUTH_URL が https) で自動的に true になる NextAuth の
+   *    既定挙動に委ねる (Cookie 名も `__Secure-` プレフィックス付きが自動選択される)。
+   *
+   * NEXTAUTH_SECRET は apps/web と **別値** を Vercel 環境変数に設定すること
+   * (同一値だと署名付き Cookie を相互に復号できてしまい、ドメイン分離の意味が薄れる)。
+   */
+  cookies: buildCookieOptions(process.env.NEXTAUTH_URL?.startsWith("https://") ?? false),
 
   pages: {
     signIn: "/login",

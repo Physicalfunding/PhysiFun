@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
 
 // NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
@@ -14,12 +16,22 @@ const TABS = [
 
 /**
  * /applications — リーダー応募一覧
+ *
+ * ## 認可 (#147 C-1)
+ * ACTIVE な AdminAccount 以外は参照不可。middleware の Cookie 判定ではなく
+ * RSC 側で `getAuthenticatedAdminId` により AdminSession 行 + AdminAccount.status
+ * === ACTIVE を DB で再確認する。null なら /login へリダイレクト。
  */
 export default async function ApplicationsListPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; page?: string }>;
 }) {
+  const adminId = await getAuthenticatedAdminId();
+  if (!adminId) {
+    redirect("/login");
+  }
+
   const params = await searchParams;
   const currentStatus =
     params.status === "APPROVED" || params.status === "REJECTED" ? params.status : "PENDING";

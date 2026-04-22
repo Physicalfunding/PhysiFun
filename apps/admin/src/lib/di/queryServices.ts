@@ -1,10 +1,12 @@
 import {
+  PrismaAdminAccountRepository,
   PrismaAdminAuditLogQueryService,
   PrismaLeaderApplicationQueryService,
   PrismaOutboxQueryService,
   PrismaProjectQueryService,
   type LeaderApplicationQueryService,
 } from "@physifun/infrastructure";
+import type { AdminAccountRepository } from "@physifun/domain";
 
 /**
  * admin Server Component / Route Handler 向け QueryService DI ヘルパー
@@ -44,6 +46,16 @@ export function getProjectQueryService(): PrismaProjectQueryService {
  */
 export function getOutboxQueryService(): PrismaOutboxQueryService {
   return new PrismaOutboxQueryService();
+}
+
+/**
+ * AdminAccount Repository を生成 (#148)
+ *
+ * 運営メンバー管理 UI / API から利用する。
+ * 戻り型は domain IF に揃えて呼び出し側が実装に依存しないようにする。
+ */
+export function getAdminAccountRepository(): AdminAccountRepository {
+  return new PrismaAdminAccountRepository();
 }
 
 /**

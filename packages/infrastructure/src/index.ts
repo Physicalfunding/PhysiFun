@@ -1,4 +1,5 @@
 export { prisma } from "./database/client";
+export { isUniqueConstraintError } from "./database/isUniqueConstraintError";
 
 export type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "./outbox";
 export {
@@ -24,6 +25,17 @@ export {
 export { createAdminPrismaAdapter } from "./admin-account/AdminPrismaAdapter";
 export { createSendAdminMagicLink } from "./admin-account/sendAdminMagicLink";
 export { isActiveAdminByEmail } from "./admin-account/isActiveAdminByEmail";
+export { findAdminAccountIdByEmail } from "./admin-account/findAdminAccountIdByEmail";
+export {
+  buildMagicLinkHmacPayload,
+  computeMagicLinkSignature,
+  signMagicLinkUrl,
+  verifyMagicLinkSignature,
+  getAdminMagicLinkHmacSecret,
+  MAGIC_LINK_SIGNATURE_PARAM,
+  MAGIC_LINK_EXPIRES_PARAM,
+  type MagicLinkVerifyResult,
+} from "./admin-account/magicLinkHmac";
 export {
   writeAdminAuditLog,
   type WriteAdminAuditLogParams,
@@ -35,6 +47,9 @@ export {
   type AdminAuditLogFilter,
 } from "./admin-account/PrismaAdminAuditLogQueryService";
 export { PrismaAdminAuthGcAdapter } from "./admin-account/PrismaAdminAuthGcAdapter";
+export { PrismaAdminAccountRepository } from "./admin-account/PrismaAdminAccountRepository";
+export { revokeAdminSessions } from "./admin-account/revokeAdminSessions";
+export { disableAdminAccountAndRevokeSessions } from "./admin-account/disableAdminAccountAndRevokeSessions";
 
 export { BcryptPasswordHasher } from "./security/BcryptPasswordHasher";
 
