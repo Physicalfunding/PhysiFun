@@ -105,8 +105,10 @@ async function verifyMagicLinkOrReject(request: NextRequest): Promise<NextRespon
  *   `adminAccountId` が FK required のため、匿名記録専用の
  *   仮想 AdminAccount を作るのは過剰設計。
  *   → 書き込み失敗しても「リダイレクト自体」は行えるよう、log-and-continue する。
- *   → AdminAccount 解決は email → findUnique(status=ACTIVE) で試み、
+ *   → AdminAccount 解決は `findAdminAccountIdByEmail` 経由で試み、
  *      特定できないときは何も書かず console.warn のみに留める。
+ *      注: status フィルタなし。DISABLED アカウント宛の攻撃試行も
+ *      audit log に記録したいため意図的に status を問わない。
  */
 async function recordSignatureInvalid(params: {
   email: string | null;

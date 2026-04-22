@@ -186,6 +186,14 @@ export function getAdminMagicLinkHmacSecret(
         "Set a dedicated secret (DO NOT reuse NEXTAUTH_SECRET)."
     );
   }
+  // trim 後と元の値が異なる場合は前後空白混入の疑い。値自体は trim せずそのまま返す
+  // (既存署名との互換性維持のため)。運用者が気付けるように warn だけ出す。
+  if (secret.trim() !== secret) {
+    console.warn(
+      "[admin-auth] ADMIN_MAGIC_LINK_HMAC_SECRET contains leading/trailing whitespace. " +
+        "Existing signatures will become invalid if the value is trimmed later."
+    );
+  }
   if (secret === env.NEXTAUTH_SECRET) {
     throw new Error(
       "[magicLinkHmac] ADMIN_MAGIC_LINK_HMAC_SECRET must differ from NEXTAUTH_SECRET " +
