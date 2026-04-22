@@ -161,6 +161,19 @@ export default async function AuditLogsPage({
   const fromDate = parseFromDate(from);
   const toDate = parseToDate(to);
 
+  // from > to の不正な期間指定はクエリを投げずに明示エラー表示する。
+  // 自動 swap だとユーザーの入力意図とズレた結果になって混乱するので、
+  // 無言の空結果ではなく「なぜ 0 件か」を先に伝える方針。
+  // 比較メモ: toDate は parseToDate 内で「翌日 00:00」に正規化済み。
+  //           同日指定 (from === to) は正常ケースなので、to を元の当日 00:00 に
+  //           戻してから大小比較する。
+  const toDateStart =
+    toDate !== undefined ? new Date(toDate.getTime() - 24 * 60 * 60 * 1000) : undefined;
+  const dateRangeError =
+    fromDate !== undefined && toDateStart !== undefined && fromDate > toDateStart
+      ? "終了日は開始日以降を指定してね"
+      : undefined;
+
   const page = Math.max(1, Number(params.page) || 1);
   const perPage = Math.min(
     PER_PAGE_MAX,
@@ -168,17 +181,20 @@ export default async function AuditLogsPage({
   );
 
   const queryService = getAdminAuditLogQueryService();
+  // 期間不正時は DB クエリをスキップして空結果を返す (select 用 distinct 取得は続行)
   const [result, distinctActions, distinctTargetTypes] = await Promise.all([
-    queryService.findMany(
-      {
-        email,
-        action,
-        targetType,
-        from: fromDate,
-        to: toDate,
-      },
-      { page, perPage }
-    ),
+    dateRangeError
+      ? Promise.resolve({ items: [], totalCount: 0 })
+      : queryService.findMany(
+          {
+            email,
+            action,
+            targetType,
+            from: fromDate,
+            to: toDate,
+          },
+          { page, perPage }
+        ),
     queryService.listDistinctActions(),
     queryService.listDistinctTargetTypes(),
   ]);
@@ -288,6 +304,16 @@ export default async function AuditLogsPage({
           </span>
         </div>
       </form>
+
+      {/* バリデーションエラー (from > to) */}
+      {dateRangeError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {dateRangeError}
+        </div>
+      )}
 
       {/* テーブル */}
       {result.items.length === 0 ? (
