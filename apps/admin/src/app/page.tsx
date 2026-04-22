@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import {
   getLeaderApplicationQueryService,
   getOutboxQueryService,
@@ -10,8 +12,20 @@ export const dynamic = "force-dynamic";
 
 /**
  * 運営管理トップページ
+ *
+ * ## 認可 (#147 C-1)
+ * ACTIVE な AdminAccount 以外は参照不可。`getAuthenticatedAdminId` は
+ * NextAuth v4 Database 戦略経由で AdminSession 行 + AdminAccount.status === ACTIVE
+ * の両方を DB で検証する契約のため、null が返った時点で非 ACTIVE / 未ログインが
+ * 確定する (#145 / #157)。middleware は Cookie 有無しか見ないため、最終防衛は
+ * RSC 側で行う。
  */
 export default async function AdminTopPage() {
+  const adminId = await getAuthenticatedAdminId();
+  if (!adminId) {
+    redirect("/login");
+  }
+
   const leaderApplicationQueryService = getLeaderApplicationQueryService();
   const projectQueryService = getProjectQueryService();
   const outboxQueryService = getOutboxQueryService();
