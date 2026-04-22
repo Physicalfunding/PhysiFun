@@ -26,6 +26,64 @@ import { EMAIL_MAGIC_LINK_MAX_AGE_SEC } from "./auth-constants";
  *   - 数名の運営のみがアクセスする想定。マジックリンク到達性で本人性を担保。
  *   - 万一トークン漏洩しても AdminSession の強制削除で即座に revoke 可能。
  */
+
+/**
+ * Cookie 設定を生成する純粋関数 (#147 Blocker B-1)
+ *
+ * `authOptions.cookies` は元々 `process.env.NEXTAUTH_URL` を直接参照していたため、
+ * テストでは動的 import (`import("../auth?t=...")`) で module cache をバイパスして
+ * 再評価する必要があった。これを `isHttps: boolean` を引数に取る純粋関数に切り出し、
+ * テストから `buildCookieOptions(true) / buildCookieOptions(false)` を直接呼べるように
+ * している。
+ *
+ * - host-only cookie 方針 (domain 未指定) を invariant として固定
+ * - `isHttps=true` のときのみ `__Secure-` / `__Host-` プレフィックス + secure=true
+ * - sameSite は "lax" で固定 (マジックリンクの戻りナビゲーションを許可)
+ */
+export function buildCookieOptions(isHttps: boolean): NextAuthOptions["cookies"] {
+  const securePrefix = isHttps ? "__Secure-" : "";
+  const hostPrefix = isHttps ? "__Host-" : "";
+  return {
+    sessionToken: {
+      name: `${securePrefix}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isHttps,
+        // domain は敢えて指定しない (host-only cookie にして親ドメイン漏れを防止)
+        domain: undefined,
+      },
+    },
+    callbackUrl: {
+      name: `${securePrefix}next-auth.callback-url`,
+      options: {
+        // NextAuth のデフォルトに従う (httpOnly: false)。
+        // callbackUrl cookie は NextAuth 本体が client-side JS からも参照する想定
+        // (signIn フォームの hidden input 等) のため、httpOnly を立てない。
+        sameSite: "lax",
+        path: "/",
+        secure: isHttps,
+        domain: undefined,
+      },
+    },
+    csrfToken: {
+      // CSRF Cookie は NextAuth 既定で __Host- プレフィックス付き。
+      // __Host- は domain 属性が無いこと + path=/ + secure を要求するため、
+      // サブドメイン分離と相性が良い。
+      name: `${hostPrefix}next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isHttps,
+        // __Host- プレフィックスの仕様上 domain は必ず未指定
+        domain: undefined,
+      },
+    },
+  };
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: getAdminPrismaAdapter(),
 
@@ -79,49 +137,7 @@ export const authOptions: NextAuthOptions = {
    * NEXTAUTH_SECRET は apps/web と **別値** を Vercel 環境変数に設定すること
    * (同一値だと署名付き Cookie を相互に復号できてしまい、ドメイン分離の意味が薄れる)。
    */
-  cookies: {
-    sessionToken: {
-      name: process.env.NEXTAUTH_URL?.startsWith("https://")
-        ? "__Secure-next-auth.session-token"
-        : "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
-        // domain は敢えて指定しない (host-only cookie にして親ドメイン漏れを防止)
-        domain: undefined,
-      },
-    },
-    callbackUrl: {
-      name: process.env.NEXTAUTH_URL?.startsWith("https://")
-        ? "__Secure-next-auth.callback-url"
-        : "next-auth.callback-url",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
-        domain: undefined,
-      },
-    },
-    csrfToken: {
-      // CSRF Cookie は NextAuth 既定で __Host- プレフィックス付き。
-      // __Host- は domain 属性が無いこと + path=/ + secure を要求するため、
-      // サブドメイン分離と相性が良い。
-      name: process.env.NEXTAUTH_URL?.startsWith("https://")
-        ? "__Host-next-auth.csrf-token"
-        : "next-auth.csrf-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
-        // __Host- プレフィックスの仕様上 domain は必ず未指定
-        domain: undefined,
-      },
-    },
-  },
+  cookies: buildCookieOptions(process.env.NEXTAUTH_URL?.startsWith("https://") ?? false),
 
   pages: {
     signIn: "/login",

@@ -5,56 +5,46 @@
  *   - `domain` 属性は必ず `undefined` (host-only cookie)
  *   - 本番 (https) では secure=true かつ `__Secure-` / `__Host-` プレフィックスが付く
  *   - `sameSite` は "lax"
+ *   - callbackUrl cookie は NextAuth デフォルト (httpOnly 未指定) に従う
  *
  * この invariant が壊れると運営セッションが親ドメイン / 兄弟サブドメインに
  * 漏出するリスクがあるため、コード変更で誤って緩められないよう回帰テストとして残す。
+ *
+ * ## 実装方針 (#147 Blocker B-1)
+ * 以前は `authOptions.cookies` が `process.env.NEXTAUTH_URL` を直接参照していたため、
+ * 本番 / ローカルの切り替えテストに動的 import + キャッシュバイパス
+ * (`import("../auth?t=...")`) を使っていた。現在は `buildCookieOptions(isHttps)` という
+ * 純粋関数に切り出されているので、env 変数を触らずに両ケースを直接検証できる。
+ *
+ * ただし `auth.ts` の module top-level では `getAdminPrismaAdapter()` と
+ * EmailProvider の初期化が走るため、依存モジュールは事前にモックしてから import する。
  *
  * 実行: `bun test apps/admin` (CI 本体と同じ). `bun:test` の jest 互換 API を使う。
  */
 
 // `bun:test` の ambient 型宣言は apps/admin/src/types/bun-test.d.ts を参照。
-import { describe, test, expect, afterEach, mock } from "bun:test";
+import { describe, test, expect, mock } from "bun:test";
 
-// DI コンテナの副作用を避けるため、依存モジュールを最初にモックする。
-// `authOptions` は module top-level で評価されるため、import 前にモック登録が必要。
+// DI コンテナの副作用 (Prisma Client 初期化等) を避けるため、
+// `auth.ts` を import する前に依存モジュールをモックする。
 mock.module("../di/auth", () => ({
   getAdminPrismaAdapter: () => ({}),
   getIsActiveAdminByEmail: () => async () => false,
   getSendAdminMagicLink: () => async () => {},
 }));
 
-mock.module("../rateLimit", () => ({
-  checkAdminMagicLinkRateLimit: () => ({ ok: true }),
-}));
-
 // NextAuth EmailProvider は内部で `require("nodemailer")` するが、
 // apps/admin は ResendMailSender 経由で送信するため nodemailer を dependency に入れていない。
-// テスト実行時に EmailProvider の import が走るだけでエラーになるのでスタブ化する。
 mock.module("nodemailer", () => ({
   default: { createTransport: () => ({ sendMail: async () => {} }) },
   createTransport: () => ({ sendMail: async () => {} }),
 }));
 
+const { buildCookieOptions } = await import("../auth");
+
 describe("apps/admin auth cookies (#147)", () => {
-  const originalEnv = process.env.NEXTAUTH_URL;
-
-  afterEach(() => {
-    process.env.NEXTAUTH_URL = originalEnv;
-  });
-
-  async function loadAuthOptions() {
-    // NEXTAUTH_URL 切替時に auth.ts を再読み込みするため、import cache をバイパス
-    // (bun には jest.resetModules が無いので dynamic import + query で代用)
-    const mod = (await import(
-      `../auth?t=${Date.now()}${Math.random()}`
-    )) as typeof import("../auth");
-    return mod.authOptions;
-  }
-
-  test("本番 (https) では session/callback cookie に __Secure- プレフィックスが付き domain は未指定", async () => {
-    process.env.NEXTAUTH_URL = "https://admin.physifun.com";
-    const authOptions = await loadAuthOptions();
-    const cookies = authOptions.cookies!;
+  test("本番 (https) では session/callback cookie に __Secure- プレフィックスが付き domain は未指定", () => {
+    const cookies = buildCookieOptions(true)!;
 
     expect(cookies.sessionToken?.name).toBe("__Secure-next-auth.session-token");
     expect(cookies.sessionToken?.options.secure).toBe(true);
@@ -65,20 +55,24 @@ describe("apps/admin auth cookies (#147)", () => {
 
     expect(cookies.callbackUrl?.name).toBe("__Secure-next-auth.callback-url");
     expect(cookies.callbackUrl?.options.domain).toBeUndefined();
+    // Major M-2: callbackUrl は NextAuth デフォルト (httpOnly を立てない) に従う
+    expect(cookies.callbackUrl?.options.httpOnly).toBeUndefined();
 
     expect(cookies.csrfToken?.name).toBe("__Host-next-auth.csrf-token");
     expect(cookies.csrfToken?.options.secure).toBe(true);
     expect(cookies.csrfToken?.options.domain).toBeUndefined();
   });
 
-  test("ローカル開発 (http) では secure=false + プレフィックスなし", async () => {
-    process.env.NEXTAUTH_URL = "http://localhost:3001";
-    const authOptions = await loadAuthOptions();
-    const cookies = authOptions.cookies!;
+  test("ローカル開発 (http) では secure=false + プレフィックスなし", () => {
+    const cookies = buildCookieOptions(false)!;
 
     expect(cookies.sessionToken?.name).toBe("next-auth.session-token");
     expect(cookies.sessionToken?.options.secure).toBe(false);
     expect(cookies.sessionToken?.options.domain).toBeUndefined();
+
+    expect(cookies.callbackUrl?.name).toBe("next-auth.callback-url");
+    expect(cookies.callbackUrl?.options.secure).toBe(false);
+    expect(cookies.callbackUrl?.options.httpOnly).toBeUndefined();
 
     expect(cookies.csrfToken?.name).toBe("next-auth.csrf-token");
     expect(cookies.csrfToken?.options.secure).toBe(false);

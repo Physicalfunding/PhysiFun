@@ -60,11 +60,29 @@ Vercel プロジェクトの **Settings → Environment Variables** に `apps/ad
 |---|---|
 | `NEXTAUTH_SECRET` | apps/web と別値 (`openssl rand -base64 32`) |
 | `NEXTAUTH_URL` | `https://admin.<本番ドメイン>` |
-| `ADMIN_MAGIC_LINK_HMAC_SECRET` | 32 bytes 以上のランダム値 (apps/web に無い) |
+| `ADMIN_MAGIC_LINK_HMAC_SECRET` | 32 bytes 以上のランダム値 (apps/web に無い)。**#146 (PR #163) マージ後に必須**。詳細は下記注記 |
 | `CRON_SECRET` | Vercel Cron 呼び出し検証用 (apps/admin のみ) |
 | `RESEND_API_KEY` | Resend ダッシュボードで発行 |
 | `MAIL_FROM` | Resend で verify 済みドメインのアドレス |
 | `DATABASE_URL` | apps/web と同じ Supabase PostgreSQL (Pooler URL) |
+
+#### `ADMIN_MAGIC_LINK_HMAC_SECRET` について (#146 / PR #163 連動)
+
+この環境変数はマジックリンクトークンの HMAC 署名 / 検証に使われる。
+現在のコード (PR #165 / 本 PR マージ時点) では **未参照** のため空でもビルドは通るが、
+#146 (PR #163) がマージされると **必須** になる。
+
+**推奨マージ順序**: #163 (HMAC 化) → #165 (Vercel 分離) → Vercel 環境変数を設定。
+逆順 (#165 先行) になる場合は、以下のいずれかで運用する:
+
+1. PR #165 マージ時点では未設定のままにしておき、#163 マージ直前に Vercel 環境変数へ
+   `ADMIN_MAGIC_LINK_HMAC_SECRET` を追加してから #163 をマージする。
+2. 先に両 PR をマージし、その直後にまとめて Vercel の環境変数を設定する
+   (この場合 #163 マージ〜環境変数設定の間は admin ログインが失敗するので、
+   メンテ時間帯にまとめて実施する)。
+
+いずれの場合も、`apps/web` とは **別値** を設定すること。`openssl rand -base64 32`
+等で 32 bytes 以上のランダム値を生成する。
 
 ### 4. Cron の動作確認
 
