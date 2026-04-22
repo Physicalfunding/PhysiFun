@@ -5,7 +5,7 @@
  *   - `domain` 属性は必ず `undefined` (host-only cookie)
  *   - 本番 (https) では secure=true かつ `__Secure-` / `__Host-` プレフィックスが付く
  *   - `sameSite` は "lax"
- *   - callbackUrl cookie は NextAuth デフォルト (httpOnly 未指定) に従う
+ *   - callbackUrl cookie は `httpOnly: true` を明示 (JS アクセス禁止, #147 H-1)
  *
  * この invariant が壊れると運営セッションが親ドメイン / 兄弟サブドメインに
  * 漏出するリスクがあるため、コード変更で誤って緩められないよう回帰テストとして残す。
@@ -57,8 +57,8 @@ describe("apps/admin auth cookies (#147)", () => {
 
     expect(cookies.callbackUrl?.name).toBe("__Secure-next-auth.callback-url");
     expect(cookies.callbackUrl?.options.domain).toBeUndefined();
-    // Major M-2: callbackUrl は NextAuth デフォルト (httpOnly を立てない) に従う
-    expect(cookies.callbackUrl?.options.httpOnly).toBeUndefined();
+    // #147 H-1: callbackUrl cookie にも httpOnly を明示 (shallow merge で上書きされるため)
+    expect(cookies.callbackUrl?.options.httpOnly).toBe(true);
     expect(cookies.callbackUrl?.options.path).toBe("/");
 
     expect(cookies.csrfToken?.name).toBe("__Host-next-auth.csrf-token");
@@ -78,7 +78,8 @@ describe("apps/admin auth cookies (#147)", () => {
 
     expect(cookies.callbackUrl?.name).toBe("next-auth.callback-url");
     expect(cookies.callbackUrl?.options.secure).toBe(false);
-    expect(cookies.callbackUrl?.options.httpOnly).toBeUndefined();
+    // #147 H-1: ローカル開発でも httpOnly は明示 true (本番と同じ invariant を固定)
+    expect(cookies.callbackUrl?.options.httpOnly).toBe(true);
     expect(cookies.callbackUrl?.options.path).toBe("/");
 
     expect(cookies.csrfToken?.name).toBe("next-auth.csrf-token");

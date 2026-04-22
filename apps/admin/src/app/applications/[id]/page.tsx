@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
 import { ReviewActions } from "@/components/ReviewActions";
 import { SafeSnsLink } from "@physifun/ui-shared";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { getCategoryLabel } from "@/lib/category";
 import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
 import { getPrefectureName } from "@/lib/prefecture";
@@ -13,12 +14,23 @@ export const dynamic = "force-dynamic";
 
 /**
  * /applications/[id] — リーダー応募詳細
+ *
+ * ## 認可 (#147 C-1)
+ * 一覧ページ (`/applications`) と同様に ACTIVE な AdminAccount のみ参照可能。
+ * 動的詳細 URL 直打ちで DISABLED アカウントが閲覧できてしまう回避経路を塞ぐため、
+ * RSC 側で `getAuthenticatedAdminId` により AdminSession 行 + AdminAccount.status
+ * === ACTIVE を DB で再確認する。null なら /login へリダイレクト。
  */
 export default async function ApplicationDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const adminId = await getAuthenticatedAdminId();
+  if (!adminId) {
+    redirect("/login");
+  }
+
   const { id } = await params;
   const queryService = getLeaderApplicationQueryService();
   const detail = await queryService.findById(id);

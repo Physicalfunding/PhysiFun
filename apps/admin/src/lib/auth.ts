@@ -58,12 +58,17 @@ export function buildCookieOptions(isHttps: boolean): NextAuthOptions["cookies"]
     callbackUrl: {
       name: `${securePrefix}next-auth.callback-url`,
       options: {
-        // NextAuth v4 のデフォルト (`httpOnly: true`) に委ねるため、ここでは
-        // `httpOnly` を明示的に設定しない。apps/admin の signIn 動線は
-        // `window.location.href` を使うフォーム / リンク経由 (サーバーリダイレクト)
-        // なので、client-side JS から callbackUrl cookie を直接読む必要は無い。
-        // 明示 override すると将来 NextAuth 側の既定が変わっても気付けないため、
-        // 既定尊重 = override なしを invariant として固定する。
+        // `httpOnly: true` を明示して JS アクセス禁止 (#147 H-1)。
+        // NextAuth v4 は `authOptions.cookies` を shallow merge するので、ここで
+        // options オブジェクト全体を渡した時点で callbackUrl エントリは完全に
+        // 上書きされる (NextAuth 内部の defaultCookies は参照されない)。
+        // 以前のコメントは「デフォルトに委ねる」としていたが、実際は `httpOnly`
+        // 未指定 = `undefined` (= false 扱い) で Cookie 発行されていたため、
+        // client-side JS から callbackUrl cookie が読めてしまう状態だった。
+        // apps/admin の signIn 動線は `window.location.href` を使うフォーム /
+        // リンク経由 (サーバーリダイレクト) なので、client-side JS から
+        // callbackUrl cookie を直接読む必要は無く、httpOnly を立てても問題ない。
+        httpOnly: true,
         sameSite: "lax",
         path: "/",
         secure: isHttps,
