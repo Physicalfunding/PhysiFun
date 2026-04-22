@@ -108,7 +108,6 @@ export type MagicLinkVerifyResult =
       reason:
         | "missing_signature"
         | "missing_expires"
-        | "invalid_encoding"
         | "length_mismatch"
         | "signature_mismatch";
     };
@@ -148,14 +147,15 @@ export function verifyMagicLinkSignature(params: {
     secret: params.secret,
   });
 
-  let providedBuf: Buffer;
-  let expectedBuf: Buffer;
-  try {
-    providedBuf = Buffer.from(params.sig, "base64url");
-    expectedBuf = Buffer.from(expected, "base64url");
-  } catch {
-    return { ok: false, reason: "invalid_encoding" };
-  }
+  // Node.js の `Buffer.from(str, "base64url")` は不正な文字を例外なく
+  // 単に無視してデコードする仕様のため、try/catch での `invalid_encoding`
+  // 分岐は到達しない dead code となる (#172)。
+  // 実挙動として:
+  //   - 不正文字を含み 43 文字未満になるケース → `length_mismatch`
+  //   - 有効 base64url 文字のみで 43 文字の不正値 → `signature_mismatch`
+  // のいずれかに確実に落ちるため、encoding 失敗を個別に扱う必要はない。
+  const providedBuf = Buffer.from(params.sig, "base64url");
+  const expectedBuf = Buffer.from(expected, "base64url");
 
   // timingSafeEqual は同一長でのみ呼べるため、長さ不一致は別 reason で弾く。
   // ただし、長さ不一致自体はほぼ実装ミスか改ざんであり情報価値は低い。
