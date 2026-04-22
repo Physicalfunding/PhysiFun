@@ -8,21 +8,57 @@ import { AddMemberForm } from "@/components/AddMemberForm";
 // 常に最新状態を表示するため force-dynamic (静的生成を無効化)
 export const dynamic = "force-dynamic";
 
+// #167: ページサイズのデフォルトと上限。audit-logs の PER_PAGE / PER_PAGE_MAX と揃える。
+const PER_PAGE = 20;
+const PER_PAGE_MAX = 50;
+
+interface MembersSearchParams {
+  page?: string;
+  perPage?: string;
+}
+
 /**
- * /members — 運営メンバー管理 (#148)
+ * 現在のページ情報から querystring を生成する (page 指定は別引数)。
+ */
+function buildQueryString(overrides: { page?: number; perPage?: number }): string {
+  const params = new URLSearchParams();
+  if (overrides.page !== undefined) params.set("page", String(overrides.page));
+  if (overrides.perPage !== undefined) params.set("perPage", String(overrides.perPage));
+  const s = params.toString();
+  return s ? `?${s}` : "";
+}
+
+/**
+ * /members — 運営メンバー管理 (#148 / #167 ページネーション対応)
  *
  * - ACTIVE な AdminAccount のみが到達可能 (middleware + getAuthenticatedAdminId)
  * - 自分自身に対しては「無効化」ボタンを表示しない (Route Handler 側でも集約ガードあり)
+ * - `page` / `perPage` クエリでページング (audit-logs と同じパターン)
  */
-export default async function MembersListPage() {
+export default async function MembersListPage({
+  searchParams,
+}: {
+  searchParams: Promise<MembersSearchParams>;
+}) {
   const operatorId = await getAuthenticatedAdminId();
   if (!operatorId) {
     // middleware が弾く想定だが、防御的に。
     redirect("/login");
   }
 
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.page) || 1);
+  const perPage = Math.min(
+    PER_PAGE_MAX,
+    Math.max(1, Number(params.perPage) || PER_PAGE)
+  );
+
   const repo = getAdminAccountRepository();
-  const members = await repo.findAll();
+  const { items: members, totalCount } = await repo.findAll({ page, perPage });
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
+  const startItem = totalCount === 0 ? 0 : Math.min((page - 1) * perPage + 1, totalCount);
+  const endItem = Math.min(page * perPage, totalCount);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -43,7 +79,12 @@ export default async function MembersListPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">メンバー一覧</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">メンバー一覧</h2>
+          <span className="text-sm text-gray-500">
+            {totalCount} 件 (page {page} / {totalPages})
+          </span>
+        </div>
         {members.length === 0 ? (
           <p className="py-12 text-center text-gray-500">メンバーがいません</p>
         ) : (
@@ -112,6 +153,35 @@ export default async function MembersListPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* ページネーション (audit-logs と同じ UI パターン) */}
+        {totalPages > 1 && (
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              {totalCount === 0
+                ? "0 件"
+                : `${totalCount} 件中 ${startItem}〜${endItem} 件`}
+            </p>
+            <div className="flex gap-2">
+              {page > 1 && (
+                <Link
+                  href={`/members${buildQueryString({ page: page - 1, perPage })}`}
+                  className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+                >
+                  前へ
+                </Link>
+              )}
+              {page < totalPages && (
+                <Link
+                  href={`/members${buildQueryString({ page: page + 1, perPage })}`}
+                  className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+                >
+                  次へ
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </section>

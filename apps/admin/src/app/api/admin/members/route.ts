@@ -14,26 +14,46 @@ import { enforceAdminRateLimit } from "@/lib/rateLimit";
 import { getAdminAccountRepository } from "@/lib/di/queryServices";
 
 /**
- * GET /api/admin/members (#148)
+ * GET /api/admin/members (#148 / #167 ページネーション対応)
  *
  * 運営メンバーの一覧を返す。ACTIVE な AdminAccount のみがアクセス可能。
+ *
+ * クエリパラメータ:
+ * - page: number (デフォルト 1)
+ * - perPage: number (デフォルト 20, 上限 50)
  */
-export async function GET() {
+const DEFAULT_PER_PAGE = 20;
+const MAX_PER_PAGE = 50;
+
+export async function GET(request: NextRequest) {
   try {
     const operatorId = await getAuthenticatedAdminId();
     if (!operatorId) return unauthorizedResponse();
 
+    const { searchParams } = request.nextUrl;
+    const pageParam = searchParams.get("page");
+    const perPageParam = searchParams.get("perPage");
+
+    const page = Math.max(1, Number(pageParam) || 1);
+    const perPage = Math.min(
+      MAX_PER_PAGE,
+      Math.max(1, Number(perPageParam) || DEFAULT_PER_PAGE)
+    );
+
     const repo = getAdminAccountRepository();
-    const members = await repo.findAll();
+    const result = await repo.findAll({ page, perPage });
 
     return successResponse({
-      items: members.map((m) => ({
+      items: result.items.map((m) => ({
         id: m.id.toString(),
         email: m.email.toString(),
         status: m.status,
         createdAt: m.createdAt.toISOString(),
         lastLoginAt: m.lastLoginAt?.toISOString() ?? null,
       })),
+      totalCount: result.totalCount,
+      page,
+      perPage,
     });
   } catch (e) {
     console.error("[api] admin/members GET error:", e);

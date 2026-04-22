@@ -22,10 +22,14 @@ export interface AdminAccountRepository {
   update(adminAccount: AdminAccount): Promise<void>;
 
   /**
-   * 全 AdminAccount を createdAt 降順で返す (#148 運営メンバー管理 UI)。
+   * AdminAccount を createdAt 降順で返す (#148 運営メンバー管理 UI / #167 ページネーション対応)。
    *
-   * 運営総数が十数件規模を超えない想定なのでページングは持たない。
-   * 将来的に膨張した場合は { offset, limit } を追加する。
+   * 他の admin API (applications/projects/outbox/audit-logs) と一貫性を持たせるため、
+   * `page` / `perPage` 指定で該当ページのみを取得し、合計件数を併せて返す。
+   * `page` は 1 始まり。呼び出し側で上限チェック (perPage <= 50) を済ませておく想定。
    */
-  findAll(): Promise<AdminAccount[]>;
+  findAll(options: {
+    page: number;
+    perPage: number;
+  }): Promise<{ items: AdminAccount[]; totalCount: number }>;
 }

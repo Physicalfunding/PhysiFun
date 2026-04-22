@@ -56,11 +56,20 @@ export class PrismaAdminAccountRepository implements AdminAccountRepository {
     });
   }
 
-  async findAll(): Promise<AdminAccount[]> {
-    const rows = await prisma.adminAccount.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    return rows.map(toDomain);
+  async findAll(options: {
+    page: number;
+    perPage: number;
+  }): Promise<{ items: AdminAccount[]; totalCount: number }> {
+    const skip = (options.page - 1) * options.perPage;
+    const [rows, totalCount] = await Promise.all([
+      prisma.adminAccount.findMany({
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: options.perPage,
+      }),
+      prisma.adminAccount.count(),
+    ]);
+    return { items: rows.map(toDomain), totalCount };
   }
 }
 
