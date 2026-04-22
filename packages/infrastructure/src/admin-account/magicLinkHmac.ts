@@ -64,6 +64,12 @@ export function computeMagicLinkSignature(params: {
 export const MAGIC_LINK_SIGNATURE_PARAM = "sig";
 
 /**
+ * 署名対象の expires (unix ms) を載せる URL クエリのパラメータ名。
+ * 生成側 (`signMagicLinkUrl`) と検証側 (route handler) で同一名を使うため定数化 (#146 m-5)。
+ */
+export const MAGIC_LINK_EXPIRES_PARAM = "sig_exp";
+
+/**
  * NextAuth EmailProvider が生成した Magic Link URL に `sig` クエリを付与する。
  * 既に `sig` が付いている場合は上書きする (再署名)。
  *
@@ -90,7 +96,7 @@ export function signMagicLinkUrl(params: {
   // expires は検証側が token 検索せずに復元できるよう同梱する。
   // 値は AdminVerificationToken.expires とクライアント時計から独立した認可に利用しない
   // (DB 側の expires が最終判定)。ここでは「署名対象 expires」の同一性を担保するのが目的。
-  urlObj.searchParams.set("sig_exp", String(expiresMs));
+  urlObj.searchParams.set(MAGIC_LINK_EXPIRES_PARAM, String(expiresMs));
   return urlObj.toString();
 }
 
@@ -129,7 +135,9 @@ export function verifyMagicLinkSignature(params: {
     return { ok: false, reason: "missing_expires" };
   }
   const expiresMs = Number(params.sigExpires);
-  if (!Number.isFinite(expiresMs) || Number.isNaN(expiresMs)) {
+  // Number.isFinite は NaN / ±Infinity をすべて false として扱うため、
+  // これだけで「有限数値であること」を一括チェックできる (#146 M-3)。
+  if (!Number.isFinite(expiresMs)) {
     return { ok: false, reason: "missing_expires" };
   }
 

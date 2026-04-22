@@ -88,6 +88,20 @@ describe("createSendAdminMagicLink (#146)", () => {
     await expect(send(params)).rejects.toThrow(/disallowed URL scheme/);
   });
 
+  it("URL に token クエリが含まれない場合は throw する (#146 m-4)", async () => {
+    const { sender } = createCapturingMailSender();
+    const send = createSendAdminMagicLink({
+      mailSender: sender,
+      expiresInMin: 10,
+      hmacSecret: HMAC_SECRET,
+    });
+    // NextAuth の契約に反して token が無い URL を渡したケース
+    const params = createParams({
+      url: "https://admin.example.com/api/auth/callback/email?callbackUrl=%2F&email=alice%40example.com",
+    });
+    await expect(send(params)).rejects.toThrow(/does not contain `token` query/);
+  });
+
   it("MailSender が失敗した場合は throw する", async () => {
     const sender: MailSender = {
       async send(): Promise<Result<void, MailSendError>> {

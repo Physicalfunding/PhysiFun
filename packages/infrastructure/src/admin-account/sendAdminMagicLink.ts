@@ -47,12 +47,20 @@ export function createSendAdminMagicLink(deps: CreateSendAdminMagicLinkDeps) {
 
     // #146: URL に HMAC-SHA256 署名 (`sig`) と署名対象の expires (`sig_exp`) を付ける。
     // NextAuth 既存のクエリ (`token`, `email`, `callbackUrl`) は保持し、末尾に追加するのみ。
+    // NextAuth は URL に `token` クエリを必ず載せる仕様だが、アップストリーム実装変更で
+    // 欠落した場合に empty string で署名してしまうと、攻撃者は token 無しの URL でも
+    // 署名検証を通せてしまう余地が生まれる (後続のセキュリティチェックには依存しない
+    // fail-fast にする / #146 m-4)。そのため token 欠落は明示的に throw する。
+    const tokenFromUrl = new URL(url).searchParams.get("token");
+    if (!tokenFromUrl) {
+      throw new Error(
+        "[sendAdminMagicLink] magic link URL does not contain `token` query (NextAuth contract violated)"
+      );
+    }
     const signedUrl = signMagicLinkUrl({
       url,
       email,
-      // NextAuth は URL に `token` クエリを必ず載せる。万一欠けていた場合は
-      // callback 側で verify が必ず失敗するため、ここで throw はしない。
-      token: new URL(url).searchParams.get("token") ?? "",
+      token: tokenFromUrl,
       expires,
       secret: deps.hmacSecret,
     });

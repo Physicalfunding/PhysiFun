@@ -2,10 +2,12 @@ import NextAuth from "next-auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import {
+  findAdminAccountIdByEmail,
   getAdminMagicLinkHmacSecret,
   verifyMagicLinkSignature,
   writeAdminAuditLog,
   MAGIC_LINK_SIGNATURE_PARAM,
+  MAGIC_LINK_EXPIRES_PARAM,
 } from "@physifun/infrastructure";
 import { authOptions } from "@/lib/auth";
 
@@ -54,7 +56,7 @@ async function verifyMagicLinkOrReject(request: NextRequest): Promise<NextRespon
   const token = url.searchParams.get("token");
   const email = url.searchParams.get("email");
   const sig = url.searchParams.get(MAGIC_LINK_SIGNATURE_PARAM);
-  const sigExp = url.searchParams.get("sig_exp");
+  const sigExp = url.searchParams.get(MAGIC_LINK_EXPIRES_PARAM);
 
   // NextAuth の email callback は token / email 必須。欠けていれば
   // NextAuth 本体のエラー経路に任せても良いが、ここでは署名検証の
@@ -73,8 +75,11 @@ async function verifyMagicLinkOrReject(request: NextRequest): Promise<NextRespon
   } catch (e) {
     // secret 未設定は fail closed。起動時 (sendVerificationRequest 経路) にも
     // 検出されるが、callback 経路でも念のため弾く。
+    // メッセージには環境変数名が含まれるため (内部構成の露出防止のため) DB には
+    // 固定 reason のみ残し、詳細は console.error に出す (#146 M-2)。
     const message = e instanceof Error ? e.message : String(e);
-    await recordSignatureInvalid({ email, reason: `secret_unavailable: ${message}` });
+    console.error("[magic-link] secret unavailable", { error: message });
+    await recordSignatureInvalid({ email, reason: "secret_unavailable" });
     return accessDeniedRedirect(request);
   }
 
@@ -117,13 +122,10 @@ async function recordSignatureInvalid(params: {
     }
     // AdminAccount を解決できる場合のみ監査ログに残す (FK 制約のため)。
     // 解決できないケース (未登録 email への改ざん試行等) は console.warn のみ。
-    // prisma を直接触りたくないので infrastructure 側の API 経由で実体解決する。
-    const { prisma } = await import("@physifun/infrastructure");
-    const admin = await prisma.adminAccount.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-    if (!admin) {
+    // `infrastructure/` 以外で prisma を直接触らない方針 (CLAUDE.md) に揃えるため、
+    // email → id 解決は `findAdminAccountIdByEmail` 経由で行う (#146 B-1)。
+    const adminId = await findAdminAccountIdByEmail(email);
+    if (!adminId) {
       console.warn("[magic-link] signature invalid for unknown email", {
         email,
         reason: params.reason,
@@ -131,10 +133,10 @@ async function recordSignatureInvalid(params: {
       return;
     }
     await writeAdminAuditLog({
-      adminAccountId: admin.id,
+      adminAccountId: adminId,
       action: "magic_link.signature_invalid",
       targetType: "AdminAccount",
-      targetId: admin.id,
+      targetId: adminId,
       metadata: {
         reason: params.reason,
       },
