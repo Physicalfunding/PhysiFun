@@ -1,4 +1,5 @@
 export { prisma } from "./database/client";
+export { isUniqueConstraintError } from "./database/isUniqueConstraintError";
 
 export type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "./outbox";
 export {

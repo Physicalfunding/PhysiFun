@@ -1,5 +1,6 @@
 import { type NextRequest } from "next/server";
 import { AdminAccount } from "@physifun/domain";
+import { isUniqueConstraintError } from "@physifun/infrastructure";
 import {
   conflictResponse,
   internalErrorResponse,
@@ -95,12 +96,29 @@ export async function POST(request: NextRequest) {
     const repo = getAdminAccountRepository();
 
     // 重複チェック (集約生成後に email 値オブジェクトで findByEmail する)
+    // PR #164 M-1: DISABLED な同一 email アカウントが既にある場合は「再有効化してね」と案内し、
+    // ACTIVE な場合は「既に登録済み」とメッセージを分岐させる。
     const existing = await repo.findByEmail(admin.email);
     if (existing) {
-      return conflictResponse("このメールアドレスは既に登録されています");
+      if (existing.isDisabled()) {
+        return conflictResponse(
+          "このメールアドレスのメンバーは現在無効化中です。再有効化してください"
+        );
+      }
+      return conflictResponse("このメールアドレスのメンバーは既に登録されています");
     }
 
-    await repo.create(admin);
+    // PR #164 H-1: findByEmail と create の間のレース条件で DB 側 unique index (P2002) に
+    // 弾かれる可能性があるため、Prisma の一意制約違反を 409 Conflict として透過的に返す。
+    // Prisma runtime 値は infra 層に閉じた `isUniqueConstraintError` ヘルパーで判定する。
+    try {
+      await repo.create(admin);
+    } catch (err) {
+      if (isUniqueConstraintError(err)) {
+        return conflictResponse("このメールアドレスのメンバーは既に登録されています");
+      }
+      throw err;
+    }
 
     // #158 H4: 監査証跡 (post-hook / 非トランザクショナル)
     await logAdminAction({

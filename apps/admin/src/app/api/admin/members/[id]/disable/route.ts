@@ -53,11 +53,18 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
     const disableResult = target.disable({ operatorId: operatorIdResult.value });
     if (!disableResult.ok) {
-      switch (disableResult.error.type) {
+      const error = disableResult.error;
+      switch (error.type) {
         case "CANNOT_DISABLE_SELF":
           return forbiddenResponse("自分自身は無効化できません");
         case "CANNOT_DISABLE_ALREADY_DISABLED":
           return unprocessableEntityResponse("このメンバーは既に無効化されています");
+        default: {
+          // PR #164 H-2: AdminAccountStateError に新しい variant が追加された際、
+          // コンパイルエラーで検知するための exhaustive guard。
+          const _exhaustive: never = error;
+          throw new Error(`unhandled state error: ${JSON.stringify(_exhaustive)}`);
+        }
       }
     }
 
@@ -67,14 +74,16 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
     // #158 H4: 2 行の監査証跡を書く (disable + session.revoke を分けて残す)
     // 監査ログは post-hook（非トランザクショナル）。commit 後に書くのは意図的。
-    await logAdminAction({
+    // PR #164 M-2: outbox 側と揃えて fire-and-forget で呼ぶ (logAdminAction は
+    // 内部で try/catch + log-and-continue する設計。await で応答を遅らせない)。
+    void logAdminAction({
       adminAccountId: operatorId,
       action: "admin_account.disable",
       targetType: "AdminAccount",
       targetId: target.id.toString(),
       metadata: { email: target.email.toString() },
     });
-    await logAdminAction({
+    void logAdminAction({
       adminAccountId: operatorId,
       action: "admin_session.revoke",
       targetType: "AdminAccount",

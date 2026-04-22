@@ -56,7 +56,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     target.enable();
     await repo.update(target);
 
-    await logAdminAction({
+    // PR #164 M-2: outbox 側と揃えて fire-and-forget で呼ぶ (logAdminAction は
+    // 内部で try/catch + log-and-continue する設計)。
+    void logAdminAction({
       adminAccountId: operatorId,
       action: "admin_account.enable",
       targetType: "AdminAccount",
