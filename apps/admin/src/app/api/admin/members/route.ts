@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     // #158 H4: 監査証跡 (post-hook / 非トランザクショナル)
-    await logAdminAction({
+    void logAdminAction({
       adminAccountId: operatorId,
       action: "admin_account.create",
       targetType: "AdminAccount",
