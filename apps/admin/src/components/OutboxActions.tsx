@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OutboxSource, OutboxStatus } from "@physifun/infrastructure";
+import { AlertDialog } from "./ui/AlertDialog";
 
 interface OutboxActionsProps {
   id: string;
@@ -10,18 +11,34 @@ interface OutboxActionsProps {
   status: OutboxStatus;
 }
 
+type PendingAction = "retry" | "complete" | null;
+
 export function OutboxActions({ id, source, status }: OutboxActionsProps) {
   const router = useRouter();
   const [isRetrying, setIsRetrying] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingAction>(null);
 
   // pending（未処理）と sent（送信済み）はアクション不要
   if (status === "sent" || status === "pending") return null;
 
-  async function handleRetry() {
-    if (!window.confirm("このメッセージをリトライ対象に戻しますか？")) return;
+  function requestRetry() {
+    setError(null);
+    setPending("retry");
+  }
 
+  function requestComplete() {
+    setError(null);
+    setPending("complete");
+  }
+
+  function closeDialog() {
+    if (isRetrying || isCompleting) return;
+    setPending(null);
+  }
+
+  async function handleRetry() {
     setIsRetrying(true);
     setError(null);
 
@@ -38,6 +55,7 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
         return;
       }
 
+      setPending(null);
       router.refresh();
     } catch {
       setError("通信エラーが発生しました");
@@ -47,10 +65,6 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
   }
 
   async function handleComplete() {
-    if (!window.confirm("このメッセージを完了としてマークしますか？この操作は取り消せません。")) {
-      return;
-    }
-
     setIsCompleting(true);
     setError(null);
 
@@ -67,6 +81,7 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
         return;
       }
 
+      setPending(null);
       router.refresh();
     } catch {
       setError("通信エラーが発生しました");
@@ -82,7 +97,7 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
       {(status === "retrying" || status === "dead-lettered") && (
         <button
           type="button"
-          onClick={handleRetry}
+          onClick={requestRetry}
           disabled={isProcessing}
           className="rounded border border-blue-300 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
         >
@@ -91,13 +106,36 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
       )}
       <button
         type="button"
-        onClick={handleComplete}
+        onClick={requestComplete}
         disabled={isProcessing}
         className="rounded border border-gray-300 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
       >
         {isCompleting ? "処理中..." : "完了にする"}
       </button>
       {error && <span className="text-xs text-red-600">{error}</span>}
+
+      <AlertDialog
+        open={pending === "retry"}
+        title="メッセージをリトライ"
+        description="このメッセージをリトライ対象に戻しますか？"
+        confirmLabel="リトライする"
+        variant="default"
+        isSubmitting={isRetrying}
+        onConfirm={handleRetry}
+        onCancel={closeDialog}
+        testId={`confirm-retry-outbox-${id}`}
+      />
+      <AlertDialog
+        open={pending === "complete"}
+        title="メッセージを完了マーク"
+        description="このメッセージを完了としてマークしますか？この操作は取り消せません。"
+        confirmLabel="完了にする"
+        variant="destructive"
+        isSubmitting={isCompleting}
+        onConfirm={handleComplete}
+        onCancel={closeDialog}
+        testId={`confirm-complete-outbox-${id}`}
+      />
     </div>
   );
 }
