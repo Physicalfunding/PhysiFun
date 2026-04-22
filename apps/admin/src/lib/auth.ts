@@ -1,8 +1,27 @@
 import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
+import { getAdminMagicLinkHmacSecret } from "@physifun/infrastructure";
 import { getAdminPrismaAdapter, getIsActiveAdminByEmail, getSendAdminMagicLink } from "./di/auth";
 import { checkAdminMagicLinkRateLimit } from "./rateLimit";
 import { EMAIL_MAGIC_LINK_MAX_AGE_SEC } from "./auth-constants";
+
+/**
+ * 起動時 (authOptions の import 時) に ADMIN_MAGIC_LINK_HMAC_SECRET の設定を検証する (#146)。
+ *
+ * 未設定 / 空 / NEXTAUTH_SECRET と同一値なら throw (fail closed)。
+ * Build 時には env が無い可能性があるため、`NODE_ENV === "test"` と
+ * `NEXT_PHASE === "phase-production-build"` のビルド時相当はスキップする。
+ *
+ * 実行時 (sendVerificationRequest / callback route) では getAdminMagicLinkHmacSecret()
+ * が都度呼ばれるため、起動時に失敗してもランタイムでは fail closed が維持される。
+ */
+function assertAdminMagicLinkHmacSecretOnBoot(): void {
+  if (process.env.NODE_ENV === "test") return;
+  if (process.env.NEXT_PHASE === "phase-production-build") return;
+  // throw されたら Next.js のサーバ起動時に検出される。
+  getAdminMagicLinkHmacSecret();
+}
+assertAdminMagicLinkHmacSecretOnBoot();
 
 /**
  * 運営管理アプリ用 NextAuth.js 設定 (#145 / #157)
