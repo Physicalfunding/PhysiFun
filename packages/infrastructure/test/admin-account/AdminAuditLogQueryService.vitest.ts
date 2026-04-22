@@ -149,6 +149,29 @@ describe("PrismaAdminAuditLogQueryService integration", () => {
       expect(result.items).toHaveLength(0);
     });
 
+    it("to は半開区間 [from, to) として扱い、境界 (to と同時刻の行) を含まない", async () => {
+      await seedFixture();
+
+      // 全件取得して最新行の createdAt を境界として使う
+      const all = await qs.findMany({}, { page: 1, perPage: 10 });
+      expect(all.items.length).toBeGreaterThan(0);
+      const latest = all.items[0]; // desc order なので最新
+
+      // to = latest.createdAt にすると、half-open のため latest 自身は除外される
+      const excluded = await qs.findMany(
+        { to: latest.createdAt },
+        { page: 1, perPage: 10 }
+      );
+      expect(excluded.items.some((r) => r.id === latest.id)).toBe(false);
+
+      // to = latest.createdAt + 1ms にすると、latest は含まれる
+      const included = await qs.findMany(
+        { to: new Date(latest.createdAt.getTime() + 1) },
+        { page: 1, perPage: 10 }
+      );
+      expect(included.items.some((r) => r.id === latest.id)).toBe(true);
+    });
+
     it("ページネーション: 2 ページ目が残り分を返す", async () => {
       await seedFixture();
 

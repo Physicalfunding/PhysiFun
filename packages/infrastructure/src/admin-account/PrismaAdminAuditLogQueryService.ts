@@ -48,7 +48,8 @@ export interface AdminAuditLogListResult {
  * - email: 運営者のメールアドレス (完全一致。正規化のため小文字比較)
  * - action: "leader_application.approve" 等の action 完全一致
  * - targetType: "LeaderApplication" / "Project" 等の targetType 完全一致
- * - from / to: createdAt の範囲指定 (閉区間)
+ * - from / to: createdAt の範囲指定 (半開区間 [from, to))
+ *   UI 層では `to = 指定日 +1 日 00:00:00 JST` を渡すことで「指定日を含む」挙動にする。
  */
 export interface AdminAuditLogFilter {
   readonly email?: string;
@@ -86,7 +87,9 @@ export class PrismaAdminAuditLogQueryService {
             select: { email: true },
           },
         },
-        orderBy: { createdAt: "desc" },
+        // 同一ミリ秒の createdAt が発生した場合でもページネーションが重複・脱落しないよう
+        // tie-breaker として id を第二キーに付与する。
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         skip,
         take: pagination.perPage,
       }),
@@ -166,7 +169,9 @@ function buildWhere(filter: AdminAuditLogFilter): Prisma.AdminAuditLogWhereInput
       where.createdAt.gte = filter.from;
     }
     if (filter.to) {
-      where.createdAt.lte = filter.to;
+      // 半開区間 [from, to)。UI 層で to = 指定日 +1日 00:00:00 JST として渡される前提。
+      // lte + 23:59:59.999 丸め方式はミリ秒未満の境界で取りこぼす可能性があるため避ける。
+      where.createdAt.lt = filter.to;
     }
   }
 

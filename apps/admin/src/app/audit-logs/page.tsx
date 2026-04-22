@@ -51,16 +51,20 @@ function parseFromDate(raw: string | undefined): Date | undefined {
 }
 
 /**
- * "YYYY-MM-DD" を Date (翌日 00:00:00 JST = 当日 23:59:59.999 の直後) に変換する。
- * 閉区間を表現するため +1 日して lte ではなく lt 相当として扱う…のではなく、
- * DB 側 lte 比較のため 23:59:59.999 で丸める。
+ * "YYYY-MM-DD" を Date (翌日 00:00:00 JST) に変換する。
+ * DB 側は `lt` (未満) で比較する前提。
+ * 例: to="2026-04-22" → 2026-04-23T00:00:00+09:00 を返し、当日 23:59:59.999 まで含む。
+ * `lte` + 23:59:59.999 方式だと 1 ミリ秒未満の境界で取りこぼす可能性があるため、
+ * 半開区間 [from, to+1day) で表現する。
  */
 function parseToDate(raw: string | undefined): Date | undefined {
   if (!raw) return undefined;
   const match = /^\d{4}-\d{2}-\d{2}$/.exec(raw);
   if (!match) return undefined;
-  const d = new Date(`${raw}T23:59:59.999+09:00`);
-  return Number.isNaN(d.getTime()) ? undefined : d;
+  // JST の当日 00:00:00 を起点に +1 日する (UTC の +1 日と同義)
+  const base = new Date(`${raw}T00:00:00+09:00`);
+  if (Number.isNaN(base.getTime())) return undefined;
+  return new Date(base.getTime() + 24 * 60 * 60 * 1000);
 }
 
 /**
@@ -87,9 +91,11 @@ function truncate(s: string, max: number): string {
 /**
  * 日時を "YYYY-MM-DD HH:mm:ss" (JST) で表示する。
  * toLocaleString はロケールによって区切り文字が変わるため、ここでは揃える目的で固定形式。
+ * timeZone を明示しないと Node プロセスの TZ に依存してずれるため、必ず Asia/Tokyo を指定する。
  */
 function formatCreatedAt(date: Date): string {
   return date.toLocaleString("ja-JP", {
+    timeZone: "Asia/Tokyo",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
