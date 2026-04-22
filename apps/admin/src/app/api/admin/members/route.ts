@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { AdminAccount, AdminAccountEmail } from "@physifun/domain";
+import { AdminAccount } from "@physifun/domain";
 import {
   conflictResponse,
   internalErrorResponse,
@@ -75,10 +75,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 値オブジェクトで検証・正規化
-    const emailResult = AdminAccountEmail.from(rawEmail);
-    if (!emailResult.ok) {
-      const err = emailResult.error;
+    // PR #164 m-2: email 検証と集約生成を一発でまとめる (createFromRawEmail)。
+    // 集約側が AdminAccountEmail を隠蔽するため、Route Handler は値オブジェクトを
+    // 組み立てる責務から解放される。
+    const adminResult = AdminAccount.createFromRawEmail({ email: rawEmail });
+    if (!adminResult.ok) {
+      const err = adminResult.error;
       const messages: string[] = [
         err.type === "EMAIL_REQUIRED"
           ? "メールアドレスを入力してください"
@@ -88,16 +90,16 @@ export async function POST(request: NextRequest) {
       ];
       return validationErrorResponse("入力内容を確認してください", { email: messages });
     }
+    const admin = adminResult.value;
 
     const repo = getAdminAccountRepository();
 
-    // 重複チェック
-    const existing = await repo.findByEmail(emailResult.value);
+    // 重複チェック (集約生成後に email 値オブジェクトで findByEmail する)
+    const existing = await repo.findByEmail(admin.email);
     if (existing) {
       return conflictResponse("このメールアドレスは既に登録されています");
     }
 
-    const admin = AdminAccount.create({ email: emailResult.value });
     await repo.create(admin);
 
     // #158 H4: 監査証跡 (post-hook / 非トランザクショナル)
