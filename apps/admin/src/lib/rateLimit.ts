@@ -11,10 +11,13 @@ import { NextResponse } from "next/server";
  *   1 アドレス 15 分間に 5 回まで (Magic Link 送信の濫用防止)。
  * - `adminAction`: `/api/admin/*` 系の運営オペ用。adminAccountId を key にして
  *   1 分間に 60 回まで (運営誤操作 / スクリプト化暴走の抑止)。
+ * - `adminRead`: `/api/admin/*` の GET (一覧 / 詳細) 用。adminAccountId を key に
+ *   1 分間に 120 回まで。認証済みでの大量スクレイピング抑止 (#166 / PR #165 M-1)。
+ *   読み取り用途のため adminAction より少し緩めに設定している。
  *
  * 水平スケール時は apps/web と同様、Redis 等の中央ストレージに置換する前提。
  */
-export type AdminRateLimitAction = "adminMagicLink" | "adminAction";
+export type AdminRateLimitAction = "adminMagicLink" | "adminAction" | "adminRead";
 
 export interface AdminRateLimitConfig {
   limit: number;
@@ -29,6 +32,10 @@ export const ADMIN_RATE_LIMIT_CONFIGS: Record<AdminRateLimitAction, AdminRateLim
   adminAction: {
     limit: 60,
     windowMs: 60 * 1000, // 1 分
+  },
+  adminRead: {
+    limit: 120,
+    windowMs: 60 * 1000, // 1 分 (GET 一覧 / 詳細用, #166)
   },
 };
 
