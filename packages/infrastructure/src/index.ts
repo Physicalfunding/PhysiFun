@@ -1,4 +1,5 @@
 export { prisma } from "./database/client";
+export { isUniqueConstraintError } from "./database/isUniqueConstraintError";
 
 export type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "./outbox";
 export {
@@ -40,6 +41,9 @@ export {
   type WriteAdminAuditLogParams,
 } from "./admin-account/PrismaAdminAuditLogAdapter";
 export { PrismaAdminAuthGcAdapter } from "./admin-account/PrismaAdminAuthGcAdapter";
+export { PrismaAdminAccountRepository } from "./admin-account/PrismaAdminAccountRepository";
+export { revokeAdminSessions } from "./admin-account/revokeAdminSessions";
+export { disableAdminAccountAndRevokeSessions } from "./admin-account/disableAdminAccountAndRevokeSessions";
 
 export { BcryptPasswordHasher } from "./security/BcryptPasswordHasher";
 
