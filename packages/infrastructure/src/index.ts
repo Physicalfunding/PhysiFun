@@ -31,6 +31,7 @@ export {
 export { PrismaAdminAuthGcAdapter } from "./admin-account/PrismaAdminAuthGcAdapter";
 export { PrismaAdminAccountRepository } from "./admin-account/PrismaAdminAccountRepository";
 export { revokeAdminSessions } from "./admin-account/revokeAdminSessions";
+export { disableAdminAccountAndRevokeSessions } from "./admin-account/disableAdminAccountAndRevokeSessions";
 
 export { BcryptPasswordHasher } from "./security/BcryptPasswordHasher";
 

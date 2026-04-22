@@ -1,5 +1,5 @@
 import { AdminAccountId } from "@physifun/domain";
-import { revokeAdminSessions } from "@physifun/infrastructure";
+import { disableAdminAccountAndRevokeSessions } from "@physifun/infrastructure";
 import {
   forbiddenResponse,
   internalErrorResponse,
@@ -61,12 +61,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       }
     }
 
-    await repo.update(target);
-
-    // AdminSession を全件削除して強制 revoke (#148)
-    const revokedCount = await revokeAdminSessions(target.id.toString());
+    // PR #164 Blocker B-1: DISABLED 永続化と AdminSession 削除を単一トランザクションで実行。
+    // 途中失敗で「DB は DISABLED なのにセッションだけ残る」整合性崩れを防ぐ。
+    const { revokedSessionCount } = await disableAdminAccountAndRevokeSessions(target);
 
     // #158 H4: 2 行の監査証跡を書く (disable + session.revoke を分けて残す)
+    // 監査ログは post-hook（非トランザクショナル）。commit 後に書くのは意図的。
     await logAdminAction({
       adminAccountId: operatorId,
       action: "admin_account.disable",
@@ -79,13 +79,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       action: "admin_session.revoke",
       targetType: "AdminAccount",
       targetId: target.id.toString(),
-      metadata: { revokedSessionCount: revokedCount, reason: "admin_account.disable" },
+      metadata: { revokedSessionCount, reason: "admin_account.disable" },
     });
 
     return successResponse({
       id: target.id.toString(),
       status: target.status,
-      revokedSessionCount: revokedCount,
+      revokedSessionCount,
     });
   } catch (e) {
     console.error("[api] admin/members/[id]/disable POST error:", e);
