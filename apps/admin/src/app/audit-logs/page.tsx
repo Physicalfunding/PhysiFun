@@ -23,6 +23,9 @@ export const dynamic = "force-dynamic";
 
 const PER_PAGE = 20;
 // page size の暴走対策。URL で ?perPage=9999 等を指定されても上限で丸める。
+// NOTE: 後述の listDistinctActions / listDistinctTargetTypes の limit=100 とは
+//       別概念。こちらは「1 ページあたりの表示件数の上限」で、あちらは
+//       「drop-down に詰め込む distinct 値の上限」。用途が異なるので値も揃えない。
 const PER_PAGE_MAX = 50;
 
 /** 画面クエリのフィルタ (全て optional。空文字は undefined 扱い) */
@@ -41,10 +44,16 @@ interface AuditLogSearchParams {
 /**
  * "YYYY-MM-DD" を Date (当日 00:00:00 JST 相当) に変換する。
  * 不正値は undefined を返す。
+ *
+ * パターンは月 01-12 / 日 01-31 まで厳密にマッチさせる。
+ * 2 月 30 日のような月ごとの日数超過は `new Date` が Invalid Date を返すため
+ * その段階で最終的に弾かれる (例: "2026-02-30" は Invalid)。
+ * 一方で `2026-99-99` のような明らかに桁数の使い方がおかしい入力は
+ * `new Date` が寛容に解釈してしまう可能性があるため、regex 側で先に落とす。
  */
 function parseFromDate(raw: string | undefined): Date | undefined {
   if (!raw) return undefined;
-  const match = /^\d{4}-\d{2}-\d{2}$/.exec(raw);
+  const match = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.exec(raw);
   if (!match) return undefined;
   const d = new Date(`${raw}T00:00:00+09:00`);
   return Number.isNaN(d.getTime()) ? undefined : d;
@@ -56,10 +65,13 @@ function parseFromDate(raw: string | undefined): Date | undefined {
  * 例: to="2026-04-22" → 2026-04-23T00:00:00+09:00 を返し、当日 23:59:59.999 まで含む。
  * `lte` + 23:59:59.999 方式だと 1 ミリ秒未満の境界で取りこぼす可能性があるため、
  * 半開区間 [from, to+1day) で表現する。
+ *
+ * パターンは `parseFromDate` と同様、月 01-12 / 日 01-31 まで厳密にマッチさせる
+ * (月ごとの日数超過は `new Date` 側で Invalid 判定される)。
  */
 function parseToDate(raw: string | undefined): Date | undefined {
   if (!raw) return undefined;
-  const match = /^\d{4}-\d{2}-\d{2}$/.exec(raw);
+  const match = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.exec(raw);
   if (!match) return undefined;
   // JST の当日 00:00:00 を起点に +1 日する (UTC の +1 日と同義)
   const base = new Date(`${raw}T00:00:00+09:00`);
