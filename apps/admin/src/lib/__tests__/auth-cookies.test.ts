@@ -52,15 +52,20 @@ describe("apps/admin auth cookies (#147)", () => {
     expect(cookies.sessionToken?.options.httpOnly).toBe(true);
     // domain 未指定 (host-only) であることを保証
     expect(cookies.sessionToken?.options.domain).toBeUndefined();
+    // path="/" は Cookie の送出スコープを全パスに揃えるための invariant (#147 M-2)
+    expect(cookies.sessionToken?.options.path).toBe("/");
 
     expect(cookies.callbackUrl?.name).toBe("__Secure-next-auth.callback-url");
     expect(cookies.callbackUrl?.options.domain).toBeUndefined();
     // Major M-2: callbackUrl は NextAuth デフォルト (httpOnly を立てない) に従う
     expect(cookies.callbackUrl?.options.httpOnly).toBeUndefined();
+    expect(cookies.callbackUrl?.options.path).toBe("/");
 
     expect(cookies.csrfToken?.name).toBe("__Host-next-auth.csrf-token");
     expect(cookies.csrfToken?.options.secure).toBe(true);
     expect(cookies.csrfToken?.options.domain).toBeUndefined();
+    // __Host- プレフィックスは path="/" 必須のため絶対に崩さないこと。
+    expect(cookies.csrfToken?.options.path).toBe("/");
   });
 
   test("ローカル開発 (http) では secure=false + プレフィックスなし", () => {
@@ -69,13 +74,16 @@ describe("apps/admin auth cookies (#147)", () => {
     expect(cookies.sessionToken?.name).toBe("next-auth.session-token");
     expect(cookies.sessionToken?.options.secure).toBe(false);
     expect(cookies.sessionToken?.options.domain).toBeUndefined();
+    expect(cookies.sessionToken?.options.path).toBe("/");
 
     expect(cookies.callbackUrl?.name).toBe("next-auth.callback-url");
     expect(cookies.callbackUrl?.options.secure).toBe(false);
     expect(cookies.callbackUrl?.options.httpOnly).toBeUndefined();
+    expect(cookies.callbackUrl?.options.path).toBe("/");
 
     expect(cookies.csrfToken?.name).toBe("next-auth.csrf-token");
     expect(cookies.csrfToken?.options.secure).toBe(false);
     expect(cookies.csrfToken?.options.domain).toBeUndefined();
+    expect(cookies.csrfToken?.options.path).toBe("/");
   });
 });

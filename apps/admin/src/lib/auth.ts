@@ -58,9 +58,12 @@ export function buildCookieOptions(isHttps: boolean): NextAuthOptions["cookies"]
     callbackUrl: {
       name: `${securePrefix}next-auth.callback-url`,
       options: {
-        // NextAuth のデフォルトに従う (httpOnly: false)。
-        // callbackUrl cookie は NextAuth 本体が client-side JS からも参照する想定
-        // (signIn フォームの hidden input 等) のため、httpOnly を立てない。
+        // NextAuth v4 のデフォルト (`httpOnly: true`) に委ねるため、ここでは
+        // `httpOnly` を明示的に設定しない。apps/admin の signIn 動線は
+        // `window.location.href` を使うフォーム / リンク経由 (サーバーリダイレクト)
+        // なので、client-side JS から callbackUrl cookie を直接読む必要は無い。
+        // 明示 override すると将来 NextAuth 側の既定が変わっても気付けないため、
+        // 既定尊重 = override なしを invariant として固定する。
         sameSite: "lax",
         path: "/",
         secure: isHttps,
@@ -82,6 +85,22 @@ export function buildCookieOptions(isHttps: boolean): NextAuthOptions["cookies"]
       },
     },
   };
+}
+
+/**
+ * NEXTAUTH_SECRET の fail-closed (#147 M-3)
+ *
+ * 本番環境で `NEXTAUTH_SECRET` が未設定だと NextAuth v4 は起動時に
+ * ランダムな値を生成してログに警告を出すだけで続行してしまう。Database 戦略なら
+ * Session Cookie 自体は DB キーなので直接は致命傷にならないが、verification token
+ * (マジックリンク) の署名 / 復号鍵として使われるため、未設定のまま再デプロイすると
+ * 既発行リンクが全て invalid になる / デプロイ毎に secret が変わってユーザが
+ * サイレントにログアウトされる等の運用リスクが残る。
+ * 本番では起動を失敗させることで、環境変数設定漏れをデプロイ時点で検知する
+ * (ADMIN_MAGIC_LINK_HMAC_SECRET と同じ fail-closed ポリシー)。
+ */
+if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
+  throw new Error("NEXTAUTH_SECRET must be set in production");
 }
 
 export const authOptions: NextAuthOptions = {

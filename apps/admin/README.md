@@ -93,7 +93,10 @@ Vercel プロジェクトの **Settings → Environment Variables** に `apps/ad
 
 - GitHub リポジトリ側で `apps/admin/**` 変更時だけ admin Vercel プロジェクトが
   ビルド対象になる設定 (Vercel の **Ignored Build Step** で
-  `git diff HEAD^ HEAD --quiet -- apps/admin packages` の判定を入れる) を推奨。
+  `git diff ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD --quiet -- apps/admin packages` の
+  判定を入れる。`HEAD^` 単体だと初回デプロイや shallow clone / 浅い履歴で
+  `unknown revision` になるため、Vercel が前回成功 SHA を渡す環境変数
+  `VERCEL_GIT_PREVIOUS_SHA` を優先し、無ければ `HEAD^` にフォールバックする) を推奨。
 - `apps/web` 側でも同様に `apps/web/**` のみビルドするよう設定する。
 - GitHub Actions (`.github/workflows/ci.yml`) はモノレポ全体に対してそのまま走らせる
   (lint / typecheck / test は両アプリをまとめてチェックする)。
