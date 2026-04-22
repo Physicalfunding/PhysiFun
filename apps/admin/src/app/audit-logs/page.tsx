@@ -89,6 +89,15 @@ function truncate(s: string, max: number): string {
 }
 
 /**
+ * tooltip 用 truncate。巨大 metadata (数十 KB) をそのまま title に入れるとブラウザで
+ * 重くなるため、上限文字数で切って "..." を付ける。
+ * previewMetadata の `…` (U+2026) と区別するため、こちらは ASCII の "..." を使う。
+ */
+function truncateForTooltip(s: string, max: number): string {
+  return s.length <= max ? s : s.slice(0, max) + "...";
+}
+
+/**
  * 日時を "YYYY-MM-DD HH:mm:ss" (JST) で表示する。
  * toLocaleString はロケールによって区切り文字が変わるため、ここでは揃える目的で固定形式。
  * timeZone を明示しないと Node プロセスの TZ に依存してずれるため、必ず Asia/Tokyo を指定する。
@@ -174,7 +183,13 @@ export default async function AuditLogsPage({
     queryService.listDistinctTargetTypes(),
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(result.totalCount / perPage));
+  const totalCount = result.totalCount;
+  const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
+  // page が totalPages を超えていても items は空になるだけなので、
+  // 表示上は件数カウントを totalCount 側でクリップして矛盾を防ぐ。
+  // 0 件時は "0〜0 件" ではなく "0 件" の文言へフォールバック (下の表示ブロックでも扱う)。
+  const startItem = totalCount === 0 ? 0 : Math.min((page - 1) * perPage + 1, totalCount);
+  const endItem = Math.min(page * perPage, totalCount);
   const currentFilter = { email, action, targetType, from, to };
 
   return (
@@ -269,7 +284,7 @@ export default async function AuditLogsPage({
             リセット
           </Link>
           <span className="ml-auto text-sm text-gray-500">
-            {result.totalCount} 件 (page {page} / {totalPages})
+            {totalCount} 件 (page {page} / {totalPages})
           </span>
         </div>
       </form>
@@ -332,10 +347,13 @@ export default async function AuditLogsPage({
                       item.metadata === null || item.metadata === undefined
                         ? ""
                         : typeof item.metadata === "string"
-                          ? item.metadata
+                          ? truncateForTooltip(item.metadata, 500)
                           : (() => {
                               try {
-                                return JSON.stringify(item.metadata, null, 2);
+                                return truncateForTooltip(
+                                  JSON.stringify(item.metadata, null, 2),
+                                  500
+                                );
                               } catch {
                                 return "";
                               }
@@ -355,8 +373,9 @@ export default async function AuditLogsPage({
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-sm text-gray-600">
-            {result.totalCount} 件中 {(page - 1) * perPage + 1}〜
-            {Math.min(page * perPage, result.totalCount)} 件
+            {totalCount === 0
+              ? "0 件"
+              : `${totalCount} 件中 ${startItem}〜${endItem} 件`}
           </p>
           <div className="flex gap-2">
             {page > 1 && (
