@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { PublishStatus } from "@physifun/domain";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { getCategoryLabel } from "@/lib/category";
 import { getProjectQueryService } from "@/lib/di/queryServices";
 import { getPrefectureName } from "@/lib/prefecture";
@@ -28,12 +30,22 @@ function toPublishStatus(raw: string | undefined): PublishStatus {
  * /projects — プロジェクト審査一覧
  *
  * PublishStatus でタブ切替する。デフォルトは PENDING_REVIEW。
+ *
+ * ## 認可 (#147 C-1)
+ * ACTIVE な AdminAccount 以外は参照不可。middleware の Cookie 判定ではなく
+ * RSC 側で `getAuthenticatedAdminId` により AdminSession 行 + AdminAccount.status
+ * === ACTIVE を DB で再確認する。null なら /login へリダイレクト。
  */
 export default async function AdminProjectsListPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; page?: string }>;
 }) {
+  const adminId = await getAuthenticatedAdminId();
+  if (!adminId) {
+    redirect("/login");
+  }
+
   const params = await searchParams;
   const currentStatus = toPublishStatus(params.status);
   const page = Math.max(1, Number(params.page) || 1);
