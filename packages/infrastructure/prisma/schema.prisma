@@ -396,6 +396,11 @@ model AdminAuditLog {
 
   @@index([adminSessionId])
   @@index([createdAt])
+  // (targetType, targetId) は #169 の複合 index 追加後も残置する:
+  // - 個別エンティティの監査履歴取得 (例: 特定 LeaderApplication / Project の全操作履歴) で
+  //   targetId 完全一致ルックアップが必要 (targetType + targetId の equality 検索)。
+  // - (targetType, createdAt) は targetType フィルタ + 時系列ソート用途であり、
+  //   targetId を絞り込めないため上記ユースケースを代替できない。
   @@index([targetType, targetId])
   // #169: 時系列ソート付きフィルタ検索を index seek に載せるための複合 index
   // - action + createdAt: action フィルタ + createdAt desc ソート / listDistinctActions の index-only scan
