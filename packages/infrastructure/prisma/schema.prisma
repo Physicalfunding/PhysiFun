@@ -394,10 +394,16 @@ model AdminAuditLog {
   adminAccount AdminAccount  @relation(fields: [adminAccountId], references: [id], onDelete: Restrict)
   adminSession AdminSession? @relation(fields: [adminSessionId], references: [id], onDelete: SetNull)
 
-  @@index([adminAccountId])
   @@index([adminSessionId])
   @@index([createdAt])
   @@index([targetType, targetId])
+  // #169: 時系列ソート付きフィルタ検索を index seek に載せるための複合 index
+  // - action + createdAt: action フィルタ + createdAt desc ソート / listDistinctActions の index-only scan
+  // - targetType + createdAt: targetType フィルタ + 時系列絞り込み (既存 (targetType, targetId) と役割が異なる)
+  // - adminAccountId + createdAt: 操作者別の履歴参照 (先頭カラム leftmost prefix で adminAccountId 単独検索も cover)
+  @@index([action, createdAt])
+  @@index([targetType, createdAt])
+  @@index([adminAccountId, createdAt])
   @@map("admin_audit_logs")
 }
 
