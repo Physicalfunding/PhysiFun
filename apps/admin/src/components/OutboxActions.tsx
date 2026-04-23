@@ -15,8 +15,8 @@ type PendingAction = "retry" | "complete" | null;
 
 export function OutboxActions({ id, source, status }: OutboxActionsProps) {
   const router = useRouter();
-  const [isRetrying, setIsRetrying] = useState(false);
-  const [isCompleting, setIsCompleting] = useState(false);
+  // MemberRowActions と揃え、`isLoading` + `pending` の 2 変数に統一
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingAction>(null);
 
@@ -34,12 +34,12 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
   }
 
   function closeDialog() {
-    if (isRetrying || isCompleting) return;
+    if (isLoading) return;
     setPending(null);
   }
 
   async function handleRetry() {
-    setIsRetrying(true);
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -60,12 +60,12 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
     } catch {
       setError("通信エラーが発生しました");
     } finally {
-      setIsRetrying(false);
+      setIsLoading(false);
     }
   }
 
   async function handleComplete() {
-    setIsCompleting(true);
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -86,11 +86,12 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
     } catch {
       setError("通信エラーが発生しました");
     } finally {
-      setIsCompleting(false);
+      setIsLoading(false);
     }
   }
 
-  const isProcessing = isRetrying || isCompleting;
+  const isRetrying = isLoading && pending === "retry";
+  const isCompleting = isLoading && pending === "complete";
 
   return (
     <div className="flex items-center gap-2">
@@ -98,7 +99,7 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
         <button
           type="button"
           onClick={requestRetry}
-          disabled={isProcessing}
+          disabled={isLoading}
           className="rounded border border-blue-300 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
         >
           {isRetrying ? "処理中..." : "リトライ"}
@@ -107,7 +108,7 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
       <button
         type="button"
         onClick={requestComplete}
-        disabled={isProcessing}
+        disabled={isLoading}
         className="rounded border border-gray-300 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
       >
         {isCompleting ? "処理中..." : "完了にする"}
