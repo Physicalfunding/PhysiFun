@@ -78,14 +78,62 @@ const DISTINCT_ACTIONS_CACHE_KEY = "admin-audit-log:distinct-actions";
 const DISTINCT_TARGET_TYPES_CACHE_KEY = "admin-audit-log:distinct-target-types";
 
 /**
+ * `revalidateTag()` 用のタグ。action / targetType を個別に invalidation できるよう
+ * 用途ごとに別タグを付ける (#179 M-2)。
+ *
+ * 例: 新しい action が DB に入った直後にキャッシュを吹き飛ばしたい場合は
+ *     `revalidateTag(ADMIN_AUDIT_LOG_ACTIONS_TAG)` を呼ぶ。
+ */
+export const ADMIN_AUDIT_LOG_ACTIONS_TAG = "admin-audit-log-actions";
+export const ADMIN_AUDIT_LOG_TARGET_TYPES_TAG = "admin-audit-log-target-types";
+
+/**
+ * distinct 系クエリをモジュールレベルで `unstable_cache` 化したファクトリ (#179 M-1)。
+ *
+ * Next.js のドキュメント推奨どおり、`unstable_cache(...)` 自体はモジュール読込時に
+ * 一度だけ評価する。呼び出し側の変動する引数 (delegate / limit) は
+ * 生成済み cached function の引数として渡すことで、呼び出しごとに新しい
+ * cached 関数を作り直さないようにする。
+ *
+ * NOTE: `unstable_cache` は cached 関数への引数 (delegate / limit) を
+ *       自動で key に含める (JSON シリアライズ)。`limit` は number なので
+ *       そのままキー分離に機能する。`delegate` はクラスインスタンスのため
+ *       実質空オブジェクト扱いだが、同一 inner を使い回す想定なので問題ない。
+ */
+const cachedListDistinctActions = unstable_cache(
+  async (delegate: AdminAuditLogQueryService, limit: number) =>
+    delegate.listDistinctActions(limit),
+  [DISTINCT_ACTIONS_CACHE_KEY],
+  {
+    revalidate: DISTINCT_CACHE_REVALIDATE_SECONDS,
+    tags: [ADMIN_AUDIT_LOG_ACTIONS_TAG],
+  }
+);
+
+const cachedListDistinctTargetTypes = unstable_cache(
+  async (delegate: AdminAuditLogQueryService, limit: number) =>
+    delegate.listDistinctTargetTypes(limit),
+  [DISTINCT_TARGET_TYPES_CACHE_KEY],
+  {
+    revalidate: DISTINCT_CACHE_REVALIDATE_SECONDS,
+    tags: [ADMIN_AUDIT_LOG_TARGET_TYPES_TAG],
+  }
+);
+
+/**
  * AdminAuditLogQueryService の distinct 系メタデータだけを Next.js `unstable_cache`
  * で 60 秒キャッシュするラッパ。`findMany` はフィルタ / ページネーションごとに
  * 動的なため素通しする。
  *
  * NOTE: `unstable_cache` は RSC / Route Handler のスコープで動く Next.js 機能の
  * ため、infrastructure 層ではなく admin アプリ側の DI 層で wrap する。
+ *
+ * 実装は module-level で生成済みの cached 関数 (`cachedListDistinctActions` /
+ * `cachedListDistinctTargetTypes`) に delegate / limit を渡すだけ。
+ * こうすることでメソッド呼び出しごとに `unstable_cache(...)` を再生成する
+ * オーバーヘッドを避ける (#179 M-1)。
  */
-class CachedAdminAuditLogQueryService implements AdminAuditLogQueryService {
+export class CachedAdminAuditLogQueryService implements AdminAuditLogQueryService {
   constructor(private readonly inner: AdminAuditLogQueryService) {}
 
   findMany(
@@ -96,23 +144,11 @@ class CachedAdminAuditLogQueryService implements AdminAuditLogQueryService {
   }
 
   listDistinctActions(limit = 100): Promise<string[]> {
-    // limit をキーに含めることで「異なる limit 指定が混ざった時に誤キャッシュ
-    // ヒットする」事故を防ぐ。
-    const cached = unstable_cache(
-      async () => this.inner.listDistinctActions(limit),
-      [DISTINCT_ACTIONS_CACHE_KEY, String(limit)],
-      { revalidate: DISTINCT_CACHE_REVALIDATE_SECONDS }
-    );
-    return cached();
+    return cachedListDistinctActions(this.inner, limit);
   }
 
   listDistinctTargetTypes(limit = 100): Promise<string[]> {
-    const cached = unstable_cache(
-      async () => this.inner.listDistinctTargetTypes(limit),
-      [DISTINCT_TARGET_TYPES_CACHE_KEY, String(limit)],
-      { revalidate: DISTINCT_CACHE_REVALIDATE_SECONDS }
-    );
-    return cached();
+    return cachedListDistinctTargetTypes(this.inner, limit);
   }
 }
 
