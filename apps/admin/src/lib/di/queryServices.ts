@@ -1,9 +1,13 @@
+import { unstable_cache } from "next/cache";
 import {
   PrismaAdminAccountRepository,
   PrismaAdminAuditLogQueryService,
   PrismaLeaderApplicationQueryService,
   PrismaOutboxQueryService,
   PrismaProjectQueryService,
+  type AdminAuditLogFilter,
+  type AdminAuditLogListResult,
+  type AdminAuditLogQueryService,
   type LeaderApplicationQueryService,
 } from "@physifun/infrastructure";
 import type { AdminAccountRepository } from "@physifun/domain";
@@ -58,12 +62,67 @@ export function getAdminAccountRepository(): AdminAccountRepository {
   return new PrismaAdminAccountRepository();
 }
 
+// ==================== AdminAuditLog メタデータキャッシュ ====================
+
 /**
- * AdminAuditLog Query Service を生成 (#149)
+ * drop-down 用メタデータの再検証時間 (秒)。
  *
- * NOTE: 読み取り専用 Query Service のインターフェースは Port 化されていないため
- * 具象クラスを返す (Outbox と同じ方針)。
+ * `/audit-logs` 画面ロードごとに `listDistinctActions` / `listDistinctTargetTypes`
+ * が毎回発行されると 1 ロードあたり合計 4 クエリになる。action / targetType の
+ * 追加頻度は低く 60 秒のラグは許容できるため、unstable_cache で束ねる (#170 M-3)。
  */
-export function getAdminAuditLogQueryService(): PrismaAdminAuditLogQueryService {
-  return new PrismaAdminAuditLogQueryService();
+const DISTINCT_CACHE_REVALIDATE_SECONDS = 60;
+
+/** unstable_cache のキー prefix。将来のタグ invalidation 用に一元管理 */
+const DISTINCT_ACTIONS_CACHE_KEY = "admin-audit-log:distinct-actions";
+const DISTINCT_TARGET_TYPES_CACHE_KEY = "admin-audit-log:distinct-target-types";
+
+/**
+ * AdminAuditLogQueryService の distinct 系メタデータだけを Next.js `unstable_cache`
+ * で 60 秒キャッシュするラッパ。`findMany` はフィルタ / ページネーションごとに
+ * 動的なため素通しする。
+ *
+ * NOTE: `unstable_cache` は RSC / Route Handler のスコープで動く Next.js 機能の
+ * ため、infrastructure 層ではなく admin アプリ側の DI 層で wrap する。
+ */
+class CachedAdminAuditLogQueryService implements AdminAuditLogQueryService {
+  constructor(private readonly inner: AdminAuditLogQueryService) {}
+
+  findMany(
+    filter: AdminAuditLogFilter,
+    pagination: { page: number; perPage: number }
+  ): Promise<AdminAuditLogListResult> {
+    return this.inner.findMany(filter, pagination);
+  }
+
+  listDistinctActions(limit = 100): Promise<string[]> {
+    // limit をキーに含めることで「異なる limit 指定が混ざった時に誤キャッシュ
+    // ヒットする」事故を防ぐ。
+    const cached = unstable_cache(
+      async () => this.inner.listDistinctActions(limit),
+      [DISTINCT_ACTIONS_CACHE_KEY, String(limit)],
+      { revalidate: DISTINCT_CACHE_REVALIDATE_SECONDS }
+    );
+    return cached();
+  }
+
+  listDistinctTargetTypes(limit = 100): Promise<string[]> {
+    const cached = unstable_cache(
+      async () => this.inner.listDistinctTargetTypes(limit),
+      [DISTINCT_TARGET_TYPES_CACHE_KEY, String(limit)],
+      { revalidate: DISTINCT_CACHE_REVALIDATE_SECONDS }
+    );
+    return cached();
+  }
+}
+
+/**
+ * AdminAuditLog Query Service を生成 (#149 / #170)
+ *
+ * distinct 系メタデータを `unstable_cache` (revalidate 60s) で包んで返す。
+ * 戻り型は Port (`AdminAuditLogQueryService`) に揃え、呼び出し側を実装に
+ * 依存させない。
+ */
+export function getAdminAuditLogQueryService(): AdminAuditLogQueryService {
+  return new CachedAdminAuditLogQueryService(new PrismaAdminAuditLogQueryService());
 }
