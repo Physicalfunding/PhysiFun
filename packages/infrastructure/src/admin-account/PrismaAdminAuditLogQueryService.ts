@@ -8,8 +8,10 @@ import { prisma } from "../database/client";
  * 行われる (#145 / #157 H2)。
  *
  * apps/admin の /audit-logs 画面 (Server Component) から直接呼び出す前提。
- * 運営アプリは infrastructure を RSC から直接利用する規約 (#119 / #131 Min-8) の
- * ため、Port 化せず具象クラスで提供する (Outbox QueryService と同じ方針)。
+ *
+ * #170 で Port 化し、`LeaderApplicationQueryService` と同様に interface を
+ * 公開する形式に揃えた。DI 層 (`apps/admin/src/lib/di/queryServices.ts`) は
+ * 戻り型を interface にして実装差し替え (キャッシュラッパ含む) を可能にする。
  */
 
 // ==================== 型定義 ====================
@@ -59,12 +61,37 @@ export interface AdminAuditLogFilter {
   readonly to?: Date;
 }
 
-// ==================== Query Service ====================
+// ==================== Query Service インターフェース ====================
+
+/**
+ * AdminAuditLog の読み取り専用 Query Service (Port)
+ *
+ * CQRS の Q 側インターフェース。`LeaderApplicationQueryService` に揃えて
+ * DI 経由での差し替え (キャッシュラッパ / テストモック) を可能にする (#170)。
+ */
+export interface AdminAuditLogQueryService {
+  findMany(
+    filter: AdminAuditLogFilter,
+    pagination: { page: number; perPage: number }
+  ): Promise<AdminAuditLogListResult>;
+
+  /**
+   * 画面のフィルタ drop-down 用: 既存ログから action の一覧を distinct で取得する。
+   */
+  listDistinctActions(limit?: number): Promise<string[]>;
+
+  /**
+   * 画面のフィルタ drop-down 用: 既存ログから targetType の一覧を distinct で取得する。
+   */
+  listDistinctTargetTypes(limit?: number): Promise<string[]>;
+}
+
+// ==================== Prisma 実装 ====================
 
 /**
  * Prisma ベースの AdminAuditLog 読み取り Query Service
  */
-export class PrismaAdminAuditLogQueryService {
+export class PrismaAdminAuditLogQueryService implements AdminAuditLogQueryService {
   /**
    * 監査ログを時系列 (新しい順) で取得する。
    *
