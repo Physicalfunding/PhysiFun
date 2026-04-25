@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertDialog } from "./ui/AlertDialog";
 
 interface MemberRowActionsProps {
   memberId: string;
@@ -10,11 +11,15 @@ interface MemberRowActionsProps {
   isSelf: boolean;
 }
 
+type PendingAction = "disable" | "enable" | null;
+
 /**
  * 運営メンバー 1 行分のアクション (#148)
  *
  * - ACTIVE メンバー: 「無効化」ボタン (自分自身には表示しない)
  * - DISABLED メンバー: 「再有効化」ボタン
+ *
+ * 破壊的操作は AlertDialog で確認する (#168)。
  */
 export function MemberRowActions({
   memberId,
@@ -25,24 +30,26 @@ export function MemberRowActions({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingAction>(null);
 
-  async function handleDisable() {
-    if (
-      !window.confirm(
-        `${memberEmail} を無効化しますか？このアカウントのセッションは即時に失効します。`
-      )
-    ) {
-      return;
-    }
-    await callAction("disable");
+  function requestDisable() {
+    setError(null);
+    setPending("disable");
   }
 
-  async function handleEnable() {
-    if (!window.confirm(`${memberEmail} を再有効化しますか？`)) return;
-    await callAction("enable");
+  function requestEnable() {
+    setError(null);
+    setPending("enable");
   }
 
-  async function callAction(action: "disable" | "enable") {
+  function closeDialog() {
+    if (isLoading) return;
+    setPending(null);
+  }
+
+  async function confirmAction() {
+    if (!pending) return;
+    const action = pending;
     setIsLoading(true);
     setError(null);
     try {
@@ -51,11 +58,14 @@ export function MemberRowActions({
       });
       const data = await res.json();
       if (!data.success) {
+        setPending(null);
         setError(data.error?.message ?? `${action} に失敗しました`);
         return;
       }
+      setPending(null);
       router.refresh();
     } catch {
+      setPending(null);
       setError("通信エラーが発生しました");
     } finally {
       setIsLoading(false);
@@ -72,24 +82,47 @@ export function MemberRowActions({
       {isActive ? (
         <button
           type="button"
-          onClick={handleDisable}
+          onClick={requestDisable}
           disabled={isLoading}
           className="rounded-md border border-red-300 bg-white px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
           data-testid={`disable-member-${memberId}`}
         >
-          {isLoading ? "処理中..." : "無効化"}
+          {isLoading && pending === "disable" ? "処理中..." : "無効化"}
         </button>
       ) : (
         <button
           type="button"
-          onClick={handleEnable}
+          onClick={requestEnable}
           disabled={isLoading}
           className="rounded-md border border-green-300 bg-white px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"
           data-testid={`enable-member-${memberId}`}
         >
-          {isLoading ? "処理中..." : "再有効化"}
+          {isLoading && pending === "enable" ? "処理中..." : "再有効化"}
         </button>
       )}
+
+      <AlertDialog
+        open={pending === "disable"}
+        title="運営メンバーを無効化"
+        description={`${memberEmail} を無効化しますか？このアカウントのセッションは即時に失効します。`}
+        confirmLabel="無効化する"
+        variant="destructive"
+        isSubmitting={isLoading}
+        onConfirm={confirmAction}
+        onCancel={closeDialog}
+        testId={`confirm-disable-member-${memberId}`}
+      />
+      <AlertDialog
+        open={pending === "enable"}
+        title="運営メンバーを再有効化"
+        description={`${memberEmail} を再有効化しますか？`}
+        confirmLabel="再有効化する"
+        variant="default"
+        isSubmitting={isLoading}
+        onConfirm={confirmAction}
+        onCancel={closeDialog}
+        testId={`confirm-enable-member-${memberId}`}
+      />
     </div>
   );
 }

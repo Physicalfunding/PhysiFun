@@ -22,7 +22,7 @@ type ModalKind = "approve" | "reject" | "forceUnpublish" | null;
  * - DRAFT        : 「アクションなし」メッセージ
  *
  * 差戻・強制非公開は reviewerNote を textarea モーダルで必須入力（1〜2000 文字）、
- * 承認は window.confirm のみ。成功後は router.refresh() で一覧・詳細を再取得する。
+ * 承認は reviewerNote 任意モーダル。成功後は router.refresh() で一覧・詳細を再取得する。
  */
 export function ProjectReviewActions({ projectId, status }: ProjectReviewActionsProps) {
   const router = useRouter();
