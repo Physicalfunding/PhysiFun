@@ -132,6 +132,12 @@ const cachedListDistinctTargetTypes = unstable_cache(
  * `cachedListDistinctTargetTypes`) に delegate / limit を渡すだけ。
  * こうすることでメソッド呼び出しごとに `unstable_cache(...)` を再生成する
  * オーバーヘッドを避ける (#179 M-1)。
+ *
+ * NOTE: unstable_cache は引数を JSON.stringify でキー化するため、
+ * delegate（クラスインスタンス）は {} に潰れる。現状はリクエストごとに
+ * new PrismaAdminAuditLogQueryService() を生成するシングルテナント前提で
+ * 問題ないが、将来テナント別 Prisma Client や接続先切替を導入する場合は
+ * テナント識別子を keyParts/tags に含めて誤キャッシュヒットを防ぐ拡張が必要。
  */
 export class CachedAdminAuditLogQueryService implements AdminAuditLogQueryService {
   constructor(private readonly inner: AdminAuditLogQueryService) {}
@@ -158,6 +164,11 @@ export class CachedAdminAuditLogQueryService implements AdminAuditLogQueryServic
  * distinct 系メタデータを `unstable_cache` (revalidate 60s) で包んで返す。
  * 戻り型は Port (`AdminAuditLogQueryService`) に揃え、呼び出し側を実装に
  * 依存させない。
+ *
+ * NOTE:
+ * - listDistinctActions / listDistinctTargetTypes は unstable_cache で 60s キャッシュ
+ * - findMany はフィルタ・ページネーションで結果が変動するためキャッシュ非対象（force-dynamic ページから素通し）
+ * そのため audit-logs ページでは「最新の一覧」と「最大 60 秒古い drop-down 選択肢」が混在する。
  */
 export function getAdminAuditLogQueryService(): AdminAuditLogQueryService {
   return new CachedAdminAuditLogQueryService(new PrismaAdminAuditLogQueryService());
