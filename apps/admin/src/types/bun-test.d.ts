@@ -16,9 +16,14 @@ declare module "bun:test" {
     toBeNull: () => void;
     toEqual: (v: unknown) => void;
     toContain: (v: unknown) => void;
+    toBeGreaterThanOrEqual: (v: number) => void;
     not: Omit<Matchers, "not">;
   }
-  export const expect: (v: unknown) => Matchers;
+  interface ExpectFn {
+    (v: unknown): Matchers;
+    any: (constructor: unknown) => unknown;
+  }
+  export const expect: ExpectFn;
   export const mock: {
     module: (name: string, factory: () => unknown) => void;
   };

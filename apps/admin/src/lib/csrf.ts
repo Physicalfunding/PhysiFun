@@ -86,11 +86,18 @@ export function getAllowedOrigins(request: NextRequest): string[] {
     }
   }
 
+  // 開発 fallback: NEXTAUTH_URL が完全に未設定のときのみ、リクエストのホストヘッダーを使う。
+  // 本番では `NEXTAUTH_URL` が設定されている前提でこの分岐には入らない。
+  // `NEXTAUTH_URL` 未設定での本番デプロイは `X-Forwarded-Host` 偽装による CSRF バイパスにつながるため危険。
   const origins = new Set<string>();
 
+  // X-Forwarded-Proto もカンマ区切りで複数値を持つことがある (例: "https, http")。
+  // 先頭 (最も外側のプロキシが観測した値) のみを採用する。
   const forwardedProtoRaw = request.headers.get("x-forwarded-proto");
   const forwardedProto = forwardedProtoRaw?.split(",")[0]?.trim() || null;
 
+  // X-Forwarded-Host もカンマ区切りで複数値を持つことがある (例: "a.example.com, b.example.com")
+  // 先頭の値だけを使う。
   const forwardedHostRaw = request.headers.get("x-forwarded-host");
   const forwardedHost = forwardedHostRaw?.split(",")[0]?.trim();
   if (forwardedHost) {
@@ -145,6 +152,15 @@ export function verifyCsrf(request: NextRequest): NextResponse | null {
   }
 
   // Origin が無い / "null" の場合は Referer をフォールバックとして検証する。
+  //
+  // `Origin: null` が発生しうる主なケース:
+  //  - `<iframe sandbox>` からのリクエスト
+  //  - `meta referrer=no-referrer` や一部のプライバシーツールによるヘッダー除去
+  //
+  // 本アプリは現時点で `<iframe sandbox>` を使っていないため、`Origin: null` + Referer
+  // が一致するケースは実運用ではほぼ発生しない想定。ただし将来的に sandbox iframe を
+  // 導入すると本 fallback が正常系として動くため、方針を再検討すること (例: sandbox
+  // からの state-changing 呼び出しを全面禁止するなど)。
   const refererOrigin = originFromUrl(request.headers.get("referer"));
   if (refererOrigin && allowed.includes(refererOrigin)) {
     return null;
