@@ -23,6 +23,9 @@ export const dynamic = "force-dynamic";
 
 const PER_PAGE = 20;
 // page size の暴走対策。URL で ?perPage=9999 等を指定されても上限で丸める。
+// NOTE: 後述の listDistinctActions / listDistinctTargetTypes の limit=100 とは
+//       別概念。こちらは「1 ページあたりの表示件数の上限」で、あちらは
+//       「drop-down に詰め込む distinct 値の上限」。用途が異なるので値も揃えない。
 const PER_PAGE_MAX = 50;
 
 /** 画面クエリのフィルタ (全て optional。空文字は undefined 扱い) */
@@ -41,13 +44,25 @@ interface AuditLogSearchParams {
 /**
  * "YYYY-MM-DD" を Date (当日 00:00:00 JST 相当) に変換する。
  * 不正値は undefined を返す。
+ *
+ * パターンは月 01-12 / 日 01-31 まで厳密にマッチさせる。
+ * `2026-99-99` のような明らかに桁数の使い方がおかしい入力は regex 側で先に落とす。
+ *
+ * V8 の `new Date` は "2026-02-30" のような月ごとの日数超過を Invalid Date にせず、
+ * 翌月へ繰り越した日付 (→ 2026-03-02) として解釈する場合がある。
+ * これを弾くため、`Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" })` で
+ * JST にフォーマットした文字列を入力と比較し、一致しない場合は undefined を返す。
  */
 function parseFromDate(raw: string | undefined): Date | undefined {
   if (!raw) return undefined;
-  const match = /^\d{4}-\d{2}-\d{2}$/.exec(raw);
+  const match = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.exec(raw);
   if (!match) return undefined;
   const d = new Date(`${raw}T00:00:00+09:00`);
-  return Number.isNaN(d.getTime()) ? undefined : d;
+  if (Number.isNaN(d.getTime())) return undefined;
+  // 繰り越し発生チェック: JST でフォーマットして入力と比較
+  const formatter = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" });
+  if (formatter.format(d) !== raw) return undefined;
+  return d;
 }
 
 /**
@@ -56,14 +71,24 @@ function parseFromDate(raw: string | undefined): Date | undefined {
  * 例: to="2026-04-22" → 2026-04-23T00:00:00+09:00 を返し、当日 23:59:59.999 まで含む。
  * `lte` + 23:59:59.999 方式だと 1 ミリ秒未満の境界で取りこぼす可能性があるため、
  * 半開区間 [from, to+1day) で表現する。
+ *
+ * パターンは `parseFromDate` と同様、月 01-12 / 日 01-31 まで厳密にマッチさせる。
+ * `2026-99-99` のような明らかに桁数の使い方がおかしい入力は regex 側で先に落とす。
+ *
+ * V8 の `new Date` は "2026-02-30" のような月ごとの日数超過を繰り越した日付として
+ * 解釈する場合があるため、`Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" })` で
+ * JST にフォーマットした文字列を入力と比較し、一致しない場合は undefined を返す。
  */
 function parseToDate(raw: string | undefined): Date | undefined {
   if (!raw) return undefined;
-  const match = /^\d{4}-\d{2}-\d{2}$/.exec(raw);
+  const match = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.exec(raw);
   if (!match) return undefined;
-  // JST の当日 00:00:00 を起点に +1 日する (UTC の +1 日と同義)
+  // JST の当日 00:00:00 を起点に繰り越し検出してから +1 日する
   const base = new Date(`${raw}T00:00:00+09:00`);
   if (Number.isNaN(base.getTime())) return undefined;
+  // 繰り越し発生チェック: JST でフォーマットして入力と比較
+  const formatter = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" });
+  if (formatter.format(base) !== raw) return undefined;
   return new Date(base.getTime() + 24 * 60 * 60 * 1000);
 }
 

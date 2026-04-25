@@ -42,6 +42,7 @@ export {
 } from "./admin-account/PrismaAdminAuditLogAdapter";
 export {
   PrismaAdminAuditLogQueryService,
+  type AdminAuditLogQueryService,
   type AdminAuditLogListItem,
   type AdminAuditLogListResult,
   type AdminAuditLogFilter,

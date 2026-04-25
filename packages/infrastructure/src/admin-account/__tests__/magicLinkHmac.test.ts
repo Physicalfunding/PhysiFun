@@ -244,6 +244,43 @@ describe("verifyMagicLinkSignature", () => {
     if (!r.ok) expect(r.reason).toBe("length_mismatch");
   });
 
+  // #172: Buffer.from(str, "base64url") は不正文字を例外なく無視してデコードするため、
+  // 旧 `invalid_encoding` reason は到達不可能な dead code だった。
+  // 実挙動として `length_mismatch` / `signature_mismatch` のいずれかに落ちることを担保する。
+  it("base64url として不正文字を含む短い sig は length_mismatch に落ちる", () => {
+    const r = verifyMagicLinkSignature({
+      email: fixedEmail,
+      token: fixedToken,
+      // `!` / `@` などは base64url の文字集合 (A-Z a-z 0-9 _ -) に含まれないため無視される。
+      // 結果として expected より短いバッファになり length_mismatch で弾かれる。
+      sig: "!!!invalid-base64url!!!",
+      sigExpires: String(fixedExpiresMs),
+      secret: SECRET,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("length_mismatch");
+  });
+
+  it("有効な base64url 文字だけで expected と同じ長さの不正 sig は signature_mismatch に落ちる", () => {
+    // expected と同じバイト長 (HMAC-SHA256 = 32 byte → base64url 43 文字) にそろえる。
+    const expected = computeMagicLinkSignature({
+      email: fixedEmail,
+      token: fixedToken,
+      expires: fixedExpiresMs,
+      secret: SECRET,
+    });
+    const bogus = "A".repeat(expected.length);
+    const r = verifyMagicLinkSignature({
+      email: fixedEmail,
+      token: fixedToken,
+      sig: bogus,
+      sigExpires: String(fixedExpiresMs),
+      secret: SECRET,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe("signature_mismatch");
+  });
+
   it("signMagicLinkUrl → verifyMagicLinkSignature のラウンドトリップが成立する", () => {
     const baseUrl =
       "https://admin.example.com/api/auth/callback/email?callbackUrl=%2F&token=tok_abcdef1234567890&email=alice%40example.com";

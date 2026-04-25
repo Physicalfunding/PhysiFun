@@ -56,11 +56,27 @@ export class PrismaAdminAccountRepository implements AdminAccountRepository {
     });
   }
 
-  async findAll(): Promise<AdminAccount[]> {
-    const rows = await prisma.adminAccount.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    return rows.map(toDomain);
+  async findAll(options: {
+    page: number;
+    perPage: number;
+  }): Promise<{ items: AdminAccount[]; totalCount: number }> {
+    const skip = (options.page - 1) * options.perPage;
+    // 現時点では運営メンバー一覧に絞り込み条件は無いが、
+    // 将来的なフィルタ追加時に `findMany` と `count` で where がずれる事故を防ぐため
+    // 共通の where 変数を介して両クエリに渡す (audit-logs の QueryService と同方針)。
+    const where = {};
+    const [rows, totalCount] = await Promise.all([
+      prisma.adminAccount.findMany({
+        where,
+        // 同じ createdAt の行でページ境界に重複・脱落が起きないよう tie-breaker として
+        // id を第二キーに追加する (PrismaAdminAuditLogQueryService と同じ方針)。
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        skip,
+        take: options.perPage,
+      }),
+      prisma.adminAccount.count({ where }),
+    ]);
+    return { items: rows.map(toDomain), totalCount };
   }
 }
 

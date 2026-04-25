@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertDialog } from "./ui/AlertDialog";
 
 interface ReviewActionsProps {
   applicationId: string;
@@ -11,21 +12,28 @@ interface ReviewActionsProps {
  * 審査アクション（承認/却下）
  *
  * PENDING 状態の応募詳細ページで表示される。
- * 承認は確認ダイアログ、却下は理由入力モーダルを経由する。
+ * 承認は AlertDialog、却下は理由入力モーダルを経由する (#168)。
  */
 export function ReviewActions({ applicationId }: ReviewActionsProps) {
   const router = useRouter();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [reviewerNote, setReviewerNote] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function handleApprove() {
-    if (!window.confirm("この応募を承認しますか？承認すると応募者にリーダー権限が付与されます。")) {
-      return;
-    }
+  function requestApprove() {
+    setError(null);
+    setShowApproveDialog(true);
+  }
 
+  function closeApproveDialog() {
+    if (isApproving) return;
+    setShowApproveDialog(false);
+  }
+
+  async function handleApprove() {
     setIsApproving(true);
     setError(null);
 
@@ -36,13 +44,16 @@ export function ReviewActions({ applicationId }: ReviewActionsProps) {
       const data = await res.json();
 
       if (!data.success) {
+        setShowApproveDialog(false);
         setError(data.error?.message ?? "承認に失敗しました");
         return;
       }
 
+      setShowApproveDialog(false);
       router.refresh();
     } catch {
-      setError("通信エラ���が発生しました");
+      setShowApproveDialog(false);
+      setError("通信エラーが発生しました");
     } finally {
       setIsApproving(false);
     }
@@ -81,6 +92,17 @@ export function ReviewActions({ applicationId }: ReviewActionsProps) {
 
   return (
     <>
+      <AlertDialog
+        open={showApproveDialog}
+        title="応募を承認"
+        description="この応募を承認しますか？承認すると応募者にリーダー権限が付与されます。"
+        confirmLabel="承認する"
+        variant="default"
+        isSubmitting={isApproving}
+        onConfirm={handleApprove}
+        onCancel={closeApproveDialog}
+        testId="confirm-approve-application"
+      />
       <section className="rounded-lg border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold">審査アクション</h2>
 
@@ -91,7 +113,7 @@ export function ReviewActions({ applicationId }: ReviewActionsProps) {
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={handleApprove}
+            onClick={requestApprove}
             disabled={isApproving || isRejecting}
             className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
             data-testid="approve-application-button"
