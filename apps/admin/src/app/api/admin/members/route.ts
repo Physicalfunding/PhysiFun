@@ -30,6 +30,10 @@ export async function GET(request: NextRequest) {
     const operatorId = await getAuthenticatedAdminId();
     if (!operatorId) return unauthorizedResponse();
 
+    // #166: 認証済みでの大量スクレイピング抑止のため、GET にもレート制限を適用
+    const limited = enforceAdminRateLimit("adminRead", operatorId);
+    if (limited) return limited;
+
     const { searchParams } = request.nextUrl;
     const pageParam = searchParams.get("page");
     const perPageParam = searchParams.get("perPage");

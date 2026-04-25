@@ -14,6 +14,7 @@ import {
 } from "@/lib/api/response";
 import { getOutboxQueryService } from "@/lib/di/queryServices";
 import { getAuthenticatedAdminId } from "@/lib/api/auth";
+import { enforceAdminRateLimit } from "@/lib/rateLimit";
 
 /**
  * GET /api/admin/outbox
@@ -31,6 +32,10 @@ export async function GET(request: NextRequest) {
     // 運営認証は `@/lib/api/auth#getAuthenticatedAdminId` で AdminSession 経由の Database 戦略 (#145)
     const reviewerId = await getAuthenticatedAdminId();
     if (!reviewerId) return unauthorizedResponse();
+
+    // #166: 認証済みでの大量スクレイピング抑止のため、GET にもレート制限を適用
+    const limited = enforceAdminRateLimit("adminRead", reviewerId);
+    if (limited) return limited;
 
     const { searchParams } = request.nextUrl;
     const sourceParam = searchParams.get("source");
