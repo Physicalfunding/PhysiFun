@@ -44,6 +44,7 @@ export function ReviewActions({ applicationId }: ReviewActionsProps) {
       const data = await res.json();
 
       if (!data.success) {
+        setShowApproveDialog(false);
         setError(data.error?.message ?? "承認に失敗しました");
         return;
       }
@@ -51,7 +52,8 @@ export function ReviewActions({ applicationId }: ReviewActionsProps) {
       setShowApproveDialog(false);
       router.refresh();
     } catch {
-      setError("通信エラ���が発生しました");
+      setShowApproveDialog(false);
+      setError("通信エラーが発生しました");
     } finally {
       setIsApproving(false);
     }

@@ -58,12 +58,14 @@ export function MemberRowActions({
       });
       const data = await res.json();
       if (!data.success) {
+        setPending(null);
         setError(data.error?.message ?? `${action} に失敗しました`);
         return;
       }
       setPending(null);
       router.refresh();
     } catch {
+      setPending(null);
       setError("通信エラーが発生しました");
     } finally {
       setIsLoading(false);

@@ -51,6 +51,7 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
       const data = await res.json();
 
       if (!data.success) {
+        setPending(null);
         setError(data.error?.message ?? "リトライに失敗しました");
         return;
       }
@@ -58,6 +59,7 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
       setPending(null);
       router.refresh();
     } catch {
+      setPending(null);
       setError("通信エラーが発生しました");
     } finally {
       setIsLoading(false);
@@ -77,6 +79,7 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
       const data = await res.json();
 
       if (!data.success) {
+        setPending(null);
         setError(data.error?.message ?? "完了マークに失敗しました");
         return;
       }
@@ -84,6 +87,7 @@ export function OutboxActions({ id, source, status }: OutboxActionsProps) {
       setPending(null);
       router.refresh();
     } catch {
+      setPending(null);
       setError("通信エラーが発生しました");
     } finally {
       setIsLoading(false);
