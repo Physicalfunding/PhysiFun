@@ -46,17 +46,23 @@ interface AuditLogSearchParams {
  * 不正値は undefined を返す。
  *
  * パターンは月 01-12 / 日 01-31 まで厳密にマッチさせる。
- * 2 月 30 日のような月ごとの日数超過は `new Date` が Invalid Date を返すため
- * その段階で最終的に弾かれる (例: "2026-02-30" は Invalid)。
- * 一方で `2026-99-99` のような明らかに桁数の使い方がおかしい入力は
- * `new Date` が寛容に解釈してしまう可能性があるため、regex 側で先に落とす。
+ * `2026-99-99` のような明らかに桁数の使い方がおかしい入力は regex 側で先に落とす。
+ *
+ * V8 の `new Date` は "2026-02-30" のような月ごとの日数超過を Invalid Date にせず、
+ * 翌月へ繰り越した日付 (→ 2026-03-02) として解釈する場合がある。
+ * これを弾くため、`Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" })` で
+ * JST にフォーマットした文字列を入力と比較し、一致しない場合は undefined を返す。
  */
 function parseFromDate(raw: string | undefined): Date | undefined {
   if (!raw) return undefined;
   const match = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.exec(raw);
   if (!match) return undefined;
   const d = new Date(`${raw}T00:00:00+09:00`);
-  return Number.isNaN(d.getTime()) ? undefined : d;
+  if (Number.isNaN(d.getTime())) return undefined;
+  // 繰り越し発生チェック: JST でフォーマットして入力と比較
+  const formatter = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" });
+  if (formatter.format(d) !== raw) return undefined;
+  return d;
 }
 
 /**
@@ -66,16 +72,23 @@ function parseFromDate(raw: string | undefined): Date | undefined {
  * `lte` + 23:59:59.999 方式だと 1 ミリ秒未満の境界で取りこぼす可能性があるため、
  * 半開区間 [from, to+1day) で表現する。
  *
- * パターンは `parseFromDate` と同様、月 01-12 / 日 01-31 まで厳密にマッチさせる
- * (月ごとの日数超過は `new Date` 側で Invalid 判定される)。
+ * パターンは `parseFromDate` と同様、月 01-12 / 日 01-31 まで厳密にマッチさせる。
+ * `2026-99-99` のような明らかに桁数の使い方がおかしい入力は regex 側で先に落とす。
+ *
+ * V8 の `new Date` は "2026-02-30" のような月ごとの日数超過を繰り越した日付として
+ * 解釈する場合があるため、`Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" })` で
+ * JST にフォーマットした文字列を入力と比較し、一致しない場合は undefined を返す。
  */
 function parseToDate(raw: string | undefined): Date | undefined {
   if (!raw) return undefined;
   const match = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.exec(raw);
   if (!match) return undefined;
-  // JST の当日 00:00:00 を起点に +1 日する (UTC の +1 日と同義)
+  // JST の当日 00:00:00 を起点に繰り越し検出してから +1 日する
   const base = new Date(`${raw}T00:00:00+09:00`);
   if (Number.isNaN(base.getTime())) return undefined;
+  // 繰り越し発生チェック: JST でフォーマットして入力と比較
+  const formatter = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" });
+  if (formatter.format(base) !== raw) return undefined;
   return new Date(base.getTime() + 24 * 60 * 60 * 1000);
 }
 

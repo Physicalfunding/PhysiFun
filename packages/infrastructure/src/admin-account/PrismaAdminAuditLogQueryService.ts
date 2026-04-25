@@ -136,6 +136,11 @@ export class PrismaAdminAuditLogQueryService {
 
   /**
    * 画面のフィルタ drop-down 用: 既存ログから targetType の一覧を distinct で取得する。
+   * 件数が多くなっても memory に積みっぱなしにならないよう上限を設ける。
+   *
+   * NOTE: この `limit=100` は「drop-down に入れる distinct 値の最大数」であり、
+   *       画面側の `PER_PAGE_MAX=50` (1 ページ表示件数上限) とは別概念。
+   *       用途も単位も異なるため、数値を揃える必要はない。
    */
   async listDistinctTargetTypes(limit = 100): Promise<string[]> {
     const rows = await prisma.adminAuditLog.findMany({
