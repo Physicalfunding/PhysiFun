@@ -48,10 +48,7 @@ export default async function MembersListPage({
 
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
-  const perPage = Math.min(
-    PER_PAGE_MAX,
-    Math.max(1, Number(params.perPage) || PER_PAGE)
-  );
+  const perPage = Math.min(PER_PAGE_MAX, Math.max(1, Number(params.perPage) || PER_PAGE));
 
   const repo = getAdminAccountRepository();
   const { items: members, totalCount } = await repo.findAll({ page, perPage });
@@ -160,9 +157,7 @@ export default async function MembersListPage({
         {totalPages > 1 && (
           <div className="mt-4 flex items-center justify-between">
             <p className="text-sm text-gray-600">
-              {totalCount === 0
-                ? "0 件"
-                : `${totalCount} 件中 ${startItem}〜${endItem} 件`}
+              {totalCount === 0 ? "0 件" : `${totalCount} 件中 ${startItem}〜${endItem} 件`}
             </p>
             <div className="flex gap-2">
               {page > 1 && (

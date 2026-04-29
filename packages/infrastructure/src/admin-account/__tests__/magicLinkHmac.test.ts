@@ -305,8 +305,7 @@ describe("verifyMagicLinkSignature", () => {
 
 describe("getAdminMagicLinkHmacSecret", () => {
   // NodeJS.ProcessEnv は NODE_ENV を必須扱いするため、unknown 経由でキャストする。
-  const asEnv = (e: Record<string, string>): NodeJS.ProcessEnv =>
-    e as unknown as NodeJS.ProcessEnv;
+  const asEnv = (e: Record<string, string>): NodeJS.ProcessEnv => e as unknown as NodeJS.ProcessEnv;
 
   it("ADMIN_MAGIC_LINK_HMAC_SECRET が設定されていれば返す", () => {
     expect(getAdminMagicLinkHmacSecret(asEnv({ ADMIN_MAGIC_LINK_HMAC_SECRET: SECRET }))).toBe(
@@ -321,9 +320,9 @@ describe("getAdminMagicLinkHmacSecret", () => {
   });
 
   it("空文字なら fail closed で throw", () => {
-    expect(() =>
-      getAdminMagicLinkHmacSecret(asEnv({ ADMIN_MAGIC_LINK_HMAC_SECRET: "" }))
-    ).toThrow(/ADMIN_MAGIC_LINK_HMAC_SECRET is not set/);
+    expect(() => getAdminMagicLinkHmacSecret(asEnv({ ADMIN_MAGIC_LINK_HMAC_SECRET: "" }))).toThrow(
+      /ADMIN_MAGIC_LINK_HMAC_SECRET is not set/
+    );
   });
 
   it("NEXTAUTH_SECRET と同一値なら throw (権限分離強制)", () => {

@@ -85,8 +85,7 @@ export function AlertDialog({
       }
 
       if (e.key === "Tab" && dialogRef.current) {
-        const focusable =
-          dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -109,8 +108,7 @@ export function AlertDialog({
   useEffect(() => {
     if (!open) return;
 
-    previouslyFocusedRef.current =
-      (document.activeElement as HTMLElement | null) ?? null;
+    previouslyFocusedRef.current = (document.activeElement as HTMLElement | null) ?? null;
     confirmBtnRef.current?.focus();
 
     return () => {
@@ -136,9 +134,7 @@ export function AlertDialog({
   if (!open) return null;
 
   const confirmClass =
-    variant === "destructive"
-      ? "bg-red-600 hover:bg-red-700"
-      : "bg-blue-600 hover:bg-blue-700";
+    variant === "destructive" ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

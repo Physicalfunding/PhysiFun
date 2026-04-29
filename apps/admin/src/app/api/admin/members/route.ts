@@ -39,10 +39,7 @@ export async function GET(request: NextRequest) {
     const perPageParam = searchParams.get("perPage");
 
     const page = Math.max(1, Number(pageParam) || 1);
-    const perPage = Math.min(
-      MAX_PER_PAGE,
-      Math.max(1, Number(perPageParam) || DEFAULT_PER_PAGE)
-    );
+    const perPage = Math.min(MAX_PER_PAGE, Math.max(1, Number(perPageParam) || DEFAULT_PER_PAGE));
 
     const repo = getAdminAccountRepository();
     const result = await repo.findAll({ page, perPage });

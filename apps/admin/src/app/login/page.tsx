@@ -47,8 +47,8 @@ export default function AdminLoginPage() {
         {sent ? (
           <div className="mt-8 space-y-4 text-sm">
             <div className="rounded bg-blue-50 p-3 text-blue-800">
-              入力されたメールアドレス宛にログインリンクを送信しました。
-              10 分以内にリンクをクリックしてください。
+              入力されたメールアドレス宛にログインリンクを送信しました。 10
+              分以内にリンクをクリックしてください。
             </div>
             <p className="text-gray-600">
               メールが届かない場合、AdminAccount が未登録または無効化されている可能性があります。

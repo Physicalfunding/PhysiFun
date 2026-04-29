@@ -127,11 +127,7 @@ export function createAdminPrismaAdapter(): Adapter {
       await prisma.adminSession.deleteMany({ where: { sessionToken } });
     },
 
-    async createVerificationToken(params: {
-      identifier: string;
-      token: string;
-      expires: Date;
-    }) {
+    async createVerificationToken(params: { identifier: string; token: string; expires: Date }) {
       // identifier (= email) を正規化して保存 (#157 H3)。大文字違いで token 検索が漏れないよう。
       const identifier = params.identifier.trim().toLowerCase();
       const row = await prisma.adminVerificationToken.create({
@@ -173,11 +169,7 @@ export function createAdminPrismaAdapter(): Adapter {
   };
 }
 
-function toAdapterUser(row: {
-  id: string;
-  email: string;
-  lastLoginAt: Date | null;
-}): AdapterUser {
+function toAdapterUser(row: { id: string; email: string; lastLoginAt: Date | null }): AdapterUser {
   return {
     id: row.id,
     email: row.email,
