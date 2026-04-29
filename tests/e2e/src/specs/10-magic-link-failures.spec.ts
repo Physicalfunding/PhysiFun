@@ -18,7 +18,9 @@ import {
  * 各テストは email を独立させて互いの状態 (rate limit / token DB) を干渉させない。
  */
 
-test("未登録 email への Magic Link 送信は AdminVerificationToken を作らない", async ({ request }) => {
+test("未登録 email への Magic Link 送信は AdminVerificationToken を作らない", async ({
+  request,
+}) => {
   const email = "unregistered@e2e-test.local";
   // 念のため掃除
   await prisma.adminVerificationToken.deleteMany({ where: { identifier: email } });
