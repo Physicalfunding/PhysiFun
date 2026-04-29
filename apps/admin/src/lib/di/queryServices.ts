@@ -101,8 +101,7 @@ export const ADMIN_AUDIT_LOG_TARGET_TYPES_TAG = "admin-audit-log-target-types";
  *       実質空オブジェクト扱いだが、同一 inner を使い回す想定なので問題ない。
  */
 const cachedListDistinctActions = unstable_cache(
-  async (delegate: AdminAuditLogQueryService, limit: number) =>
-    delegate.listDistinctActions(limit),
+  async (delegate: AdminAuditLogQueryService, limit: number) => delegate.listDistinctActions(limit),
   [DISTINCT_ACTIONS_CACHE_KEY],
   {
     revalidate: DISTINCT_CACHE_REVALIDATE_SECONDS,

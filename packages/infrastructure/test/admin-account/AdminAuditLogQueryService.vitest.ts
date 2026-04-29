@@ -106,10 +106,7 @@ describe("PrismaAdminAuditLogQueryService integration", () => {
     it("email フィルタ: 大文字混在でも小文字正規化でマッチする", async () => {
       await seedFixture();
 
-      const result = await qs.findMany(
-        { email: "Alice@Example.com" },
-        { page: 1, perPage: 10 }
-      );
+      const result = await qs.findMany({ email: "Alice@Example.com" }, { page: 1, perPage: 10 });
 
       expect(result.totalCount).toBe(3);
       expect(result.items.every((r) => r.adminEmail === "alice@example.com")).toBe(true);
@@ -130,10 +127,7 @@ describe("PrismaAdminAuditLogQueryService integration", () => {
     it("targetType フィルタで該当行のみ返る", async () => {
       await seedFixture();
 
-      const result = await qs.findMany(
-        { targetType: "Project" },
-        { page: 1, perPage: 10 }
-      );
+      const result = await qs.findMany({ targetType: "Project" }, { page: 1, perPage: 10 });
 
       expect(result.totalCount).toBe(3);
       expect(result.items.every((r) => r.targetType === "Project")).toBe(true);
@@ -158,10 +152,7 @@ describe("PrismaAdminAuditLogQueryService integration", () => {
       const latest = all.items[0]; // desc order なので最新
 
       // to = latest.createdAt にすると、half-open のため latest 自身は除外される
-      const excluded = await qs.findMany(
-        { to: latest.createdAt },
-        { page: 1, perPage: 10 }
-      );
+      const excluded = await qs.findMany({ to: latest.createdAt }, { page: 1, perPage: 10 });
       expect(excluded.items.some((r) => r.id === latest.id)).toBe(false);
 
       // to = latest.createdAt + 1ms にすると、latest は含まれる

@@ -87,7 +87,7 @@ export function createSendAdminMagicLink(deps: CreateSendAdminMagicLinkDeps) {
       `<p><a href="${escapeHtml(signedUrl)}" style="display:inline-block;padding:12px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:4px;">ログインする</a></p>`,
       `<p>うまく動作しない場合は以下の URL をブラウザに貼り付けてください:<br><a href="${escapeHtml(signedUrl)}">${escapeHtml(signedUrl)}</a></p>`,
       `<p style="color:#6b7280;font-size:12px;">このリンクは ${escapeHtml(expiresJst)} まで有効です。心当たりがない場合は破棄してください。</p>`,
-      "<p style=\"color:#6b7280;font-size:12px;\">— PhysiFun 運営</p>",
+      '<p style="color:#6b7280;font-size:12px;">— PhysiFun 運営</p>',
     ].join("\n");
 
     const result = await deps.mailSender.send({

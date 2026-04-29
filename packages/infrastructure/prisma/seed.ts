@@ -47,7 +47,9 @@ async function main(): Promise<void> {
   });
 
   console.log(`[seed] Created initial AdminAccount: ${created.email} (id=${created.id})`);
-  console.log(`[seed] ログイン時は /login でメールを入力しマジックリンクを利用してください (#145)。`);
+  console.log(
+    `[seed] ログイン時は /login でメールを入力しマジックリンクを利用してください (#145)。`
+  );
 }
 
 function requireEnv(name: string): string {

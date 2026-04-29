@@ -41,9 +41,7 @@ export async function writeAdminAuditLog(params: WriteAdminAuditLogParams): Prom
       targetId: params.targetId ?? null,
       // Prisma の Json カラムに DB NULL を入れる場合は Prisma.JsonNull を使う。
       metadata:
-        params.metadata == null
-          ? Prisma.JsonNull
-          : (params.metadata as Prisma.InputJsonValue),
+        params.metadata == null ? Prisma.JsonNull : (params.metadata as Prisma.InputJsonValue),
     },
   });
 }

@@ -1,9 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 import { createSendAdminMagicLink } from "../sendAdminMagicLink";
-import {
-  MAGIC_LINK_SIGNATURE_PARAM,
-  computeMagicLinkSignature,
-} from "../magicLinkHmac";
+import { MAGIC_LINK_SIGNATURE_PARAM, computeMagicLinkSignature } from "../magicLinkHmac";
 import type { MailMessage, MailSender, MailSendError } from "../../mail/types";
 import type { SendVerificationRequestParams } from "next-auth/providers/email";
 import type { Result } from "@physifun/domain";
@@ -35,7 +32,9 @@ function createCapturingMailSender(): {
   return { sender, captured };
 }
 
-function createParams(overrides?: Partial<SendVerificationRequestParams>): SendVerificationRequestParams {
+function createParams(
+  overrides?: Partial<SendVerificationRequestParams>
+): SendVerificationRequestParams {
   const base: Partial<SendVerificationRequestParams> = {
     identifier: "alice@example.com",
     url: "https://admin.example.com/api/auth/callback/email?callbackUrl=%2F&token=tok_abcdef1234567890&email=alice%40example.com",

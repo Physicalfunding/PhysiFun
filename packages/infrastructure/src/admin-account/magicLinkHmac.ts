@@ -105,11 +105,7 @@ export type MagicLinkVerifyResult =
   | { ok: true }
   | {
       ok: false;
-      reason:
-        | "missing_signature"
-        | "missing_expires"
-        | "length_mismatch"
-        | "signature_mismatch";
+      reason: "missing_signature" | "missing_expires" | "length_mismatch" | "signature_mismatch";
     };
 
 /**
@@ -176,9 +172,7 @@ export function verifyMagicLinkSignature(params: {
  * - NEXTAUTH_SECRET と同一値 → 権限分離の意図に反するため throw
  *   (運用ミスを起動時に検出)
  */
-export function getAdminMagicLinkHmacSecret(
-  env: NodeJS.ProcessEnv = process.env
-): string {
+export function getAdminMagicLinkHmacSecret(env: NodeJS.ProcessEnv = process.env): string {
   const secret = env.ADMIN_MAGIC_LINK_HMAC_SECRET;
   if (!secret || secret.trim() === "") {
     throw new Error(

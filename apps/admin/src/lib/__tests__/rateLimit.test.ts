@@ -116,7 +116,9 @@ describe("adminRateLimit", () => {
         for (let i = 0; i < actionConfig.limit; i++) {
           consumeAdminRateLimit("adminAction", subject, now + i);
         }
-        expect(consumeAdminRateLimit("adminAction", subject, now + actionConfig.limit).ok).toBe(false);
+        expect(consumeAdminRateLimit("adminAction", subject, now + actionConfig.limit).ok).toBe(
+          false
+        );
 
         // adminRead は影響を受けない (別のバケット)
         const result = consumeAdminRateLimit("adminRead", subject, now + actionConfig.limit);
