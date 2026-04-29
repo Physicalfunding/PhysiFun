@@ -14,13 +14,20 @@ import * as path from "path";
 const CI = !!process.env.CI;
 const REPO_ROOT = path.resolve(__dirname, "../..");
 
-const WEB_PORT = 3000;
-const ADMIN_PORT = 3001;
+// E2E 専用ポート。ローカル開発で 3000/3001 が他用途で使われていても衝突しないよう
+// 30000 番台に振っている。実環境 (apps/web の dev/start) は 3000 を継続使用。
+const WEB_PORT = 31000;
+const ADMIN_PORT = 31001;
 const WEB_BASE_URL = `http://localhost:${WEB_PORT}`;
 const ADMIN_BASE_URL = `http://localhost:${ADMIN_PORT}`;
 
 // E2E 専用の固定シークレット。本番で使わないこと。
 const E2E_NEXTAUTH_SECRET = "e2e-test-secret-do-not-use-in-production";
+// Magic Link / cron 用 secret も本番で使わないこと。NEXTAUTH_SECRET と別値であることが
+// 起動時に検証される (#146)。
+export const E2E_ADMIN_MAGIC_LINK_HMAC_SECRET =
+  "e2e-admin-magic-link-hmac-secret-do-not-use-in-production";
+export const E2E_CRON_SECRET = "e2e-cron-secret-do-not-use-in-production";
 
 const webServerEnv = {
   PORT: String(WEB_PORT),
@@ -38,6 +45,12 @@ const adminServerEnv = {
   ...webServerEnv,
   PORT: String(ADMIN_PORT),
   NEXTAUTH_URL: ADMIN_BASE_URL,
+  // #146: HMAC 検証は起動時に fail-closed で検証される。NEXTAUTH_SECRET と別値必須。
+  ADMIN_MAGIC_LINK_HMAC_SECRET: E2E_ADMIN_MAGIC_LINK_HMAC_SECRET,
+  // #158 / #159: cron GC エンドポイントの Bearer token
+  CRON_SECRET: E2E_CRON_SECRET,
+  // RESEND_API_KEY 未設定なら NoopMailSender にフォールバックするため敢えて設定しない
+  // (E2E ではメール送信を経由せず DB の AdminVerificationToken を直接読む)。
 };
 
 export default defineConfig({
@@ -75,9 +88,13 @@ export default defineConfig({
 
   webServer: [
     {
-      command: CI ? "bun --filter @physifun/web start" : "bun --filter @physifun/web dev",
+      // E2E では `next dev/start -p <PORT>` を直接呼ぶ。
+      // - web の package.json の `dev` は PORT env を尊重するが、
+      //   admin の `dev` は `next dev --port 3001` でハードコードのため上書き不可。
+      //   両者で挙動を揃えるため CLI で `-p ${PORT}` を渡し、cwd を各 app に切り替える。
+      command: CI ? `bun next start -p ${WEB_PORT}` : `bun next dev -p ${WEB_PORT}`,
       url: WEB_BASE_URL,
-      cwd: REPO_ROOT,
+      cwd: path.resolve(REPO_ROOT, "apps/web"),
       reuseExistingServer: !CI,
       timeout: 180_000,
       stdout: "pipe",
@@ -85,9 +102,9 @@ export default defineConfig({
       env: webServerEnv,
     },
     {
-      command: CI ? "bun --filter @physifun/admin start" : "bun --filter @physifun/admin dev",
+      command: CI ? `bun next start -p ${ADMIN_PORT}` : `bun next dev -p ${ADMIN_PORT}`,
       url: ADMIN_BASE_URL,
-      cwd: REPO_ROOT,
+      cwd: path.resolve(REPO_ROOT, "apps/admin"),
       reuseExistingServer: !CI,
       timeout: 180_000,
       stdout: "pipe",

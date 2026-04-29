@@ -15,16 +15,16 @@ test.use({ storageState: ADMIN_STORAGE });
 // #145: AdminAccount ベース認証 + ApproveLeaderApplicationUseCase の reviewer 検証を
 // AdminAccount に切替したため、このテストを有効化する。
 test("admin が PENDING 応募を承認でき、ステータスが APPROVED に変わる", async ({ page }) => {
-  // window.confirm を常に承諾する
-  page.on("dialog", (dialog) => dialog.accept());
-
   await page.goto(`${ADMIN_BASE_URL}/applications?status=PENDING`);
 
   // プロジェクトタイトルで応募行を特定してクリック
   await page.getByRole("link", { name: TEST_LEADER.projectTitle }).first().click();
   await page.waitForURL(/\/applications\/[0-9a-f-]+/);
 
+  // 承認ボタン押下 → AlertDialog (#168 で window.confirm から差し替え) が開く
   await page.getByTestId("approve-application-button").click();
+  // ダイアログ内の確定ボタンを押して承認 API を実行
+  await page.getByTestId("confirm-approve-application").click();
 
   // 承認後、承認ボタンが消える / ステータス表示が変わる想定
   // 詳細画面の再描画を待つ (router.refresh)

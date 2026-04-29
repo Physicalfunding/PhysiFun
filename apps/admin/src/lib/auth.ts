@@ -134,9 +134,15 @@ export const authOptions: NextAuthOptions = {
     EmailProvider({
       // ⚠️ server / from は実際には使われない。
       // NextAuth の EmailProvider は本来 nodemailer を使って SMTP 送信するが、
-      // ここでは `sendVerificationRequest` を明示指定しているため nodemailer は
-      // 初期化されず、送信は ResendMailSender 経由に差し替わる。
-      // ただし EmailProvider のスキーマ上 server / from が必須 (undefined 不可) なので
+      // ここでは `sendVerificationRequest` を明示指定しているため、
+      // ランタイムで nodemailer の `createTransport` 等が呼ばれることは無く、
+      // 送信は ResendMailSender 経由に差し替わる。
+      //
+      // ただし `next-auth/providers/email.js` がモジュール先頭で
+      // `require("nodemailer")` を実行しているため、依存自体は解決可能でないと
+      // バンドル時 (特に Turbopack の dev mode) に "Module not found" になる。
+      // → そのため `nodemailer` を apps/admin の dependencies に入れている。
+      // EmailProvider のスキーマ上 server / from が必須 (undefined 不可) なので
       // 形だけ満たすためのダミー値を入れている。誤って SMTP を叩こうとしても
       // host:"unused" で解決不能になり実害は無いが、変更時は意図を誤解しないこと。
       server: { host: "unused", port: 0, auth: { user: "unused", pass: "unused" } },
