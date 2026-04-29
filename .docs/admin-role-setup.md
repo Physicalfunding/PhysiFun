@@ -43,7 +43,7 @@ AdminAccount (運営アカウント)
 | `RESEND_API_KEY` | Magic Link メール送信 (Resend) | `apps/web` と分離するなら別キーを推奨 |
 | `MAIL_FROM` | 送信元アドレス | 例: `"PhysiFun 運営" <admin-noreply@<本番ドメイン>>` |
 | `CRON_SECRET` | `/api/cron/gc-admin-auth` の Authorization 検証 | `Bearer <CRON_SECRET>`。timingSafeEqual で比較 |
-| `ADMIN_SEED_EMAIL` | seed スクリプトが作成する初期 AdminAccount の email | seed 後に Vercel から削除可 |
+| `SEED_ADMIN_EMAIL` | seed スクリプトが作成する初期 AdminAccount の email | seed 後に Vercel から削除可 |
 | `DATABASE_URL` | 共通 Supabase Postgres | `apps/web` と同値で OK |
 
 > `NEXTAUTH_SECRET` と `ADMIN_MAGIC_LINK_HMAC_SECRET` は **必ず別値**にする。同一値で運用すると HMAC 検証層を回避された場合に署名と Cookie の独立性が崩れる。
@@ -70,12 +70,12 @@ AdminAccount (運営アカウント)
 ```bash
 # 環境変数 (.env.local など)
 DATABASE_URL=postgres://...
-ADMIN_SEED_EMAIL=admin@your-domain.example
+SEED_ADMIN_EMAIL=admin@your-domain.example
 
-bun --filter @physifun/infrastructure prisma db seed
+bun --cwd packages/infrastructure run db:seed
 ```
 
-`packages/infrastructure/prisma/seed.ts` が `ADMIN_SEED_EMAIL` の `AdminAccount` を `ACTIVE` で upsert する。完了後は `ADMIN_SEED_EMAIL` を Vercel から削除して構わない。
+`packages/infrastructure/prisma/seed.ts` が `SEED_ADMIN_EMAIL` の `AdminAccount` を `ACTIVE` で upsert する。完了後は `SEED_ADMIN_EMAIL` を Vercel から削除して構わない。
 
 ### 代替: Supabase Studio から SQL 直接実行
 

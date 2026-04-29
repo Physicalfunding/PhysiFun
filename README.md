@@ -30,6 +30,23 @@ Phase 移行はランタイムのフィーチャーフラグではなく、**コ
 
 ---
 
+## アプリケーション構成
+
+monorepo（bun workspaces）構成で、以下の 2 つの Next.js アプリと共有パッケージから成る。
+
+| パス | 役割 | ポート | 詳細 |
+|---|---|---|---|
+| `apps/web` | 一般ユーザ向けアプリ（LP / リーダー応募 / マイページ等） | **3000** | [`apps/web/README.md`](./apps/web/README.md) |
+| `apps/admin` | 運営管理アプリ（応募審査 / プロジェクト審査 / 運営メンバー管理） | **3001** | [`apps/admin/README.md`](./apps/admin/README.md) |
+| `packages/domain` | ドメイン層（エンティティ / 値オブジェクト / リポジトリ IF） | ー | ー |
+| `packages/application` | アプリケーション層（ユースケース） | ー | ー |
+| `packages/infrastructure` | インフラ層（Prisma / Supabase Storage / メール送信 / Outbox） | ー | ー |
+| `packages/ui-shared` | 両アプリで共有する UI コンポーネント | ー | ー |
+
+DB（Supabase PostgreSQL）は web / admin で **同一インスタンスを共有**するが、Cookie / セッション / 環境変数は完全に分離されている（`AdminAccount` は `Account` と独立アグリゲート）。
+
+---
+
 ## 開発環境のセットアップ
 
 ### 前提条件
@@ -39,6 +56,7 @@ Phase 移行はランタイムのフィーチャーフラグではなく、**コ
 - [Bun](https://bun.sh/) (v1.x)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started)
+- [Resend](https://resend.com/) の API キー（admin の Magic Link ログインで使用）
 
 ### 1. リポジトリのクローンと依存関係のインストール
 
@@ -50,62 +68,82 @@ bun install
 
 ### 2. Supabase ローカル環境の起動
 
-Docker Desktop が起動していることを確認してから実行してください。
+Docker Desktop が起動していることを確認してから、リポジトリルートで実行する:
 
 ```bash
-supabase start
+make start          # = supabase start
 ```
 
-起動後、以下の情報が表示されます（`.env.local` の設定に使用します）:
+起動後、`make status`（= `supabase status`）で接続情報が確認できる:
 
 ```
-Studio   : http://127.0.0.1:54323     # DB 管理画面
+Studio   : http://127.0.0.1:54323     # DB 管理 GUI
 Database : postgresql://postgres:postgres@127.0.0.1:54322/postgres
 API URL  : http://127.0.0.1:54321
 ```
 
 ### 3. 環境変数の設定
 
-`.env.example` を参考に `.env.local` を作成します。
+web / admin それぞれの `.env.local` を用意する。
 
 ```bash
-cp .env.example .env.local
+cp apps/web/.env.example   apps/web/.env.local
+cp apps/admin/.env.example apps/admin/.env.local
 ```
 
-`.env.local` を編集し、Supabase ローカルの接続情報を設定します:
+各ファイルの設定項目は以下を参照:
 
-```env
-# Database（Supabase ローカル）
-DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+- web: [`apps/web/README.md`](./apps/web/README.md#環境変数)
+- admin: [`apps/admin/README.md`](./apps/admin/README.md#環境変数)
 
-# Authentication
-NEXTAUTH_SECRET="local-dev-secret-key"
-NEXTAUTH_URL="http://localhost:3000"
-
-# Storage（Supabase ローカル）
-# supabase start 時に表示された値を設定
-NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="（supabase start で表示された Publishable キー）"
-SUPABASE_SERVICE_ROLE_KEY="（supabase start で表示された Secret キー）"
-SUPABASE_STORAGE_BUCKET="project-images"
-```
-
-> **Note:** `.env.local` は `.gitignore` に含まれているため、git には追跡されません。
+> **Note:** `.env.local` は `.gitignore` に含まれているため、git には追跡されない。
 
 ### 4. データベースのマイグレーション
 
+Prisma スキーマは `packages/infrastructure` に集約されており、ルートからエイリアス経由で実行する:
+
 ```bash
-bunx prisma migrate deploy
-bunx prisma generate
+bun run db:generate          # Prisma Client 生成
+bun run db:migrate:deploy    # マイグレーション適用
 ```
 
-### 5. 開発サーバーの起動
+### 5. 初期 AdminAccount の作成（admin ログインに必須）
+
+`apps/admin` は **Magic Link (NextAuth EmailProvider) のみ** でログインする。事前に `AdminAccount` レコードを作成しておく必要がある。
+
+```bash
+SEED_ADMIN_EMAIL="you@example.com" \
+  bun --cwd packages/infrastructure run db:seed
+```
+
+冪等な upsert なので何度実行しても安全。詳細・運用は [`.docs/admin-role-setup.md`](./.docs/admin-role-setup.md) を参照。
+
+### 6. 開発サーバーの起動
+
+#### web のみ起動（一般ユーザ向け、port 3000）
 
 ```bash
 bun dev
+# = bun --filter @physifun/web dev
 ```
 
-http://localhost:3000 でアプリケーションにアクセスできます。
+→ http://localhost:3000
+
+#### admin のみ起動（運営管理、port 3001）
+
+```bash
+bun run dev:admin
+# = bun --filter @physifun/admin dev
+```
+
+→ http://localhost:3001
+
+#### web と admin を並列起動
+
+```bash
+bun run dev:all
+# = bun --filter '@physifun/{web,admin}' dev
+```
 
 ---
 
@@ -124,33 +162,58 @@ Next.js の環境変数読み込み優先順位を利用して、環境ごとに
 ## よく使うコマンド
 
 ```bash
-# 開発
-bun dev                    # 開発サーバー起動
-bun run build              # ビルド
+# 開発サーバー
+bun dev                    # web のみ起動（port 3000）
+bun run dev:admin          # admin のみ起動（port 3001）
+bun run dev:all            # web + admin 並列起動
+
+# ビルド・品質チェック
+bun run build              # web のビルド
+bun run build:admin        # admin のビルド
 bun run lint               # Lint
+bun run typecheck          # 型チェック（全 workspace）
 bun run format             # Prettier フォーマット
 
 # テスト
-bun run test               # テスト実行
-bun run test:watch         # テスト（ウォッチモード）
-bun run test:coverage      # カバレッジ付きテスト
+bun run test               # web のユニットテスト
+bun run test:watch         # ウォッチモード
+bun run test:coverage      # カバレッジ
+bun run test:infra         # infrastructure 層（vitest）
+bun run test:e2e           # Playwright E2E
+bun run test:e2e:ui        # Playwright UI モード
 
-# データベース
-bunx prisma migrate deploy # マイグレーション適用
-bunx prisma generate       # Prisma Client 生成
-bunx prisma studio         # Prisma Studio（DB 管理 GUI）
+# データベース（packages/infrastructure 経由）
+bun run db:generate        # Prisma Client 生成
+bun run db:migrate         # マイグレーション作成 + 適用（dev）
+bun run db:migrate:deploy  # マイグレーション適用のみ（CI / 本番）
+bun run db:migrate:reset   # DB リセット
+bun run db:push            # スキーマを直接反映（マイグレーション履歴なし）
+bun run db:studio          # Prisma Studio
 
-# Supabase ローカル
-supabase start             # ローカル環境起動
-supabase stop              # ローカル環境停止
-supabase status            # 起動状態・接続情報の確認
+# Supabase ローカル（Makefile 経由でも可）
+supabase start             # ローカル環境起動（make start）
+supabase stop              # ローカル環境停止（make stop）
+supabase status            # 起動状態・接続情報の確認（make status）
+
+# 初期 AdminAccount の seed
+SEED_ADMIN_EMAIL="you@example.com" \
+  bun --cwd packages/infrastructure run db:seed
 ```
 
 ---
 
 ## ドキュメント
 
-詳細なドキュメントは `.docs/` ディレクトリにあります。
+### アプリ別 README
+
+| ファイル | 内容 |
+|---|---|
+| [`apps/web/README.md`](./apps/web/README.md) | 一般ユーザ向けアプリ（web）の構成・環境変数・ローカル起動 |
+| [`apps/admin/README.md`](./apps/admin/README.md) | 運営管理アプリ（admin）の構成・環境変数・ローカル起動・Vercel デプロイ |
+
+### 設計・運用ドキュメント
+
+`.docs/` ディレクトリ参照。
 
 | ファイル | 内容 |
 |---|---|
@@ -160,3 +223,4 @@ supabase status            # 起動状態・接続情報の確認
 | [`.docs/dev-rule.md`](.docs/dev-rule.md) | 開発フロー・PR ルール |
 | [`.docs/requirements.md`](.docs/requirements.md) | 要件定義 |
 | [`.docs/design.md`](.docs/design.md) | 設計書 |
+| [`.docs/admin-role-setup.md`](.docs/admin-role-setup.md) | 運営アカウント（AdminAccount）のセットアップ・運用手順 |
