@@ -134,10 +134,7 @@ describe("PrismaProjectQueryService (admin) integration", () => {
       const reviewer = await prisma.adminAccount.create({
         data: {
           email: "admin@example.com",
-          passwordHash: "dummy",
           status: "ACTIVE",
-          totpEnabled: false,
-          recoveryCodes: [],
         },
       });
       const project = await prisma.project.create({

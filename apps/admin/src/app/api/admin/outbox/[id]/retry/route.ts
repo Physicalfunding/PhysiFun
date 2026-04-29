@@ -1,5 +1,4 @@
 import { type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { isUuidV4 } from "@physifun/domain";
 import {
   PrismaOutboxCommandAdapter,
@@ -13,6 +12,9 @@ import {
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
+import { logAdminAction } from "@/lib/api/auditLog";
+import { enforceAdminRateLimit } from "@/lib/rateLimit";
 
 const commandAdapter = new PrismaOutboxCommandAdapter();
 
@@ -23,13 +25,20 @@ const commandAdapter = new PrismaOutboxCommandAdapter();
  *
  * リクエストボディ:
  * - source: "leaderApplication" | "project" (必須)
+ *
+ * 認証の注意:
+ * - middleware.ts は /api パスを除外しているため、この Route Handler が第一防衛線
+ * - 認証後にレート制限 (adminAccountId 単位 60 req/min) を適用 (#157 H1)
+ * - 成功後に AdminAuditLog へ post-hook 書き込み (#158 M3)
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) return unauthorizedResponse();
-    const roles = (token.roles as string[] | undefined) ?? [];
-    if (!roles.includes("ADMIN")) return unauthorizedResponse("ADMIN 権限が必要です");
+    // 運営認証は `@/lib/api/auth#getAuthenticatedAdminId` で AdminSession 経由の Database 戦略 (#145)
+    const reviewerId = await getAuthenticatedAdminId();
+    if (!reviewerId) return unauthorizedResponse();
+
+    const limited = enforceAdminRateLimit("adminAction", reviewerId);
+    if (limited) return limited;
 
     const { id } = await params;
 
@@ -60,6 +69,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (result.count === 0) {
       return unprocessableEntityResponse("対象メッセージが見つからないか、既に送信済みです");
     }
+
+    // #158 M3 / #159 H-2: outbox 手動操作を監査証跡に残す。
+    // logAdminAction は内部で try/catch して log-and-continue する設計 (auditLog.ts 参照)。
+    // 監査 DB 書き込みの遅延をレスポンス p99 に載せないよう fire-and-forget で呼ぶ。
+    void logAdminAction({
+      adminAccountId: reviewerId,
+      action: "outbox.retry",
+      targetType: "OutboxMessage",
+      targetId: id,
+      metadata: { source },
+    });
 
     return successResponse({ id, message: "リトライ対象に戻しました" });
   } catch (e) {

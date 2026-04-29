@@ -34,7 +34,7 @@ src/
 │
 ├── domain/                       # ドメイン層（エンティティ・値オブジェクト・リポジトリIF）
 │   ├── account/                  # Account, Role（ユーザー: SUPPORTER/LEADER）
-│   ├── admin-account/            # AdminAccount, AdminAccountStatus, TotpSecret, RecoveryCodeHash
+│   ├── admin-account/            # AdminAccount, AdminAccountStatus, AdminAccountEmail, AdminAccountId (Magic Link 認証ベース、apps/admin 専用 / packages/domain/admin-account/)
 │   ├── leader-application/       # LeaderApplication, ApplicationMode（PRE_ACCOUNT/AUTHENTICATED）
 │   ├── project/                  # Project, ProjectPhase, PublishStatus
 │   ├── recruitment/              # Recruitment, RecruitmentSchedule, SupportTicket

@@ -12,20 +12,19 @@ test.use({ storageState: ADMIN_STORAGE });
  *
  * 事後状態: Account.roles に LEADER が追加される
  */
-// TODO(#145): Phase 2 で AdminAccount ログインに切替後、ApproveLeaderApplicationUseCase が
-// reviewerId を Account.id として解決するため REVIEWER_NOT_FOUND になる。
-// UseCase を AdminAccount ベースに改修する #145 で再度有効化する。
-test.skip("admin が PENDING 応募を承認でき、ステータスが APPROVED に変わる", async ({ page }) => {
-  // window.confirm を常に承諾する
-  page.on("dialog", (dialog) => dialog.accept());
-
+// #145: AdminAccount ベース認証 + ApproveLeaderApplicationUseCase の reviewer 検証を
+// AdminAccount に切替したため、このテストを有効化する。
+test("admin が PENDING 応募を承認でき、ステータスが APPROVED に変わる", async ({ page }) => {
   await page.goto(`${ADMIN_BASE_URL}/applications?status=PENDING`);
 
   // プロジェクトタイトルで応募行を特定してクリック
   await page.getByRole("link", { name: TEST_LEADER.projectTitle }).first().click();
   await page.waitForURL(/\/applications\/[0-9a-f-]+/);
 
+  // 承認ボタン押下 → AlertDialog (#168 で window.confirm から差し替え) が開く
   await page.getByTestId("approve-application-button").click();
+  // ダイアログ内の確定ボタンを押して承認 API を実行
+  await page.getByTestId("confirm-approve-application").click();
 
   // 承認後、承認ボタンが消える / ステータス表示が変わる想定
   // 詳細画面の再描画を待つ (router.refresh)

@@ -1,28 +1,15 @@
-import type { DefaultSession, DefaultUser } from "next-auth";
-import type { DefaultJWT } from "next-auth/jwt";
+import type { DefaultSession } from "next-auth";
 
 /**
- * NextAuth.js の型拡張（運営管理アプリ用）
+ * NextAuth.js の型拡張（運営管理アプリ用 / #145）
  *
- * セッションと JWT に id と roles フィールドを追加する。
+ * Database 戦略 + EmailProvider に切り替えたため、JWT 関連の型は不要。
+ * session.user.id (AdminAccount.id) のみ拡張する。
  */
-
 declare module "next-auth" {
   interface Session {
     user: {
-      id?: string;
-      roles?: string[];
+      id: string;
     } & DefaultSession["user"];
-  }
-
-  interface User extends DefaultUser {
-    roles?: string[];
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT extends DefaultJWT {
-    id?: string;
-    roles?: string[];
   }
 }

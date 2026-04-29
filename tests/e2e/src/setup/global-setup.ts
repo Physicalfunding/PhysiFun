@@ -1,39 +1,49 @@
 import { test as setup, expect } from "@playwright/test";
 import * as fs from "fs";
-import * as path from "path";
-import { truncateAll, seedAdminAccount } from "../helpers/db";
+import { truncateAll, seedAdminAccount, seedAdminSession } from "../helpers/db";
 import { AUTH_DIR, ADMIN_STORAGE, ADMIN_BASE_URL } from "../fixtures";
 
 /**
- * Setup project
+ * Setup project (#145)
  *
  * 1. .auth/ ディレクトリを用意
- * 2. DB を truncate + admin user を seed
- * 3. admin アプリにログインして storageState を保存
+ * 2. DB を truncate + AdminAccount seed
+ * 3. AdminSession 行を DB に直接作成し、sessionToken Cookie をブラウザに注入して
+ *    Playwright の storageState に保存する。マジックリンクのメール受信・クリック
+ *    フローを省略するための割り切り。
  */
 setup("DB リセット + admin seed + admin storageState 保存", async ({ page }) => {
-  // 1. .auth ディレクトリ作成
   if (!fs.existsSync(AUTH_DIR)) {
     fs.mkdirSync(AUTH_DIR, { recursive: true });
   }
 
-  // 2. DB truncate + admin seed
   await truncateAll();
   const admin = await seedAdminAccount();
+  const { sessionToken, expires } = await seedAdminSession({ adminAccountId: admin.id });
 
-  // 3. admin アプリにログインして storageState 保存
-  await page.goto(`${ADMIN_BASE_URL}/login`);
-  await page.getByLabel("メールアドレス").fill(admin.email);
-  await page.getByLabel("パスワード").fill(admin.password);
-  await page.getByRole("button", { name: "ログイン" }).click();
+  // ADMIN_BASE_URL は http://localhost:3001。NextAuth のデフォルト Cookie 名を使う。
+  const adminUrl = new URL(ADMIN_BASE_URL);
+  await page.context().addCookies([
+    {
+      name: "next-auth.session-token",
+      value: sessionToken,
+      domain: adminUrl.hostname,
+      path: "/",
+      httpOnly: true,
+      secure: false, // 開発環境 (http) のため
+      sameSite: "Lax",
+      expires: Math.floor(expires.getTime() / 1000),
+    },
+  ]);
 
-  // ログイン成功後、/ へ push される (admin/login/page.tsx)
-  await page.waitForURL(new RegExp(`^${ADMIN_BASE_URL}(/|/\\?.*)?$`));
+  // Cookie を実際にサーバーに送って認証が効いていることを確認。
+  // middleware は Cookie 存在のみチェックし、実際の AdminSession 検証は
+  // Server Component / Route Handler で行う。トップページは認可済みなら
+  // /login にリダイレクトしない。
+  await page.goto(`${ADMIN_BASE_URL}/`);
+  await page.waitForLoadState("domcontentloaded");
   expect(page.url()).not.toContain("/login");
 
   await page.context().storageState({ path: ADMIN_STORAGE });
-  // 念のためファイルが作られたことを確認
   expect(fs.existsSync(ADMIN_STORAGE)).toBe(true);
-  // lint (unused import suppression)
-  void path;
 });

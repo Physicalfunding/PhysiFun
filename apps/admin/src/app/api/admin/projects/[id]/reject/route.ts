@@ -1,5 +1,4 @@
 import { type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import {
   RejectProjectPublicationUseCase,
   type RejectProjectPublicationError,
@@ -14,6 +13,9 @@ import {
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
+import { logAdminAction } from "@/lib/api/auditLog";
+import { enforceAdminRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/admin/projects/:id/reject
@@ -23,29 +25,26 @@ import {
  *
  * 認証の注意:
  * - middleware.ts は /api パスを除外しているため、この Route Handler が唯一の認可チェック
- * - UseCase 層にも ADMIN ロール二重防御が入っているため、ルート側とユースケース側で二段階に守られている
+ * - UseCase 層にも二重防御が入っている
+ * - 認証後にレート制限 (adminAccountId 単位 60 req/min) を適用 (#157 H1)
+ * - 成功後に AdminAuditLog へ post-hook 書き込み (#157 H2)
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // 第一防衛線: ADMIN ロールチェック
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) return unauthorizedResponse();
-    const roles = (token.roles as string[] | undefined) ?? [];
-    if (!roles.includes("ADMIN")) return unauthorizedResponse("ADMIN 権限が必要です");
+    const reviewerId = await getAuthenticatedAdminId();
+    if (!reviewerId) return unauthorizedResponse();
 
-    // reviewerId（= token.sub）は UseCase の AccountId VO で後続バリデーションされる
-    if (!token.sub) return unauthorizedResponse();
+    const limited = enforceAdminRateLimit("adminAction", reviewerId);
+    if (limited) return limited;
 
     const { id } = await params;
 
-    // UUID v4 形式バリデーション
     if (!isUuidV4(id)) {
       return validationErrorResponse("無効なプロジェクト ID です", {
         id: ["UUID v4 形式で指定してください"],
       });
     }
 
-    // リクエストボディ
     let body: { reviewerNote?: unknown };
     try {
       body = await request.json();
@@ -62,13 +61,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const useCase = new RejectProjectPublicationUseCase(port);
     const result = await useCase.execute({
       projectId: id,
-      reviewerId: token.sub,
+      reviewerId,
       reviewerNote: body.reviewerNote,
     });
 
     if (!result.ok) {
       return mapRejectError(result.error);
     }
+
+    // #157 H2: 運営オペの監査証跡
+    await logAdminAction({
+      adminAccountId: reviewerId,
+      action: "project.reject",
+      targetType: "Project",
+      targetId: result.value.projectId,
+      metadata: { reviewerNote: body.reviewerNote.trim() },
+    });
 
     return successResponse({ projectId: result.value.projectId });
   } catch (e) {
@@ -101,9 +109,8 @@ function mapRejectError(error: RejectProjectPublicationError) {
     case "PROJECT_NOT_FOUND":
       return notFoundResponse("プロジェクト");
     case "REVIEWER_NOT_FOUND":
-      return notFoundResponse("アカウント");
-    case "REVIEWER_NOT_ADMIN":
-      return unauthorizedResponse("ADMIN 権限が必要です");
+      // #157 M3: reviewer が DISABLED に落ちた稀ケース。401 で再ログインを促す。
+      return unauthorizedResponse();
     case "INVALID_PROJECT_STATUS":
       return unprocessableEntityResponse(
         `このプロジェクトは差戻可能な状態ではありません（現在のステータス: ${error.currentStatus}）`

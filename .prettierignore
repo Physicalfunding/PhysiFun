@@ -5,3 +5,8 @@ build
 coverage
 bun.lock
 *.md
+
+# Local-only directories (not tracked by git)
+.claude/worktrees
+tests/e2e/.auth
+tests/e2e/test-results

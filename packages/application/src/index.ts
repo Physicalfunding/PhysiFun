@@ -81,6 +81,7 @@ export type {
 
 // Shared
 export type { AccountRole } from "./shared/AccountRole";
+export type { AdminReviewer } from "./shared/AdminReviewer";
 
 // UpdateProjectDraftUseCase
 export {
@@ -144,10 +145,7 @@ export {
   type ApproveProjectPublicationOutput,
   type ApproveProjectPublicationError,
 } from "./project/ApproveProjectPublicationUseCase";
-export type {
-  ApproveProjectPublicationPort,
-  AccountForProjectApproval,
-} from "./project/ports/ApproveProjectPublicationPort";
+export type { ApproveProjectPublicationPort } from "./project/ports/ApproveProjectPublicationPort";
 // RejectProjectPublicationUseCase
 export {
   RejectProjectPublicationUseCase,

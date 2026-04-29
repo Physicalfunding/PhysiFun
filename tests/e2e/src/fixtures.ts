@@ -5,8 +5,10 @@ import * as path from "path";
  * Phase 1 E2E で共有するテストデータ・定数定義
  */
 
-export const WEB_BASE_URL = "http://localhost:3000";
-export const ADMIN_BASE_URL = "http://localhost:3001";
+// E2E 専用ポート。ローカル開発で 3000/3001 が他用途で使われていても衝突しないよう
+// 30000 番台。playwright.config.ts の WEB_PORT / ADMIN_PORT と必ず同じにすること。
+export const WEB_BASE_URL = "http://localhost:31000";
+export const ADMIN_BASE_URL = "http://localhost:31001";
 
 /** storageState を保存するディレクトリ (tests/e2e からの相対) */
 export const AUTH_DIR = path.resolve(__dirname, "../.auth");
@@ -31,11 +33,9 @@ export const TEST_LEADER = {
     "E2Eテスト用の活動予定です。毎週土曜日に地域コミュニティの集まりを開催します。",
 } as const;
 
-/** テスト用 admin アカウントデータ (setup で seed される) */
+/** テスト用 admin アカウントデータ (setup で seed される) (#145: magic link 方式のためパスワード不要) */
 export const TEST_ADMIN = {
   email: "admin@e2e-test.local",
-  password: "AdminPass123!",
-  displayName: "E2E Admin",
 } as const;
 
 /** プロジェクト編集時に上書きする内容 (05-project-create で使う) */

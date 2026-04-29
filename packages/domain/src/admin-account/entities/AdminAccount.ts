@@ -1,22 +1,19 @@
 import { type Result, err, ok } from "../../shared/result";
 import type { AdminAccountStateError } from "../errors/AdminAccountError";
-import { AdminAccountEmail } from "../value-objects/AdminAccountEmail";
+import { AdminAccountEmail, type AdminAccountEmailError } from "../value-objects/AdminAccountEmail";
 import { AdminAccountId } from "../value-objects/AdminAccountId";
 import { AdminAccountStatus } from "../value-objects/AdminAccountStatus";
-import { HashedPassword } from "../value-objects/HashedPassword";
-import type { RecoveryCodeHash } from "../value-objects/RecoveryCodeHash";
-import { TotpSecret } from "../value-objects/TotpSecret";
 
 /**
- * AdminAccount 集約ルート (#140 / #144)
+ * AdminAccount 集約ルート (#140 / #144 / #145)
  *
  * 運営アカウントを表すドメインエンティティ。
  * apps/web で利用する Account とは完全に独立した認証基盤を構成する。
  *
- * - メール + パスワード + TOTP による二要素認証 (#146 で接続)
- * - リカバリコードはハッシュ化して配列で保持 (原本は生成時のみ表示)
+ * - #145 で認証方式を Magic Link (NextAuth EmailProvider) に変更。
+ *   パスワード・TOTP・リカバリコードは廃止 (parent Issue #140 で方針転換)。
  * - 集約状態は `ACTIVE` / `DISABLED` の 2 値
- * - 状態遷移は集約メソッド (`disable()` / `enableTotp()` 等) 経由でのみ行う
+ * - 状態遷移は集約メソッド (`disable()` / `enable()`) 経由でのみ行う
  *
  * 参照: `docs/202604_初回リリースに向けた計画/運営アプリ.md`
  */
@@ -24,10 +21,6 @@ export class AdminAccount {
   private constructor(
     private readonly _id: AdminAccountId,
     private _email: AdminAccountEmail,
-    private _passwordHash: HashedPassword,
-    private _totpSecret: TotpSecret | null,
-    private _totpEnabled: boolean,
-    private _recoveryCodes: readonly RecoveryCodeHash[],
     private _status: AdminAccountStatus,
     private _lastLoginAt: Date | null,
     private readonly _createdAt: Date,
@@ -38,12 +31,10 @@ export class AdminAccount {
    * 新規 AdminAccount を作成する (初期運営 seed / 運営追加 UI から呼ばれる)。
    *
    * - status は `ACTIVE` 固定
-   * - TOTP は未設定状態 (enableTotp() で #146 で有効化)
    * - 時刻はテストから注入可能
    */
   static create(input: {
     email: AdminAccountEmail;
-    passwordHash: HashedPassword;
     /** 省略時は `AdminAccountId.generate()`。 */
     id?: AdminAccountId;
     /** 省略時は `new Date()`。 */
@@ -53,14 +44,34 @@ export class AdminAccount {
     return new AdminAccount(
       input.id ?? AdminAccountId.generate(),
       input.email,
-      input.passwordHash,
-      null,
-      false,
-      [],
       AdminAccountStatus.ACTIVE,
       null,
       now,
       now
+    );
+  }
+
+  /**
+   * 生のメール文字列から新規 AdminAccount を生成する (#148 / #158 L4)。
+   *
+   * 運営追加 UI や seed から直接呼ぶためのショートカット。
+   * email の正規化・検証は `AdminAccountEmail.from` に委譲するため、
+   * 呼び出し側は "文字列を渡せば集約が整合した状態で作られる" という
+   * 不変条件を得られる (value object を組み立てる責務を集約に閉じる)。
+   */
+  static createFromRawEmail(input: {
+    email: string;
+    id?: AdminAccountId;
+    now?: Date;
+  }): Result<AdminAccount, AdminAccountEmailError> {
+    const emailResult = AdminAccountEmail.from(input.email);
+    if (!emailResult.ok) return emailResult;
+    return ok(
+      AdminAccount.create({
+        email: emailResult.value,
+        id: input.id,
+        now: input.now,
+      })
     );
   }
 
@@ -71,10 +82,6 @@ export class AdminAccount {
   static reconstruct(input: {
     id: AdminAccountId;
     email: AdminAccountEmail;
-    passwordHash: HashedPassword;
-    totpSecret: TotpSecret | null;
-    totpEnabled: boolean;
-    recoveryCodes: readonly RecoveryCodeHash[];
     status: AdminAccountStatus;
     lastLoginAt: Date | null;
     createdAt: Date;
@@ -83,10 +90,6 @@ export class AdminAccount {
     return new AdminAccount(
       input.id,
       input.email,
-      input.passwordHash,
-      input.totpSecret,
-      input.totpEnabled,
-      input.recoveryCodes,
       input.status,
       input.lastLoginAt,
       input.createdAt,
@@ -102,22 +105,6 @@ export class AdminAccount {
 
   get email(): AdminAccountEmail {
     return this._email;
-  }
-
-  get passwordHash(): HashedPassword {
-    return this._passwordHash;
-  }
-
-  get totpSecret(): TotpSecret | null {
-    return this._totpSecret;
-  }
-
-  get totpEnabled(): boolean {
-    return this._totpEnabled;
-  }
-
-  get recoveryCodes(): readonly RecoveryCodeHash[] {
-    return this._recoveryCodes;
   }
 
   get status(): AdminAccountStatus {
@@ -136,6 +123,18 @@ export class AdminAccount {
     return this._updatedAt;
   }
 
+  // ---- Predicates ----
+
+  /** ACTIVE かどうか (呼び出し側の三項演算を減らすための糖衣)。 */
+  isActive(): boolean {
+    return this._status === AdminAccountStatus.ACTIVE;
+  }
+
+  /** DISABLED かどうか。 */
+  isDisabled(): boolean {
+    return this._status === AdminAccountStatus.DISABLED;
+  }
+
   // ---- State transitions ----
 
   /**
@@ -144,8 +143,19 @@ export class AdminAccount {
    *
    * DISABLED → DISABLED は運営 UI でエラーフィードバックしたいため
    * `Result` で返す (enable() が冪等 void なのと非対称なのは意図的)。
+   *
+   * #148 / #158 L4: 「自分自身は無効化できない」ガードを集約に集約する。
+   * 呼び出し側 (Route Handler) はこの集約メソッドを経由することで
+   * `CANNOT_DISABLE_SELF` エラーをドメイン境界の内側で一元管理できる。
    */
-  disable(input?: { now?: Date }): Result<void, AdminAccountStateError> {
+  disable(input?: {
+    now?: Date;
+    /** 操作者 (ログイン中の運営) の AdminAccount.id。指定時は自己無効化を弾く。 */
+    operatorId?: AdminAccountId;
+  }): Result<void, AdminAccountStateError> {
+    if (input?.operatorId && this._id.equals(input.operatorId)) {
+      return err({ type: "CANNOT_DISABLE_SELF" });
+    }
     if (this._status === AdminAccountStatus.DISABLED) {
       return err({ type: "CANNOT_DISABLE_ALREADY_DISABLED" });
     }
@@ -167,38 +177,6 @@ export class AdminAccount {
     }
     this._status = AdminAccountStatus.ACTIVE;
     this._updatedAt = input?.now ?? new Date();
-  }
-
-  /**
-   * TOTP セットアップを完了させ二要素認証を有効化する (#146 で使用)。
-   *
-   * - secret が未設定だとエラー
-   * - 既に enabled ならエラー (再設定フローは別メソッドを想定)
-   */
-  enableTotp(input: {
-    secret: TotpSecret;
-    recoveryCodes: readonly RecoveryCodeHash[];
-    now?: Date;
-  }): Result<void, AdminAccountStateError> {
-    if (this._status === AdminAccountStatus.DISABLED) {
-      return err({ type: "ACCOUNT_DISABLED" });
-    }
-    if (this._totpEnabled) {
-      return err({ type: "TOTP_ALREADY_ENABLED" });
-    }
-    this._totpSecret = input.secret;
-    this._totpEnabled = true;
-    this._recoveryCodes = input.recoveryCodes;
-    this._updatedAt = input.now ?? new Date();
-    return ok(undefined);
-  }
-
-  /**
-   * パスワードハッシュを差し替える (パスワード変更 / 初期発行)。
-   */
-  changePassword(input: { passwordHash: HashedPassword; now?: Date }): void {
-    this._passwordHash = input.passwordHash;
-    this._updatedAt = input.now ?? new Date();
   }
 
   /**

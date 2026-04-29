@@ -1,16 +1,6 @@
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 import type { CreateProjectOutboxMessageParams } from "./RequestPublishPort";
-
-/**
- * UseCase 側で ADMIN ロールチェックに使用するアカウント情報
- *
- * infrastructure 層の PrismaProjectCommandAdapter.findAccountById が
- * 構造的部分型で適合するよう、必要最小限のフィールドのみ定義する。
- */
-export interface AccountForProjectApproval {
-  readonly id: string;
-  readonly roles: readonly string[];
-}
+import type { AdminReviewer } from "../../shared/AdminReviewer";
 
 /**
  * ApproveProjectPublicationUseCase のポートインターフェース
@@ -27,10 +17,12 @@ export interface AccountForProjectApproval {
  */
 export interface ApproveProjectPublicationPort {
   /**
-   * アカウント ID でアカウントを検索する。
-   * ADMIN ロールの二重防御（Route Handler + UseCase）のための第二防衛線。
+   * AdminAccount ID で reviewer を検索する。
+   *
+   * インフラ側で status !== "ACTIVE" は null にマップされるため、
+   * UseCase は null を「見つからない or 無効化済み」として扱えばよい。
    */
-  findAccountById(accountId: string): Promise<AccountForProjectApproval | null>;
+  findAdminReviewerById(id: string): Promise<AdminReviewer | null>;
 
   /** プロジェクトID で Project 集約を取得する */
   findProjectById(projectId: string): Promise<Project | null>;

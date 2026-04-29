@@ -31,8 +31,7 @@ export interface ForceUnpublishProjectOutput {
  * - `INVALID_PROJECT_ID`    : projectId が UUID v4 でない
  * - `REVIEWER_NOTE_REQUIRED`: reviewerNote 未入力（trim 後に空）
  * - `REVIEWER_NOTE_TOO_LONG`: reviewerNote が上限超過（trim 後）
- * - `REVIEWER_NOT_FOUND`    : reviewerId のアカウントが存在しない
- * - `REVIEWER_NOT_ADMIN`    : reviewer が ADMIN ロールを持たない（UseCase 層の二重防御）
+ * - `REVIEWER_NOT_FOUND`    : reviewer (AdminAccount) が存在しない、または無効化済み
  * - `PROJECT_NOT_FOUND`     : 指定 ID のプロジェクトが存在しない
  * - `DOMAIN_ERROR`          : Project.forceUnpublish の状態遷移エラー
  * - `FEEDBACK_ERROR`        : ProjectReviewFeedback 生成時のバリデーションエラー
@@ -47,7 +46,6 @@ export type ForceUnpublishProjectError =
       readonly actualLength: number;
     }
   | { readonly type: "REVIEWER_NOT_FOUND" }
-  | { readonly type: "REVIEWER_NOT_ADMIN" }
   | { readonly type: "PROJECT_NOT_FOUND" }
   | { readonly type: "DOMAIN_ERROR"; readonly domainError: ProjectStateError }
   | { readonly type: "FEEDBACK_ERROR"; readonly feedbackError: ReviewFeedbackError };
@@ -85,7 +83,7 @@ export const PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE = "project_force_unpublished.
  * 処理フロー:
  * 1. reviewerNote のバリデーション（trim / 空なら REVIEWER_NOTE_REQUIRED / 長すぎなら REVIEWER_NOTE_TOO_LONG）
  * 2. ReviewerId / ProjectId VO 生成（入力バリデーション）
- * 3. reviewer の ADMIN ロールチェック（API Route Handler と二重防御）
+ * 3. reviewer (AdminAccount) の存在確認（API Route Handler と二重防御）
  * 4. プロジェクトの存在チェック
  * 5. project.forceUnpublish()（PUBLISHED チェック + ステータス遷移）
  * 6. ProjectReviewFeedback 生成（action=FORCE_UNPUBLISHED, note=trimmedNote）
@@ -124,17 +122,12 @@ export class ForceUnpublishProjectUseCase {
       return err({ type: "INVALID_PROJECT_ID" });
     }
 
-    // 3. reviewer の ADMIN ロール二重防御（API Route Handler の認可に加えて）
-    // TODO(#145): Phase 2 で Account.roles から "ADMIN" を除去したため
-    // このチェックは常に false を返す。AdminAccount 認証移行と合わせて、
-    // reviewerId を AdminAccount.id として検証するポートに差し替える。
-    // 現状 apps/admin 側の認証が繋がっていないため、この UseCase は到達不能。
-    const reviewer = await this.port.findAccountById(input.reviewerId);
+    // 3. reviewer (AdminAccount) の存在確認（API Route Handler の認可に加えた二重防御）
+    // インフラ側で AdminAccount.status !== "ACTIVE" は null にマップされるため、
+    // 「未存在」と「無効化済み」は REVIEWER_NOT_FOUND に集約される。
+    const reviewer = await this.port.findAdminReviewerById(input.reviewerId);
     if (!reviewer) {
       return err({ type: "REVIEWER_NOT_FOUND" });
-    }
-    if (!reviewer.roles.includes("ADMIN")) {
-      return err({ type: "REVIEWER_NOT_ADMIN" });
     }
 
     // 4. プロジェクトの存在チェック

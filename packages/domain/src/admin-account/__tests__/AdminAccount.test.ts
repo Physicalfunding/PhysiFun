@@ -3,9 +3,6 @@ import { AdminAccount } from "../entities/AdminAccount";
 import { AdminAccountEmail } from "../value-objects/AdminAccountEmail";
 import { AdminAccountId } from "../value-objects/AdminAccountId";
 import { AdminAccountStatus } from "../value-objects/AdminAccountStatus";
-import { HashedPassword } from "../value-objects/HashedPassword";
-import { RecoveryCodeHash } from "../value-objects/RecoveryCodeHash";
-import { TotpSecret } from "../value-objects/TotpSecret";
 
 function email(value = "admin@example.com"): AdminAccountEmail {
   const r = AdminAccountEmail.from(value);
@@ -13,56 +10,35 @@ function email(value = "admin@example.com"): AdminAccountEmail {
   return r.value;
 }
 
-function hash(value = "$2b$10$abcdefghijklmnopqrstuv"): HashedPassword {
-  const r = HashedPassword.from(value);
-  if (!r.ok) throw new Error("test fixture: hash");
-  return r.value;
-}
-
-function totp(value = "encrypted-totp-secret"): TotpSecret {
-  const r = TotpSecret.from(value);
-  if (!r.ok) throw new Error("test fixture: totp");
-  return r.value;
-}
-
-function recoveryCode(value: string): RecoveryCodeHash {
-  const r = RecoveryCodeHash.from(value);
-  if (!r.ok) throw new Error("test fixture: recovery code");
-  return r.value;
-}
-
 describe("AdminAccount", () => {
   describe("create", () => {
-    it("ACTIVE / totpEnabled=false / recoveryCodes=[] で生成される", () => {
+    it("ACTIVE / lastLoginAt=null で生成される", () => {
       const now = new Date("2026-04-21T00:00:00Z");
-      const account = AdminAccount.create({ email: email(), passwordHash: hash(), now });
+      const account = AdminAccount.create({ email: email(), now });
 
       expect(account.status).toBe(AdminAccountStatus.ACTIVE);
-      expect(account.totpEnabled).toBe(false);
-      expect(account.totpSecret).toBeNull();
-      expect(account.recoveryCodes).toEqual([]);
       expect(account.lastLoginAt).toBeNull();
       expect(account.createdAt).toBe(now);
       expect(account.updatedAt).toBe(now);
     });
 
     it("id を省略すると新規 AdminAccountId が割り当てられる", () => {
-      const a = AdminAccount.create({ email: email("a@example.com"), passwordHash: hash() });
-      const b = AdminAccount.create({ email: email("b@example.com"), passwordHash: hash() });
+      const a = AdminAccount.create({ email: email("a@example.com") });
+      const b = AdminAccount.create({ email: email("b@example.com") });
       expect(a.id.equals(b.id)).toBe(false);
     });
   });
 
   describe("disable / enable", () => {
     it("ACTIVE → DISABLED に遷移する", () => {
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      const account = AdminAccount.create({ email: email() });
       const result = account.disable();
       expect(result.ok).toBe(true);
       expect(account.status).toBe(AdminAccountStatus.DISABLED);
     });
 
     it("DISABLED を再度 disable するとエラー", () => {
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      const account = AdminAccount.create({ email: email() });
       account.disable();
       const result = account.disable();
       expect(result.ok).toBe(false);
@@ -71,8 +47,29 @@ describe("AdminAccount", () => {
       }
     });
 
+    it("自分自身を disable しようとするとエラー (#148 / #158 L4)", () => {
+      const id = AdminAccountId.generate();
+      const account = AdminAccount.create({ email: email(), id });
+      const result = account.disable({ operatorId: id });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe("CANNOT_DISABLE_SELF");
+      }
+      // 状態は変化していない
+      expect(account.status).toBe(AdminAccountStatus.ACTIVE);
+    });
+
+    it("他人が disable する場合は operatorId を渡しても成功する", () => {
+      const targetId = AdminAccountId.generate();
+      const operatorId = AdminAccountId.generate();
+      const account = AdminAccount.create({ email: email(), id: targetId });
+      const result = account.disable({ operatorId });
+      expect(result.ok).toBe(true);
+      expect(account.status).toBe(AdminAccountStatus.DISABLED);
+    });
+
     it("DISABLED → ACTIVE に再有効化できる", () => {
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      const account = AdminAccount.create({ email: email() });
       account.disable();
       account.enable();
       expect(account.status).toBe(AdminAccountStatus.ACTIVE);
@@ -81,7 +78,7 @@ describe("AdminAccount", () => {
     it("ACTIVE を再度 enable() しても冪等で副作用がない", () => {
       // enable() は disable() と意図的に非対称 (Result を返さず void)。
       // 運営 UI で既に ACTIVE の AdminAccount を再有効化してもエラーにしない。
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      const account = AdminAccount.create({ email: email() });
       const before = account.updatedAt;
       account.enable();
       expect(account.status).toBe(AdminAccountStatus.ACTIVE);
@@ -90,39 +87,49 @@ describe("AdminAccount", () => {
     });
   });
 
-  describe("enableTotp", () => {
-    it("未設定から TOTP を有効化できる", () => {
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
-      const result = account.enableTotp({
-        secret: totp(),
-        recoveryCodes: [recoveryCode("h1"), recoveryCode("h2")],
-      });
+  describe("createFromRawEmail (#148 / #158 L4)", () => {
+    it("正しい email 文字列から AdminAccount を生成する", () => {
+      const result = AdminAccount.createFromRawEmail({ email: "  New@Example.com  " });
       expect(result.ok).toBe(true);
-      expect(account.totpEnabled).toBe(true);
-      expect(account.recoveryCodes).toHaveLength(2);
+      if (result.ok) {
+        // 正規化されている
+        expect(result.value.email.toString()).toBe("new@example.com");
+        expect(result.value.status).toBe(AdminAccountStatus.ACTIVE);
+        expect(result.value.lastLoginAt).toBeNull();
+      }
     });
 
-    it("既に有効化済みならエラー", () => {
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
-      account.enableTotp({ secret: totp(), recoveryCodes: [] });
-      const result = account.enableTotp({ secret: totp("another"), recoveryCodes: [] });
-      expect(result.ok).toBe(false);
-    });
-
-    it("DISABLED 状態では TOTP を有効化できない", () => {
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
-      account.disable();
-      const result = account.enableTotp({ secret: totp(), recoveryCodes: [] });
+    it("空文字は EMAIL_REQUIRED エラー", () => {
+      const result = AdminAccount.createFromRawEmail({ email: "   " });
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.type).toBe("ACCOUNT_DISABLED");
+        expect(result.error.type).toBe("EMAIL_REQUIRED");
       }
+    });
+
+    it("不正な形式は EMAIL_INVALID_FORMAT エラー", () => {
+      const result = AdminAccount.createFromRawEmail({ email: "not-an-email" });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe("EMAIL_INVALID_FORMAT");
+      }
+    });
+  });
+
+  describe("predicates (#148)", () => {
+    it("isActive / isDisabled は status に応じて切り替わる", () => {
+      const account = AdminAccount.create({ email: email() });
+      expect(account.isActive()).toBe(true);
+      expect(account.isDisabled()).toBe(false);
+      account.disable();
+      expect(account.isActive()).toBe(false);
+      expect(account.isDisabled()).toBe(true);
     });
   });
 
   describe("recordLogin", () => {
     it("lastLoginAt と updatedAt を更新する", () => {
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      const account = AdminAccount.create({ email: email() });
       const at = new Date("2026-04-21T05:00:00Z");
       account.recordLogin({ at });
       expect(account.lastLoginAt).toBe(at);
@@ -132,32 +139,11 @@ describe("AdminAccount", () => {
     it("DISABLED 状態でも lastLoginAt を更新できる (呼び出し側が status を確認する責務)", () => {
       // recordLogin は状態ガードを持たず、認証成功後の記録にのみ使う。
       // DISABLED アカウントでの認証拒否は application 層 / 認証基盤の責務。
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
+      const account = AdminAccount.create({ email: email() });
       account.disable();
       const at = new Date("2026-04-21T05:00:00Z");
       account.recordLogin({ at });
       expect(account.lastLoginAt).toBe(at);
-    });
-  });
-
-  describe("changePassword", () => {
-    it("passwordHash と updatedAt を更新する", () => {
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
-      const newHash = hash("$2b$10$zzzzzzzzzzzzzzzzzzzzzzzz");
-      const at = new Date("2026-04-21T06:00:00Z");
-      account.changePassword({ passwordHash: newHash, now: at });
-      expect(account.passwordHash.equals(newHash)).toBe(true);
-      expect(account.updatedAt).toBe(at);
-    });
-
-    it("DISABLED 状態でも passwordHash を変更できる (運営による強制リセット用途)", () => {
-      // changePassword は状態ガードを持たない。DISABLED 中のパスワード変更を
-      // 許容することで、運営 UI から強制リセット → 再有効化のフローを成立させる。
-      const account = AdminAccount.create({ email: email(), passwordHash: hash() });
-      account.disable();
-      const newHash = hash("$2b$10$yyyyyyyyyyyyyyyyyyyyyy");
-      account.changePassword({ passwordHash: newHash });
-      expect(account.passwordHash.equals(newHash)).toBe(true);
     });
   });
 
@@ -168,10 +154,6 @@ describe("AdminAccount", () => {
       const account = AdminAccount.reconstruct({
         id,
         email: email(),
-        passwordHash: hash(),
-        totpSecret: totp(),
-        totpEnabled: true,
-        recoveryCodes: [recoveryCode("h")],
         status: AdminAccountStatus.DISABLED,
         lastLoginAt: now,
         createdAt: now,
@@ -179,8 +161,7 @@ describe("AdminAccount", () => {
       });
       expect(account.id.equals(id)).toBe(true);
       expect(account.status).toBe(AdminAccountStatus.DISABLED);
-      expect(account.totpEnabled).toBe(true);
-      expect(account.recoveryCodes).toHaveLength(1);
+      expect(account.lastLoginAt).toBe(now);
     });
   });
 });

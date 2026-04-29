@@ -1,228 +1,195 @@
-# ADMIN ロール付与の運用手順
+# 運営アカウント (AdminAccount) のセットアップ・運用手順
 
 ## 概要
 
-Phase 1 では ADMIN ロール付与 UI は存在しない。
-運営メンバーのアカウント作成・ADMIN ロール付与は、Supabase Studio（DB 直編集）で行う。
+`apps/admin` の認証は **`AdminAccount` ベース + Magic Link (NextAuth EmailProvider) + Database セッション戦略**。Phase 2 準備（Issue #140 系）で `Account.roles = ADMIN` 方式は廃止済み。
 
-対象: 運営メンバー 2 名分のアカウント
+本ドキュメントは:
 
-## 前提条件
+- 初期 `AdminAccount` を作成する手順
+- 運用中に運営メンバーを追加・無効化・再有効化する手順
+- 必要な環境変数 / Cron / 監査ログ
+- 緊急時の強制 revoke 手順
 
-- Supabase プロジェクトにアクセスできること
-- Supabase Studio の URL を把握していること（本番・ステージング）
-- 運営メンバーのメールアドレスが決まっていること
-- bcrypt ハッシュを生成できる環境があること（Node.js / bun）
-
-## テーブル構造（参考）
-
-対象テーブル: `accounts`（Prisma モデル名: `Account`）
-
-| カラム | 型 | 備考 |
-|---|---|---|
-| `id` | UUID | `gen_random_uuid()` で自動生成 |
-| `email` | TEXT (UNIQUE) | メールアドレス |
-| `displayName` | TEXT | 表示名 |
-| `status` | enum `AccountStatus` | `PENDING_EMAIL_CONFIRMATION` / `ACTIVE` |
-| `passwordHash` | TEXT (nullable) | bcrypt ハッシュ |
-| `roles` | enum `Role[]` | `{SUPPORTER}`, `{SUPPORTER,ADMIN}` など |
-| `activationToken` | TEXT (nullable, UNIQUE) | アクティベーション用 |
-| `activationTokenExp` | TIMESTAMP (nullable) | トークン有効期限 |
-| `iconUrl` | TEXT (nullable) | アイコン URL |
-| `bio` | TEXT (nullable) | 自己紹介 |
-| `snsLinks` | JSONB (nullable) | SNS リンク |
-| `contributedHours` | INT | デフォルト 0 |
-| `receivedHours` | INT | デフォルト 0 |
-| `createdAt` | TIMESTAMP | 自動 |
-| `updatedAt` | TIMESTAMP | 自動 |
-
-### ロール一覧
-
-| ロール | 用途 |
-|---|---|
-| `SUPPORTER` | 全アカウント共通（デフォルト） |
-| `LEADER` | リーダー応募承認後に付与 |
-| `ADMIN` | 運営メンバー |
+を扱う。設計の詳細は `docs-repository/docs/202604_初回リリースに向けた計画/運営アプリ.md` および `アカウント.md` の「運営アカウント (AdminAccount)」セクション参照。
 
 ---
 
-## 手順 1: 運営メンバーのアカウント作成
+## 集約（参考）
 
-2 つの方法がある。状況に応じて選択する。
+```
+AdminAccount (運営アカウント)
+  ├─ AdminSession                 (Database セッション、TTL 1h)
+  ├─ AdminVerificationToken       (Magic Link ワンタイムトークン)
+  └─ AdminAuditLog                (運営操作の監査証跡)
+```
 
-### 方法 A: 通常フロー経由（推奨）
+| テーブル | 主用途 | 備考 |
+|---|---|---|
+| `admin_accounts` | 運営アカウント本体 | `email` (UNIQUE) + `status` (ACTIVE / DISABLED) |
+| `admin_sessions` | NextAuth セッション | DELETE で即時 revoke |
+| `admin_verification_tokens` | Magic Link トークン | 1 回消費で削除。`/api/cron/gc-admin-auth` で期限切れも回収 |
+| `admin_audit_logs` | 監査ログ | `adminSessionId` は SetNull で履歴を残す |
 
-通常の応募フローでアカウントを作成し、その後 Supabase Studio でロールを変更する。
+---
 
-1. `/apply` フォームからメールアドレス・パスワードを入力して応募する
-2. アクティベーションメールのリンクをクリックしてアカウントを有効化する
-3. アカウントの `status` が `ACTIVE` になったことを確認する
-4. **手順 2** に進み、ADMIN ロールを付与する
+## 環境変数（Vercel `apps/admin` プロジェクト）
 
-> 方法 A のメリット: パスワードハッシュやアクティベーションの処理をアプリケーションに任せられるため、手動ミスが少ない。
+| 変数 | 用途 | 注意点 |
+|---|---|---|
+| `NEXTAUTH_SECRET` | NextAuth セッション / Magic Link トークン署名 | `apps/web` と **別値**。本番未設定なら起動拒否 (#147 M-3) |
+| `NEXTAUTH_URL` | Magic Link URL の origin | `https://admin.<本番ドメイン>` を設定。誤って web 側に向くとリンクが死ぬ |
+| `ADMIN_MAGIC_LINK_HMAC_SECRET` | Magic Link URL の HMAC 署名鍵 | `NEXTAUTH_SECRET` と **別値**。未設定なら起動時に明示エラー (fail closed, #146) |
+| `RESEND_API_KEY` | Magic Link メール送信 (Resend) | `apps/web` と分離するなら別キーを推奨 |
+| `MAIL_FROM` | 送信元アドレス | 例: `"PhysiFun 運営" <admin-noreply@<本番ドメイン>>` |
+| `CRON_SECRET` | `/api/cron/gc-admin-auth` の Authorization 検証 | `Bearer <CRON_SECRET>`。timingSafeEqual で比較 |
+| `ADMIN_SEED_EMAIL` | seed スクリプトが作成する初期 AdminAccount の email | seed 後に Vercel から削除可 |
+| `DATABASE_URL` | 共通 Supabase Postgres | `apps/web` と同値で OK |
 
-### 方法 B: Supabase Studio の SQL エディタで直接 INSERT
+> `NEXTAUTH_SECRET` と `ADMIN_MAGIC_LINK_HMAC_SECRET` は **必ず別値**にする。同一値で運用すると HMAC 検証層を回避された場合に署名と Cookie の独立性が崩れる。
 
-アプリケーションがまだデプロイされていない場合や、初期セットアップ時に使用する。
+---
 
-#### B-1. パスワードハッシュの生成
+## Vercel Cron（期限切れ GC）
+
+`apps/admin/vercel.json` で `/api/cron/gc-admin-auth` を毎時実行する設定済み。
+
+- スケジュール: `0 * * * *`
+- 認証: `Authorization: Bearer <CRON_SECRET>`
+- 処理: `AdminVerificationToken` / `AdminSession` のうち `expires < now()` の行を物理削除
+- 監査: `AdminAuditLog.adminSessionId` は SetNull なので、セッションが GC された後も履歴は残る
+
+ローカル / E2E では cron は走らないため、テスト側から `fetch('/api/cron/gc-admin-auth', { headers: { authorization: 'Bearer <CRON_SECRET>' } })` を直接叩いて検証する。
+
+---
+
+## 初期セットアップ
+
+### 推奨: seed スクリプト経由
 
 ```bash
-# bun の場合
-bun -e "import bcrypt from 'bcryptjs'; console.log(await bcrypt.hash('ここに強固なパスワード', 10));"
+# 環境変数 (.env.local など)
+DATABASE_URL=postgres://...
+ADMIN_SEED_EMAIL=admin@your-domain.example
 
-# または Node.js の場合
-node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('ここに強固なパスワード', 10, (err, hash) => console.log(hash));"
+bun --filter @physifun/infrastructure prisma db seed
 ```
 
-> パスワードは最低 12 文字以上、英大小文字・数字・記号を含む強固なものを使用すること。
+`packages/infrastructure/prisma/seed.ts` が `ADMIN_SEED_EMAIL` の `AdminAccount` を `ACTIVE` で upsert する。完了後は `ADMIN_SEED_EMAIL` を Vercel から削除して構わない。
 
-#### B-2. SQL で INSERT
-
-Supabase Studio の SQL Editor で以下を実行する。
+### 代替: Supabase Studio から SQL 直接実行
 
 ```sql
--- 運営メンバー 1
-INSERT INTO accounts (
-  id,
-  email,
-  "displayName",
-  status,
-  roles,
-  "passwordHash",
-  "contributedHours",
-  "receivedHours",
-  "createdAt",
-  "updatedAt"
-) VALUES (
+INSERT INTO admin_accounts (id, email, status, "createdAt", "updatedAt")
+VALUES (
   gen_random_uuid(),
-  'admin1@example.com',          -- 実際のメールアドレスに置き換え
-  '管理者1',                       -- 表示名
+  'admin@your-domain.example',
   'ACTIVE',
-  ARRAY['SUPPORTER', 'ADMIN']::"Role"[],
-  '$2b$10$...ここにbcryptハッシュ...', -- B-1 で生成したハッシュ
-  0,
-  0,
-  NOW(),
-  NOW()
-);
-
--- 運営メンバー 2
-INSERT INTO accounts (
-  id,
-  email,
-  "displayName",
-  status,
-  roles,
-  "passwordHash",
-  "contributedHours",
-  "receivedHours",
-  "createdAt",
-  "updatedAt"
-) VALUES (
-  gen_random_uuid(),
-  'admin2@example.com',          -- 実際のメールアドレスに置き換え
-  '管理者2',                       -- 表示名
-  'ACTIVE',
-  ARRAY['SUPPORTER', 'ADMIN']::"Role"[],
-  '$2b$10$...ここにbcryptハッシュ...', -- B-1 で生成したハッシュ
-  0,
-  0,
   NOW(),
   NOW()
 );
 ```
 
----
-
-## 手順 2: 既存アカウントに ADMIN ロールを追加
-
-方法 A で作成したアカウント、または既に存在するアカウントに ADMIN ロールを追加する場合。
-
-> **前提**: 方法 A 経由でアカウント作成済みの場合、`SUPPORTER` ロールは自動付与されている。手動 INSERT（方法 B）でも `SUPPORTER` を含めて作成しているため、以下の UPDATE では `ADMIN` の追加のみ行う。
-
-```sql
--- 既存アカウントに ADMIN ロールを追加（重複付与を防止）
-UPDATE accounts
-SET roles = array_append(roles, 'ADMIN'::"Role"),
-    "updatedAt" = NOW()
-WHERE email = 'admin@example.com'
-  AND NOT ('ADMIN'::"Role" = ANY(roles));
-```
-
-> **注意**: 生 SQL では `updatedAt` は Prisma ORM のように自動更新されないため、必ず `NOW()` を明示すること。
+> パスワードハッシュは不要（Magic Link 方式のため）。
 
 ---
 
-## 手順 3: 確認
+## 運用中の運営メンバー追加（推奨）
 
-ADMIN ロールが正しく付与されたことを確認する。
+`/admin/members` UI から実行する（#148）:
 
-```sql
--- ADMIN ロール保持者の一覧
-SELECT id, email, "displayName", roles, status
-FROM accounts
-WHERE 'ADMIN'::"Role" = ANY(roles);
-```
+1. ACTIVE な運営として `apps/admin` にログイン
+2. `/admin/members` を開き、追加フォームに新規運営の email を入力
+3. `AdminAccount` が `ACTIVE` で作成される
+4. 追加された運営は `/admin/login` で email を入力 → Magic Link を受信 → リンククリックでログイン可能
 
-期待される結果:
-- 2 名分のレコードが表示される
-- `roles` に `ADMIN` が含まれている
-- `status` が `ACTIVE` になっている
+操作は `AdminAuditLog` に `admin_account.create` として記録される。
 
 ---
 
-## 手順 4: ロール削除（緊急時）
+## 運営メンバー無効化 (`disable`)
 
-ADMIN ロールを剥奪する必要がある場合（アカウント侵害時など）。
+`/admin/members` の各行アクション「無効化」を実行する:
+
+- `AdminAccount.status` が `DISABLED` に変更される
+- 当該 AdminAccount の `AdminSession` が **すべて削除される**（強制 revoke）
+- 以降は `/admin/login` で email を入力しても `signIn` callback で弾かれて Magic Link は送信されない
+- `AdminAuditLog` に `admin_account.disable` + `admin_session.revoke` が記録される
+
+> 自分自身の `AdminAccount` は無効化できない（UI / API ともにガード）。最後の運営が抜けるリスクを構造的に排除している。
+
+### 緊急時に手作業で revoke する場合
+
+UI からアクセスできない場合は SQL で直接行う:
 
 ```sql
--- ADMIN ロールを削除
-UPDATE accounts
-SET roles = array_remove(roles, 'ADMIN'::"Role"),
-    "updatedAt" = NOW()
-WHERE email = 'admin@example.com';
+-- 1. AdminAccount を DISABLED に
+UPDATE admin_accounts
+SET status = 'DISABLED', "updatedAt" = NOW()
+WHERE email = 'compromised@example.com';
+
+-- 2. 該当 AdminAccount の AdminSession を全削除（強制 revoke）
+DELETE FROM admin_sessions
+WHERE "adminAccountId" IN (
+  SELECT id FROM admin_accounts WHERE email = 'compromised@example.com'
+);
+
+-- 3. 念のため未消費の Magic Link トークンも無効化
+DELETE FROM admin_verification_tokens
+WHERE identifier = 'compromised@example.com';
 ```
 
-削除後、手順 3 の確認クエリで対象アカウントが表示されないことを確認する。
+監査履歴を残すため、操作後に `AdminAuditLog` へ手動 INSERT も検討する（運用裁量）。
+
+---
+
+## 再有効化 (`enable`)
+
+`/admin/members` の各行アクション「再有効化」で `DISABLED → ACTIVE` に戻す。`AdminAuditLog` に `admin_account.enable` が記録される。
+
+---
+
+## 確認クエリ
+
+```sql
+-- ACTIVE な運営アカウント一覧
+SELECT id, email, status, "lastLoginAt", "createdAt"
+FROM admin_accounts
+WHERE status = 'ACTIVE'
+ORDER BY "createdAt";
+
+-- 直近 24 時間の運営操作履歴
+SELECT
+  l."createdAt",
+  a.email AS admin_email,
+  l.action,
+  l."targetType",
+  l."targetId"
+FROM admin_audit_logs l
+JOIN admin_accounts a ON a.id = l."adminAccountId"
+WHERE l."createdAt" >= NOW() - INTERVAL '24 hours'
+ORDER BY l."createdAt" DESC;
+```
 
 ---
 
 ## 注意事項
 
-- **最小権限の原則**: ADMIN ロール付与は最小限のメンバーに限定する
-- **パスワード強度**: 最低 12 文字以上、英大小文字・数字・記号を含む
-- **アクセス制限**: 本番環境の Supabase Studio へのアクセスは限定メンバーのみに許可する
-- **動作確認**: ロール変更後は `apps/admin`（管理画面）にログインして動作確認する
-- **パスワードの共有**: 生成したパスワードはパスワードマネージャーを通じて共有すること（平文メール禁止）
-- **本番操作時の注意**: SQL 実行前に必ず `WHERE` 句の対象を確認する。`BEGIN` / `COMMIT` でトランザクションを使うことを推奨する
-
-```sql
--- トランザクション例
-BEGIN;
-
-UPDATE accounts
-SET roles = array_append(roles, 'ADMIN'::"Role"),
-    "updatedAt" = NOW()
-WHERE email = 'admin@example.com'
-  AND NOT ('ADMIN'::"Role" = ANY(roles));
-
--- 結果を確認
-SELECT id, email, "displayName", roles, status
-FROM accounts
-WHERE email = 'admin@example.com';
-
--- 問題なければ
-COMMIT;
--- 問題があれば
--- ROLLBACK;
-```
+- **最小権限の原則**: `AdminAccount` は最小限のメンバーに限定する
+- **アクセス制限**: 本番 Supabase Studio へのアクセスは限定メンバーのみ
+- **動作確認**: 追加・無効化後は `/admin/login` で実際にログインできる/できないを確認
+- **パスワードは不要**: Magic Link 方式のため共有すべき資格情報は無い。アクセスは email 受信箱の所有 + Magic Link クリックで完結する
+- **`AdminAccount` は物理削除しない**: 監査履歴を保つため `status = DISABLED` で論理削除する。FK は `onDelete: Restrict`
 
 ---
 
-## 将来の改善
+## 関連 Issue / 実装
 
-- ADMIN ロール付与 UI の追加（既存 ADMIN による昇格機能）
-- 監査ログの導入（誰がいつロールを変更したか記録）
-- 2FA（二要素認証）の必須化
-- ADMIN ロール付与時の承認フロー導入
+- #140: 親 Issue（AdminAccount 完全分離）
+- #144: ドメイン + Prisma migration
+- #145: `apps/admin` NextAuth を AdminAccount + Magic Link に差し替え
+- #146: Magic Link URL の HMAC 検証強化
+- #147: `apps/admin` を別 Vercel プロジェクト化 + サブドメイン公開
+- #148: 運営メンバー追加 UI + 強制 revoke
+- #149: AdminAuditLog 操作履歴 UI
+- #150: ドキュメント更新 + E2E 検証（本ドキュメントの整備を含む）

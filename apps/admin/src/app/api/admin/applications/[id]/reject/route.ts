@@ -1,5 +1,4 @@
 import { type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import {
   RejectLeaderApplicationUseCase,
   type RejectLeaderApplicationError,
@@ -14,6 +13,9 @@ import {
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
+import { logAdminAction } from "@/lib/api/auditLog";
+import { enforceAdminRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/admin/applications/:id/reject
@@ -23,26 +25,26 @@ import {
  *
  * 認証の注意:
  * - middleware.ts は /api パスを除外しているため、この Route Handler が唯一の認可チェック
- * - token.roles は auth.ts の jwt コールバックで設定される（TODO: #61 で実装予定）
+ * - 運営認証は `@/lib/api/auth#getAuthenticatedAdminId` で AdminSession 経由の Database 戦略 (#145)
+ * - 認証後にレート制限 (adminAccountId 単位 60 req/min) を適用 (#157 H1)
+ * - 成功後に AdminAuditLog へ post-hook 書き込み (#157 H2)
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // ADMIN ロールチェック
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) return unauthorizedResponse();
-    const roles = (token.roles as string[] | undefined) ?? [];
-    if (!roles.includes("ADMIN")) return unauthorizedResponse("ADMIN 権限が必要です");
+    const reviewerId = await getAuthenticatedAdminId();
+    if (!reviewerId) return unauthorizedResponse();
+
+    const limited = enforceAdminRateLimit("adminAction", reviewerId);
+    if (limited) return limited;
 
     const { id } = await params;
 
-    // UUID 形式バリデーション
     if (!isUuidV4(id)) {
       return validationErrorResponse("無効な応募 ID です", {
         id: ["UUID v4 形式で指定してください"],
       });
     }
 
-    // リクエストボディ
     let body: { reviewerNote?: string };
     try {
       body = await request.json();
@@ -65,6 +67,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!result.ok) {
       return mapRejectError(result.error);
     }
+
+    // #157 H2: 運営オペの監査証跡
+    await logAdminAction({
+      adminAccountId: reviewerId,
+      action: "leader_application.reject",
+      targetType: "LeaderApplication",
+      targetId: result.value.applicationId,
+      metadata: { reviewerNote: body.reviewerNote.trim() },
+    });
 
     return successResponse({
       applicationId: result.value.applicationId,

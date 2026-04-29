@@ -1,5 +1,4 @@
 import { type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import {
   ForceUnpublishProjectUseCase,
   type ForceUnpublishProjectError,
@@ -14,6 +13,9 @@ import {
   unprocessableEntityResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
+import { getAuthenticatedAdminId } from "@/lib/api/auth";
+import { logAdminAction } from "@/lib/api/auditLog";
+import { enforceAdminRateLimit } from "@/lib/rateLimit";
 
 /**
  * POST /api/admin/projects/:id/force-unpublish
@@ -23,24 +25,21 @@ import {
  *
  * 認証の注意:
  * - middleware.ts は /api パスを除外しているため、この Route Handler が第一防衛線
- * - UseCase 層でも findAccountById → roles.includes("ADMIN") で二重防御している
- * - token.roles は auth.ts の jwt コールバックで設定される
+ * - UseCase 層でも findAdminReviewerById (ACTIVE な AdminAccount) で二重防御している
+ * - 認証後にレート制限 (adminAccountId 単位 60 req/min) を適用 (#157 H1)
+ * - 成功後に AdminAuditLog へ post-hook 書き込み (#157 H2)
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // 第一防衛線: ADMIN ロールチェック（token ベース）
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) return unauthorizedResponse();
-    const roles = (token.roles as string[] | undefined) ?? [];
-    if (!roles.includes("ADMIN")) return unauthorizedResponse("ADMIN 権限が必要です");
-
-    // token.sub は reviewer の AccountId
-    const reviewerId = token.sub;
+    // 第一防衛線: AdminSession による運営認証 (#145)
+    const reviewerId = await getAuthenticatedAdminId();
     if (!reviewerId) return unauthorizedResponse();
+
+    const limited = enforceAdminRateLimit("adminAction", reviewerId);
+    if (limited) return limited;
 
     const { id } = await params;
 
-    // UUID 形式バリデーション
     if (!isUuidV4(id)) {
       return validationErrorResponse("無効なプロジェクト ID です", {
         id: ["UUID v4 形式で指定してください"],
@@ -72,6 +71,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return mapForceUnpublishError(result.error);
     }
 
+    // #157 H2: 運営オペの監査証跡 (強制非公開は特に重要なので必ず記録)
+    await logAdminAction({
+      adminAccountId: reviewerId,
+      action: "project.force_unpublish",
+      targetType: "Project",
+      targetId: result.value.projectId,
+      metadata: { reviewerNote: body.reviewerNote.trim() },
+    });
+
     return successResponse({
       projectId: result.value.projectId,
     });
@@ -102,9 +110,8 @@ function mapForceUnpublishError(error: ForceUnpublishProjectError) {
     case "PROJECT_NOT_FOUND":
       return notFoundResponse("プロジェクト");
     case "REVIEWER_NOT_FOUND":
-      return notFoundResponse("アカウント");
-    case "REVIEWER_NOT_ADMIN":
-      return unauthorizedResponse("ADMIN 権限が必要です");
+      // #157 M3: reviewer が DISABLED に落ちた稀ケース。401 で再ログインを促す。
+      return unauthorizedResponse();
     case "DOMAIN_ERROR":
       return unprocessableEntityResponse("このプロジェクトは現在の状態では強制非公開にできません");
     case "FEEDBACK_ERROR":

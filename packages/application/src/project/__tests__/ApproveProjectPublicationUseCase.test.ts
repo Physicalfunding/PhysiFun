@@ -16,10 +16,8 @@ import {
   OwnerPublishedLimitExceededError,
   PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE,
 } from "../ApproveProjectPublicationUseCase";
-import type {
-  AccountForProjectApproval,
-  ApproveProjectPublicationPort,
-} from "../ports/ApproveProjectPublicationPort";
+import type { ApproveProjectPublicationPort } from "../ports/ApproveProjectPublicationPort";
+import type { AdminReviewer } from "../../shared/AdminReviewer";
 import type { CreateProjectOutboxMessageParams } from "../ports/RequestPublishPort";
 
 // ==================== テストヘルパー ====================
@@ -83,12 +81,12 @@ function createPendingReviewProject(): Project {
 
 class InMemoryApproveProjectPublicationPort implements ApproveProjectPublicationPort {
   /**
-   * findAccountById の挙動を制御するオーバーライド。
-   * - 未設定: デフォルトで ADMIN として扱う
-   * - null: アカウント未発見（REVIEWER_NOT_FOUND 検証用）
-   * - object: そのロール構成を返す
+   * findAdminReviewerById の挙動を制御するオーバーライド。
+   * - 未設定: デフォルトで該当 id の AdminReviewer を返す
+   * - null: reviewer 未発見（REVIEWER_NOT_FOUND 検証用）
+   * - object: その AdminReviewer を返す
    */
-  accountOverrides = new Map<string, AccountForProjectApproval | null>();
+  adminReviewerOverrides = new Map<string, AdminReviewer | null>();
 
   /** findProjectById が返す候補 */
   projects: Project[] = [];
@@ -114,12 +112,12 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
   /** executeApproveInTransaction 呼び出し回数 */
   executeApproveCallCount = 0;
 
-  async findAccountById(accountId: string): Promise<AccountForProjectApproval | null> {
-    if (this.accountOverrides.has(accountId)) {
-      return this.accountOverrides.get(accountId) ?? null;
+  async findAdminReviewerById(id: string): Promise<AdminReviewer | null> {
+    if (this.adminReviewerOverrides.has(id)) {
+      return this.adminReviewerOverrides.get(id) ?? null;
     }
-    // デフォルト: ADMIN として扱う
-    return { id: accountId, roles: ["ADMIN"] };
+    // デフォルト: 該当 id の ACTIVE な AdminAccount として扱う
+    return { id, email: `admin-${id}@example.com` };
   }
 
   async findProjectById(projectId: string): Promise<Project | null> {
@@ -291,10 +289,10 @@ describe("ApproveProjectPublicationUseCase", () => {
     expect(port.executeApproveCallCount).toBe(0);
   });
 
-  // ---- ADMIN ロール二重防御 ----
+  // ---- reviewer (AdminAccount) 二重防御 ----
 
-  it("審査者アカウントが存在しない場合は REVIEWER_NOT_FOUND", async () => {
-    port.accountOverrides.set(REVIEWER_ACCOUNT_ID_STR, null);
+  it("審査者 (AdminAccount) が存在しない場合は REVIEWER_NOT_FOUND", async () => {
+    port.adminReviewerOverrides.set(REVIEWER_ACCOUNT_ID_STR, null);
 
     const result = await useCase.execute({
       projectId: PROJECT_ID_STR,
@@ -307,11 +305,9 @@ describe("ApproveProjectPublicationUseCase", () => {
     expect(port.executeApproveCallCount).toBe(0);
   });
 
-  it("審査者が ADMIN ロールを持たない場合は REVIEWER_NOT_ADMIN", async () => {
-    port.accountOverrides.set(REVIEWER_ACCOUNT_ID_STR, {
-      id: REVIEWER_ACCOUNT_ID_STR,
-      roles: ["LEADER"],
-    });
+  it("AdminAccount が無効化済み（adapter が null 返却）の場合 REVIEWER_NOT_FOUND", async () => {
+    // adapter 層で status !== "ACTIVE" の AdminAccount は null にマップされる想定。
+    port.adminReviewerOverrides.set(REVIEWER_ACCOUNT_ID_STR, null);
     port.projects.push(createPendingReviewProject());
 
     const result = await useCase.execute({
@@ -321,7 +317,7 @@ describe("ApproveProjectPublicationUseCase", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.type).toBe("REVIEWER_NOT_ADMIN");
+    expect(result.error.type).toBe("REVIEWER_NOT_FOUND");
     expect(port.executeApproveCallCount).toBe(0);
   });
 
