@@ -1,5 +1,23 @@
 # 設計書
 
+> ⚠️ **このドキュメントは旧 MVP 設計時点のスナップショットです（2026-04 時点で大幅に乖離）**
+>
+> 本書はモノレポ化（`apps/web` + `apps/admin` + `packages/{domain,application,infrastructure,ui-shared}`）以前のディレクトリ構成（`src/` 直配下）を前提としており、現行の構成とは異なる。また、以下の API / 機能は **現行仕様では削除または変更されている**:
+>
+> - 4.4 リターン API（→ 「リターン」概念は不採用）
+> - 4.6 参加申し込み API（→ サポート募集機能として再設計、`docs-repository/docs/202604_初回リリースに向けた計画/サポート募集.md` 参照）
+> - 4.7 メッセージ API（→ 実装しない。LINE オープンチャットで代替）
+> - `participations/` `messages/` ディレクトリ（→ 存在しない）
+>
+> **最新の設計は以下を参照**:
+>
+> - [`apps/web/README.md`](../apps/web/README.md) / [`apps/admin/README.md`](../apps/admin/README.md) — アプリ別の構成・環境変数
+> - [`.docs/structure.md`](./structure.md) — ディレクトリ構成・命名規則
+> - [`.docs/tech.md`](./tech.md) — 技術スタック・インフラ
+> - [`docs-repository/docs/202604_初回リリースに向けた計画/`](../../docs-repository/docs/202604_初回リリースに向けた計画/) — フェーズ別の最新仕様
+>
+> 本書は履歴として残しているが、新規実装の根拠としては使用しないこと。
+
 ## 1. システムアーキテクチャ
 
 ### 1.1 技術スタック

@@ -12,11 +12,13 @@
 | React Hook Form + Zod | 最新 | フォーム・バリデーション |
 
 ### 認証
-| 技術 | 用途 |
-|---|---|
-| NextAuth.js v4 | セッション管理・認証（メール + パスワード） |
+| アプリ | 技術 | 戦略 | 用途 |
+|---|---|---|---|
+| `apps/web` | NextAuth.js v4 (Credentials Provider) | JWT セッション | 一般ユーザ（リーダー / サポーター）の email + password ログイン |
+| `apps/admin` | NextAuth.js v4 (EmailProvider / Magic Link) | Database セッション (TTL 1h) | 運営の Magic Link ログイン（`AdminAccount` 独立アグリゲート、`ADMIN_MAGIC_LINK_HMAC_SECRET` で URL 署名） |
 
 ※ Supabase Auth は**使わない**。認証は NextAuth.js に統一。
+※ web / admin は **Cookie・セッション・環境変数を完全分離**（サブドメイン分離: `<domain>` / `admin.<domain>`）。
 
 ### データベース
 | 技術 | 用途 |
@@ -29,11 +31,17 @@
 |---|---|
 | Supabase Storage | 画像アップロード（バケット: `project-images`） |
 
+### メール送信
+| 技術 | 用途 |
+|---|---|
+| Resend | アクティベーションメール / 運営 Magic Link メール送信 |
+
 ### インフラ（現在）
 | 技術 | 用途 |
 |---|---|
-| Vercel | ホスティング（サーバレス関数 + 静的配信） |
-| Supabase | DB + Storage（有料プランを前提） |
+| Vercel | ホスティング（**`apps/web` と `apps/admin` は別 Vercel プロジェクト**、サブドメイン分離） |
+| Supabase | DB + Storage（有料プランを前提、web / admin で同一インスタンスを共有） |
+| Bun (workspaces) | パッケージマネージャ + monorepo マネージャ |
 
 ---
 
@@ -45,15 +53,38 @@
 
 ### 必須の環境変数
 
+アプリごとに別 Vercel プロジェクトとして管理する。詳細は各 README を参照。
+
+#### `apps/web`（一般ユーザ向け）
+
 ```env
-DATABASE_URL          # Supabase PostgreSQL（Transaction Pooler URL）
-NEXTAUTH_SECRET       # ランダム秘密鍵
-NEXTAUTH_URL          # 本番: https://your-app.vercel.app
+DATABASE_URL                       # Supabase PostgreSQL（Transaction Pooler URL）
+NEXTAUTH_SECRET                    # apps/admin と必ず別値
+NEXTAUTH_URL                       # 本番: https://<本番ドメイン>
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-SUPABASE_STORAGE_BUCKET   # デフォルト: project-images
+SUPABASE_STORAGE_BUCKET            # デフォルト: project-images
+RESEND_API_KEY                     # アクティベーションメール送信
+ADMIN_EMAIL_LIST                   # 運営宛通知（Phase 1 用、カンマ区切り）
+NEXT_PUBLIC_RELEASE_PHASE          # 1 / 2
 ```
+
+詳細は [`apps/web/README.md`](../apps/web/README.md#環境変数) を参照。
+
+#### `apps/admin`（運営管理）
+
+```env
+DATABASE_URL                       # apps/web と同値で OK
+NEXTAUTH_SECRET                    # apps/web と必ず別値
+NEXTAUTH_URL                       # 本番: https://admin.<本番ドメイン>
+ADMIN_MAGIC_LINK_HMAC_SECRET       # NEXTAUTH_SECRET と必ず別値（未設定なら起動拒否）
+RESEND_API_KEY                     # 運営 Magic Link 送信
+MAIL_FROM                          # 例: "PhysiFun 運営" <admin-noreply@<本番ドメイン>>
+CRON_SECRET                        # /api/cron/gc-admin-auth の Bearer 認証
+```
+
+詳細は [`apps/admin/README.md`](../apps/admin/README.md#環境変数) および [`.docs/admin-role-setup.md`](./admin-role-setup.md) を参照。
 
 ---
 
@@ -71,14 +102,28 @@ SUPABASE_STORAGE_BUCKET   # デフォルト: project-images
 
 ## アーキテクチャ原則
 
+### モノレポ構成
+
+```
+PhysiFun/
+├── apps/
+│   ├── web/        # 一般ユーザ向け（Next.js, port 3000）
+│   └── admin/      # 運営管理（Next.js, port 3001、別 Vercel プロジェクト）
+└── packages/
+    ├── domain/          # エンティティ / 値オブジェクト / リポジトリ IF
+    ├── application/     # ユースケース
+    ├── infrastructure/  # Prisma / Supabase Storage / メール / Outbox
+    └── ui-shared/       # 両アプリ共通の UI コンポーネント
+```
+
 ### レイヤー構成（現在）
 
 ```
-Next.js App Router
+Next.js App Router (apps/{web,admin})
   ↓ API Route Handler（薄い BFF）
-  ↓ Application Layer（use-cases）
-  ↓ Domain Layer（entities・value-objects）
-  ↓ Infrastructure Layer（Prisma・Supabase）
+  ↓ Application Layer（packages/application/use-cases）
+  ↓ Domain Layer（packages/domain）
+  ↓ Infrastructure Layer（packages/infrastructure: Prisma / Supabase / Outbox）
 ```
 
 ### 分離の原則

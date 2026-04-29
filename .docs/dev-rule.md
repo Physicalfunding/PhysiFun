@@ -98,3 +98,5 @@ const { error } = await supabase.storage.from(bucket).upload(path, file);
 | ディレクトリ構成・命名規則の変更 | `structure.md` |
 | 開発フロー・PR ルールの変更 | `dev-rule.md` |
 | Claude 向け基本ルールの変更 | `CLAUDE.md` |
+| 運営アカウント（AdminAccount）のセットアップ・運用手順の変更 | `admin-role-setup.md` |
+| ローカル開発環境のセットアップ手順の変更 | ルート `README.md` / `apps/web/README.md` / `apps/admin/README.md` |
