@@ -2,7 +2,7 @@
 
 ## 基本方針
 
-- **単一リポジトリ** — フロントエンドと API を同一 Next.js プロジェクト内に同居
+- **モノレポ（bun workspaces）** — 一般ユーザ向け (`apps/web`) と運営管理 (`apps/admin`) を別 Next.js アプリとして分離。共通レイヤーは `packages/` に集約
 - **分離可能な構造** — 将来の AWS 移行・マイクロサービス化に備えてレイヤーを明確に分ける
 - **過剰な抽象化をしない** — 現在必要な複雑さのみ持つ
 
@@ -11,60 +11,53 @@
 ## ディレクトリ構成
 
 ```
-src/
-├── app/                          # Next.js App Router
-│   ├── (auth)/                   # 認証ページグループ（ログイン）
-│   ├── apply/                    # リーダー応募 LP（Phase 1: 非ログイン）
-│   ├── api/                      # API Route Handler（薄い BFF）
-│   │   ├── auth/
-│   │   ├── leader-applications/  # リーダー応募
-│   │   ├── projects/             # プロジェクト + 審査
-│   │   ├── recruitments/         # サポート募集（リーダー側 UI）
-│   │   └── my/
-│   ├── my/                       # 認証済みユーザー向けページ
-│   ├── page.tsx                  # トップページ（LP）
-│   └── layout.tsx
+PhysiFun/
+├── apps/
+│   ├── web/                              # 一般ユーザ向け Next.js（port 3000）
+│   │   └── src/app/
+│   │       ├── (auth)/                   # 認証ページ（ログイン）
+│   │       ├── activate/                 # メール経由のパスワード設定
+│   │       ├── apply/                    # リーダー応募 LP（Phase 1: 非ログイン）
+│   │       ├── api/                      # API Route Handler（薄い BFF）
+│   │       ├── my/                       # 認証済みユーザー向けページ（マイページ等）
+│   │       ├── projects/                 # 公開プロジェクトページ（Phase 2 拡張）
+│   │       └── page.tsx                  # トップページ（LP）
+│   │
+│   └── admin/                            # 運営管理 Next.js（port 3001、別 Vercel プロジェクト）
+│       └── src/app/
+│           ├── (auth)/                   # 運営ログイン（Magic Link）
+│           ├── admin/                    # 運営ダッシュボード（応募審査 / プロジェクト審査 / 運営メンバー管理 / 監査ログ）
+│           └── api/
+│               ├── auth/                 # NextAuth (EmailProvider)
+│               └── cron/gc-admin-auth/   # 期限切れトークン / セッションの GC
 │
-├── application/
-│   └── use-cases/                # ビジネスロジック層（ユースケース）
-│       ├── auth/
-│       ├── leader-application/   # リーダー応募（旧 entry）
-│       ├── project/              # プロジェクト作成・編集・公開審査
-│       └── recruitment/          # サポート募集（活動参加募集）
+├── packages/
+│   ├── domain/                           # ドメイン層
+│   │   ├── account/                      # Account, Role（SUPPORTER / LEADER）
+│   │   ├── admin-account/                # AdminAccount（apps/admin 専用、Magic Link 認証ベース）
+│   │   ├── leader-application/           # LeaderApplication
+│   │   ├── project/                      # Project, ProjectPhase, PublishStatus
+│   │   ├── recruitment/                  # Recruitment, SupportTicket（Phase 1 では未実装、計画段階）
+│   │   └── shared/                       # Result 型、共通値オブジェクト
+│   │
+│   ├── application/
+│   │   └── use-cases/                    # ユースケース層
+│   │
+│   ├── infrastructure/                   # インフラ層
+│   │   ├── prisma/                       # Prisma スキーマ / マイグレーション / seed
+│   │   ├── database/
+│   │   │   └── repositories/             # Prisma 実装リポジトリ
+│   │   ├── outbox/                       # Outbox ワーカー（メール送信のリトライ・冪等化、Magic Link / アクティベーションメール等）
+│   │   ├── mail/                         # Resend クライアント
+│   │   └── storage/                      # Supabase Storage 実装
+│   │
+│   └── ui-shared/                        # 両アプリで共有する UI コンポーネント
 │
-├── domain/                       # ドメイン層（エンティティ・値オブジェクト・リポジトリIF）
-│   ├── account/                  # Account, Role（ユーザー: SUPPORTER/LEADER）
-│   ├── admin-account/            # AdminAccount, AdminAccountStatus, AdminAccountEmail, AdminAccountId (Magic Link 認証ベース、apps/admin 専用 / packages/domain/admin-account/)
-│   ├── leader-application/       # LeaderApplication, ApplicationMode（PRE_ACCOUNT/AUTHENTICATED）
-│   ├── project/                  # Project, ProjectPhase, PublishStatus
-│   ├── recruitment/              # Recruitment, RecruitmentSchedule, SupportTicket
-│   └── shared/                   # Result 型、共通値オブジェクト
-│
-├── infrastructure/               # インフラ層（外部サービスとの接続）
-│   ├── database/
-│   │   ├── prisma.ts             # Prisma Client シングルトン
-│   │   └── repositories/         # Prisma 実装リポジトリ
-│   ├── outbox/                   # Outbox ワーカー（初期パスワード送信等）
-│   └── storage/
-│       └── ImageUploadService.ts # Supabase Storage 実装
-│
-├── components/                   # UI コンポーネント
-│   ├── common/                   # 汎用コンポーネント（Button, Input, Modal など）
-│   ├── auth/
-│   ├── leader-application/       # リーダー応募フォーム
-│   ├── project/                  # プロジェクト編集タブ（基本情報 / サポート募集 / 活動報告）
-│   ├── recruitment/              # サポート募集作成 UI
-│   └── providers/
-│
-├── lib/                          # ユーティリティ・ヘルパー
-│   ├── auth.ts                   # NextAuth 設定
-│   ├── session.ts                # セッションユーティリティ
-│   └── api/                      # API レスポンスヘルパー
-│
-└── types/                        # 型定義（外部ライブラリ拡張など）
+├── .docs/                                # 設計・運用ドキュメント
+└── docs-repository/                      # フェーズ別の最新仕様書
 ```
 
-> **Phase 1 スコープ**: `leader-application` / `project` / `recruitment`（リーダー側 UI のみ）を実装。サポーター向けの閲覧・申請 UI は Phase 2 で追加。廃止された旧 bounded context（`return` / `participation` / `schedule` / `message` / `guest`）は計画ドキュメントに存在しない。
+> **Phase 1 スコープ**: `leader-application` / `project`（リーダー側のプロジェクト作成・編集・公開申請）を実装。`recruitment` は計画ドキュメントには存在するが Phase 1 では未実装。サポーター向けの閲覧・申請 UI は Phase 2 で追加。廃止された旧 bounded context（`return` / `participation` / `schedule` / `message` / `guest` / `ApplicationMode`）は計画ドキュメントに存在しない。
 
 ---
 
