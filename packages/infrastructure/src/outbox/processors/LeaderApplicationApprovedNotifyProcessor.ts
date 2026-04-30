@@ -19,9 +19,7 @@ export { LEADER_APPLICATION_APPROVED_NOTIFY_TYPE };
  * 運営がリーダー応募を承認した際に、応募者に「リーダーとして利用開始できる」旨を通知する。
  * payload に email が含まれているため AccountEmailLookup は不要。
  */
-export class LeaderApplicationApprovedNotifyProcessor
-  implements OutboxProcessor<LeaderApplicationApprovedNotifyPayload>
-{
+export class LeaderApplicationApprovedNotifyProcessor implements OutboxProcessor<LeaderApplicationApprovedNotifyPayload> {
   readonly type = LEADER_APPLICATION_APPROVED_NOTIFY_TYPE;
 
   constructor(

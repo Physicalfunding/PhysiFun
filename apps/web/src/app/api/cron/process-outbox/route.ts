@@ -55,10 +55,7 @@ export async function GET(request: Request) {
   }
 
   if (failedTicks.length > 0) {
-    return NextResponse.json(
-      { error: "Internal server error", failedTicks },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error", failedTicks }, { status: 500 });
   }
   return NextResponse.json({ ok: true });
 }

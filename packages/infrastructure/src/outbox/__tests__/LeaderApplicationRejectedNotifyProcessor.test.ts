@@ -42,9 +42,7 @@ describe("LeaderApplicationRejectedNotifyProcessor", () => {
 
   beforeEach(() => {
     mailSender = new NoopMailSender();
-    lookup = new StubAccountEmailLookup(
-      new Map([["acc-1", "applicant@example.com"]])
-    );
+    lookup = new StubAccountEmailLookup(new Map([["acc-1", "applicant@example.com"]]));
     processor = new LeaderApplicationRejectedNotifyProcessor(mailSender, lookup);
   });
 
@@ -61,9 +59,7 @@ describe("LeaderApplicationRejectedNotifyProcessor", () => {
   });
 
   it("本文に reviewerNote を含む", async () => {
-    await processor.process(
-      makeMessage({ reviewerNote: "活動実績が不足しています" })
-    );
+    await processor.process(makeMessage({ reviewerNote: "活動実績が不足しています" }));
 
     const sent = mailSender.sentMessages[0];
     expect(sent.text).toContain("活動実績が不足しています");
@@ -71,9 +67,7 @@ describe("LeaderApplicationRejectedNotifyProcessor", () => {
   });
 
   it("reviewerNote の HTML 特殊文字をエスケープする", async () => {
-    await processor.process(
-      makeMessage({ reviewerNote: "<script>alert('x')</script>" })
-    );
+    await processor.process(makeMessage({ reviewerNote: "<script>alert('x')</script>" }));
 
     const sent = mailSender.sentMessages[0];
     expect(sent.html).not.toContain("<script>");

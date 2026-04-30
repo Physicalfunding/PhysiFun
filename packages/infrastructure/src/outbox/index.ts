@@ -44,7 +44,4 @@ export {
 } from "./processors/ProjectForceUnpublishedNotifyProcessor";
 export type { AccountEmailLookup } from "./processors/types";
 export { PrismaAccountEmailLookup } from "./processors/PrismaAccountEmailLookup";
-export {
-  buildLeaderApplicationOutboxWorker,
-  buildProjectOutboxWorker,
-} from "./composition";
+export { buildLeaderApplicationOutboxWorker, buildProjectOutboxWorker } from "./composition";

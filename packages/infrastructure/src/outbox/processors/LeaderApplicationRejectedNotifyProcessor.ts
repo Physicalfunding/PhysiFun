@@ -20,9 +20,7 @@ export { LEADER_APPLICATION_REJECTED_NOTIFY_TYPE };
  * 運営がリーダー応募を却下した際に、応募者に却下理由を通知する。
  * payload には email が含まれないため AccountEmailLookup で accountId → email を解決する。
  */
-export class LeaderApplicationRejectedNotifyProcessor
-  implements OutboxProcessor<LeaderApplicationRejectedNotifyPayload>
-{
+export class LeaderApplicationRejectedNotifyProcessor implements OutboxProcessor<LeaderApplicationRejectedNotifyPayload> {
   readonly type = LEADER_APPLICATION_REJECTED_NOTIFY_TYPE;
 
   constructor(

@@ -366,9 +366,7 @@ describe("OutboxWorker", () => {
   it("候補が他ワーカーに claim 済みで取得 findMany が空の場合は処理しない", async () => {
     // Step 1: candidate 1 件あり
     // Step 3: 自分が claim できた行は 0 件 (= 他ワーカーが先に取った)
-    mockFindMany
-      .mockResolvedValueOnce([makeDbMessage()])
-      .mockResolvedValueOnce([]);
+    mockFindMany.mockResolvedValueOnce([makeDbMessage()]).mockResolvedValueOnce([]);
 
     await worker.tick();
 
