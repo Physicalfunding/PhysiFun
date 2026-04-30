@@ -4,6 +4,7 @@ import {
   OutboxWorker,
   ResendMailSender,
   prisma,
+  type ActivationEmailPayload,
   type MailSender,
   type OutboxProcessor,
 } from "@physifun/infrastructure";
@@ -50,7 +51,7 @@ function getAppUrl(): string {
   return value.replace(/\/+$/, "");
 }
 
-function getActivationEmailProcessor(): OutboxProcessor {
+function getActivationEmailProcessor(): OutboxProcessor<ActivationEmailPayload> {
   return new ActivationEmailProcessor(getMailSender(), getAppUrl());
 }
 

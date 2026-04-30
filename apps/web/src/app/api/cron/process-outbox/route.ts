@@ -15,8 +15,16 @@ import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
  *   ProjectOutbox / 他の processor は PR2 で追加する (Issue #187)。
  */
 export async function GET(request: Request) {
+  // CRON_SECRET 未設定だと `Bearer undefined` として比較され、攻撃者がそれを送れば
+  // 通ってしまうため fail-closed にする (#188 review M1)。
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("[cron] CRON_SECRET is not set");
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

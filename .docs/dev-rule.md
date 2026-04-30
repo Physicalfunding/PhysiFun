@@ -100,3 +100,9 @@ const { error } = await supabase.storage.from(bucket).upload(path, file);
 | Claude 向け基本ルールの変更 | `CLAUDE.md` |
 | 運営アカウント（AdminAccount）のセットアップ・運用手順の変更 | `admin-role-setup.md` |
 | ローカル開発環境のセットアップ手順の変更 | ルート `README.md` / `apps/web/README.md` / `apps/admin/README.md` |
+
+---
+
+## Vercel Cron 運用メモ
+
+`apps/web/vercel.json` / `apps/admin/vercel.json` の `crons` は Hobby プラン制約で daily (`0 0 * * *`) 設定。Pro 化したら `/api/cron/process-outbox` のメール送信 SLA (30s〜1min) を満たすため `* * * * *` 等の高頻度に切り替えること（#187）。
