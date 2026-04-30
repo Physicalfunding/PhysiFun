@@ -14,6 +14,12 @@ import type { RejectLeaderApplicationPort } from "./ports/RejectLeaderApplicatio
 // TODO: #XX クールダウン定数はドメイン層に移動する
 export const REJECTION_COOLDOWN_MS = 72 * 60 * 60 * 1000;
 
+/**
+ * リーダー応募却下時に書き込まれる LeaderApplicationOutboxMessage の type 定数。
+ * 対応 processor: `LeaderApplicationRejectedNotifyProcessor` (#187)
+ */
+export const LEADER_APPLICATION_REJECTED_NOTIFY_TYPE = "rejected.notify_applicant" as const;
+
 // ==================== 入力型 ====================
 
 /**
@@ -113,7 +119,7 @@ export class RejectLeaderApplicationUseCase {
       application,
       outboxMessage: {
         id: outboxMessageId,
-        type: "rejected.notify_applicant",
+        type: LEADER_APPLICATION_REJECTED_NOTIFY_TYPE,
         payload: {
           applicationId: application.id.toString(),
           accountId: application.accountId.toString(),

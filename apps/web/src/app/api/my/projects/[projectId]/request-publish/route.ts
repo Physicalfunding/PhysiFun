@@ -1,5 +1,7 @@
+import { after } from "next/server";
 import { RequestPublishUseCase, type RequestPublishError } from "@physifun/application";
 import { getRequestPublishPort } from "@/lib/di/project";
+import { getProjectOutboxWorker } from "@/lib/di/outbox";
 import { getCurrentUserId } from "@/lib/session";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import {
@@ -66,6 +68,18 @@ export async function POST(
     if (!result.ok) {
       return handleError(result.error);
     }
+
+    // 即時送信トリガー (#187 B 経路)
+    // 公開申請成立後、運営宛通知メールを `after()` で送出する。失敗しても
+    // ProjectOutboxMessage は PENDING のまま残り、cron (A 経路) が拾う。
+    after(async () => {
+      try {
+        await getProjectOutboxWorker().tick();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[after] request-publish project outbox tick failed:", message);
+      }
+    });
 
     return successResponse(result.value);
   } catch (error) {

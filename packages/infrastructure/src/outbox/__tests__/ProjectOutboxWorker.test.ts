@@ -18,11 +18,13 @@ type MockMessage = {
 
 const mockFindMany = jest.fn<() => Promise<MockMessage[]>>();
 const mockUpdate = jest.fn<(...args: unknown[]) => Promise<MockMessage>>();
+const mockUpdateMany = jest.fn<(...args: unknown[]) => Promise<{ count: number }>>();
 
 const mockPrisma = {
   projectOutboxMessage: {
     findMany: mockFindMany,
     update: mockUpdate,
+    updateMany: mockUpdateMany,
   },
 } as any;
 
@@ -63,7 +65,9 @@ describe("ProjectOutboxWorker", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
     mockUpdate.mockReset();
+    mockUpdateMany.mockReset();
     mockUpdate.mockResolvedValue(makeDbMessage());
+    mockUpdateMany.mockResolvedValue({ count: 1 });
     processor = new StubProcessor("admin_publish_request.notify");
     worker = new ProjectOutboxWorker(mockPrisma, [processor], {
       baseBackoffSeconds: 30,

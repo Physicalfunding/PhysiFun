@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
+import { getLeaderApplicationOutboxWorker, getProjectOutboxWorker } from "@/lib/di/outbox";
 
 /**
  * Outbox 自動処理 Cron エンドポイント (#187)
@@ -11,8 +11,13 @@ import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
  *
  * 認証: `Authorization: Bearer ${CRON_SECRET}` で外部呼び出しから保護。
  *
- * PR1 スコープ: LeaderApplicationOutbox のみ。
- *   ProjectOutbox / 他の processor は PR2 で追加する (Issue #187)。
+ * 対象 (PR2 #187):
+ *   - LeaderApplicationOutboxMessage (ACTIVATION_EMAIL / approved / rejected)
+ *   - ProjectOutboxMessage (公開申請通知 / 承認 / 差戻 / 強制非公開)
+ *
+ * 失敗ハンドリング: どちらか一方の tick が失敗しても、他方の処理結果に
+ * 影響させないため try-catch で個別にラップする。最後に 1 件でも失敗していれば
+ * 500 を返し、Vercel のログから検知できるようにする。
  */
 export async function GET(request: Request) {
   // CRON_SECRET 未設定だと `Bearer undefined` として比較され、攻撃者がそれを送れば
@@ -28,13 +33,29 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // 失敗 worker の "識別子のみ" を返す。エラー詳細メッセージは console.error にだけ出す。
+  // Prisma 等の例外メッセージにテーブル名・接続情報が含まれる可能性があるため、
+  // CRON_SECRET 越しでもレスポンスには載せない (#187 PR2 review MEDIUM 2)。
+  const failedTicks: string[] = [];
+
   try {
-    const worker = getLeaderApplicationOutboxWorker();
-    await worker.tick();
-    return NextResponse.json({ ok: true });
+    await getLeaderApplicationOutboxWorker().tick();
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    console.error("[cron] process-outbox failed:", message);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("[cron] leader-application outbox tick failed:", message);
+    failedTicks.push("leader-application");
   }
+
+  try {
+    await getProjectOutboxWorker().tick();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[cron] project outbox tick failed:", message);
+    failedTicks.push("project");
+  }
+
+  if (failedTicks.length > 0) {
+    return NextResponse.json({ error: "Internal server error", failedTicks }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true });
 }
