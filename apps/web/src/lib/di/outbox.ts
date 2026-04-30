@@ -1,169 +1,26 @@
 import {
-  ActivationEmailProcessor,
-  AdminPublishRequestNotifyProcessor,
-  LeaderApplicationApprovedNotifyProcessor,
-  LeaderApplicationRejectedNotifyProcessor,
-  NoopMailSender,
-  OutboxWorker,
-  PrismaAccountEmailLookup,
-  ProjectForceUnpublishedNotifyProcessor,
-  ProjectOutboxWorker,
-  ProjectPublishApprovedNotifyProcessor,
-  ProjectPublishRejectedNotifyProcessor,
-  ResendMailSender,
+  buildLeaderApplicationOutboxWorker,
+  buildProjectOutboxWorker,
   prisma,
-  type AccountEmailLookup,
-  type ActivationEmailPayload,
-  type AdminPublishRequestNotifyPayload,
-  type LeaderApplicationApprovedNotifyPayload,
-  type LeaderApplicationRejectedNotifyPayload,
-  type MailSender,
-  type OutboxProcessor,
-  type ProjectForceUnpublishedPayload,
-  type ProjectPublishApprovedPayload,
-  type ProjectPublishRejectedPayload,
+  type OutboxWorker,
+  type ProjectOutboxWorker,
 } from "@physifun/infrastructure";
 
 /**
- * Outbox 周りの DI ヘルパー (#187)
+ * Outbox 周りの DI ヘルパー (#187 PR2)
  *
- * - `OutboxWorker` (LeaderApplicationOutboxMessage) と
- *   `ProjectOutboxWorker` (ProjectOutboxMessage) を組み立てる
- * - メール送信は Resend が利用可能な環境では `ResendMailSender`、無ければ
- *   `NoopMailSender` にフォールバック (テスト・CI で起動できるようにするため)
- *
- * PR2 スコープ (#187):
- *   - LeaderApplication 系: ACTIVATION_EMAIL / approved.notify_applicant / rejected.notify_applicant
- *   - Project 系: admin_publish_request.notify / leader_publish_approved.notify /
- *     leader_publish_rejected.notify / leader_force_unpublished.notify
+ * 実体は `@physifun/infrastructure/outbox/composition` に集約 (#187 PR2 review MEDIUM 1)。
+ * apps/web と apps/admin の重複を防ぐためここでは薄い再エクスポートだけ行う。
  *
  * 規約 (#119): モジュールレベルで new せず、都度関数呼び出しで生成する。
  */
 
-function getMailSender(): MailSender {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.MAIL_FROM ?? "noreply@physifun.com";
-  if (!apiKey) {
-    return new NoopMailSender();
-  }
-  return new ResendMailSender({ apiKey, fromAddress });
-}
-
-/**
- * メール本文に埋め込むベース URL を返す。
- *
- * 未設定だと `${baseUrl}/activate?token=...` が "/activate?..." になり、
- * メール本文中で正しいリンクにならないため throw する (fail closed)。
- */
-function getAppUrl(): string {
-  const value = process.env.APP_URL;
-  if (!value) {
-    throw new Error(
-      "APP_URL is not set. Set it to the canonical web origin (e.g. https://physical-funding-staging.vercel.app)"
-    );
-  }
-  // 末尾スラッシュを正規化して `${baseUrl}/activate` の二重スラッシュを防ぐ
-  return value.replace(/\/+$/, "");
-}
-
-/**
- * 運営宛通知メールの宛先を返す。
- *
- * `ADMIN_EMAIL_LIST` はカンマ区切り (#147 互換) だが、現状の `MailSender.send` は
- * 単一宛先しか取らないため、先頭の 1 件を採用する。複数運営に配信したい場合は
- * 別途メーリングリストを用意するか、MailMessage.to を string[] 化する。
- */
-function getAdminNotificationEmail(): string {
-  const value = process.env.ADMIN_EMAIL_LIST;
-  if (!value) {
-    throw new Error("ADMIN_EMAIL_LIST is not set. Set comma-separated admin emails.");
-  }
-  const first = value
-    .split(",")
-    .map((s) => s.trim())
-    .find((s) => s.length > 0);
-  if (!first) {
-    throw new Error("ADMIN_EMAIL_LIST is empty after parsing.");
-  }
-  return first;
-}
-
-function getAccountEmailLookup(): AccountEmailLookup {
-  return new PrismaAccountEmailLookup(prisma);
-}
-
-// ---------- LeaderApplication outbox processors ----------
-
-function getActivationEmailProcessor(): OutboxProcessor<ActivationEmailPayload> {
-  return new ActivationEmailProcessor(getMailSender(), getAppUrl());
-}
-
-function getLeaderApplicationApprovedNotifyProcessor(): OutboxProcessor<LeaderApplicationApprovedNotifyPayload> {
-  return new LeaderApplicationApprovedNotifyProcessor(getMailSender(), getAppUrl());
-}
-
-function getLeaderApplicationRejectedNotifyProcessor(): OutboxProcessor<LeaderApplicationRejectedNotifyPayload> {
-  return new LeaderApplicationRejectedNotifyProcessor(getMailSender(), getAccountEmailLookup());
-}
-
-// ---------- Project outbox processors ----------
-
-function getAdminPublishRequestNotifyProcessor(): OutboxProcessor<AdminPublishRequestNotifyPayload> {
-  return new AdminPublishRequestNotifyProcessor(
-    getMailSender(),
-    getAdminNotificationEmail(),
-    getAppUrl()
-  );
-}
-
-function getProjectPublishApprovedNotifyProcessor(): OutboxProcessor<ProjectPublishApprovedPayload> {
-  return new ProjectPublishApprovedNotifyProcessor(
-    getMailSender(),
-    getAccountEmailLookup(),
-    getAppUrl()
-  );
-}
-
-function getProjectPublishRejectedNotifyProcessor(): OutboxProcessor<ProjectPublishRejectedPayload> {
-  return new ProjectPublishRejectedNotifyProcessor(
-    getMailSender(),
-    getAccountEmailLookup(),
-    getAppUrl()
-  );
-}
-
-function getProjectForceUnpublishedNotifyProcessor(): OutboxProcessor<ProjectForceUnpublishedPayload> {
-  return new ProjectForceUnpublishedNotifyProcessor(
-    getMailSender(),
-    getAccountEmailLookup(),
-    getAppUrl()
-  );
-}
-
-/**
- * LeaderApplicationOutboxMessage 用の Worker を返す。
- *
- * cron route と inline trigger (`after()`) の両方から利用される。
- */
+/** LeaderApplicationOutboxMessage 用 Worker (cron + inline trigger 両方から利用) */
 export function getLeaderApplicationOutboxWorker(): OutboxWorker {
-  return new OutboxWorker(prisma, [
-    getActivationEmailProcessor(),
-    getLeaderApplicationApprovedNotifyProcessor(),
-    getLeaderApplicationRejectedNotifyProcessor(),
-  ]);
+  return buildLeaderApplicationOutboxWorker(prisma);
 }
 
-/**
- * ProjectOutboxMessage 用の Worker を返す。
- *
- * cron route と inline trigger (request-publish / admin の approve/reject/force-unpublish)
- * の両方から利用される。
- */
+/** ProjectOutboxMessage 用 Worker (cron + inline trigger 両方から利用) */
 export function getProjectOutboxWorker(): ProjectOutboxWorker {
-  return new ProjectOutboxWorker(prisma, [
-    getAdminPublishRequestNotifyProcessor(),
-    getProjectPublishApprovedNotifyProcessor(),
-    getProjectPublishRejectedNotifyProcessor(),
-    getProjectForceUnpublishedNotifyProcessor(),
-  ]);
+  return buildProjectOutboxWorker(prisma);
 }

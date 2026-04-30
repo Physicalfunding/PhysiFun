@@ -294,8 +294,11 @@ model LeaderApplicationOutboxMessage {
   lastError      String?   @db.Text
   nextRetryAt    DateTime?
   deadLetteredAt DateTime? // dead-letter 化された時刻 (non-null = 再処理対象外)
+  claimedAt      DateTime? // claim された時刻 (null = 未 claim、claim 有効期限切れも null 扱い)
+  claimedBy      String? // claim したワーカーの token (UUID)
 
   @@index([sentAt, deadLetteredAt, nextRetryAt])
+  @@index([claimedBy])
   @@map("leader_application_outbox_messages")
 }
 
@@ -311,8 +314,11 @@ model ProjectOutboxMessage {
   lastError      String?   @db.Text
   nextRetryAt    DateTime?
   deadLetteredAt DateTime? // dead-letter 化された時刻 (non-null = 再処理対象外)
+  claimedAt      DateTime? // claim された時刻 (null = 未 claim、claim 有効期限切れも null 扱い)
+  claimedBy      String? // claim したワーカーの token (UUID)
 
   @@index([sentAt, deadLetteredAt, nextRetryAt])
+  @@index([claimedBy])
   @@map("project_outbox_messages")
 }
 

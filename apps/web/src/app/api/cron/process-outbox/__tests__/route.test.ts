@@ -12,12 +12,15 @@
 
 // `@/lib/di/outbox` を import すると `@physifun/infrastructure` 経由で
 // PrismaClient のコンストラクタが走るため、テストでは tick だけスタブする。
+const leaderTick = jest.fn();
+const projectTick = jest.fn();
+
 jest.mock("@/lib/di/outbox", () => ({
   getLeaderApplicationOutboxWorker: () => ({
-    tick: jest.fn().mockResolvedValue(undefined),
+    tick: leaderTick,
   }),
   getProjectOutboxWorker: () => ({
-    tick: jest.fn().mockResolvedValue(undefined),
+    tick: projectTick,
   }),
 }));
 
@@ -28,6 +31,10 @@ describe("GET /api/cron/process-outbox - auth", () => {
 
   beforeEach(() => {
     process.env = { ...ORIGINAL_ENV };
+    leaderTick.mockReset();
+    projectTick.mockReset();
+    leaderTick.mockResolvedValue(undefined);
+    projectTick.mockResolvedValue(undefined);
   });
 
   afterAll(() => {
@@ -63,5 +70,29 @@ describe("GET /api/cron/process-outbox - auth", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(500);
+  });
+
+  it("tick 失敗時は 500 で failedTicks にキー名のみ返し、エラーメッセージは含まない", async () => {
+    process.env.CRON_SECRET = "test-secret";
+    const dbError = new Error(
+      "PrismaClientKnownRequestError: relation 'leader_application_outbox_messages' does not exist"
+    );
+    leaderTick.mockRejectedValue(dbError);
+
+    const request = new Request("http://localhost/api/cron/process-outbox", {
+      headers: { authorization: "Bearer test-secret" },
+    });
+
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toEqual({
+      error: "Internal server error",
+      failedTicks: ["leader-application"],
+    });
+    // 内部エラーメッセージが漏出していないこと (#187 PR2 review MEDIUM 2)
+    expect(JSON.stringify(body)).not.toContain("Prisma");
+    expect(JSON.stringify(body)).not.toContain("relation");
   });
 });

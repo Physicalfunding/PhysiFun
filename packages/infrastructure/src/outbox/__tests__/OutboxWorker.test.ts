@@ -16,13 +16,15 @@ type MockMessage = {
   deadLetteredAt: Date | null;
 };
 
-const mockFindMany = jest.fn<() => Promise<MockMessage[]>>();
+const mockFindMany = jest.fn<(...args: unknown[]) => Promise<MockMessage[]>>();
 const mockUpdate = jest.fn<(...args: unknown[]) => Promise<MockMessage>>();
+const mockUpdateMany = jest.fn<(...args: unknown[]) => Promise<{ count: number }>>();
 
 const mockPrisma = {
   leaderApplicationOutboxMessage: {
     findMany: mockFindMany,
     update: mockUpdate,
+    updateMany: mockUpdateMany,
   },
 } as any;
 
@@ -63,7 +65,9 @@ describe("OutboxWorker", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
     mockUpdate.mockReset();
+    mockUpdateMany.mockReset();
     mockUpdate.mockResolvedValue(makeDbMessage());
+    mockUpdateMany.mockResolvedValue({ count: 1 });
     processor = new StubProcessor("ACTIVATION_EMAIL");
     worker = new OutboxWorker(mockPrisma, [processor], {
       baseBackoffSeconds: 30,
@@ -247,5 +251,137 @@ describe("OutboxWorker", () => {
     expect(otherProcessor.processedMessages[0].id).toBe("msg-1");
     expect(processor.processedMessages).toHaveLength(1);
     expect(processor.processedMessages[0].id).toBe("msg-2");
+  });
+
+  // ==================== claim/lock (#187 PR2 review HIGH) ====================
+
+  it("tick() は updateMany で claim を取得する (claimedAt + claimedBy セット)", async () => {
+    mockFindMany.mockResolvedValue([makeDbMessage()]);
+
+    await worker.tick();
+
+    expect(mockUpdateMany).toHaveBeenCalledTimes(1);
+    const call = mockUpdateMany.mock.calls[0][0] as any;
+    expect(call.data.claimedAt).toBeInstanceOf(Date);
+    expect(typeof call.data.claimedBy).toBe("string");
+    expect(call.data.claimedBy.length).toBeGreaterThan(0);
+  });
+
+  it("候補取得 findMany の WHERE に claim 期限切れ条件を含む", async () => {
+    mockFindMany.mockResolvedValue([]);
+
+    await worker.tick();
+
+    const firstCall = mockFindMany.mock.calls[0][0] as any;
+    // AND の中に claim 条件が入っているはず
+    expect(firstCall.where.AND).toBeDefined();
+    const andClauses = firstCall.where.AND as Array<{ OR: unknown[] }>;
+    const hasClaimClause = andClauses.some(
+      (c) =>
+        Array.isArray(c.OR) &&
+        c.OR.some((sub) => typeof sub === "object" && sub !== null && "claimedAt" in sub)
+    );
+    expect(hasClaimClause).toBe(true);
+  });
+
+  it("claim 後の取得 findMany は claimedBy = token で絞り込む", async () => {
+    mockFindMany.mockResolvedValue([makeDbMessage()]);
+
+    await worker.tick();
+
+    // tick() 内で findMany が 2 回呼ばれる: candidates → claimed
+    expect(mockFindMany).toHaveBeenCalledTimes(2);
+    const secondCall = mockFindMany.mock.calls[1][0] as any;
+    expect(secondCall.where).toMatchObject({
+      sentAt: null,
+    });
+    expect(typeof secondCall.where.claimedBy).toBe("string");
+  });
+
+  it("成功時に claim を解放する (claimedAt: null, claimedBy: null)", async () => {
+    mockFindMany.mockResolvedValue([makeDbMessage()]);
+
+    await worker.tick();
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          sentAt: expect.any(Date),
+          claimedAt: null,
+          claimedBy: null,
+        }),
+      })
+    );
+  });
+
+  it("失敗時 (retriable) に claim を解放する", async () => {
+    mockFindMany.mockResolvedValue([makeDbMessage()]);
+    processor.result = err({ message: "tmp", retriable: true });
+
+    await worker.tick();
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          claimedAt: null,
+          claimedBy: null,
+        }),
+      })
+    );
+  });
+
+  it("dead-letter 時にも claim を解放する", async () => {
+    mockFindMany.mockResolvedValue([makeDbMessage()]);
+    processor.result = err({ message: "fatal", retriable: false });
+
+    await worker.tick();
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          deadLetteredAt: expect.any(Date),
+          claimedAt: null,
+          claimedBy: null,
+        }),
+      })
+    );
+  });
+
+  it("未知種別 dead-letter 時にも claim を解放する", async () => {
+    mockFindMany.mockResolvedValue([makeDbMessage({ type: "UNKNOWN_TYPE" })]);
+
+    await worker.tick();
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          deadLetteredAt: expect.any(Date),
+          claimedAt: null,
+          claimedBy: null,
+        }),
+      })
+    );
+  });
+
+  it("候補が他ワーカーに claim 済みで取得 findMany が空の場合は処理しない", async () => {
+    // Step 1: candidate 1 件あり
+    // Step 3: 自分が claim できた行は 0 件 (= 他ワーカーが先に取った)
+    mockFindMany
+      .mockResolvedValueOnce([makeDbMessage()])
+      .mockResolvedValueOnce([]);
+
+    await worker.tick();
+
+    expect(processor.processedMessages).toHaveLength(0);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("候補が 0 件なら updateMany を呼ばない", async () => {
+    mockFindMany.mockResolvedValue([]);
+
+    await worker.tick();
+
+    expect(mockUpdateMany).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

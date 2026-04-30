@@ -33,14 +33,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const errors: string[] = [];
+  // 失敗 worker の "識別子のみ" を返す。エラー詳細メッセージは console.error にだけ出す。
+  // Prisma 等の例外メッセージにテーブル名・接続情報が含まれる可能性があるため、
+  // CRON_SECRET 越しでもレスポンスには載せない (#187 PR2 review MEDIUM 2)。
+  const failedTicks: string[] = [];
 
   try {
     await getLeaderApplicationOutboxWorker().tick();
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[cron] leader-application outbox tick failed:", message);
-    errors.push(`leaderApplication: ${message}`);
+    failedTicks.push("leader-application");
   }
 
   try {
@@ -48,11 +51,14 @@ export async function GET(request: Request) {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[cron] project outbox tick failed:", message);
-    errors.push(`project: ${message}`);
+    failedTicks.push("project");
   }
 
-  if (errors.length > 0) {
-    return NextResponse.json({ error: "Internal server error", errors }, { status: 500 });
+  if (failedTicks.length > 0) {
+    return NextResponse.json(
+      { error: "Internal server error", failedTicks },
+      { status: 500 }
+    );
   }
   return NextResponse.json({ ok: true });
 }
