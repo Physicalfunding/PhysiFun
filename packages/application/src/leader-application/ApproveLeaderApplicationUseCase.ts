@@ -3,6 +3,14 @@ import { AccountId, type Result, err, ok } from "@physifun/domain";
 import type { ApproveLeaderApplicationPort } from "./ports/ApproveLeaderApplicationPort";
 import type { AccountRole } from "../shared/AccountRole";
 
+// ==================== Outbox メッセージ種別 ====================
+
+/**
+ * リーダー応募承認時に書き込まれる LeaderApplicationOutboxMessage の type 定数。
+ * 対応 processor: `LeaderApplicationApprovedNotifyProcessor` (#187)
+ */
+export const LEADER_APPLICATION_APPROVED_NOTIFY_TYPE = "approved.notify_applicant" as const;
+
 // ==================== 出力 DTO ====================
 
 /**
@@ -110,7 +118,7 @@ export class ApproveLeaderApplicationUseCase {
       reviewedAt: now,
       outboxMessage: {
         id: outboxMessageId,
-        type: "approved.notify_applicant",
+        type: LEADER_APPLICATION_APPROVED_NOTIFY_TYPE,
         payload: {
           applicationId: application.id.toString(),
           accountId: account.id,

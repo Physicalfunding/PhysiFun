@@ -16,6 +16,9 @@ jest.mock("@/lib/di/outbox", () => ({
   getLeaderApplicationOutboxWorker: () => ({
     tick: jest.fn().mockResolvedValue(undefined),
   }),
+  getProjectOutboxWorker: () => ({
+    tick: jest.fn().mockResolvedValue(undefined),
+  }),
 }));
 
 import { GET } from "../route";

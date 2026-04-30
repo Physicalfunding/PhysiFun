@@ -1,9 +1,10 @@
-import { type NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import {
   RejectProjectPublicationUseCase,
   type RejectProjectPublicationError,
 } from "@physifun/application";
 import { getRejectProjectPublicationPort } from "@/lib/di/project";
+import { getProjectOutboxWorker } from "@/lib/di/outbox";
 import { isUuidV4 } from "@physifun/domain";
 import {
   successResponse,
@@ -76,6 +77,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       targetType: "Project",
       targetId: result.value.projectId,
       metadata: { reviewerNote: body.reviewerNote.trim() },
+    });
+
+    // 即時送信トリガー (#187 B 経路): leader_publish_rejected.notify メール
+    after(async () => {
+      try {
+        await getProjectOutboxWorker().tick();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[after] projects/reject outbox tick failed:", message);
+      }
     });
 
     return successResponse({ projectId: result.value.projectId });

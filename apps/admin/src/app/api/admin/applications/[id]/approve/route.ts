@@ -1,4 +1,4 @@
-import { type NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import {
   ApproveLeaderApplicationUseCase,
   type ApproveLeaderApplicationError,
@@ -16,6 +16,7 @@ import {
 import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { logAdminAction } from "@/lib/api/auditLog";
 import { enforceAdminRateLimit } from "@/lib/rateLimit";
+import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
 
 /**
  * POST /api/admin/applications/:id/approve
@@ -61,6 +62,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       targetType: "LeaderApplication",
       targetId: result.value.applicationId,
       metadata: { accountId: result.value.accountId },
+    });
+
+    // 即時送信トリガー (#187 B 経路): approved.notify_applicant メール
+    after(async () => {
+      try {
+        await getLeaderApplicationOutboxWorker().tick();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[after] applications/approve outbox tick failed:", message);
+      }
     });
 
     return successResponse({

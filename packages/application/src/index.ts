@@ -32,6 +32,7 @@ export type {
 // ApproveLeaderApplicationUseCase
 export {
   ApproveLeaderApplicationUseCase,
+  LEADER_APPLICATION_APPROVED_NOTIFY_TYPE,
   type ApproveLeaderApplicationInput,
   type ApproveLeaderApplicationOutput,
   type ApproveLeaderApplicationError,
@@ -55,6 +56,7 @@ export {
 export {
   RejectLeaderApplicationUseCase,
   REJECTION_COOLDOWN_MS,
+  LEADER_APPLICATION_REJECTED_NOTIFY_TYPE,
   type RejectLeaderApplicationInput,
   type RejectLeaderApplicationOutput,
   type RejectLeaderApplicationError,

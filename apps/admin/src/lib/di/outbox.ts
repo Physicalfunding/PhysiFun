@@ -25,17 +25,15 @@ import {
 } from "@physifun/infrastructure";
 
 /**
- * Outbox 周りの DI ヘルパー (#187)
+ * Outbox 周りの DI ヘルパー (#187 PR2)
  *
- * - `OutboxWorker` (LeaderApplicationOutboxMessage) と
- *   `ProjectOutboxWorker` (ProjectOutboxMessage) を組み立てる
- * - メール送信は Resend が利用可能な環境では `ResendMailSender`、無ければ
- *   `NoopMailSender` にフォールバック (テスト・CI で起動できるようにするため)
+ * apps/admin の各承認/却下/強制非公開ルートから `after()` 経由で呼び出される。
+ * apps/web 側の `apps/web/src/lib/di/outbox.ts` とほぼ同じ構成だが、admin は
+ * ACTIVATION_EMAIL を投函しないため対応 processor は除外している。
  *
- * PR2 スコープ (#187):
- *   - LeaderApplication 系: ACTIVATION_EMAIL / approved.notify_applicant / rejected.notify_applicant
- *   - Project 系: admin_publish_request.notify / leader_publish_approved.notify /
- *     leader_publish_rejected.notify / leader_force_unpublished.notify
+ * メール本文に埋め込むリンクは **web origin** を指す必要があるため、
+ * `APP_URL` には admin ではなく web 側のドメイン (例: https://physical-funding-staging.vercel.app)
+ * を設定する。
  *
  * 規約 (#119): モジュールレベルで new せず、都度関数呼び出しで生成する。
  */
@@ -49,12 +47,6 @@ function getMailSender(): MailSender {
   return new ResendMailSender({ apiKey, fromAddress });
 }
 
-/**
- * メール本文に埋め込むベース URL を返す。
- *
- * 未設定だと `${baseUrl}/activate?token=...` が "/activate?..." になり、
- * メール本文中で正しいリンクにならないため throw する (fail closed)。
- */
 function getAppUrl(): string {
   const value = process.env.APP_URL;
   if (!value) {
@@ -62,17 +54,9 @@ function getAppUrl(): string {
       "APP_URL is not set. Set it to the canonical web origin (e.g. https://physical-funding-staging.vercel.app)"
     );
   }
-  // 末尾スラッシュを正規化して `${baseUrl}/activate` の二重スラッシュを防ぐ
   return value.replace(/\/+$/, "");
 }
 
-/**
- * 運営宛通知メールの宛先を返す。
- *
- * `ADMIN_EMAIL_LIST` はカンマ区切り (#147 互換) だが、現状の `MailSender.send` は
- * 単一宛先しか取らないため、先頭の 1 件を採用する。複数運営に配信したい場合は
- * 別途メーリングリストを用意するか、MailMessage.to を string[] 化する。
- */
 function getAdminNotificationEmail(): string {
   const value = process.env.ADMIN_EMAIL_LIST;
   if (!value) {
@@ -94,6 +78,11 @@ function getAccountEmailLookup(): AccountEmailLookup {
 
 // ---------- LeaderApplication outbox processors ----------
 
+/**
+ * ACTIVATION_EMAIL は web 側の応募フローで投函される type だが、admin の tick が
+ * 該当 PENDING 行を拾った場合、対応 processor が未登録だと dead-letter 化する。
+ * フェイルセーフとして admin 側にも登録しておく。
+ */
 function getActivationEmailProcessor(): OutboxProcessor<ActivationEmailPayload> {
   return new ActivationEmailProcessor(getMailSender(), getAppUrl());
 }
@@ -143,7 +132,9 @@ function getProjectForceUnpublishedNotifyProcessor(): OutboxProcessor<ProjectFor
 /**
  * LeaderApplicationOutboxMessage 用の Worker を返す。
  *
- * cron route と inline trigger (`after()`) の両方から利用される。
+ * apps/admin の `applications/[id]/approve` と `applications/[id]/reject` の
+ * inline trigger から利用される。ACTIVATION_EMAIL は admin 経路では発生しないが、
+ * 万一 PENDING 行が残っていても拾えるよう web 側と同様に登録しても良い (将来検討)。
  */
 export function getLeaderApplicationOutboxWorker(): OutboxWorker {
   return new OutboxWorker(prisma, [
@@ -156,8 +147,8 @@ export function getLeaderApplicationOutboxWorker(): OutboxWorker {
 /**
  * ProjectOutboxMessage 用の Worker を返す。
  *
- * cron route と inline trigger (request-publish / admin の approve/reject/force-unpublish)
- * の両方から利用される。
+ * apps/admin の `projects/[id]/approve|reject|force-unpublish` の inline trigger から
+ * 利用される。
  */
 export function getProjectOutboxWorker(): ProjectOutboxWorker {
   return new ProjectOutboxWorker(prisma, [
