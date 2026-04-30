@@ -325,4 +325,43 @@ describe("SubmitLeaderApplicationUseCase", () => {
     expect(port.createdApplications[0].projectTitle).toBe("タイトル");
     expect(port.createdApplications[0].municipality).toBe("京都市");
   });
+
+  // ---- 電話番号 (Issue #192 / PR2) ----
+
+  it("phoneNumber 未指定の場合は Account.phoneNumber が null になる", async () => {
+    const result = await useCase.execute(validInput());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(port.createdAccounts[0].phoneNumber).toBeNull();
+  });
+
+  it("phoneNumber に空文字を指定した場合は Account.phoneNumber が null になる", async () => {
+    const result = await useCase.execute(validInput({ phoneNumber: "" }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(port.createdAccounts[0].phoneNumber).toBeNull();
+  });
+
+  it("phoneNumber に有効な電話番号を指定すると Account.phoneNumber に保存される", async () => {
+    const result = await useCase.execute(validInput({ phoneNumber: "090-1234-5678" }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(port.createdAccounts[0].phoneNumber).toBe("090-1234-5678");
+  });
+
+  it("phoneNumber が 20 文字超の場合は VALIDATION_ERROR", async () => {
+    const result = await useCase.execute(validInput({ phoneNumber: "1".repeat(21) }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("VALIDATION_ERROR");
+  });
+
+  it("phoneNumber に許可外文字が含まれる場合は VALIDATION_ERROR", async () => {
+    const result = await useCase.execute(validInput({ phoneNumber: "090-abcd-5678" }));
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("VALIDATION_ERROR");
+    if (result.error.type !== "VALIDATION_ERROR") return;
+    expect(result.error.issues.some((i) => i.path === "phoneNumber")).toBe(true);
+  });
 });

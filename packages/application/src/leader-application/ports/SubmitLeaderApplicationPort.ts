@@ -28,6 +28,12 @@ export interface CreateAccountParams {
   readonly id: string;
   readonly email: string;
   readonly displayName: string;
+  /**
+   * 電話番号（任意、〜20 文字）
+   * - Issue #192: 応募 API で受け取り、Account に保存する。
+   * - 未入力の場合は `null`。
+   */
+  readonly phoneNumber: string | null;
   readonly status: AccountStatus;
   readonly roles: AccountRole[];
   readonly activationToken: string;

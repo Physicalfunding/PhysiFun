@@ -22,7 +22,8 @@ datasource db {
 model Account {
   id                 String        @id @default(uuid())
   email              String        @unique
-  displayName        String // 表示名 (1〜50 文字、B-3 仮値)
+  displayName        String // 表示名 / お名前 (1〜50 文字、B-3 仮値)
+  phoneNumber        String? // 電話番号 (任意、〜20 文字。ハイフン込み・国際表記許容、Issue #192)
   status             AccountStatus
   passwordHash       String? // ACTIVE 時は必須、PENDING_EMAIL_CONFIRMATION 時は null
   roles              Role[] // ["SUPPORTER"], ["SUPPORTER", "LEADER"] etc.
