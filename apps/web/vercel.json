@@ -1,8 +1,9 @@
 {
+  "installCommand": "cd ../.. && bun install",
   "crons": [
     {
       "path": "/api/cron/cleanup-expired-accounts",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
