@@ -22,9 +22,12 @@ export default function AdminLoginPage() {
 
     try {
       // NextAuth が検証後 /login/verify-request にリダイレクトする (pages.verifyRequest)。
+      // callbackUrl: マジックリンククリック後の遷移先。未指定だと /login に戻ってしまうため
+      // 管理画面のトップ (/applications) に明示的に飛ばす。
       const result = await signIn("email", {
         email: email.trim().toLowerCase(),
         redirect: false,
+        callbackUrl: "/applications",
       });
 
       if (result?.error) {
