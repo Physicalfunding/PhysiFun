@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
 import {
   SubmitLeaderApplicationUseCase,
   type SubmitLeaderApplicationError,
@@ -11,6 +11,7 @@ import {
   internalErrorResponse,
 } from "@/lib/api/response";
 import { getSubmitLeaderApplicationPort } from "@/lib/di/leader-application";
+import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
 
 /**
  * UseCase のエラー型に応じた HTTP レスポンスを返す
@@ -59,6 +60,19 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return handleUseCaseError(result.error);
     }
+
+    // 即時送信トリガー (#187 B 経路)
+    // レスポンス送信後に Outbox を 1 バッチ tick して ACTIVATION_EMAIL を即送信する。
+    // ここで失敗しても OutboxMessage は PENDING のまま残るので、cron (A 経路) が翌日
+    // までに復旧させる。
+    after(async () => {
+      try {
+        await getLeaderApplicationOutboxWorker().tick();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[after] leader-applications outbox tick failed:", message);
+      }
+    });
 
     return successResponse(result.value, 201);
   } catch (e) {
