@@ -164,9 +164,9 @@ enum PublishStatus {
 enum ProjectPhase {
   VISION
   PLANNING
-  PREPARATION
+  READY
   EXECUTION
-  COMPLETED
+  ONGOING
 }
 
 // ==================== ProjectReviewFeedback ====================

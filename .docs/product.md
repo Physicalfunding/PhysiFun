@@ -89,7 +89,7 @@ Phase 1 → Phase 2 の移行は **ランタイムのフィーチャーフラグ
 
 *リーダー機能（ログイン後）*
 - ログイン・ログアウト
-- プロジェクト作成・編集（公開ステータスは `DRAFT` / `PENDING_REVIEW` / `PUBLISHED` の 3 値、フェーズは `VISION` 〜 `COMPLETED`。公開には運営審査が必要）
+- プロジェクト作成・編集（公開ステータスは `DRAFT` / `PENDING_REVIEW` / `PUBLISHED` の 3 値、フェーズは `VISION` 〜 `ONGOING`。公開には運営審査が必要）
 - サポート募集の作成（活動参加募集 / スキル・モノ募集）
 - 募集スケジュール管理（時間帯 + 同時刻定員）
 - 画像アップロード（Supabase Storage）

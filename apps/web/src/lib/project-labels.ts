@@ -1,6 +1,5 @@
 import type { PublishStatus } from "@physifun/domain";
-import type { ProjectPhase } from "@physifun/domain";
-import { CATEGORY_MASTER } from "@physifun/domain";
+import { CATEGORY_MASTER, PROJECT_PHASE_LABELS } from "@physifun/domain";
 
 /**
  * PublishStatus の日本語ラベル
@@ -13,14 +12,11 @@ export const PUBLISH_STATUS_LABEL: Record<PublishStatus, string> = {
 
 /**
  * ProjectPhase の日本語ラベル
+ *
+ * 単一情報源として domain の PROJECT_PHASE_LABELS を再エクスポート。
+ * フロント表示は必ずこのラベル経由（Issue #192）。
  */
-export const PROJECT_PHASE_LABEL: Record<ProjectPhase, string> = {
-  VISION: "ビジョン",
-  PLANNING: "企画",
-  PREPARATION: "準備",
-  EXECUTION: "実行",
-  COMPLETED: "完了",
-};
+export const PROJECT_PHASE_LABEL = PROJECT_PHASE_LABELS;
 
 /**
  * カテゴリ値 → ラベルのマッピング
