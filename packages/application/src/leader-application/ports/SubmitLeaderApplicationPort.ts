@@ -5,6 +5,8 @@
  * インフラストラクチャ層と通信する。インフラ層が実装を提供する。
  */
 
+import type { LeaderApplicationRecruitmentType, ProjectPhase } from "@physifun/domain";
+
 /**
  * アカウントの状態
  */
@@ -42,24 +44,51 @@ export interface CreateAccountParams {
 
 /**
  * トランザクション内で実行する LeaderApplication 作成パラメータ
+ *
+ * Issue #192 PR3 で大幅に拡張。条件付き必須は UseCase 側の Zod superRefine で担保し、
+ * Port には正規化済みの値（不要フィールドは null）が渡される。
  */
 export interface CreateLeaderApplicationParams {
   readonly id: string;
   readonly accountId: string;
   readonly status: "PENDING";
+
+  // ProjectDraft（既存。文字数仮値が PR3 で改訂され、plannedActivities は activityContent にリネーム）
   readonly projectTitle: string;
   readonly projectSummary: string;
   readonly projectStory: string;
   readonly projectCategory: string;
   readonly prefectureCode: string;
   readonly municipality: string | null;
-  readonly plannedActivities: string;
+  readonly activityContent: string | null; // TIME 募集枠で必須、SKILL_ITEM 単独時は null
   readonly snsLinks: {
     x: string | null;
     instagram: string | null;
     facebook: string | null;
     website: string | null;
   } | null;
+
+  // 応募スナップショット
+  readonly phoneNumber: string | null;
+
+  // 応募フォーム拡張 (Issue #192 PR3)
+  readonly progress: ProjectPhase;
+  readonly recruitmentTypes: readonly LeaderApplicationRecruitmentType[]; // 1件以上
+
+  // TIME 募集枠の詳細
+  readonly eventLocation: string | null;
+  readonly eventPeriod: string | null;
+  readonly recruitCount: number | null;
+
+  // SKILL_ITEM 募集枠の詳細
+  readonly skillItemNeeds: string | null;
+  readonly skillItemDeadline: string | null;
+
+  // リターン情報
+  readonly timeReturn: string | null;
+  readonly skillItemReturn: string | null;
+  readonly experienceOffered: string | null; // 必須（アプリ層で担保）
+
   readonly submittedAt: Date;
 }
 

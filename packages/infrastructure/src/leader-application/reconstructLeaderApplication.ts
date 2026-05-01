@@ -23,7 +23,8 @@ export function reconstructLeaderApplication(row: {
   projectCategory: string;
   prefectureCode: string;
   municipality: string | null;
-  plannedActivities: string;
+  /** Issue #192 PR3 で `plannedActivities` から改名・nullable 化 */
+  activityContent: string | null;
   snsLinks: unknown;
   submittedAt: Date;
   reviewedAt: Date | null;
@@ -57,7 +58,7 @@ export function reconstructLeaderApplication(row: {
     projectStory: row.projectStory,
     projectCategory: row.projectCategory,
     location: locationResult.value,
-    plannedActivities: row.plannedActivities,
+    activityContent: row.activityContent,
     snsLinks: snsResult.value,
   });
   if (!draftResult.ok)

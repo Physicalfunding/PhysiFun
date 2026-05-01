@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+import type { LeaderApplicationRecruitmentType, ProjectPhase, Role } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../database/client";
 
@@ -39,13 +39,27 @@ interface CreateLeaderApplicationParams {
   readonly projectCategory: string;
   readonly prefectureCode: string;
   readonly municipality: string | null;
-  readonly plannedActivities: string;
+  readonly activityContent: string | null;
   readonly snsLinks: {
     x: string | null;
     instagram: string | null;
     facebook: string | null;
     website: string | null;
   } | null;
+
+  // Issue #192 PR3 拡張
+  readonly phoneNumber: string | null;
+  readonly progress: ProjectPhase;
+  readonly recruitmentTypes: readonly LeaderApplicationRecruitmentType[];
+  readonly eventLocation: string | null;
+  readonly eventPeriod: string | null;
+  readonly recruitCount: number | null;
+  readonly skillItemNeeds: string | null;
+  readonly skillItemDeadline: string | null;
+  readonly timeReturn: string | null;
+  readonly skillItemReturn: string | null;
+  readonly experienceOffered: string | null;
+
   readonly submittedAt: Date;
 }
 
@@ -113,11 +127,24 @@ export class PrismaSubmitLeaderApplicationAdapter {
           projectCategory: leaderApplication.projectCategory,
           prefectureCode: leaderApplication.prefectureCode,
           municipality: leaderApplication.municipality,
-          plannedActivities: leaderApplication.plannedActivities,
+          activityContent: leaderApplication.activityContent,
           snsLinks:
             leaderApplication.snsLinks === null
               ? Prisma.JsonNull
               : (leaderApplication.snsLinks as Prisma.InputJsonValue),
+          phoneNumber: leaderApplication.phoneNumber,
+          progress: leaderApplication.progress,
+          recruitmentTypes: {
+            set: leaderApplication.recruitmentTypes as LeaderApplicationRecruitmentType[],
+          },
+          eventLocation: leaderApplication.eventLocation,
+          eventPeriod: leaderApplication.eventPeriod,
+          recruitCount: leaderApplication.recruitCount,
+          skillItemNeeds: leaderApplication.skillItemNeeds,
+          skillItemDeadline: leaderApplication.skillItemDeadline,
+          timeReturn: leaderApplication.timeReturn,
+          skillItemReturn: leaderApplication.skillItemReturn,
+          experienceOffered: leaderApplication.experienceOffered,
           submittedAt: leaderApplication.submittedAt,
         },
       }),

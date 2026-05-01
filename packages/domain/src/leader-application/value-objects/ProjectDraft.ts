@@ -10,13 +10,27 @@ import {
 import { SnsLinks, type SnsLinksError } from "../../shared/value-objects/SnsLinks";
 
 /**
- * ProjectDraft 文字数上限（`アカウント.md` B-3 仮値）
+ * ProjectDraft 文字数上限
+ *
+ * Issue #192 PR3 で仮値を改訂:
+ *   - projectTitle:   100 → 60
+ *   - projectSummary: 300 → 150
+ *   - projectStory:   5000 → 300
+ *   - plannedActivities → activityContent: 1000 → 200 （フィールド名も変更）
+ *
+ * `activityContent` は応募時の「時間（やる気）」枠で必須となる条件付き必須項目。
+ * ProjectDraft VO 自体では nullable として保持し、必須化は呼び出し側
+ * (SubmitLeaderApplicationUseCase の Zod superRefine) で担保する。
+ *
+ * NOTE: 旧フィールド名 `plannedActivities` は ApplyForm.tsx (PR4 で再編予定) からの
+ * 互換参照を維持するため、`activityContent` の値を別名として併存させる。
+ * PR4 で UI が再編されたタイミングで削除する。
  */
 const LIMITS = {
-  projectTitle: 100,
-  projectSummary: 300,
-  projectStory: 5000,
-  plannedActivities: 1000,
+  projectTitle: 60,
+  projectSummary: 150,
+  projectStory: 300,
+  activityContent: 200,
 } as const;
 
 /**
@@ -28,6 +42,8 @@ const LIMITS = {
  * - すべての文字列フィールドは前後の空白をトリム後に文字数判定
  * - Markdown フィールド（story）は生の Markdown の文字数で判定
  * - category / location は必須、SNS リンクは任意
+ * - activityContent は応募時の TIME 募集枠で必須となる条件付き必須（Zod superRefine 側で担保）。
+ *   ProjectDraft 自体は nullable として保持する。
  */
 export class ProjectDraft {
   private constructor(
@@ -36,7 +52,7 @@ export class ProjectDraft {
     readonly projectStory: string,
     readonly projectCategory: ProjectCategory,
     readonly location: ProjectLocation,
-    readonly plannedActivities: string,
+    readonly activityContent: string | null,
     readonly snsLinks: SnsLinks
   ) {}
 
@@ -46,7 +62,8 @@ export class ProjectDraft {
     projectStory: string;
     projectCategory: string;
     location: ProjectLocation;
-    plannedActivities: string;
+    /** TIME 募集枠で必須。SKILL_ITEM 単独の場合は null。 */
+    activityContent?: string | null;
     snsLinks: SnsLinks;
   }): Result<ProjectDraft, ProjectDraftError> {
     const titleResult = normalizeText("projectTitle", input.projectTitle, LIMITS.projectTitle);
@@ -62,12 +79,21 @@ export class ProjectDraft {
     const storyResult = normalizeText("projectStory", input.projectStory, LIMITS.projectStory);
     if (!storyResult.ok) return storyResult;
 
-    const activitiesResult = normalizeText(
-      "plannedActivities",
-      input.plannedActivities,
-      LIMITS.plannedActivities
-    );
-    if (!activitiesResult.ok) return activitiesResult;
+    let activityContent: string | null = null;
+    if (input.activityContent !== null && input.activityContent !== undefined) {
+      const trimmed = input.activityContent.trim();
+      if (trimmed.length > 0) {
+        if (trimmed.length > LIMITS.activityContent) {
+          return err({
+            type: "TEXT_TOO_LONG",
+            field: "activityContent",
+            maxLength: LIMITS.activityContent,
+            actualLength: trimmed.length,
+          });
+        }
+        activityContent = trimmed;
+      }
+    }
 
     if (!isProjectCategory(input.projectCategory)) {
       return err({
@@ -83,7 +109,7 @@ export class ProjectDraft {
         storyResult.value,
         input.projectCategory,
         input.location,
-        activitiesResult.value,
+        activityContent,
         input.snsLinks
       )
     );
@@ -96,7 +122,7 @@ export class ProjectDraft {
       this.projectStory === other.projectStory &&
       this.projectCategory === other.projectCategory &&
       this.location.equals(other.location) &&
-      this.plannedActivities === other.plannedActivities &&
+      this.activityContent === other.activityContent &&
       this.snsLinks.equals(other.snsLinks)
     );
   }
@@ -106,7 +132,7 @@ export type ProjectDraftTextField =
   | "projectTitle"
   | "projectSummary"
   | "projectStory"
-  | "plannedActivities";
+  | "activityContent";
 
 export type ProjectDraftError =
   | {
@@ -146,4 +172,15 @@ function normalizeText(
   return ok(trimmed);
 }
 
-export const PROJECT_DRAFT_LIMITS = LIMITS;
+/**
+ * ProjectDraft の文字数上限（Single Source of Truth）。
+ *
+ * `plannedActivities` キーは ApplyForm.tsx (PR4 で再編予定) からの後方互換参照のため、
+ * 新フィールド `activityContent` の値を別名として併存させる。
+ * PR4 マージ時にこの後方互換キーを削除する。
+ */
+export const PROJECT_DRAFT_LIMITS = {
+  ...LIMITS,
+  /** @deprecated Use `activityContent`. ApplyForm.tsx 互換のため一時的に残置（PR4 で削除）。 */
+  plannedActivities: LIMITS.activityContent,
+} as const;

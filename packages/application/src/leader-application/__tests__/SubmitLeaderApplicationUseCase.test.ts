@@ -48,6 +48,9 @@ class InMemorySubmitLeaderApplicationPort implements SubmitLeaderApplicationPort
 
 /**
  * 有効な入力データを生成する
+ *
+ * Issue #192 PR3 の必須フィールドを満たす（progress / recruitmentTypes / experienceOffered
+ * + TIME 募集枠の条件付き必須一式）。
  */
 function validInput(
   overrides?: Partial<SubmitLeaderApplicationInput>
@@ -57,18 +60,28 @@ function validInput(
     displayName: "テストユーザー",
     projectTitle: "古民家を再生するプロジェクト",
     projectSummary: "地域の古民家を若者の交流拠点として再生します。",
-    projectStory:
-      "このプロジェクトは、過疎化が進む地域の古民家を活用し、若者が集まれる場所を作ることを目指しています。",
+    projectStory: "過疎化が進む地域の古民家を活用し、若者が集まれる場所を作ります。",
     projectCategory: "KOMINKA",
     prefectureCode: "26",
     municipality: "京都市",
-    plannedActivities: "月に 2 回のワークショップを開催し、DIY で改修を進めます。",
     snsLinks: {
       x: "https://x.com/example",
       instagram: null,
       facebook: null,
       website: "https://example.com",
     },
+    progress: "PLANNING",
+    recruitmentTypes: ["TIME"],
+    experienceOffered: "古民家再生の体験を提供します。",
+    activityContent: "月に 2 回のワークショップを開催し、DIY で改修を進めます。",
+    eventLocation: "京都市内の現地",
+    eventPeriod: "2026年4月〜2026年12月",
+    recruitCount: 10,
+    timeReturn: "活動証明書と地元食材を返礼します。",
+    skillItemNeeds: null,
+    skillItemDeadline: null,
+    skillItemReturn: null,
+    phoneNumber: null,
     ipAddress: "192.168.1.1",
     captchaToken: "valid-captcha-token",
     ...overrides,
@@ -132,6 +145,10 @@ describe("SubmitLeaderApplicationUseCase", () => {
     expect(app.projectCategory).toBe("KOMINKA");
     expect(app.prefectureCode).toBe("26");
     expect(app.municipality).toBe("京都市");
+    expect(app.progress).toBe("PLANNING");
+    expect(app.recruitmentTypes).toEqual(["TIME"]);
+    expect(app.experienceOffered).toBe("古民家再生の体験を提供します。");
+    expect(app.activityContent).toBe("月に 2 回のワークショップを開催し、DIY で改修を進めます。");
 
     // OutboxMessage
     expect(port.createdOutboxMessages).toHaveLength(1);
@@ -228,8 +245,26 @@ describe("SubmitLeaderApplicationUseCase", () => {
     expect(result.error.issues[0].path).toBe("snsLinks.x");
   });
 
-  it("プロジェクトタイトルが 100 文字を超える場合はバリデーションエラー", async () => {
-    const result = await useCase.execute(validInput({ projectTitle: "あ".repeat(101) }));
+  it("プロジェクトタイトルが 60 文字を超える場合はバリデーションエラー（PR3 改訂値）", async () => {
+    const result = await useCase.execute(validInput({ projectTitle: "あ".repeat(61) }));
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.error.type).toBe("VALIDATION_ERROR");
+  });
+
+  it("プロジェクト概要が 150 文字を超える場合はバリデーションエラー（PR3 改訂値）", async () => {
+    const result = await useCase.execute(validInput({ projectSummary: "あ".repeat(151) }));
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+
+    expect(result.error.type).toBe("VALIDATION_ERROR");
+  });
+
+  it("プロジェクトストーリーが 300 文字を超える場合はバリデーションエラー（PR3 改訂値）", async () => {
+    const result = await useCase.execute(validInput({ projectStory: "あ".repeat(301) }));
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -241,9 +276,7 @@ describe("SubmitLeaderApplicationUseCase", () => {
     const result = await useCase.execute(validInput({ displayName: "あ".repeat(51) }));
 
     expect(result.ok).toBe(false);
-    if (result.ok) return;
-
-    expect(result.error.type).toBe("VALIDATION_ERROR");
+    if (!result.ok) return;
   });
 
   it("入力がオブジェクトでない場合はバリデーションエラー", async () => {
@@ -326,27 +359,22 @@ describe("SubmitLeaderApplicationUseCase", () => {
     expect(port.createdApplications[0].municipality).toBe("京都市");
   });
 
-  // ---- 電話番号 (Issue #192 / PR2) ----
+  // ---- 電話番号 (Issue #192) ----
 
-  it("phoneNumber 未指定の場合は Account.phoneNumber が null になる", async () => {
+  it("phoneNumber 未指定の場合は Account.phoneNumber と LeaderApplication.phoneNumber が null になる", async () => {
     const result = await useCase.execute(validInput());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(port.createdAccounts[0].phoneNumber).toBeNull();
+    expect(port.createdApplications[0].phoneNumber).toBeNull();
   });
 
-  it("phoneNumber に空文字を指定した場合は Account.phoneNumber が null になる", async () => {
-    const result = await useCase.execute(validInput({ phoneNumber: "" }));
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(port.createdAccounts[0].phoneNumber).toBeNull();
-  });
-
-  it("phoneNumber に有効な電話番号を指定すると Account.phoneNumber に保存される", async () => {
+  it("phoneNumber に有効な電話番号を指定すると Account / LeaderApplication 両方に保存される（PR3 スナップショット）", async () => {
     const result = await useCase.execute(validInput({ phoneNumber: "090-1234-5678" }));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(port.createdAccounts[0].phoneNumber).toBe("090-1234-5678");
+    expect(port.createdApplications[0].phoneNumber).toBe("090-1234-5678");
   });
 
   it("phoneNumber が 20 文字超の場合は VALIDATION_ERROR", async () => {
@@ -363,5 +391,224 @@ describe("SubmitLeaderApplicationUseCase", () => {
     expect(result.error.type).toBe("VALIDATION_ERROR");
     if (result.error.type !== "VALIDATION_ERROR") return;
     expect(result.error.issues.some((i) => i.path === "phoneNumber")).toBe(true);
+  });
+
+  // ---- 応募フォーム拡張 (Issue #192 PR3) ----
+
+  describe("progress (Issue #192 PR3 必須)", () => {
+    it("無効な progress 値はバリデーションエラー", async () => {
+      const result = await useCase.execute(validInput({ progress: "INVALID" as "PLANNING" }));
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe("VALIDATION_ERROR");
+      }
+    });
+
+    it("READY 等の他のフェーズ値も受け付ける", async () => {
+      const result = await useCase.execute(validInput({ progress: "READY" }));
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(port.createdApplications[0].progress).toBe("READY");
+      }
+    });
+  });
+
+  describe("recruitmentTypes (Issue #192 PR3 必須・1件以上)", () => {
+    it("空配列はバリデーションエラー", async () => {
+      const result = await useCase.execute(validInput({ recruitmentTypes: [] }));
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.type).toBe("VALIDATION_ERROR");
+      }
+    });
+
+    it("無効な値はバリデーションエラー", async () => {
+      const result = await useCase.execute(validInput({ recruitmentTypes: ["INVALID" as "TIME"] }));
+      expect(result.ok).toBe(false);
+    });
+  });
+
+  describe("experienceOffered (Issue #192 PR3 必須・〜150)", () => {
+    it("空文字はバリデーションエラー", async () => {
+      const result = await useCase.execute(validInput({ experienceOffered: "" }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        expect(result.error.issues.some((i) => i.path === "experienceOffered")).toBe(true);
+      }
+    });
+
+    it("151 文字はバリデーションエラー", async () => {
+      const result = await useCase.execute(validInput({ experienceOffered: "あ".repeat(151) }));
+      expect(result.ok).toBe(false);
+    });
+
+    it("150 文字ちょうどは OK", async () => {
+      const result = await useCase.execute(validInput({ experienceOffered: "あ".repeat(150) }));
+      expect(result.ok).toBe(true);
+    });
+  });
+
+  describe("条件付き必須: TIME 募集枠", () => {
+    function timeOnlyInput(
+      overrides?: Partial<SubmitLeaderApplicationInput>
+    ): SubmitLeaderApplicationInput {
+      return validInput({
+        recruitmentTypes: ["TIME"],
+        skillItemNeeds: null,
+        skillItemDeadline: null,
+        skillItemReturn: null,
+        ...overrides,
+      });
+    }
+
+    it("activityContent が null の場合はバリデーションエラー", async () => {
+      const result = await useCase.execute(timeOnlyInput({ activityContent: null }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        expect(result.error.issues.some((i) => i.path === "activityContent")).toBe(true);
+      }
+    });
+
+    it("eventLocation が null の場合はバリデーションエラー", async () => {
+      const result = await useCase.execute(timeOnlyInput({ eventLocation: null }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        expect(result.error.issues.some((i) => i.path === "eventLocation")).toBe(true);
+      }
+    });
+
+    it("eventPeriod が null の場合はバリデーションエラー", async () => {
+      const result = await useCase.execute(timeOnlyInput({ eventPeriod: null }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        expect(result.error.issues.some((i) => i.path === "eventPeriod")).toBe(true);
+      }
+    });
+
+    it("recruitCount が null の場合はバリデーションエラー", async () => {
+      const result = await useCase.execute(timeOnlyInput({ recruitCount: null }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        expect(result.error.issues.some((i) => i.path === "recruitCount")).toBe(true);
+      }
+    });
+
+    it("recruitCount が 0 はバリデーションエラー", async () => {
+      const result = await useCase.execute(timeOnlyInput({ recruitCount: 0 }));
+      expect(result.ok).toBe(false);
+    });
+
+    it("timeReturn が null の場合はバリデーションエラー", async () => {
+      const result = await useCase.execute(timeOnlyInput({ timeReturn: null }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        expect(result.error.issues.some((i) => i.path === "timeReturn")).toBe(true);
+      }
+    });
+
+    it("activityContent が 200 文字超はバリデーションエラー", async () => {
+      const result = await useCase.execute(timeOnlyInput({ activityContent: "あ".repeat(201) }));
+      expect(result.ok).toBe(false);
+    });
+  });
+
+  describe("条件付き必須: SKILL_ITEM 募集枠", () => {
+    function skillOnlyInput(
+      overrides?: Partial<SubmitLeaderApplicationInput>
+    ): SubmitLeaderApplicationInput {
+      return validInput({
+        recruitmentTypes: ["SKILL_ITEM"],
+        // TIME 関連は不要なので null
+        activityContent: null,
+        eventLocation: null,
+        eventPeriod: null,
+        recruitCount: null,
+        timeReturn: null,
+        // SKILL_ITEM 必須
+        skillItemNeeds: "再生に使う古材を募集します。",
+        skillItemDeadline: "2026年6月末",
+        skillItemReturn: "古民家での宿泊体験をリターンとして提供します。",
+        ...overrides,
+      });
+    }
+
+    it("正常系: SKILL_ITEM 単独でも応募できる（TIME 関連は null のまま OK）", async () => {
+      const result = await useCase.execute(skillOnlyInput());
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const app = port.createdApplications[0];
+        expect(app.recruitmentTypes).toEqual(["SKILL_ITEM"]);
+        expect(app.activityContent).toBeNull();
+        expect(app.eventLocation).toBeNull();
+        expect(app.recruitCount).toBeNull();
+        expect(app.timeReturn).toBeNull();
+        expect(app.skillItemNeeds).toBe("再生に使う古材を募集します。");
+      }
+    });
+
+    it("skillItemNeeds が null の場合はバリデーションエラー", async () => {
+      const result = await useCase.execute(skillOnlyInput({ skillItemNeeds: null }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        expect(result.error.issues.some((i) => i.path === "skillItemNeeds")).toBe(true);
+      }
+    });
+
+    it("skillItemDeadline が null の場合はバリデーションエラー", async () => {
+      const result = await useCase.execute(skillOnlyInput({ skillItemDeadline: null }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        expect(result.error.issues.some((i) => i.path === "skillItemDeadline")).toBe(true);
+      }
+    });
+
+    it("skillItemReturn が null の場合はバリデーションエラー", async () => {
+      const result = await useCase.execute(skillOnlyInput({ skillItemReturn: null }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        expect(result.error.issues.some((i) => i.path === "skillItemReturn")).toBe(true);
+      }
+    });
+  });
+
+  describe("条件付き必須: TIME + SKILL_ITEM の両方", () => {
+    it("両方を選択した場合、両方の必須群が満たされていれば OK", async () => {
+      const result = await useCase.execute(
+        validInput({
+          recruitmentTypes: ["TIME", "SKILL_ITEM"],
+          activityContent: "ワークショップを実施します。",
+          eventLocation: "現地",
+          eventPeriod: "通年",
+          recruitCount: 5,
+          timeReturn: "活動証明書",
+          skillItemNeeds: "古材",
+          skillItemDeadline: "2026年6月末",
+          skillItemReturn: "宿泊券",
+        })
+      );
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(port.createdApplications[0].recruitmentTypes).toEqual(["TIME", "SKILL_ITEM"]);
+      }
+    });
+
+    it("両方選択時に SKILL_ITEM 系が欠落しているとバリデーションエラー", async () => {
+      const result = await useCase.execute(
+        validInput({
+          recruitmentTypes: ["TIME", "SKILL_ITEM"],
+          // TIME 系は揃っている。SKILL_ITEM 系が null
+          skillItemNeeds: null,
+          skillItemDeadline: null,
+          skillItemReturn: null,
+        })
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        const paths = result.error.issues.map((i) => i.path);
+        expect(paths).toContain("skillItemNeeds");
+        expect(paths).toContain("skillItemDeadline");
+        expect(paths).toContain("skillItemReturn");
+      }
+    });
   });
 });
