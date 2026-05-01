@@ -16,7 +16,7 @@ export const PHONE_NUMBER_MAX_LENGTH = 20;
  *   - ハイフン込み・国際表記を許容
  *   - 〜20 文字
  */
-const PHONE_NUMBER_REGEX = /^[0-9+\-\s()]+$/;
+export const PHONE_NUMBER_ALLOWED_CHARS_PATTERN = /^[0-9+\-\s()]+$/;
 
 /**
  * PhoneNumber 値オブジェクトのエラー型
@@ -57,7 +57,7 @@ export class PhoneNumber {
     if (trimmed.length > PHONE_NUMBER_MAX_LENGTH) {
       return err({ type: "PHONE_NUMBER_TOO_LONG", maxLength: PHONE_NUMBER_MAX_LENGTH });
     }
-    if (!PHONE_NUMBER_REGEX.test(trimmed)) {
+    if (!PHONE_NUMBER_ALLOWED_CHARS_PATTERN.test(trimmed)) {
       return err({ type: "PHONE_NUMBER_INVALID_CHARACTERS", value: trimmed });
     }
     return ok(new PhoneNumber(trimmed));

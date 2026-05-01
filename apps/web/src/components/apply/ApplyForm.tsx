@@ -6,7 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/components/common/Toast";
 import { PREFECTURES } from "@/lib/prefectures";
-import { CATEGORY_MASTER, PHONE_NUMBER_MAX_LENGTH, PROJECT_DRAFT_LIMITS } from "@physifun/domain";
+import {
+  CATEGORY_MASTER,
+  PHONE_NUMBER_ALLOWED_CHARS_PATTERN,
+  PHONE_NUMBER_MAX_LENGTH,
+  PROJECT_DRAFT_LIMITS,
+} from "@physifun/domain";
 
 // ==================== フロントエンド用バリデーションスキーマ ====================
 
@@ -37,7 +42,7 @@ const applyFormSchema = z.object({
     .string()
     .max(PHONE_NUMBER_MAX_LENGTH, `電話番号は ${PHONE_NUMBER_MAX_LENGTH} 文字以内です`)
     .refine(
-      (v) => v === "" || /^[0-9+\-\s()]+$/.test(v),
+      (v) => v === "" || PHONE_NUMBER_ALLOWED_CHARS_PATTERN.test(v),
       "電話番号は数字・ハイフン・プラス・括弧・半角スペースのみで入力してください"
     )
     .optional(),

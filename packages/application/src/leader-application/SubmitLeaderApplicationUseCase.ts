@@ -50,7 +50,7 @@ export const submitLeaderApplicationInputSchema = z.object({
     // 入力段で trim + toLowerCase して正規化する。
     // 以降の重複チェック / Account.email 保存 / Outbox payload に一貫した形で伝播する。
     .transform((value) => value.trim().toLowerCase()),
-  displayName: z.string().min(1, "表示名は必須です").max(50, "表示名は 50 文字以内です"),
+  displayName: z.string().min(1, "お名前は必須です").max(50, "お名前は 50 文字以内です"),
   /**
    * 電話番号（任意、〜20 文字）
    * - Issue #192: PR2 では Account.phoneNumber に保存。LeaderApplication 側のスナップショットは PR3 で実装。
