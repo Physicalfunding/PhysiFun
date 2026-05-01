@@ -7,9 +7,9 @@
 export const ProjectPhase = {
   VISION: "VISION",
   PLANNING: "PLANNING",
-  PREPARATION: "PREPARATION",
+  READY: "READY",
   EXECUTION: "EXECUTION",
-  COMPLETED: "COMPLETED",
+  ONGOING: "ONGOING",
 } as const;
 
 export type ProjectPhase = (typeof ProjectPhase)[keyof typeof ProjectPhase];

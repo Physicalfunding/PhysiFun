@@ -409,8 +409,8 @@ describe("Project", () => {
       const project = unwrapDraft();
       expect(project.phase).toBe(ProjectPhase.VISION);
 
-      project.update({ phase: ProjectPhase.COMPLETED });
-      expect(project.phase).toBe(ProjectPhase.COMPLETED);
+      project.update({ phase: ProjectPhase.ONGOING });
+      expect(project.phase).toBe(ProjectPhase.ONGOING);
 
       project.update({ phase: ProjectPhase.PLANNING });
       expect(project.phase).toBe(ProjectPhase.PLANNING);
