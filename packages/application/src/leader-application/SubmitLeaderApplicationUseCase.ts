@@ -4,6 +4,9 @@ import {
   err,
   ok,
   CATEGORY_MASTER,
+  PHONE_NUMBER_MAX_LENGTH,
+  PhoneNumber,
+  type PhoneNumberError,
   PROJECT_DRAFT_LIMITS,
   ProjectDraft,
   type ProjectDraftError,
@@ -47,7 +50,16 @@ export const submitLeaderApplicationInputSchema = z.object({
     // 入力段で trim + toLowerCase して正規化する。
     // 以降の重複チェック / Account.email 保存 / Outbox payload に一貫した形で伝播する。
     .transform((value) => value.trim().toLowerCase()),
-  displayName: z.string().min(1, "表示名は必須です").max(50, "表示名は 50 文字以内です"),
+  displayName: z.string().min(1, "お名前は必須です").max(50, "お名前は 50 文字以内です"),
+  /**
+   * 電話番号（任意、〜20 文字）
+   * - Issue #192: PR2 では Account.phoneNumber に保存。LeaderApplication 側のスナップショットは PR3 で実装。
+   * - フォーマット検証（許可文字）はドメイン VO（PhoneNumber）で実施する。
+   */
+  phoneNumber: z
+    .string()
+    .max(PHONE_NUMBER_MAX_LENGTH, `電話番号は ${PHONE_NUMBER_MAX_LENGTH} 文字以内です`)
+    .nullish(),
   projectTitle: z
     .string()
     .min(1, "プロジェクトタイトルは必須です")
@@ -166,7 +178,7 @@ function generateActivationToken(): string {
 
 // ==================== ドメインエラー → VALIDATION_ERROR 変換 ====================
 
-type DomainVoError = ProjectLocationError | SnsLinksError | ProjectDraftError;
+type DomainVoError = ProjectLocationError | SnsLinksError | ProjectDraftError | PhoneNumberError;
 
 /**
  * ドメイン VO のエラーを VALIDATION_ERROR の issues 形式に変換する
@@ -193,6 +205,13 @@ function mapDomainErrorToIssue(error: DomainVoError): { path: string; message: s
       return { path: error.field, message: `${error.field} は ${error.maxLength} 文字以内です` };
     case "INVALID_PROJECT_CATEGORY":
       return { path: "projectCategory", message: "無効なプロジェクトカテゴリです" };
+    case "PHONE_NUMBER_TOO_LONG":
+      return { path: "phoneNumber", message: `電話番号は ${error.maxLength} 文字以内です` };
+    case "PHONE_NUMBER_INVALID_CHARACTERS":
+      return {
+        path: "phoneNumber",
+        message: "電話番号は数字・ハイフン・プラス・括弧・半角スペースのみで入力してください",
+      };
     default: {
       // 将来 DomainVoError 配下の VO エラーに variant が追加された場合に
       // コンパイルエラーで気づけるようにする
@@ -273,6 +292,15 @@ export class SubmitLeaderApplicationUseCase {
       });
     }
 
+    const phoneNumberResult = PhoneNumber.create(validated.phoneNumber ?? null);
+    if (!phoneNumberResult.ok) {
+      return err({
+        type: "VALIDATION_ERROR",
+        issues: [mapDomainErrorToIssue(phoneNumberResult.error)],
+      });
+    }
+    const phoneNumber = phoneNumberResult.value;
+
     const draftResult = ProjectDraft.create({
       projectTitle: validated.projectTitle,
       projectSummary: validated.projectSummary,
@@ -319,6 +347,7 @@ export class SubmitLeaderApplicationUseCase {
         id: accountId,
         email: validated.email,
         displayName: validated.displayName.trim(),
+        phoneNumber: phoneNumber ? phoneNumber.toString() : null,
         status: "PENDING_EMAIL_CONFIRMATION",
         roles: ["SUPPORTER"],
         activationToken,

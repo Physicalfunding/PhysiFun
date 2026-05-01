@@ -6,7 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/components/common/Toast";
 import { PREFECTURES } from "@/lib/prefectures";
-import { CATEGORY_MASTER, PROJECT_DRAFT_LIMITS } from "@physifun/domain";
+import {
+  CATEGORY_MASTER,
+  PHONE_NUMBER_ALLOWED_CHARS_PATTERN,
+  PHONE_NUMBER_MAX_LENGTH,
+  PROJECT_DRAFT_LIMITS,
+} from "@physifun/domain";
 
 // ==================== フロントエンド用バリデーションスキーマ ====================
 
@@ -32,7 +37,15 @@ function snsUrlField(label: string) {
 }
 
 const applyFormSchema = z.object({
-  displayName: z.string().min(1, "表示名を入力してください").max(50, "表示名は 50 文字以内です"),
+  displayName: z.string().min(1, "お名前を入力してください").max(50, "お名前は 50 文字以内です"),
+  phoneNumber: z
+    .string()
+    .max(PHONE_NUMBER_MAX_LENGTH, `電話番号は ${PHONE_NUMBER_MAX_LENGTH} 文字以内です`)
+    .refine(
+      (v) => v === "" || PHONE_NUMBER_ALLOWED_CHARS_PATTERN.test(v),
+      "電話番号は数字・ハイフン・プラス・括弧・半角スペースのみで入力してください"
+    )
+    .optional(),
   email: z
     .string()
     .min(1, "メールアドレスを入力してください")
@@ -175,10 +188,10 @@ export function ApplyForm() {
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-gray-900">基本情報</h2>
         <div className="space-y-4">
-          {/* 表示名 */}
+          {/* お名前 */}
           <div>
             <label htmlFor="displayName" className={labelClassName}>
-              表示名 <span className="text-red-500">*</span>
+              お名前 <span className="text-red-500">*</span>
             </label>
             <input
               id="displayName"
@@ -189,6 +202,28 @@ export function ApplyForm() {
             />
             {errors.displayName && (
               <p className="mt-1 text-sm text-red-600">{errors.displayName.message}</p>
+            )}
+          </div>
+
+          {/* 電話番号 (任意) */}
+          <div>
+            <label htmlFor="phoneNumber" className={labelClassName}>
+              電話番号
+            </label>
+            <input
+              id="phoneNumber"
+              type="tel"
+              autoComplete="tel"
+              placeholder="090-1234-5678"
+              {...register("phoneNumber")}
+              className={inputClassName(!!errors.phoneNumber)}
+              aria-invalid={errors.phoneNumber ? "true" : "false"}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              ハイフンや国際表記（+81）も入力できます。最大 {PHONE_NUMBER_MAX_LENGTH} 文字
+            </p>
+            {errors.phoneNumber && (
+              <p className="mt-1 text-sm text-red-600">{errors.phoneNumber.message}</p>
             )}
           </div>
 

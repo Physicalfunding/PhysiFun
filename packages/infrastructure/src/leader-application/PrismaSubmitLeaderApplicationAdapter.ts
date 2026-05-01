@@ -21,6 +21,8 @@ interface CreateAccountParams {
   readonly id: string;
   readonly email: string;
   readonly displayName: string;
+  /** 電話番号（任意、〜20 文字、Issue #192） */
+  readonly phoneNumber: string | null;
   readonly status: "PENDING_EMAIL_CONFIRMATION" | "ACTIVE";
   readonly roles: readonly ("SUPPORTER" | "LEADER" | "ADMIN")[];
   readonly activationToken: string;
@@ -93,6 +95,7 @@ export class PrismaSubmitLeaderApplicationAdapter {
           id: account.id,
           email: account.email,
           displayName: account.displayName,
+          phoneNumber: account.phoneNumber,
           status: account.status,
           roles: { set: account.roles as Role[] },
           activationToken: account.activationToken,
