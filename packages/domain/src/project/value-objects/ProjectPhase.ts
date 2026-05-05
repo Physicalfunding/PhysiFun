@@ -14,12 +14,17 @@ export const ProjectPhase = {
 
 export type ProjectPhase = (typeof ProjectPhase)[keyof typeof ProjectPhase];
 
-const PROJECT_PHASE_VALUES = new Set<string>(Object.values(ProjectPhase));
-
 /**
- * 任意の文字列が ProjectPhase の値かどうか判定する型ガード。
- * 永続化層（Prisma 行）からの復元時に使用する。
+ * 任意の値が `ProjectPhase` の値かどうかを判定する型ガード。
+ *
+ * Prisma 等の外部由来 `string` 値（あるいは `unknown`）を `ProjectPhase` として
+ * 安全に絞り込むのに使用する。永続化層からの復元時にも使う。
+ *
+ * `ProjectPhase` 定数を直接参照することで、値追加時の同期忘れを防ぐ。
  */
 export function isProjectPhase(value: unknown): value is ProjectPhase {
-  return typeof value === "string" && PROJECT_PHASE_VALUES.has(value);
+  return (
+    typeof value === "string" &&
+    (Object.values(ProjectPhase) as string[]).includes(value)
+  );
 }
