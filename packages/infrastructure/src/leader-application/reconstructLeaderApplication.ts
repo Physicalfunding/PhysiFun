@@ -5,6 +5,7 @@ import {
   type LeaderApplicationStatus,
   ProjectDraft,
   ProjectLocation,
+  ProjectPhase,
   SnsLinks,
 } from "@physifun/domain";
 
@@ -26,6 +27,8 @@ export function reconstructLeaderApplication(row: {
   /** Issue #192 PR3 で `plannedActivities` から改名・nullable 化 */
   activityContent: string | null;
   snsLinks: unknown;
+  /** Issue #192 PR3 で追加された進捗フェーズ。Prisma の ProjectPhase enum 値。 */
+  progress: string;
   submittedAt: Date;
   reviewedAt: Date | null;
   reviewerNote: string | null;
@@ -69,6 +72,7 @@ export function reconstructLeaderApplication(row: {
     accountId: accountIdResult.value,
     status: row.status as LeaderApplicationStatus,
     projectDraft: draftResult.value,
+    progress: row.progress as ProjectPhase,
     submittedAt: row.submittedAt,
     reviewedAt: row.reviewedAt,
     reviewerNote: row.reviewerNote,

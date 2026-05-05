@@ -1,4 +1,5 @@
-import type { LeaderApplication } from "@physifun/domain";
+import type { Prisma } from "@prisma/client";
+import type { LeaderApplication, Project } from "@physifun/domain";
 import { prisma } from "../database/client";
 import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
 
@@ -84,8 +85,11 @@ export class PrismaApproveLeaderApplicationAdapter {
     accountId: string;
     newRoles: AccountRole[];
     reviewedAt: Date;
+    /** Issue #192 PR5: 承認時に同時作成する初期 Project（DRAFT） */
+    project: Project;
     outboxMessage: { id: string; type: string; payload: unknown };
   }): Promise<void> {
+    const p = params.project;
     await prisma.$transaction([
       prisma.leaderApplication.update({
         where: { id: params.application.id.toString() },
@@ -98,11 +102,40 @@ export class PrismaApproveLeaderApplicationAdapter {
         where: { id: params.accountId },
         data: { roles: { set: params.newRoles } },
       }),
+      // Issue #192 PR5: 応募内容から派生した初期 Project を DRAFT で同一トランザクションに INSERT
+      prisma.project.create({
+        data: {
+          id: p.id.toString(),
+          ownerAccountId: p.ownerAccountId.toString(),
+          slug: null,
+          title: p.title,
+          summary: p.summary,
+          story: p.body,
+          leaderIntro: p.leaderIntroduction,
+          coverImageUrl: p.coverImageUrl,
+          category: p.category,
+          prefectureCode: p.location?.prefectureCode ?? null,
+          municipality: p.location?.municipality ?? null,
+          snsLinks: p.snsLinks.isEmpty()
+            ? {}
+            : ({
+                x: p.snsLinks.x,
+                instagram: p.snsLinks.instagram,
+                facebook: p.snsLinks.facebook,
+                website: p.snsLinks.website,
+              } satisfies Prisma.InputJsonValue),
+          activityPlan: p.activityPlan,
+          status: p.publishStatus,
+          phase: p.phase,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        },
+      }),
       prisma.leaderApplicationOutboxMessage.create({
         data: {
           id: params.outboxMessage.id,
           type: params.outboxMessage.type,
-          payload: params.outboxMessage.payload as object,
+          payload: params.outboxMessage.payload as Prisma.InputJsonValue,
         },
       }),
     ]);

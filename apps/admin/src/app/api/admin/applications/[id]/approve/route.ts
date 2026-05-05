@@ -61,7 +61,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       action: "leader_application.approve",
       targetType: "LeaderApplication",
       targetId: result.value.applicationId,
-      metadata: { accountId: result.value.accountId },
+      metadata: { accountId: result.value.accountId, projectId: result.value.projectId },
     });
 
     // 即時送信トリガー (#187 B 経路): approved.notify_applicant メール
@@ -77,6 +77,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return successResponse({
       applicationId: result.value.applicationId,
       accountId: result.value.accountId,
+      // Issue #192 PR5: 承認時に自動生成された Project ID
+      projectId: result.value.projectId,
     });
   } catch (e) {
     console.error("[api] admin/applications/[id]/approve POST error:", e);
@@ -92,8 +94,6 @@ function mapApproveError(error: ApproveLeaderApplicationError) {
       return notFoundResponse("アカウント");
     case "NOT_PENDING":
       return unprocessableEntityResponse("この応募は審査待ち状態ではありません");
-    case "ALREADY_LEADER":
-      return unprocessableEntityResponse("このアカウントは既にリーダーです");
     case "INVALID_REVIEWER_ID":
       return validationErrorResponse("無効な審査者 ID です", {
         reviewerId: ["UUID v4 形式で指定してください"],
@@ -101,6 +101,11 @@ function mapApproveError(error: ApproveLeaderApplicationError) {
     case "REVIEWER_NOT_FOUND":
       // #157 M3: reviewer が DISABLED に落ちた稀ケース。401 を返して再ログインを促す。
       return unauthorizedResponse();
+    case "PROJECT_MAPPING_FAILED":
+      // Issue #192 PR5: Project マッピング失敗（応募バリデーション通過後の異常）
+      return unprocessableEntityResponse(
+        `応募内容から初期プロジェクトを生成できませんでした: ${error.reason}`
+      );
     default: {
       const _exhaustive: never = error;
       return internalErrorResponse();

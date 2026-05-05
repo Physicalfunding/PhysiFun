@@ -1,4 +1,5 @@
 import { AccountId } from "../../account/value-objects/AccountId";
+import { ProjectPhase } from "../../project/value-objects/ProjectPhase";
 import { type Result, err, ok } from "../../shared/result";
 import type { LeaderApplicationStateError } from "../errors/LeaderApplicationError";
 import { LeaderApplicationId } from "../value-objects/LeaderApplicationId";
@@ -29,6 +30,7 @@ export class LeaderApplication {
     private readonly _accountId: AccountId,
     private _status: LeaderApplicationStatus,
     private readonly _projectDraft: ProjectDraft,
+    private readonly _progress: ProjectPhase,
     private readonly _submittedAt: Date,
     private _reviewedAt: Date | null,
     private _reviewerNote: string | null
@@ -40,10 +42,14 @@ export class LeaderApplication {
    * - 状態は `PENDING` で固定
    * - `submittedAt` は呼び出し時点の時刻（テスタビリティのため引数で上書き可能）
    * - `reviewedAt` / `reviewerNote` は null
+   * - `progress` は応募者が選択する 5 値の `ProjectPhase`（PR3 で追加）。
+   *   省略時はマイグレーションの DEFAULT に揃え `PLANNING` をフォールバックに用いる。
    */
   static submit(input: {
     accountId: AccountId;
     projectDraft: ProjectDraft;
+    /** 進捗フェーズ（応募時に選択。省略時は PLANNING）。 */
+    progress?: ProjectPhase;
     /** 省略時は `new Date()`。テスト用に注入可能。 */
     submittedAt?: Date;
     /** 省略時は `LeaderApplicationId.generate()`。 */
@@ -54,6 +60,7 @@ export class LeaderApplication {
       input.accountId,
       LeaderApplicationStatus.PENDING,
       input.projectDraft,
+      input.progress ?? ProjectPhase.PLANNING,
       input.submittedAt ?? new Date(),
       null,
       null
@@ -65,12 +72,16 @@ export class LeaderApplication {
    *
    * Repository 実装がこのメソッドを使う。状態遷移のルールは適用せず、
    * DB に保存されている値をそのまま復元する（信頼境界は Repository 側）。
+   *
+   * `progress` は PR3 で追加された必須フィールド。後方互換性のため省略可とし、
+   * 省略時は `PLANNING` をフォールバックする（migration の DEFAULT と一致）。
    */
   static reconstruct(input: {
     id: LeaderApplicationId;
     accountId: AccountId;
     status: LeaderApplicationStatus;
     projectDraft: ProjectDraft;
+    progress?: ProjectPhase;
     submittedAt: Date;
     reviewedAt: Date | null;
     reviewerNote: string | null;
@@ -80,6 +91,7 @@ export class LeaderApplication {
       input.accountId,
       input.status,
       input.projectDraft,
+      input.progress ?? ProjectPhase.PLANNING,
       input.submittedAt,
       input.reviewedAt,
       input.reviewerNote
@@ -102,6 +114,14 @@ export class LeaderApplication {
 
   get projectDraft(): ProjectDraft {
     return this._projectDraft;
+  }
+
+  /**
+   * 応募時に選択された進捗フェーズ（PR3 で追加）。
+   * 承認時の Project 自動生成（PR5）で `Project.phase` の初期値にコピーされる。
+   */
+  get progress(): ProjectPhase {
+    return this._progress;
   }
 
   get submittedAt(): Date {
