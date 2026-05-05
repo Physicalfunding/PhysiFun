@@ -34,8 +34,5 @@ export const PROJECT_PHASE_VALUES = Object.values(ProjectPhase) as [
  * `ProjectPhase` 定数を直接参照することで、値追加時の同期忘れを防ぐ。
  */
 export function isProjectPhase(value: unknown): value is ProjectPhase {
-  return (
-    typeof value === "string" &&
-    (Object.values(ProjectPhase) as string[]).includes(value)
-  );
+  return typeof value === "string" && (Object.values(ProjectPhase) as string[]).includes(value);
 }

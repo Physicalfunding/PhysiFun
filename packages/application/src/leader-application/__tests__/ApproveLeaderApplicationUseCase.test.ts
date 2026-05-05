@@ -540,5 +540,4 @@ describe("ApproveLeaderApplicationUseCase", () => {
 
     expect(result.ok).toBe(true);
   });
-
 });

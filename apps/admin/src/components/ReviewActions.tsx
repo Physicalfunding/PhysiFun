@@ -56,7 +56,9 @@ export function ReviewActions({ applicationId }: ReviewActionsProps) {
       // Issue #192 PR5: すでにリーダーだったケース（重複承認）は新規ロール付与が起きていないため
       // 管理者に注意喚起する。Project は冪等的に既存のものが返却される。
       if (data.data?.wasAlreadyLeader === true) {
-        setNotice("このアカウントはすでにリーダー権限を保持していました。既存のプロジェクトを使用します。");
+        setNotice(
+          "このアカウントはすでにリーダー権限を保持していました。既存のプロジェクトを使用します。"
+        );
       }
       router.refresh();
     } catch {

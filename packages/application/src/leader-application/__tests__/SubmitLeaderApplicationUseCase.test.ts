@@ -396,9 +396,7 @@ describe("SubmitLeaderApplicationUseCase", () => {
     if (result.ok) return;
     expect(result.error.type).toBe("CAPTCHA_VERIFICATION_FAILED");
 
-    expect(captcha.calls).toEqual([
-      { token: "valid-captcha-token", remoteIp: "192.168.1.1" },
-    ]);
+    expect(captcha.calls).toEqual([{ token: "valid-captcha-token", remoteIp: "192.168.1.1" }]);
     expect(port.createdAccounts).toHaveLength(0);
     expect(port.createdApplications).toHaveLength(0);
   });
@@ -406,9 +404,7 @@ describe("SubmitLeaderApplicationUseCase", () => {
   it("正常系では CaptchaVerifierPort.verify が token / remoteIp 付きで呼ばれる", async () => {
     const result = await useCase.execute(validInput());
     expect(result.ok).toBe(true);
-    expect(captcha.calls).toEqual([
-      { token: "valid-captcha-token", remoteIp: "192.168.1.1" },
-    ]);
+    expect(captcha.calls).toEqual([{ token: "valid-captcha-token", remoteIp: "192.168.1.1" }]);
     expect(rateLimit.calls).toEqual(["192.168.1.1"]);
   });
 
