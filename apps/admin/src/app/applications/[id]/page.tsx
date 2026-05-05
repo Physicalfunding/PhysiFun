@@ -105,8 +105,10 @@ export default async function ApplicationDetailPage({
             <dd className="mt-1 whitespace-pre-wrap text-gray-900">{detail.projectStory}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">活動予定</dt>
-            <dd className="mt-1 whitespace-pre-wrap text-gray-900">{detail.plannedActivities}</dd>
+            <dt className="text-sm font-medium text-gray-500">活動内容</dt>
+            <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+              {detail.activityContent ?? "（未入力）"}
+            </dd>
           </div>
           {detail.snsLinks && (
             <div>

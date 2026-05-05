@@ -36,7 +36,7 @@ function createTestProjectDraft(): ProjectDraft {
     projectStory: "テストプロジェクトのストーリー",
     projectCategory: "COMMUNITY",
     location: location.value,
-    plannedActivities: "テスト活動内容",
+    activityContent: "テスト活動内容",
     snsLinks: snsLinks.value,
   });
   if (!draft.ok) throw new Error("Failed to create test ProjectDraft");

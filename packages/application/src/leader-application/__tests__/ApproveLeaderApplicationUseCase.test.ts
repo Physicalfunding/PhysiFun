@@ -32,7 +32,7 @@ function createTestProjectDraft(): ProjectDraft {
       "テストプロジェクトのストーリーです。これはテスト用のストーリーで、十分な長さが必要です。テストプロジェクトのストーリーです。",
     projectCategory: "COMMUNITY",
     location: location.value,
-    plannedActivities: "テスト活動内容です。これはテスト用の活動計画です。",
+    activityContent: "テスト活動内容です。これはテスト用の活動計画です。",
     snsLinks: snsLinks.value,
   });
   if (!draft.ok) throw new Error("ProjectDraft creation failed");

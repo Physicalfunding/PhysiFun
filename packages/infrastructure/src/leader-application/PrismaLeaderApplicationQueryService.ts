@@ -33,7 +33,8 @@ export interface LeaderApplicationDetail {
   readonly projectCategory: string;
   readonly prefectureCode: string;
   readonly municipality: string | null;
-  readonly plannedActivities: string;
+  /** Issue #192 PR3 で `plannedActivities` から改名・nullable 化 */
+  readonly activityContent: string | null;
   readonly snsLinks: {
     x: string | null;
     instagram: string | null;
@@ -141,7 +142,7 @@ export class PrismaLeaderApplicationQueryService implements LeaderApplicationQue
       projectCategory: row.projectCategory,
       prefectureCode: row.prefectureCode,
       municipality: row.municipality,
-      plannedActivities: row.plannedActivities,
+      activityContent: row.activityContent,
       snsLinks: row.snsLinks as LeaderApplicationDetail["snsLinks"],
       submittedAt: row.submittedAt,
       reviewedAt: row.reviewedAt,

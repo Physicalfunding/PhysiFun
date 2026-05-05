@@ -20,7 +20,7 @@ function buildProjectDraft(): ProjectDraft {
     projectStory: "想いと背景",
     projectCategory: "KOMINKA",
     location: location.value,
-    plannedActivities: "週末イベント",
+    activityContent: "週末イベント",
     snsLinks: sns.value,
   });
   if (!draft.ok) throw new Error("fixture broken");

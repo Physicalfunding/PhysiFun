@@ -73,15 +73,42 @@ model LeaderApplication {
   reviewerNote String?                 @db.Text // 却下理由等、運営が付与
   reviewedBy   String? // 審査を行った AdminAccount.id。PENDING 時は null。
 
-  // ProjectDraft 値オブジェクト (B-3 仮値の上限)
-  projectTitle      String // 〜100
-  projectSummary    String  @db.Text // 〜300
-  projectStory      String  @db.Text // 〜5000 (Markdown)
-  projectCategory   String // CATEGORY_MASTER 参照。enum にせず String で保持
-  prefectureCode    String // "01"〜"47"
-  municipality      String? // 任意、〜50
-  plannedActivities String  @db.Text // 〜1000
-  snsLinks          Json? // { x, instagram, facebook, website }
+  // 応募者連絡先スナップショット (Issue #192 PR3)
+  // Account.phoneNumber と二重保存。応募時点の値を保持する。
+  phoneNumber String?
+
+  // ProjectDraft 値オブジェクト (Issue #192 PR3 改訂後の仮値)
+  projectTitle    String // 〜60
+  projectSummary  String  @db.Text // 〜150
+  projectStory    String  @db.Text // 〜300 (Markdown)
+  projectCategory String // CATEGORY_MASTER 参照。enum にせず String で保持
+  prefectureCode  String // "01"〜"47"
+  municipality    String? // 任意、〜50
+  /// 活動内容（〜200）。TIME 募集枠で必須、SKILL_ITEM 単独時は null。
+  /// 旧フィールド `plannedActivities` を統合・リネームしたもの。
+  activityContent String? @db.Text
+  snsLinks        Json? // { x, instagram, facebook, website }
+
+  // 応募フォーム拡張フィールド (Issue #192 PR3)
+  /// 進捗フェーズ。応募時点でリーダーが選択する 5 値の ProjectPhase。
+  /// 既存レコード向けには migration の DEFAULT で 'PLANNING' を当てる。
+  progress ProjectPhase
+
+  /// 募集タイプ。1 件以上必須（アプリ層 Zod で担保）。
+  /// 名前空間衝突回避のため `LeaderApplicationRecruitmentType` を採用（Issue #192 案 2）。
+  recruitmentTypes LeaderApplicationRecruitmentType[]
+
+  // 募集詳細（条件付き必須）。詳細は SubmitLeaderApplicationUseCase の Zod superRefine 参照。
+  eventLocation     String? @db.Text // TIME 必須
+  eventPeriod       String? @db.Text // TIME 必須
+  recruitCount      Int? // TIME 必須（>= 1）
+  skillItemNeeds    String? @db.Text // SKILL_ITEM 必須
+  skillItemDeadline String? @db.Text // SKILL_ITEM 必須
+
+  // リターン情報
+  timeReturn        String? @db.Text // TIME 選択時
+  skillItemReturn   String? @db.Text // SKILL_ITEM 選択時
+  experienceOffered String? @db.Text // 必須（DB は nullable、アプリ層で必須化）
 
   submittedAt DateTime  @default(now())
   reviewedAt  DateTime?
@@ -97,6 +124,14 @@ model LeaderApplication {
   @@index([submittedAt])
   @@index([reviewedBy])
   @@map("leader_applications")
+}
+
+/// リーダー応募の募集タイプ (Issue #192 PR3)。
+/// 既存 enum `RecruitmentType { ACTIVITY }` (SupportRecruitment 用) との名前空間衝突を
+/// 避けるため、Issue #192 案 2 の命名を採用。
+enum LeaderApplicationRecruitmentType {
+  TIME
+  SKILL_ITEM
 }
 
 enum LeaderApplicationStatus {
