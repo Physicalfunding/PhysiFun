@@ -1,8 +1,8 @@
 /**
- * apps/admin リーダー応募ラベル変換の単体テスト (Issue #192 PR6 レビュー対応 M4)
+ * apps/admin リーダー応募 / ProjectPhase ラベル・型ガードの単体テスト (Issue #192 PR6)
  *
- * 募集タイプ・ProjectPhase の表示ラベル変換、および
- * `recruitmentTypes` 空配列ケースなどの分岐を回帰テストとして残す。
+ * 募集タイプ・ProjectPhase の表示ラベルと、Prisma 等の外部由来 string 値を
+ * domain enum に絞り込むための型ガード関数の挙動を回帰テストとして残す。
  *
  * 実行: `bun test apps/admin/src/lib/__tests__/leaderApplicationLabels.test.ts`
  */
@@ -15,28 +15,18 @@ import {
   PROJECT_PHASE_LABELS,
   ProjectPhase,
 } from "@physifun/domain";
-import { getRecruitmentTypeLabel } from "../leaderApplicationLabels";
 
-describe("getRecruitmentTypeLabel", () => {
+describe("LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS", () => {
   test("TIME を「時間（やる気）での支援」に変換する", () => {
-    expect(getRecruitmentTypeLabel(LeaderApplicationRecruitmentType.TIME)).toBe(
+    expect(LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS[LeaderApplicationRecruitmentType.TIME]).toBe(
       "時間（やる気）での支援"
     );
   });
 
   test("SKILL_ITEM を「スキル・モノでの支援」に変換する", () => {
-    expect(getRecruitmentTypeLabel(LeaderApplicationRecruitmentType.SKILL_ITEM)).toBe(
-      "スキル・モノでの支援"
-    );
-  });
-
-  test("SSOT として domain 側のラベル定義と一致する", () => {
-    expect(getRecruitmentTypeLabel(LeaderApplicationRecruitmentType.TIME)).toBe(
-      LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS[LeaderApplicationRecruitmentType.TIME]
-    );
-    expect(getRecruitmentTypeLabel(LeaderApplicationRecruitmentType.SKILL_ITEM)).toBe(
+    expect(
       LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS[LeaderApplicationRecruitmentType.SKILL_ITEM]
-    );
+    ).toBe("スキル・モノでの支援");
   });
 });
 
@@ -76,6 +66,12 @@ describe("isProjectPhase", () => {
     expect(isProjectPhase("UNKNOWN")).toBe(false);
     expect(isProjectPhase("")).toBe(false);
     expect(isProjectPhase("planning")).toBe(false);
+  });
+
+  test("ProjectPhase 定数の全ての値で true を返す（同期確認）", () => {
+    for (const value of Object.values(ProjectPhase)) {
+      expect(isProjectPhase(value)).toBe(true);
+    }
   });
 });
 

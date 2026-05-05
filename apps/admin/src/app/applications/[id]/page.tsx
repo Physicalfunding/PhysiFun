@@ -1,4 +1,8 @@
-import { PROJECT_PHASE_LABELS, LeaderApplicationRecruitmentType } from "@physifun/domain";
+import {
+  LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS,
+  LeaderApplicationRecruitmentType,
+  PROJECT_PHASE_LABELS,
+} from "@physifun/domain";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
@@ -7,7 +11,6 @@ import { SafeSnsLink } from "@physifun/ui-shared";
 import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { getCategoryLabel } from "@/lib/category";
 import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
-import { getRecruitmentTypeLabel } from "@/lib/leaderApplicationLabels";
 import { getPrefectureName } from "@/lib/prefecture";
 
 // NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
@@ -24,14 +27,16 @@ export const dynamic = "force-dynamic";
  * === ACTIVE を DB で再確認する。null なら /login へリダイレクト。
  *
  * ## 表示構造 (Issue #192 PR6)
- * PR3 で追加された応募フォーム拡張フィールドに対応するため、以下の 5 セクション
+ * PR3 で追加された応募フォーム拡張フィールドに対応するため、以下の 4 セクション
  * グルーピングで詳細を表示する:
  *
  * 1. 応募者情報（お名前 / メール / 電話番号）
- * 2. プロジェクト詳細（カテゴリ / 活動地域 / 概要 / 説明 / SNS）
- * 3. プロジェクトの進捗（progress を日本語ラベルで表示）
- * 4. 募集内容（recruitmentTypes と TIME / SKILL_ITEM 条件付きフィールド）
- * 5. リターン（experienceOffered + 条件付き timeReturn / skillItemReturn）
+ * 2. プロジェクト詳細（現在のフェーズ / カテゴリ / 活動地域 / 概要 / 説明 / SNS）
+ * 3. 募集内容（recruitmentTypes と TIME / SKILL_ITEM 条件付きフィールド）
+ * 4. リターン（experienceOffered + 条件付き timeReturn / skillItemReturn）
+ *
+ * 「プロジェクトの進捗」(progress) は単独セクションだと 1 項目のみで構造的一貫性が
+ * 低かったため、セクション 2 の最初の項目として統合した。
  */
 export default async function ApplicationDetailPage({
   params,
@@ -115,6 +120,10 @@ export default async function ApplicationDetailPage({
         <h2 className="mb-4 text-lg font-semibold">プロジェクト詳細</h2>
         <dl className="space-y-6">
           <div>
+            <dt className="text-sm font-medium text-gray-500">現在のフェーズ</dt>
+            <dd className="mt-1">{PROJECT_PHASE_LABELS[detail.progress]}</dd>
+          </div>
+          <div>
             <dt className="text-sm font-medium text-gray-500">カテゴリ</dt>
             <dd className="mt-1">{getCategoryLabel(detail.projectCategory)}</dd>
           </div>
@@ -144,18 +153,7 @@ export default async function ApplicationDetailPage({
         </dl>
       </section>
 
-      {/* 3. プロジェクトの進捗 */}
-      <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold">プロジェクトの進捗</h2>
-        <dl className="space-y-6">
-          <div>
-            <dt className="text-sm font-medium text-gray-500">現在のフェーズ</dt>
-            <dd className="mt-1">{PROJECT_PHASE_LABELS[detail.progress]}</dd>
-          </div>
-        </dl>
-      </section>
-
-      {/* 4. 募集内容 */}
+      {/* 3. 募集内容 */}
       <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold">募集内容</h2>
         <dl className="space-y-6">
@@ -167,7 +165,7 @@ export default async function ApplicationDetailPage({
               ) : (
                 <ul className="list-inside list-disc">
                   {detail.recruitmentTypes.map((type) => (
-                    <li key={type}>{getRecruitmentTypeLabel(type)}</li>
+                    <li key={type}>{LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS[type]}</li>
                   ))}
                 </ul>
               )}
@@ -237,16 +235,19 @@ export default async function ApplicationDetailPage({
         </dl>
       </section>
 
-      {/* 5. リターン */}
+      {/* 4. リターン */}
       <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold">リターン</h2>
         <dl className="space-y-6">
           <div>
             <dt className="text-sm font-medium text-gray-500">体験できること</dt>
             <dd className="mt-1 whitespace-pre-wrap text-gray-900">
-              {detail.experienceOffered ?? (
-                <span className="text-red-600">⚠ 必須項目が未入力です</span>
-              )}
+              {detail.experienceOffered ??
+                (isLegacyApplication ? (
+                  <span className="text-gray-500">（旧データのため未入力）</span>
+                ) : (
+                  <span className="text-red-600">⚠ 必須項目が未入力です</span>
+                ))}
             </dd>
           </div>
 
