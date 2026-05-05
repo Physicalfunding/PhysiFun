@@ -1,6 +1,8 @@
-import type {
-  LeaderApplicationRecruitmentType,
-  LeaderApplicationStatus,
+import {
+  isLeaderApplicationRecruitmentType,
+  isProjectPhase,
+  type LeaderApplicationRecruitmentType,
+  type LeaderApplicationStatus,
   ProjectPhase,
 } from "@physifun/domain";
 import { prisma } from "../database/client";
@@ -163,8 +165,12 @@ export class PrismaLeaderApplicationQueryService implements LeaderApplicationQue
       activityContent: row.activityContent,
       snsLinks: row.snsLinks as LeaderApplicationDetail["snsLinks"],
       phoneNumber: row.phoneNumber,
-      progress: row.progress,
-      recruitmentTypes: row.recruitmentTypes,
+      // Prisma の生成型は `string` を許容するため、ドメインの型ガードで安全に絞り込む。
+      // 不正値は (将来 enum を増やしたとき等の) フォールバックとして PLANNING にする。
+      progress: isProjectPhase(row.progress) ? row.progress : ProjectPhase.PLANNING,
+      // 不正値（既知 enum 外）は黙って除外する。Prisma の `String[]` カラムを
+      // ドメイン enum 配列として受け取るための防御的フィルタ。
+      recruitmentTypes: row.recruitmentTypes.filter(isLeaderApplicationRecruitmentType),
       eventLocation: row.eventLocation,
       eventPeriod: row.eventPeriod,
       recruitCount: row.recruitCount,

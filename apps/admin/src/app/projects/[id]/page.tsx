@@ -175,7 +175,7 @@ export default async function AdminProjectDetailPage({
         <h2 className="mb-4 text-lg font-semibold">リーダー情報</h2>
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <dt className="text-sm font-medium text-gray-500">表示名</dt>
+            <dt className="text-sm font-medium text-gray-500">お名前</dt>
             <dd className="mt-1">{detail.owner.displayName}</dd>
           </div>
           <div>

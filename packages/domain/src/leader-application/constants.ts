@@ -33,6 +33,20 @@ export function isLeaderApplicationRecruitmentType(
 }
 
 /**
+ * 募集タイプ (LeaderApplicationRecruitmentType) の日本語ラベル
+ *
+ * バックエンド内部では英語 enum 値を扱い、フロント表示は必ずこのラベル経由で行う。
+ * `PROJECT_PHASE_LABELS` と同レイヤーで SSOT 化する。
+ */
+export const LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS: Record<
+  LeaderApplicationRecruitmentType,
+  string
+> = {
+  [LeaderApplicationRecruitmentType.TIME]: "時間（やる気）での支援",
+  [LeaderApplicationRecruitmentType.SKILL_ITEM]: "スキル・モノでの支援",
+};
+
+/**
  * 応募フォーム文字列フィールドの最大文字数（Issue #192 仮値）
  *
  * 既存の `PROJECT_DRAFT_LIMITS` (projectTitle / projectSummary / projectStory / activityContent)

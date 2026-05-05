@@ -1,5 +1,6 @@
 export {
   LEADER_APPLICATION_LIMITS,
+  LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS,
   LeaderApplicationRecruitmentType,
   isLeaderApplicationRecruitmentType,
 } from "./constants";

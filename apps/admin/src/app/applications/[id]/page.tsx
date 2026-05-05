@@ -60,6 +60,10 @@ export default async function ApplicationDetailPage({
   const includesSkillItem = detail.recruitmentTypes.includes(
     LeaderApplicationRecruitmentType.SKILL_ITEM
   );
+  // PR3 以前の旧データ (recruitmentTypes が空) では `activityContent` のみが
+  // 任意項目として残っている。新スキーマだと TIME 配下にしか表示されないため、
+  // 旧データ閲覧時は別枠で `activityContent` を表示する。
+  const isLegacyApplication = detail.recruitmentTypes.length === 0;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -143,7 +147,7 @@ export default async function ApplicationDetailPage({
       {/* 3. プロジェクトの進捗 */}
       <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold">プロジェクトの進捗</h2>
-        <dl>
+        <dl className="space-y-6">
           <div>
             <dt className="text-sm font-medium text-gray-500">現在のフェーズ</dt>
             <dd className="mt-1">{PROJECT_PHASE_LABELS[detail.progress]}</dd>
@@ -217,6 +221,19 @@ export default async function ApplicationDetailPage({
               </div>
             </>
           )}
+
+          {/* 旧データ向けフォールバック: recruitmentTypes が空の場合 activityContent を表示 */}
+          {isLegacyApplication && (
+            <div>
+              <dt className="text-sm font-medium text-gray-500">活動内容（旧データ）</dt>
+              <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+                <p className="mb-1 text-xs text-amber-700">
+                  ※ PR3 以前に提出された応募のため、募集タイプが未設定です。
+                </p>
+                {detail.activityContent ?? "（未入力）"}
+              </dd>
+            </div>
+          )}
         </dl>
       </section>
 
@@ -227,7 +244,9 @@ export default async function ApplicationDetailPage({
           <div>
             <dt className="text-sm font-medium text-gray-500">体験できること</dt>
             <dd className="mt-1 whitespace-pre-wrap text-gray-900">
-              {detail.experienceOffered ?? "（未入力）"}
+              {detail.experienceOffered ?? (
+                <span className="text-red-600">⚠ 必須項目が未入力です</span>
+              )}
             </dd>
           </div>
 
