@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,8 +14,18 @@ import {
   PHONE_NUMBER_MAX_LENGTH,
   PROJECT_DRAFT_LIMITS,
   PROJECT_PHASE_LABELS,
+  PROJECT_PHASE_VALUES,
   ProjectPhase,
+  RECRUITMENT_TYPE_VALUES,
 } from "@physifun/domain";
+
+/**
+ * API エラーレスポンスの想定形（最小定義）
+ *
+ * サーバー側は `{ error: { message, code, ... } }` 形式で返すため、
+ * `result.error?.message` 参照に型を付けるためだけの最小型。
+ */
+type ApiErrorResponse = { error?: { message?: string } };
 
 // ==================== フロントエンド用バリデーションスキーマ ====================
 
@@ -43,11 +53,11 @@ function snsUrlField(label: string) {
 /**
  * フォーム入力用 Zod スキーマ
  *
- * Issue #192 PR4: 応募フォーム拡張に対応する 5 セクション構造に再編。
+ * Issue #192 PR4: 応募フォーム拡張に対応する 8 セクション構造に再編。
  * サーバー側 `submitLeaderApplicationInputSchema` と整合する。
  * 条件付き必須は `superRefine` で担保（recruitmentTypes の選択値による分岐）。
  */
-const applyFormSchema = z
+export const applyFormSchema = z
   .object({
     // 1. 基本情報
     displayName: z.string().min(1, "お名前を入力してください").max(50, "お名前は 50 文字以内です"),
@@ -89,13 +99,17 @@ const applyFormSchema = z
     projectCategory: z.string().min(1, "プロジェクトカテゴリを選択してください"),
 
     // 3. プロジェクトの進捗
-    progress: z.nativeEnum(ProjectPhase, {
+    progress: z.enum(PROJECT_PHASE_VALUES, {
       errorMap: () => ({ message: "進捗を選択してください" }),
     }),
 
     // 4. 募集内容
     recruitmentTypes: z
-      .array(z.nativeEnum(LeaderApplicationRecruitmentType))
+      .array(
+        z.enum(RECRUITMENT_TYPE_VALUES, {
+          errorMap: () => ({ message: "無効な募集タイプです" }),
+        })
+      )
       .min(1, "募集内容を 1 件以上選択してください"),
 
     // 4-a. 時間（やる気）募集枠（条件付き必須）
@@ -126,8 +140,21 @@ const applyFormSchema = z
      * `react-hook-form` の `register("recruitCount", { valueAsNumber: true })` で
      * number 化しているため、ここでは number として受け取る。未入力は NaN になるので
      * `nan().or(...)` ではなく `unknown` を経由して superRefine 側で判定する。
+     * 上限はサーバー側と整合させるため `LEADER_APPLICATION_LIMITS.recruitCountMax` を利用。
      */
-    recruitCount: z.union([z.number().int().min(1), z.nan()]).optional(),
+    recruitCount: z
+      .union([
+        z
+          .number()
+          .int()
+          .min(1)
+          .max(
+            LEADER_APPLICATION_LIMITS.recruitCountMax,
+            `募集人数は ${LEADER_APPLICATION_LIMITS.recruitCountMax} 以下で入力してください`
+          ),
+        z.nan(),
+      ])
+      .optional(),
 
     // 4-b. スキル・モノ募集枠（条件付き必須）
     skillItemNeeds: z
@@ -146,12 +173,23 @@ const applyFormSchema = z
       .optional(),
 
     // 5. リターン
+    /**
+     * 体験できること（必須）
+     *
+     * 半角スペースのみの入力を必須バリデーションで弾くため、サーバー側スキーマと同じく
+     * trim してから min(1) / max(...) を適用する。
+     */
     experienceOffered: z
       .string()
-      .min(1, "体験できることを入力してください")
-      .max(
-        LEADER_APPLICATION_LIMITS.experienceOffered,
-        `体験できることは ${LEADER_APPLICATION_LIMITS.experienceOffered} 文字以内です`
+      .transform((v) => v.trim())
+      .pipe(
+        z
+          .string()
+          .min(1, "体験できることを入力してください")
+          .max(
+            LEADER_APPLICATION_LIMITS.experienceOffered,
+            `体験できることは ${LEADER_APPLICATION_LIMITS.experienceOffered} 文字以内です`
+          )
       ),
     timeReturn: z
       .string()
@@ -263,12 +301,13 @@ const inputClassName = (hasError: boolean) =>
 const labelClassName = "block text-sm font-medium text-gray-700";
 const sectionClassName = "rounded-lg border border-gray-200 bg-white p-6 shadow-sm";
 const sectionHeadingClassName = "mb-4 text-lg font-semibold text-gray-900";
+const subSectionHeadingClassName = "text-base font-medium text-gray-900";
 
 // ==================== コンポーネント ====================
 
 /**
  * ApplyForm
- * リーダー応募フォームコンポーネント (Issue #192 PR4 で 5 セクション構造に再編)
+ * リーダー応募フォームコンポーネント (Issue #192 PR4 で 8 セクション構造に再編)
  */
 export function ApplyForm() {
   const { showToast } = useToast();
@@ -279,6 +318,7 @@ export function ApplyForm() {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm<ApplyFormData>({
     resolver: zodResolver(applyFormSchema),
@@ -300,6 +340,32 @@ export function ApplyForm() {
     LeaderApplicationRecruitmentType.SKILL_ITEM
   );
 
+  /**
+   * 条件付きフィールドの値クリーンアップ
+   *
+   * `recruitmentTypes` のチェックを外したときに、非表示になったフィールドに
+   * 入力済みの値が残ったまま送信されてしまうのを防ぐため、該当フィールドを
+   * `undefined` にリセットする。`shouldUnregister: true` をフォーム全体に適用すると
+   * 動的セクションの値も意図せず消える副作用があるため、useEffect 方式を採用。
+   */
+  useEffect(() => {
+    if (!showTimeFields) {
+      setValue("activityContent", undefined);
+      setValue("eventLocation", undefined);
+      setValue("eventPeriod", undefined);
+      setValue("recruitCount", undefined);
+      setValue("timeReturn", undefined);
+    }
+  }, [showTimeFields, setValue]);
+
+  useEffect(() => {
+    if (!showSkillItemFields) {
+      setValue("skillItemNeeds", undefined);
+      setValue("skillItemDeadline", undefined);
+      setValue("skillItemReturn", undefined);
+    }
+  }, [showSkillItemFields, setValue]);
+
   const onSubmit = async (data: ApplyFormData) => {
     setIsLoading(true);
 
@@ -316,11 +382,17 @@ export function ApplyForm() {
         }),
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        // フィールドエラーがある場合は Toast で通知
-        const message = result.error?.message || "応募の送信に失敗しました";
+        // 失敗時は JSON が返らない（HTML エラーページ等）可能性もあるため try/catch で守る
+        let message = "応募の送信に失敗しました";
+        try {
+          const errorJson = (await response.json()) as ApiErrorResponse;
+          if (errorJson.error?.message) {
+            message = errorJson.error.message;
+          }
+        } catch {
+          // SyntaxError 等は握りつぶしてデフォルトメッセージを使う
+        }
         showToast(message, "error");
         return;
       }
@@ -502,70 +574,79 @@ export function ApplyForm() {
 
       {/* 3. プロジェクトの進捗 */}
       <section className={sectionClassName}>
-        <h2 className={sectionHeadingClassName}>3. プロジェクトの進捗</h2>
-        <p className="mb-3 text-sm text-gray-600">
-          現在のプロジェクトの進行状況を 1 つ選んでください。<span className="text-red-500">*</span>
-        </p>
-        <div className="space-y-2">
-          {Object.values(ProjectPhase).map((phase) => (
-            <div key={phase} className="flex items-center gap-2">
-              <input
-                id={`progress-${phase}`}
-                type="radio"
-                value={phase}
-                {...register("progress")}
-                className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
-              />
-              <label htmlFor={`progress-${phase}`} className="text-sm text-gray-700">
-                {PROJECT_PHASE_LABELS[phase]}
-              </label>
-            </div>
-          ))}
-        </div>
-        {errors.progress && <p className="mt-2 text-sm text-red-600">{errors.progress.message}</p>}
+        <fieldset>
+          <legend className={sectionHeadingClassName}>3. プロジェクトの進捗</legend>
+          <p className="mb-3 text-sm text-gray-600">
+            現在のプロジェクトの進行状況を 1 つ選んでください。
+            <span className="text-red-500">*</span>
+          </p>
+          <div className="space-y-2">
+            {Object.values(ProjectPhase).map((phase) => (
+              <div key={phase} className="flex items-center gap-2">
+                <input
+                  id={`progress-${phase}`}
+                  type="radio"
+                  value={phase}
+                  {...register("progress")}
+                  className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
+                />
+                <label htmlFor={`progress-${phase}`} className="text-sm text-gray-700">
+                  {PROJECT_PHASE_LABELS[phase]}
+                </label>
+              </div>
+            ))}
+          </div>
+          {errors.progress && (
+            <p className="mt-2 text-sm text-red-600">{errors.progress.message}</p>
+          )}
+        </fieldset>
       </section>
 
       {/* 4. 募集内容 */}
       <section className={sectionClassName}>
-        <h2 className={sectionHeadingClassName}>4. 募集内容</h2>
-        <p className="mb-3 text-sm text-gray-600">
-          募集する支援の種類を 1 つ以上選んでください（複数可）。
-          <span className="text-red-500">*</span>
-        </p>
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <input
-              id="recruitmentType-time"
-              type="checkbox"
-              value={LeaderApplicationRecruitmentType.TIME}
-              {...register("recruitmentTypes")}
-              className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-            />
-            <label htmlFor="recruitmentType-time" className="text-sm text-gray-700">
-              時間（やる気）での支援を募集する
-            </label>
+        <h2 className={sectionHeadingClassName} id="recruitmentTypes-heading">
+          4. 募集内容
+        </h2>
+        <div role="group" aria-labelledby="recruitmentTypes-heading">
+          <p className="mb-3 text-sm text-gray-600">
+            募集する支援の種類を 1 つ以上選んでください（複数可）。
+            <span className="text-red-500">*</span>
+          </p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                id="recruitmentType-time"
+                type="checkbox"
+                value={LeaderApplicationRecruitmentType.TIME}
+                {...register("recruitmentTypes")}
+                className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+              />
+              <label htmlFor="recruitmentType-time" className="text-sm text-gray-700">
+                時間（やる気）での支援を募集する
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="recruitmentType-skill-item"
+                type="checkbox"
+                value={LeaderApplicationRecruitmentType.SKILL_ITEM}
+                {...register("recruitmentTypes")}
+                className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+              />
+              <label htmlFor="recruitmentType-skill-item" className="text-sm text-gray-700">
+                スキル・モノでの支援を募集する
+              </label>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              id="recruitmentType-skill-item"
-              type="checkbox"
-              value={LeaderApplicationRecruitmentType.SKILL_ITEM}
-              {...register("recruitmentTypes")}
-              className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-            />
-            <label htmlFor="recruitmentType-skill-item" className="text-sm text-gray-700">
-              スキル・モノでの支援を募集する
-            </label>
-          </div>
+          {errors.recruitmentTypes && (
+            <p className="mt-2 text-sm text-red-600">{errors.recruitmentTypes.message}</p>
+          )}
         </div>
-        {errors.recruitmentTypes && (
-          <p className="mt-2 text-sm text-red-600">{errors.recruitmentTypes.message}</p>
-        )}
 
         {/* 4-a. 時間（やる気）枠 */}
         {showTimeFields && (
           <div className="mt-6 space-y-4 border-l-4 border-orange-200 pl-4">
-            <h3 className="text-base font-medium text-gray-900">時間（やる気）募集の詳細</h3>
+            <h3 className={subSectionHeadingClassName}>時間（やる気）募集の詳細</h3>
 
             <div>
               <label htmlFor="activityContent" className={labelClassName}>
@@ -578,6 +659,12 @@ export function ApplyForm() {
                 className={inputClassName(!!errors.activityContent)}
                 aria-invalid={errors.activityContent ? "true" : "false"}
               />
+              {/*
+                activityContent の上限は ProjectDraft VO 由来の `PROJECT_DRAFT_LIMITS.activityContent`
+                を参照する（ドメイン側で同名フィールドを既に保持しているため SSOT を維持する）。
+                以下の eventLocation / eventPeriod など PR3 で新規追加されたフィールドだけが
+                `LEADER_APPLICATION_LIMITS` 側に定義されているため、ここは混在となるが意図的。
+              */}
               <p className="mt-1 text-xs text-gray-500">
                 最大 {PROJECT_DRAFT_LIMITS.activityContent} 文字
               </p>
@@ -627,6 +714,7 @@ export function ApplyForm() {
                 id="recruitCount"
                 type="number"
                 min={1}
+                max={LEADER_APPLICATION_LIMITS.recruitCountMax}
                 step={1}
                 {...register("recruitCount", { valueAsNumber: true })}
                 className={inputClassName(!!errors.recruitCount)}
@@ -642,7 +730,7 @@ export function ApplyForm() {
         {/* 4-b. スキル・モノ枠 */}
         {showSkillItemFields && (
           <div className="mt-6 space-y-4 border-l-4 border-orange-200 pl-4">
-            <h3 className="text-base font-medium text-gray-900">スキル・モノ募集の詳細</h3>
+            <h3 className={subSectionHeadingClassName}>スキル・モノ募集の詳細</h3>
 
             <div>
               <label htmlFor="skillItemNeeds" className={labelClassName}>

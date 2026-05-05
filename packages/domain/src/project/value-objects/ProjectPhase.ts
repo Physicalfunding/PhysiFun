@@ -13,3 +13,14 @@ export const ProjectPhase = {
 } as const;
 
 export type ProjectPhase = (typeof ProjectPhase)[keyof typeof ProjectPhase];
+
+/**
+ * `ProjectPhase` の値配列（Zod `z.enum(...)` 用）
+ *
+ * フロント / アプリケーション層 双方の入力スキーマで Single Source of Truth として
+ * 利用する。
+ */
+export const PROJECT_PHASE_VALUES = Object.values(ProjectPhase) as [
+  ProjectPhase,
+  ...ProjectPhase[],
+];

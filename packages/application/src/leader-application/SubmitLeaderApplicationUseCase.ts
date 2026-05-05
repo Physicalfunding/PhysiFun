@@ -10,11 +10,12 @@ import {
   PhoneNumber,
   type PhoneNumberError,
   PROJECT_DRAFT_LIMITS,
+  PROJECT_PHASE_VALUES,
   ProjectDraft,
   type ProjectDraftError,
   ProjectLocation,
   type ProjectLocationError,
-  ProjectPhase,
+  RECRUITMENT_TYPE_VALUES,
   SnsLinks,
   type SnsLinksError,
 } from "@physifun/domain";
@@ -27,19 +28,6 @@ import type { SubmitLeaderApplicationPort } from "./ports/SubmitLeaderApplicatio
  * ドメイン層の CATEGORY_MASTER から Zod enum 用の値配列を生成（Single Source of Truth）
  */
 const PROJECT_CATEGORY_VALUES = CATEGORY_MASTER.map((c) => c.value) as [string, ...string[]];
-
-/**
- * ProjectPhase 値配列（Zod enum 用）
- */
-const PROJECT_PHASE_VALUES = Object.values(ProjectPhase) as [ProjectPhase, ...ProjectPhase[]];
-
-/**
- * LeaderApplicationRecruitmentType 値配列（Zod enum 用）
- */
-const RECRUITMENT_TYPE_VALUES = Object.values(LeaderApplicationRecruitmentType) as [
-  LeaderApplicationRecruitmentType,
-  ...LeaderApplicationRecruitmentType[],
-];
 
 /**
  * SNS リンクのスキーマ（各フィールド任意、最大 500 文字）
@@ -169,11 +157,15 @@ export const submitLeaderApplicationInputSchema = z
         `実施期間は ${LEADER_APPLICATION_LIMITS.eventPeriod} 文字以内です`
       )
       .nullish(),
-    /** 募集人数（TIME 必須・>= 1） */
+    /** 募集人数（TIME 必須・1 以上 recruitCountMax 以下） */
     recruitCount: z
       .number()
       .int("募集人数は整数で入力してください")
       .min(1, "募集人数は 1 以上です")
+      .max(
+        LEADER_APPLICATION_LIMITS.recruitCountMax,
+        `募集人数は ${LEADER_APPLICATION_LIMITS.recruitCountMax} 以下で入力してください`
+      )
       .nullish(),
     /** 時間用リターン（TIME 必須・〜200） */
     timeReturn: z
