@@ -7,6 +7,8 @@ import { NextResponse } from "next/server";
  * - `createProject`: `POST /api/my/projects` 用 (10 req / 10 min / user)
  * - `updateProject`: `PATCH /api/my/projects/[projectId]` 用 (30 req / min / user)
  * - `projectStatusTransition`: 公開申請 / 取下げ / 非公開化 用 (10 req / min / user)
+ * - `leaderApplicationSubmit`: `POST /api/leader-applications` 用 (3 req / 1 hour / IP)
+ *   未認証の公開エンドポイントなので key は IP アドレス（Issue #200 / B-6）。
  *
  * NOTE (Issue #108): `projectStatusTransition` は Issue #108 原文の
  * 「Status transitions: 10 req / min / user」に従い、
@@ -14,7 +16,11 @@ import { NextResponse } from "next/server";
  * ルートごとに独立したカウンタを持たせず、同じ `projectStatusTransition` キーで
  * スライディングウィンドウを共有しているのは意図的な設計。
  */
-export type RateLimitAction = "createProject" | "updateProject" | "projectStatusTransition";
+export type RateLimitAction =
+  | "createProject"
+  | "updateProject"
+  | "projectStatusTransition"
+  | "leaderApplicationSubmit";
 
 /**
  * レート制限の設定 (上限回数とウィンドウ長)。
@@ -45,6 +51,10 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitAction, RateLimitConfig> = {
   projectStatusTransition: {
     limit: 10,
     windowMs: 60 * 1000, // 1 分 (request-publish / withdraw / unpublish 合算)
+  },
+  leaderApplicationSubmit: {
+    limit: 3,
+    windowMs: 60 * 60 * 1000, // 1 時間 (Issue #200 / B-6, 同一 IP からの連続応募抑止)
   },
 };
 

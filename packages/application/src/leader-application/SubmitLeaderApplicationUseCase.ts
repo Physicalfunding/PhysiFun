@@ -20,6 +20,8 @@ import {
   type SnsLinksError,
 } from "@physifun/domain";
 import { z } from "zod";
+import type { CaptchaVerifierPort } from "./ports/CaptchaVerifierPort";
+import type { IpRateLimitPort } from "./ports/IpRateLimitPort";
 import type { SubmitLeaderApplicationPort } from "./ports/SubmitLeaderApplicationPort";
 
 // ==================== 入力バリデーション ====================
@@ -318,38 +320,6 @@ export type SubmitLeaderApplicationError =
       readonly email: string;
     };
 
-// ==================== スタブ関数 ====================
-
-/**
- * IP レートリミットチェック (B-6: 1 時間あたり同一 IP から最大 3 件)
- *
- * TODO(#192): CAPTCHA / レートリミットを実装するまでは本番無効化。
- * apps/web 側の `isLeaderApplicationEnabledServer()` で本番ではゲートしている。
- * Redis / DB ベースのカウンターで実装する。
- *
- * @param _ipAddress - リクエスト元 IP
- * @returns 常に ok を返す（スタブ実装）
- */
-function checkIpRateLimit(_ipAddress: string): Result<void, { type: "RATE_LIMIT_EXCEEDED" }> {
-  // スタブ: 常に OK
-  return ok(undefined);
-}
-
-/**
- * CAPTCHA 検証 (A-3)
- *
- * TODO(#192): CAPTCHA / レートリミットを実装するまでは本番無効化。
- * apps/web 側の `isLeaderApplicationEnabledServer()` で本番ではゲートしている。
- * reCAPTCHA / hCaptcha / Turnstile 等の検証ロジックで差し替える。
- *
- * @param _token - CAPTCHA トークン
- * @returns 常に ok を返す（スタブ実装）
- */
-function verifyCaptcha(_token: string): Result<void, { type: "CAPTCHA_VERIFICATION_FAILED" }> {
-  // スタブ: 常に OK
-  return ok(undefined);
-}
-
 // ==================== アクティベーショントークン ====================
 
 /**
@@ -424,8 +394,8 @@ function normalizeOptional(value: string | null | undefined): string | null {
  * リーダー応募を送信するユースケース
  *
  * 1. 入力バリデーション（Zod）
- * 2. IP レートリミットチェック（スタブ）
- * 3. CAPTCHA 検証（スタブ）
+ * 2. IP レートリミットチェック（IpRateLimitPort 経由）
+ * 3. CAPTCHA 検証（CaptchaVerifierPort 経由）
  * 4. ドメイン VO 構築（ProjectLocation / SnsLinks / ProjectDraft）
  * 5. 重複チェック（同一メールで PENDING / PENDING_EMAIL_CONFIRMATION のアカウントが存在しないか）
  * 6. Account 作成（PENDING_EMAIL_CONFIRMATION, roles: [SUPPORTER]）
@@ -434,7 +404,11 @@ function normalizeOptional(value: string | null | undefined): string | null {
  * 9. 上記 6〜8 をトランザクションで実行
  */
 export class SubmitLeaderApplicationUseCase {
-  constructor(private readonly port: SubmitLeaderApplicationPort) {}
+  constructor(
+    private readonly port: SubmitLeaderApplicationPort,
+    private readonly captcha: CaptchaVerifierPort,
+    private readonly rateLimit: IpRateLimitPort
+  ) {}
 
   async execute(
     input: unknown
@@ -453,13 +427,16 @@ export class SubmitLeaderApplicationUseCase {
     const validated = parseResult.data;
 
     // 2. IP レートリミットチェック
-    const rateLimitResult = checkIpRateLimit(validated.ipAddress);
+    const rateLimitResult = this.rateLimit.consume(validated.ipAddress);
     if (!rateLimitResult.ok) {
       return err({ type: "RATE_LIMIT_EXCEEDED" });
     }
 
     // 3. CAPTCHA 検証
-    const captchaResult = verifyCaptcha(validated.captchaToken);
+    const captchaResult = await this.captcha.verify({
+      token: validated.captchaToken,
+      remoteIp: validated.ipAddress,
+    });
     if (!captchaResult.ok) {
       return err({ type: "CAPTCHA_VERIFICATION_FAILED" });
     }

@@ -18,7 +18,6 @@ import {
   unauthorizedResponse,
   forbiddenResponse,
   conflictResponse,
-  serviceUnavailableResponse,
 } from "../response";
 
 describe("ApiResponse", () => {
@@ -78,13 +77,6 @@ describe("ApiResponse", () => {
     it("409ステータスで競合エラーを返す", () => {
       const response = conflictResponse("このメールアドレスは既に登録されています");
       expect(response.status).toBe(409);
-    });
-  });
-
-  describe("serviceUnavailableResponse", () => {
-    it("503ステータスでサービス利用不可エラーを返す", () => {
-      const response = serviceUnavailableResponse("準備中です");
-      expect(response.status).toBe(503);
     });
   });
 });

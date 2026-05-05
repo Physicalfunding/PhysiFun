@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
+import { err, ok } from "@physifun/domain";
 import {
   SubmitLeaderApplicationUseCase,
   type SubmitLeaderApplicationInput,
@@ -10,6 +11,8 @@ import type {
   CreateLeaderApplicationParams,
   CreateOutboxMessageParams,
 } from "../ports/SubmitLeaderApplicationPort";
+import type { CaptchaVerifierPort } from "../ports/CaptchaVerifierPort";
+import type { IpRateLimitPort } from "../ports/IpRateLimitPort";
 
 // ==================== インメモリ実装 ====================
 
@@ -41,6 +44,41 @@ class InMemorySubmitLeaderApplicationPort implements SubmitLeaderApplicationPort
     this.createdAccounts.push(params.account);
     this.createdApplications.push(params.leaderApplication);
     this.createdOutboxMessages.push(params.outboxMessage);
+  }
+}
+
+// ==================== フェイクポート (Issue #200) ====================
+
+/**
+ * 既定では常に成功する CAPTCHA フェイク。`shouldFail` を立てるとエラーを返す。
+ */
+class FakeCaptchaVerifier implements CaptchaVerifierPort {
+  shouldFail = false;
+  /** verify が呼ばれた回数とその引数を記録（呼び出し検証用） */
+  calls: Array<{ token: string; remoteIp: string }> = [];
+
+  async verify(input: { token: string; remoteIp: string }) {
+    this.calls.push(input);
+    if (this.shouldFail) {
+      return err({ type: "CAPTCHA_VERIFICATION_FAILED" as const });
+    }
+    return ok(undefined);
+  }
+}
+
+/**
+ * 既定では常に通過する IP レートリミットフェイク。`shouldExceed` でエラーに切り替える。
+ */
+class FakeIpRateLimit implements IpRateLimitPort {
+  shouldExceed = false;
+  calls: string[] = [];
+
+  consume(ipAddress: string) {
+    this.calls.push(ipAddress);
+    if (this.shouldExceed) {
+      return err({ type: "RATE_LIMIT_EXCEEDED" as const });
+    }
+    return ok(undefined);
   }
 }
 
@@ -92,11 +130,15 @@ function validInput(
 
 describe("SubmitLeaderApplicationUseCase", () => {
   let port: InMemorySubmitLeaderApplicationPort;
+  let captcha: FakeCaptchaVerifier;
+  let rateLimit: FakeIpRateLimit;
   let useCase: SubmitLeaderApplicationUseCase;
 
   beforeEach(() => {
     port = new InMemorySubmitLeaderApplicationPort();
-    useCase = new SubmitLeaderApplicationUseCase(port);
+    captcha = new FakeCaptchaVerifier();
+    rateLimit = new FakeIpRateLimit();
+    useCase = new SubmitLeaderApplicationUseCase(port, captcha, rateLimit);
   });
 
   // ---- ハッピーパス ----
@@ -320,6 +362,47 @@ describe("SubmitLeaderApplicationUseCase", () => {
     if (result.ok) return;
 
     expect(result.error.type).toBe("DUPLICATE_PENDING_APPLICATION");
+  });
+
+  // ---- CAPTCHA / レートリミット (Issue #200) ----
+
+  it("レートリミット超過時は RATE_LIMIT_EXCEEDED を返し、後続処理（CAPTCHA / DB）を呼ばない", async () => {
+    rateLimit.shouldExceed = true;
+    const result = await useCase.execute(validInput());
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("RATE_LIMIT_EXCEEDED");
+
+    expect(rateLimit.calls).toEqual(["192.168.1.1"]);
+    // レート制限で弾かれたら CAPTCHA も DB 書き込みも走らない
+    expect(captcha.calls).toEqual([]);
+    expect(port.createdAccounts).toHaveLength(0);
+    expect(port.createdApplications).toHaveLength(0);
+  });
+
+  it("CAPTCHA 検証に失敗した場合は CAPTCHA_VERIFICATION_FAILED を返し、DB 書き込みを行わない", async () => {
+    captcha.shouldFail = true;
+    const result = await useCase.execute(validInput());
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("CAPTCHA_VERIFICATION_FAILED");
+
+    expect(captcha.calls).toEqual([
+      { token: "valid-captcha-token", remoteIp: "192.168.1.1" },
+    ]);
+    expect(port.createdAccounts).toHaveLength(0);
+    expect(port.createdApplications).toHaveLength(0);
+  });
+
+  it("正常系では CaptchaVerifierPort.verify が token / remoteIp 付きで呼ばれる", async () => {
+    const result = await useCase.execute(validInput());
+    expect(result.ok).toBe(true);
+    expect(captcha.calls).toEqual([
+      { token: "valid-captcha-token", remoteIp: "192.168.1.1" },
+    ]);
+    expect(rateLimit.calls).toEqual(["192.168.1.1"]);
   });
 
   // ---- アクティベーショントークン ----
