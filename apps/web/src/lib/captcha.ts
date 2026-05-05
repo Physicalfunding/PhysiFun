@@ -40,8 +40,24 @@ interface TurnstileSiteverifyResponse {
  * `TURNSTILE_SECRET_KEY` が未設定の場合：
  * - `NODE_ENV === "production"`: CAPTCHA_VERIFICATION_FAILED で弾く
  * - それ以外: 警告ログを出してパス（ローカル開発向けの fallback）
+ *
+ * 起動時アサーション (Issue #200 / PR #201 review L-1):
+ * `NEXT_PUBLIC_TURNSTILE_SITE_KEY` がフロント側でセット済みなのに
+ * `TURNSTILE_SECRET_KEY` がサーバー側で未設定だと、クライアントは本物の
+ * Turnstile トークンを送るがサーバーが検証をスキップしてしまう。これは
+ * NODE_ENV に依存しない明確な設定ミスなので、ここで早期に throw して
+ * デプロイを失敗させる。
  */
 export function createTurnstileCaptchaVerifier(): CaptchaVerifierPort {
+  const siteKeyAtInit = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const secretAtInit = process.env.TURNSTILE_SECRET_KEY;
+  if (siteKeyAtInit && !secretAtInit) {
+    throw new Error(
+      "[captcha] Misconfiguration: NEXT_PUBLIC_TURNSTILE_SITE_KEY is set but TURNSTILE_SECRET_KEY is missing. " +
+        "This would cause the server to bypass CAPTCHA verification while the client sends real tokens."
+    );
+  }
+
   return {
     async verify({ token, remoteIp }) {
       const secret = process.env.TURNSTILE_SECRET_KEY;

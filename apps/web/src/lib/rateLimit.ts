@@ -72,6 +72,10 @@ interface Bucket {
  * 外部ストレージが必要。Phase 1 の暫定対策として十分なので、スケール時に
  * 置き換える前提で使う。
  *
+ * `LEADER_APPLICATION_ENABLED=true` で本番トラフィックを受ける前に
+ * Vercel KV へ移行することがブロッカー。トラッキング Issue:
+ * https://github.com/Physicalfunding/PhysiFun/issues/202
+ *
  * key は `<action>:<userId>` 形式。
  * max 件数に到達すると LRU で古いユーザーから捨てる。
  * ttl は最長ウィンドウに揃えて、放置された bucket が自動で消えるようにしている

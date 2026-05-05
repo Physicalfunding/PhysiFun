@@ -62,9 +62,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     // NOTE (Issue #200): `x-forwarded-for` の最左 IP は Vercel edge が信頼できる値で
-    // 書き換える前提。セルフホスト/別 PaaS にデプロイする場合はクライアント任意で
-    // 偽装可能になり、レートリミット回避が成立する点に注意。
-    const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    // 書き換える前提。セルフホスト/別 PaaS にデプロイする場合はクライアントが任意の
+    // 値を入れられるためレートリミット回避が成立しうる。デプロイ環境の前段プロキシが
+    // X-Forwarded-For を上書きすることを必ず確認すること。
+    //
+    // また、IP が取れない (ヘッダー未設定) リクエストは "unknown" バケットを共有して
+    // 他リクエストの枠を食い合うため、ここで弾く。Vercel 上では実質発生しないが、
+    // 直接公開された場合の安全弁。
+    const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    if (!ipAddress) {
+      return forbiddenResponse("リクエスト元 IP を判定できませんでした");
+    }
 
     const useCase = new SubmitLeaderApplicationUseCase(
       getSubmitLeaderApplicationPort(),
