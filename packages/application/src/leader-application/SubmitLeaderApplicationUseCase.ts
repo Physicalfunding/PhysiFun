@@ -125,13 +125,23 @@ export const submitLeaderApplicationInputSchema = z
       )
       .min(1, "募集内容を 1 件以上選択してください"),
 
-    /** 体験できること（必須・〜150） */
+    /**
+     * 体験できること（必須・〜150）
+     *
+     * 半角スペースのみの入力を必須バリデーションで弾くため、まず trim してから
+     * min(1) / max(...) を適用する（PR #195 review M1 対応）。
+     */
     experienceOffered: z
       .string()
-      .min(1, "体験できることは必須です")
-      .max(
-        LEADER_APPLICATION_LIMITS.experienceOffered,
-        `体験できることは ${LEADER_APPLICATION_LIMITS.experienceOffered} 文字以内です`
+      .transform((v) => v.trim())
+      .pipe(
+        z
+          .string()
+          .min(1, "体験できることは必須です")
+          .max(
+            LEADER_APPLICATION_LIMITS.experienceOffered,
+            `体験できることは ${LEADER_APPLICATION_LIMITS.experienceOffered} 文字以内です`
+          )
       ),
 
     // TIME 募集枠（条件付き必須は superRefine で担保）
@@ -568,7 +578,8 @@ export class SubmitLeaderApplicationUseCase {
         skillItemDeadline: normalizeOptional(validated.skillItemDeadline),
         timeReturn: normalizeOptional(validated.timeReturn),
         skillItemReturn: normalizeOptional(validated.skillItemReturn),
-        experienceOffered: normalizeOptional(validated.experienceOffered),
+        // experienceOffered は Zod 側で trim + min(1) 済みのため、そのまま渡す
+        experienceOffered: validated.experienceOffered,
         submittedAt: now,
       },
       outboxMessage: {

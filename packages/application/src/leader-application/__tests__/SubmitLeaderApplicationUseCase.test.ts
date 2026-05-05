@@ -446,6 +446,24 @@ describe("SubmitLeaderApplicationUseCase", () => {
       const result = await useCase.execute(validInput({ experienceOffered: "あ".repeat(150) }));
       expect(result.ok).toBe(true);
     });
+
+    // PR #195 review M1: trim 後判定で必須・上限を整合させる
+    it("半角スペースのみはバリデーションエラー（必須）", async () => {
+      const result = await useCase.execute(validInput({ experienceOffered: " " }));
+      expect(result.ok).toBe(false);
+      if (!result.ok && result.error.type === "VALIDATION_ERROR") {
+        const issue = result.error.issues.find((i) => i.path === "experienceOffered");
+        expect(issue?.message).toBe("体験できることは必須です");
+      }
+    });
+
+    it("前後の空白は trim されて永続化される", async () => {
+      const result = await useCase.execute(
+        validInput({ experienceOffered: "  some experience  " })
+      );
+      expect(result.ok).toBe(true);
+      expect(port.createdApplications[0].experienceOffered).toBe("some experience");
+    });
   });
 
   describe("条件付き必須: TIME 募集枠", () => {
