@@ -1,4 +1,10 @@
-import type { LeaderApplicationStatus } from "@physifun/domain";
+import {
+  isLeaderApplicationRecruitmentType,
+  isProjectPhase,
+  type LeaderApplicationRecruitmentType,
+  type LeaderApplicationStatus,
+  ProjectPhase,
+} from "@physifun/domain";
 import { prisma } from "../database/client";
 
 // ==================== 型定義 ====================
@@ -41,6 +47,20 @@ export interface LeaderApplicationDetail {
     facebook: string | null;
     website: string | null;
   } | null;
+
+  // Issue #192 PR3 で追加された応募フォーム拡張フィールド (Admin 詳細表示用)
+  readonly phoneNumber: string | null;
+  readonly progress: ProjectPhase;
+  readonly recruitmentTypes: LeaderApplicationRecruitmentType[];
+  readonly eventLocation: string | null;
+  readonly eventPeriod: string | null;
+  readonly recruitCount: number | null;
+  readonly skillItemNeeds: string | null;
+  readonly skillItemDeadline: string | null;
+  readonly timeReturn: string | null;
+  readonly skillItemReturn: string | null;
+  readonly experienceOffered: string | null;
+
   readonly submittedAt: Date;
   readonly reviewedAt: Date | null;
 }
@@ -144,6 +164,21 @@ export class PrismaLeaderApplicationQueryService implements LeaderApplicationQue
       municipality: row.municipality,
       activityContent: row.activityContent,
       snsLinks: row.snsLinks as LeaderApplicationDetail["snsLinks"],
+      phoneNumber: row.phoneNumber,
+      // Prisma の生成型は `string` を許容するため、ドメインの型ガードで安全に絞り込む。
+      // 不正値は (将来 enum を増やしたとき等の) フォールバックとして PLANNING にする。
+      progress: isProjectPhase(row.progress) ? row.progress : ProjectPhase.PLANNING,
+      // 不正値（既知 enum 外）は黙って除外する。Prisma の `String[]` カラムを
+      // ドメイン enum 配列として受け取るための防御的フィルタ。
+      recruitmentTypes: row.recruitmentTypes.filter(isLeaderApplicationRecruitmentType),
+      eventLocation: row.eventLocation,
+      eventPeriod: row.eventPeriod,
+      recruitCount: row.recruitCount,
+      skillItemNeeds: row.skillItemNeeds,
+      skillItemDeadline: row.skillItemDeadline,
+      timeReturn: row.timeReturn,
+      skillItemReturn: row.skillItemReturn,
+      experienceOffered: row.experienceOffered,
       submittedAt: row.submittedAt,
       reviewedAt: row.reviewedAt,
     };

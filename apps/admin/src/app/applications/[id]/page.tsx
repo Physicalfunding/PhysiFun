@@ -1,3 +1,8 @@
+import {
+  LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS,
+  LeaderApplicationRecruitmentType,
+  PROJECT_PHASE_LABELS,
+} from "@physifun/domain";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ApplicationStatusBadge } from "@/components/ApplicationStatusBadge";
@@ -20,6 +25,18 @@ export const dynamic = "force-dynamic";
  * 動的詳細 URL 直打ちで DISABLED アカウントが閲覧できてしまう回避経路を塞ぐため、
  * RSC 側で `getAuthenticatedAdminId` により AdminSession 行 + AdminAccount.status
  * === ACTIVE を DB で再確認する。null なら /login へリダイレクト。
+ *
+ * ## 表示構造 (Issue #192 PR6)
+ * PR3 で追加された応募フォーム拡張フィールドに対応するため、以下の 4 セクション
+ * グルーピングで詳細を表示する:
+ *
+ * 1. 応募者情報（お名前 / メール / 電話番号）
+ * 2. プロジェクト詳細（現在のフェーズ / カテゴリ / 活動地域 / 概要 / 説明 / SNS）
+ * 3. 募集内容（recruitmentTypes と TIME / SKILL_ITEM 条件付きフィールド）
+ * 4. リターン（experienceOffered + 条件付き timeReturn / skillItemReturn）
+ *
+ * 「プロジェクトの進捗」(progress) は単独セクションだと 1 項目のみで構造的一貫性が
+ * 低かったため、セクション 2 の最初の項目として統合した。
  */
 export default async function ApplicationDetailPage({
   params,
@@ -42,6 +59,16 @@ export default async function ApplicationDetailPage({
   const locationText = [getPrefectureName(detail.prefectureCode), detail.municipality]
     .filter(Boolean)
     .join(" ");
+
+  // 募集タイプ判定（条件付き表示の判定に利用）
+  const includesTime = detail.recruitmentTypes.includes(LeaderApplicationRecruitmentType.TIME);
+  const includesSkillItem = detail.recruitmentTypes.includes(
+    LeaderApplicationRecruitmentType.SKILL_ITEM
+  );
+  // PR3 以前の旧データ (recruitmentTypes が空) では `activityContent` のみが
+  // 任意項目として残っている。新スキーマだと TIME 配下にしか表示されないため、
+  // 旧データ閲覧時は別枠で `activityContent` を表示する。
+  const isLegacyApplication = detail.recruitmentTypes.length === 0;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -69,25 +96,33 @@ export default async function ApplicationDetailPage({
         </div>
       </div>
 
-      {/* 応募者情報 */}
+      {/* 1. 応募者情報 */}
       <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-lg font-semibold">応募者情報</h2>
         <dl className="grid grid-cols-2 gap-4">
           <div>
-            <dt className="text-sm font-medium text-gray-500">表示名</dt>
+            <dt className="text-sm font-medium text-gray-500">お名前</dt>
             <dd className="mt-1">{detail.displayName}</dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">メールアドレス</dt>
             <dd className="mt-1">{detail.email}</dd>
           </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">電話番号</dt>
+            <dd className="mt-1">{detail.phoneNumber ?? "（未入力）"}</dd>
+          </div>
         </dl>
       </section>
 
-      {/* 企画内容 */}
+      {/* 2. プロジェクト詳細 */}
       <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-lg font-semibold">企画内容</h2>
+        <h2 className="mb-4 text-lg font-semibold">プロジェクト詳細</h2>
         <dl className="space-y-6">
+          <div>
+            <dt className="text-sm font-medium text-gray-500">現在のフェーズ</dt>
+            <dd className="mt-1">{PROJECT_PHASE_LABELS[detail.progress]}</dd>
+          </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">カテゴリ</dt>
             <dd className="mt-1">{getCategoryLabel(detail.projectCategory)}</dd>
@@ -101,14 +136,8 @@ export default async function ApplicationDetailPage({
             <dd className="mt-1 text-gray-900">{detail.projectSummary}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">詳細</dt>
+            <dt className="text-sm font-medium text-gray-500">プロジェクト説明（想い）</dt>
             <dd className="mt-1 whitespace-pre-wrap text-gray-900">{detail.projectStory}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500">活動内容</dt>
-            <dd className="mt-1 whitespace-pre-wrap text-gray-900">
-              {detail.activityContent ?? "（未入力）"}
-            </dd>
           </div>
           {detail.snsLinks && (
             <div>
@@ -118,6 +147,128 @@ export default async function ApplicationDetailPage({
                 <SafeSnsLink label="Instagram" url={detail.snsLinks.instagram} />
                 <SafeSnsLink label="Facebook" url={detail.snsLinks.facebook} />
                 <SafeSnsLink label="Website" url={detail.snsLinks.website} />
+              </dd>
+            </div>
+          )}
+        </dl>
+      </section>
+
+      {/* 3. 募集内容 */}
+      <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
+        <h2 className="mb-4 text-lg font-semibold">募集内容</h2>
+        <dl className="space-y-6">
+          <div>
+            <dt className="text-sm font-medium text-gray-500">募集タイプ</dt>
+            <dd className="mt-1">
+              {detail.recruitmentTypes.length === 0 ? (
+                "（未選択）"
+              ) : (
+                <ul className="list-inside list-disc">
+                  {detail.recruitmentTypes.map((type) => (
+                    <li key={type}>{LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS[type]}</li>
+                  ))}
+                </ul>
+              )}
+            </dd>
+          </div>
+
+          {/* TIME 関連フィールド: TIME を含む場合のみ表示 */}
+          {includesTime && (
+            <>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">活動内容</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+                  {detail.activityContent ?? "（未入力）"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">開催場所</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+                  {detail.eventLocation ?? "（未入力）"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">実施期間</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+                  {detail.eventPeriod ?? "（未入力）"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">募集人数</dt>
+                <dd className="mt-1 text-gray-900">
+                  {detail.recruitCount !== null ? `${detail.recruitCount} 名` : "（未入力）"}
+                </dd>
+              </div>
+            </>
+          )}
+
+          {/* SKILL_ITEM 関連フィールド: SKILL_ITEM を含む場合のみ表示 */}
+          {includesSkillItem && (
+            <>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">募集したい内容</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+                  {detail.skillItemNeeds ?? "（未入力）"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">期限</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+                  {detail.skillItemDeadline ?? "（未入力）"}
+                </dd>
+              </div>
+            </>
+          )}
+
+          {/* 旧データ向けフォールバック: recruitmentTypes が空の場合 activityContent を表示 */}
+          {isLegacyApplication && (
+            <div>
+              <dt className="text-sm font-medium text-gray-500">活動内容（旧データ）</dt>
+              <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+                <p className="mb-1 text-xs text-amber-700">
+                  ※ PR3 以前に提出された応募のため、募集タイプが未設定です。
+                </p>
+                {detail.activityContent ?? "（未入力）"}
+              </dd>
+            </div>
+          )}
+        </dl>
+      </section>
+
+      {/* 4. リターン */}
+      <section className="mb-8 rounded-lg border border-gray-200 bg-white p-6">
+        <h2 className="mb-4 text-lg font-semibold">リターン</h2>
+        <dl className="space-y-6">
+          <div>
+            <dt className="text-sm font-medium text-gray-500">体験できること</dt>
+            <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+              {detail.experienceOffered ??
+                (isLegacyApplication ? (
+                  <span className="text-gray-500">（旧データのため未入力）</span>
+                ) : (
+                  <span className="text-red-600">⚠ 必須項目が未入力です</span>
+                ))}
+            </dd>
+          </div>
+
+          {includesTime && (
+            <div>
+              <dt className="text-sm font-medium text-gray-500">
+                時間用リターン（やる気で支援する人向け）
+              </dt>
+              <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+                {detail.timeReturn ?? "（未入力）"}
+              </dd>
+            </div>
+          )}
+
+          {includesSkillItem && (
+            <div>
+              <dt className="text-sm font-medium text-gray-500">
+                スキル・モノ用リターン（スキルやモノで支援する人向け）
+              </dt>
+              <dd className="mt-1 whitespace-pre-wrap text-gray-900">
+                {detail.skillItemReturn ?? "（未入力）"}
               </dd>
             </div>
           )}
