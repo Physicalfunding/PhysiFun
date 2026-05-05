@@ -1,4 +1,8 @@
-import type { LeaderApplicationStatus } from "@physifun/domain";
+import type {
+  LeaderApplicationRecruitmentType,
+  LeaderApplicationStatus,
+  ProjectPhase,
+} from "@physifun/domain";
 import { prisma } from "../database/client";
 
 // ==================== 型定義 ====================
@@ -41,6 +45,20 @@ export interface LeaderApplicationDetail {
     facebook: string | null;
     website: string | null;
   } | null;
+
+  // Issue #192 PR3 で追加された応募フォーム拡張フィールド (Admin 詳細表示用)
+  readonly phoneNumber: string | null;
+  readonly progress: ProjectPhase;
+  readonly recruitmentTypes: LeaderApplicationRecruitmentType[];
+  readonly eventLocation: string | null;
+  readonly eventPeriod: string | null;
+  readonly recruitCount: number | null;
+  readonly skillItemNeeds: string | null;
+  readonly skillItemDeadline: string | null;
+  readonly timeReturn: string | null;
+  readonly skillItemReturn: string | null;
+  readonly experienceOffered: string | null;
+
   readonly submittedAt: Date;
   readonly reviewedAt: Date | null;
 }
@@ -144,6 +162,17 @@ export class PrismaLeaderApplicationQueryService implements LeaderApplicationQue
       municipality: row.municipality,
       activityContent: row.activityContent,
       snsLinks: row.snsLinks as LeaderApplicationDetail["snsLinks"],
+      phoneNumber: row.phoneNumber,
+      progress: row.progress,
+      recruitmentTypes: row.recruitmentTypes,
+      eventLocation: row.eventLocation,
+      eventPeriod: row.eventPeriod,
+      recruitCount: row.recruitCount,
+      skillItemNeeds: row.skillItemNeeds,
+      skillItemDeadline: row.skillItemDeadline,
+      timeReturn: row.timeReturn,
+      skillItemReturn: row.skillItemReturn,
+      experienceOffered: row.experienceOffered,
       submittedAt: row.submittedAt,
       reviewedAt: row.reviewedAt,
     };
