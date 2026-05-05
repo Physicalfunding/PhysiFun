@@ -7,13 +7,16 @@ import {
   successResponse,
   validationErrorResponse,
   conflictResponse,
-  errorResponse,
+  forbiddenResponse,
   internalErrorResponse,
-  serviceUnavailableResponse,
 } from "@/lib/api/response";
-import { getSubmitLeaderApplicationPort } from "@/lib/di/leader-application";
+import {
+  getCaptchaVerifierPort,
+  getLeaderApplicationIpRateLimitPort,
+  getSubmitLeaderApplicationPort,
+} from "@/lib/di/leader-application";
 import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
-import { isLeaderApplicationEnabledServer } from "@/lib/featureFlags";
+import { rateLimitExceededResponse } from "@/lib/rateLimit";
 
 /**
  * UseCase のエラー型に応じた HTTP レスポンスを返す
@@ -31,13 +34,18 @@ function handleUseCaseError(error: SubmitLeaderApplicationError) {
       return validationErrorResponse("入力内容を確認してください", fields);
     }
     case "RATE_LIMIT_EXCEEDED":
-      return errorResponse(
-        "送信回数の上限に達しました。しばらく時間をおいてから再度お試しください",
-        "UNPROCESSABLE_ENTITY",
-        429
-      );
+      // ポートが返した rate limit メタデータを使い、既存ルートと整合する
+      // `Retry-After` / `X-RateLimit-*` ヘッダー付きの 429 を返す。
+      return rateLimitExceededResponse({
+        ok: false,
+        limit: error.limit,
+        remaining: error.remaining,
+        retryAfterSeconds: error.retryAfterSeconds,
+        reset: error.reset,
+      });
     case "CAPTCHA_VERIFICATION_FAILED":
-      return validationErrorResponse("CAPTCHA の検証に失敗しました");
+      // ボット判定の失敗はフィールド検証エラーではないので 403 で返す。
+      return forbiddenResponse("CAPTCHA の検証に失敗しました。再度お試しください");
     case "DUPLICATE_PENDING_APPLICATION":
       return conflictResponse("このメールアドレスでは既に応募が登録されています");
   }
@@ -45,26 +53,35 @@ function handleUseCaseError(error: SubmitLeaderApplicationError) {
 
 /**
  * POST /api/leader-applications
- * リーダー応募を送信する
+ * リーダー応募を送信する。
  *
- * TODO(#192): CAPTCHA / IP レートリミットがスタブのままなので、本番環境では
- * `LEADER_APPLICATION_ENABLED` flag を立てるまで 503 を返す。
+ * Issue #200: CAPTCHA (Cloudflare Turnstile) と IP レートリミット
+ * (`leaderApplicationSubmit`: 3 req / 1 hour / IP) で未認証スパムを抑止する。
  */
 export async function POST(request: NextRequest) {
-  // フィーチャーフラグゲート (PR #198 review C1)
-  if (!isLeaderApplicationEnabledServer()) {
-    return serviceUnavailableResponse("リーダー応募の受付は現在準備中です");
-  }
-
   try {
     const body = await request.json();
-    const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    // NOTE (Issue #200): `x-forwarded-for` の最左 IP は Vercel edge が信頼できる値で
+    // 書き換える前提。セルフホスト/別 PaaS にデプロイする場合はクライアントが任意の
+    // 値を入れられるためレートリミット回避が成立しうる。デプロイ環境の前段プロキシが
+    // X-Forwarded-For を上書きすることを必ず確認すること。
+    //
+    // また、IP が取れない (ヘッダー未設定) リクエストは "unknown" バケットを共有して
+    // 他リクエストの枠を食い合うため、ここで弾く。Vercel 上では実質発生しないが、
+    // 直接公開された場合の安全弁。
+    const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    if (!ipAddress) {
+      return forbiddenResponse("リクエスト元 IP を判定できませんでした");
+    }
 
-    const useCase = new SubmitLeaderApplicationUseCase(getSubmitLeaderApplicationPort());
+    const useCase = new SubmitLeaderApplicationUseCase(
+      getSubmitLeaderApplicationPort(),
+      getCaptchaVerifierPort(),
+      getLeaderApplicationIpRateLimitPort()
+    );
     const result = await useCase.execute({
       ...body,
       ipAddress,
-      captchaToken: body.captchaToken ?? "stub",
     });
 
     if (!result.ok) {

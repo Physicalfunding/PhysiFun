@@ -7,6 +7,8 @@ import { NextResponse } from "next/server";
  * - `createProject`: `POST /api/my/projects` 用 (10 req / 10 min / user)
  * - `updateProject`: `PATCH /api/my/projects/[projectId]` 用 (30 req / min / user)
  * - `projectStatusTransition`: 公開申請 / 取下げ / 非公開化 用 (10 req / min / user)
+ * - `leaderApplicationSubmit`: `POST /api/leader-applications` 用 (3 req / 1 hour / IP)
+ *   未認証の公開エンドポイントなので key は IP アドレス（Issue #200 / B-6）。
  *
  * NOTE (Issue #108): `projectStatusTransition` は Issue #108 原文の
  * 「Status transitions: 10 req / min / user」に従い、
@@ -14,7 +16,11 @@ import { NextResponse } from "next/server";
  * ルートごとに独立したカウンタを持たせず、同じ `projectStatusTransition` キーで
  * スライディングウィンドウを共有しているのは意図的な設計。
  */
-export type RateLimitAction = "createProject" | "updateProject" | "projectStatusTransition";
+export type RateLimitAction =
+  | "createProject"
+  | "updateProject"
+  | "projectStatusTransition"
+  | "leaderApplicationSubmit";
 
 /**
  * レート制限の設定 (上限回数とウィンドウ長)。
@@ -46,6 +52,10 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitAction, RateLimitConfig> = {
     limit: 10,
     windowMs: 60 * 1000, // 1 分 (request-publish / withdraw / unpublish 合算)
   },
+  leaderApplicationSubmit: {
+    limit: 3,
+    windowMs: 60 * 60 * 1000, // 1 時間 (Issue #200 / B-6, 同一 IP からの連続応募抑止)
+  },
 };
 
 interface Bucket {
@@ -62,6 +72,10 @@ interface Bucket {
  * 外部ストレージが必要。Phase 1 の暫定対策として十分なので、スケール時に
  * 置き換える前提で使う。
  *
+ * `LEADER_APPLICATION_ENABLED=true` で本番トラフィックを受ける前に
+ * Vercel KV へ移行することがブロッカー。トラッキング Issue:
+ * https://github.com/Physicalfunding/PhysiFun/issues/202
+ *
  * key は `<action>:<userId>` 形式。
  * max 件数に到達すると LRU で古いユーザーから捨てる。
  * ttl は最長ウィンドウに揃えて、放置された bucket が自動で消えるようにしている
@@ -76,8 +90,8 @@ const buckets = new LRUCache<string, Bucket>({
   allowStale: false,
 });
 
-function bucketKey(action: RateLimitAction, userId: string): string {
-  return `${action}:${userId}`;
+function bucketKey(action: RateLimitAction, subjectKey: string): string {
+  return `${action}:${subjectKey}`;
 }
 
 /**
@@ -107,22 +121,23 @@ export interface RateLimitResult {
 }
 
 /**
- * 指定アクション・ユーザーでリクエストを 1 回消費し、制限に収まっているか判定する。
+ * 指定アクション・主体キーでリクエストを 1 回消費し、制限に収まっているか判定する。
  *
  * 破壊的な操作: `ok=true` の場合、内部のカウンタにタイムスタンプが追加される。
  * `ok=false` の場合はカウンタを増やさない (超過中のバーストで TTL が延びないように)。
  *
  * @param action アクション種別
- * @param userId ユーザー ID (`session.user.id`)
+ * @param subjectKey 制限の主体を識別するキー。認証済みアクションでは `session.user.id`、
+ *   未認証アクション (`leaderApplicationSubmit` など) では IP アドレスを渡す。
  * @param now 現在時刻 (ms)。テスト用に差し替え可能。省略時は `Date.now()`。
  */
 export function consumeRateLimit(
   action: RateLimitAction,
-  userId: string,
+  subjectKey: string,
   now: number = Date.now()
 ): RateLimitResult {
   const config = RATE_LIMIT_CONFIGS[action];
-  const key = bucketKey(action, userId);
+  const key = bucketKey(action, subjectKey);
   const bucket = buckets.get(key) ?? { timestamps: [] };
 
   // ウィンドウ外の古いタイムスタンプは除去
@@ -201,10 +216,10 @@ export function rateLimitExceededResponse(result: RateLimitResult): NextResponse
 
 /**
  * API Route Handler 用の薄いラッパー。
- * ユーザーが制限を超えていたら 429 レスポンスを返し、そうでなければ null を返す。
+ * 主体が制限を超えていたら 429 レスポンスを返し、そうでなければ null を返す。
  *
  * @param action アクション種別
- * @param userId ユーザー ID (`session.user.id`)
+ * @param subjectKey 制限の主体を識別するキー (認証済みなら user.id、未認証なら IP)
  * @param now 現在時刻 (ms)。テスト用に差し替え可能。省略時は `Date.now()`。
  *
  * @example
@@ -213,10 +228,10 @@ export function rateLimitExceededResponse(result: RateLimitResult): NextResponse
  */
 export function enforceRateLimit(
   action: RateLimitAction,
-  userId: string,
+  subjectKey: string,
   now: number = Date.now()
 ): NextResponse | null {
-  const result = consumeRateLimit(action, userId, now);
+  const result = consumeRateLimit(action, subjectKey, now);
   if (!result.ok) {
     return rateLimitExceededResponse(result);
   }

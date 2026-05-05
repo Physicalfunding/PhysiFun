@@ -224,10 +224,7 @@ export class MaxProjectsReachedError extends Error {
  * reconstruct（バリデーションなし）の中間に位置するファクトリで、
  * 応募内容から派生した初期値を受け取りつつドメインバリデーション（trim/長さ）を通す。
  */
-function buildInitialProject(
-  application: LeaderApplication,
-  now: Date
-): Result<Project, string> {
+function buildInitialProject(application: LeaderApplication, now: Date): Result<Project, string> {
   const draft = application.projectDraft;
 
   // ProjectLocation を再構築（draft.location と同等の値だが Project 用に独立した VO として扱う）

@@ -8,11 +8,7 @@ export type { ProjectStateError, ProjectUpdateError } from "./errors/ProjectErro
 export type { ProjectRepository } from "./repositories/ProjectRepository";
 export type { ProjectReviewFeedbackRepository } from "./repositories/ProjectReviewFeedbackRepository";
 export { ProjectId, type InvalidProjectIdError } from "./value-objects/ProjectId";
-export {
-  ProjectPhase,
-  PROJECT_PHASE_VALUES,
-  isProjectPhase,
-} from "./value-objects/ProjectPhase";
+export { ProjectPhase, PROJECT_PHASE_VALUES, isProjectPhase } from "./value-objects/ProjectPhase";
 export { PROJECT_PHASE_LABELS } from "./value-objects/projectPhaseLabels";
 export { PublishStatus } from "./value-objects/PublishStatus";
 export { ReviewAction } from "./value-objects/ReviewAction";

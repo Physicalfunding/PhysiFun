@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Script from "next/script";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -289,6 +290,37 @@ export const applyFormSchema = z
 
 type ApplyFormData = z.infer<typeof applyFormSchema>;
 
+// ==================== Turnstile 型定義 ====================
+
+/**
+ * Cloudflare Turnstile JS API の最小型定義 (Issue #200)
+ *
+ * `https://challenges.cloudflare.com/turnstile/v0/api.js` 読み込み後に
+ * `window.turnstile` にぶら下がる API。
+ */
+interface TurnstileApi {
+  render(
+    container: HTMLElement,
+    options: {
+      sitekey: string;
+      callback: (token: string) => void;
+      "error-callback"?: () => void;
+      "expired-callback"?: () => void;
+      theme?: "light" | "dark" | "auto";
+    }
+  ): string;
+  reset(widgetId?: string): void;
+  remove(widgetId?: string): void;
+}
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileApi;
+  }
+}
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
 // ==================== ヘルパー ====================
 
 const inputClassName = (hasError: boolean) =>
@@ -313,6 +345,13 @@ export function ApplyForm() {
   const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  // Container は callback ref + state で管理する。useRef にすると ref の更新時に
+  // useEffect が再実行されないため、条件付きレンダー (`{TURNSTILE_SITE_KEY && ...}`)
+  // とスクリプトロードの順序によっては widget が初期化されないケースがある。
+  const [turnstileContainer, setTurnstileContainer] = useState<HTMLDivElement | null>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
+  const [turnstileScriptLoaded, setTurnstileScriptLoaded] = useState(false);
 
   const {
     register,
@@ -366,7 +405,46 @@ export function ApplyForm() {
     }
   }, [showSkillItemFields, setValue]);
 
+  /**
+   * Turnstile widget の描画 (Issue #200)
+   *
+   * - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` 未設定の場合は描画をスキップして CAPTCHA を要求しない
+   *   （ローカル開発の fail-open 動作と整合させるため）。
+   * - スクリプト読み込み後 `window.turnstile.render` で明示的に描画し、callback で
+   *   トークンを React state に格納する。
+   * - Strict Mode の二重マウント / アンマウント時に widget をクリーンアップして
+   *   `[Cloudflare Turnstile] A widget with the same id already exists` を回避する。
+   */
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY) return;
+    if (!turnstileScriptLoaded) return;
+    if (!turnstileContainer) return;
+    if (typeof window === "undefined" || !window.turnstile) return;
+
+    const widgetId = window.turnstile.render(turnstileContainer, {
+      sitekey: TURNSTILE_SITE_KEY,
+      callback: (token: string) => setCaptchaToken(token),
+      "expired-callback": () => setCaptchaToken(null),
+      "error-callback": () => setCaptchaToken(null),
+      theme: "light",
+    });
+    turnstileWidgetIdRef.current = widgetId;
+
+    return () => {
+      if (window.turnstile && turnstileWidgetIdRef.current) {
+        window.turnstile.remove(turnstileWidgetIdRef.current);
+        turnstileWidgetIdRef.current = null;
+      }
+    };
+  }, [turnstileScriptLoaded, turnstileContainer]);
+
   const onSubmit = async (data: ApplyFormData) => {
+    // CAPTCHA 必須環境（site key 設定済み）でトークン未取得なら送信させない
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      showToast("CAPTCHA を完了してから送信してください", "error");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -378,9 +456,10 @@ export function ApplyForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...submitData,
-          // TODO(#192): CAPTCHA を実装するまで本番では feature flag で無効化している。
-          // 実装後はこの "stub" 文字列を実トークンに差し替える。
-          captchaToken: "stub",
+          // site key 未設定の dev 環境では captchaToken を空文字で送ると Zod の
+          // `min(1)` で弾かれるため "dev-bypass" を入れる。サーバー側は
+          // TURNSTILE_SECRET_KEY 未設定時に検証をパスする fail-open 動作と整合する。
+          captchaToken: captchaToken ?? "dev-bypass",
         }),
       });
 
@@ -396,6 +475,12 @@ export function ApplyForm() {
           // SyntaxError 等は握りつぶしてデフォルトメッセージを使う
         }
         showToast(message, "error");
+        // CAPTCHA 失敗・レート制限などサーバー側で弾かれた場合は token を破棄して
+        // 再チャレンジできるようにする
+        if (TURNSTILE_SITE_KEY && window.turnstile && turnstileWidgetIdRef.current) {
+          window.turnstile.reset(turnstileWidgetIdRef.current);
+          setCaptchaToken(null);
+        }
         return;
       }
 
@@ -979,10 +1064,24 @@ export function ApplyForm() {
         )}
       </section>
 
+      {/* CAPTCHA (Cloudflare Turnstile, Issue #200) */}
+      {TURNSTILE_SITE_KEY && (
+        <>
+          <Script
+            src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+            strategy="afterInteractive"
+            onLoad={() => setTurnstileScriptLoaded(true)}
+          />
+          <div className="flex justify-center">
+            <div ref={setTurnstileContainer} aria-label="CAPTCHA" />
+          </div>
+        </>
+      )}
+
       {/* 送信ボタン */}
       <button
         type="submit"
-        disabled={isLoading}
+        disabled={isLoading || (!!TURNSTILE_SITE_KEY && !captchaToken)}
         className="w-full rounded-md bg-orange-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isLoading ? "送信中..." : "応募する"}

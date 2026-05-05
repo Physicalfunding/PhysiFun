@@ -17,6 +17,13 @@ export type {
   CreateOutboxMessageParams,
 } from "./leader-application/ports/SubmitLeaderApplicationPort";
 
+// CaptchaVerifierPort / IpRateLimitPort (Issue #200)
+export type { CaptchaVerifierPort } from "./leader-application/ports/CaptchaVerifierPort";
+export type {
+  IpRateLimitPort,
+  IpRateLimitExceededError,
+} from "./leader-application/ports/IpRateLimitPort";
+
 // ActivateAccountUseCase
 export {
   ActivateAccountUseCase,
