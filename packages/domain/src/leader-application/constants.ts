@@ -63,4 +63,23 @@ export const LEADER_APPLICATION_LIMITS = {
   eventPeriod: 200,
   skillItemNeeds: 200,
   skillItemDeadline: 200,
+  /**
+   * 募集人数の上限（仮値: 1000 名）
+   *
+   * 想定外に大きな値が入ることでの DB / 表示崩れを避けるためのガード値。
+   * 仕様上の妥当な上限は未確定だが、現実的なリーダー応募 1 件あたりの
+   * 募集人数として 1000 を超えるケースは想定しない。
+   */
+  recruitCountMax: 1000,
 } as const;
+
+/**
+ * `LeaderApplicationRecruitmentType` の値配列（Zod `z.enum(...)` 用）
+ *
+ * フロント / アプリケーション層 双方の入力スキーマで Single Source of Truth として
+ * 利用する。
+ */
+export const RECRUITMENT_TYPE_VALUES = Object.values(LeaderApplicationRecruitmentType) as [
+  LeaderApplicationRecruitmentType,
+  ...LeaderApplicationRecruitmentType[],
+];

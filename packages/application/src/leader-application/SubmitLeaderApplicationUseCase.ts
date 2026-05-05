@@ -10,11 +10,12 @@ import {
   PhoneNumber,
   type PhoneNumberError,
   PROJECT_DRAFT_LIMITS,
+  PROJECT_PHASE_VALUES,
   ProjectDraft,
   type ProjectDraftError,
   ProjectLocation,
   type ProjectLocationError,
-  ProjectPhase,
+  RECRUITMENT_TYPE_VALUES,
   SnsLinks,
   type SnsLinksError,
 } from "@physifun/domain";
@@ -27,19 +28,6 @@ import type { SubmitLeaderApplicationPort } from "./ports/SubmitLeaderApplicatio
  * ドメイン層の CATEGORY_MASTER から Zod enum 用の値配列を生成（Single Source of Truth）
  */
 const PROJECT_CATEGORY_VALUES = CATEGORY_MASTER.map((c) => c.value) as [string, ...string[]];
-
-/**
- * ProjectPhase 値配列（Zod enum 用）
- */
-const PROJECT_PHASE_VALUES = Object.values(ProjectPhase) as [ProjectPhase, ...ProjectPhase[]];
-
-/**
- * LeaderApplicationRecruitmentType 値配列（Zod enum 用）
- */
-const RECRUITMENT_TYPE_VALUES = Object.values(LeaderApplicationRecruitmentType) as [
-  LeaderApplicationRecruitmentType,
-  ...LeaderApplicationRecruitmentType[],
-];
 
 /**
  * SNS リンクのスキーマ（各フィールド任意、最大 500 文字）
@@ -169,11 +157,22 @@ export const submitLeaderApplicationInputSchema = z
         `実施期間は ${LEADER_APPLICATION_LIMITS.eventPeriod} 文字以内です`
       )
       .nullish(),
-    /** 募集人数（TIME 必須・>= 1） */
+    /**
+     * 募集人数（TIME 必須・1 以上 recruitCountMax 以下）
+     *
+     * フロント側は `valueAsNumber: true` で number 化するため未入力時は NaN になり、
+     * `JSON.stringify` 経由で null としてサーバーに到達する。サーバー側でも防御的に
+     * `.finite()` を入れて NaN/Infinity を明示的に弾く（PR #198 review M4 対応）。
+     */
     recruitCount: z
       .number()
+      .finite("募集人数は数値で入力してください")
       .int("募集人数は整数で入力してください")
       .min(1, "募集人数は 1 以上です")
+      .max(
+        LEADER_APPLICATION_LIMITS.recruitCountMax,
+        `募集人数は ${LEADER_APPLICATION_LIMITS.recruitCountMax} 以下で入力してください`
+      )
       .nullish(),
     /** 時間用リターン（TIME 必須・〜200） */
     timeReturn: z
@@ -324,7 +323,9 @@ export type SubmitLeaderApplicationError =
 /**
  * IP レートリミットチェック (B-6: 1 時間あたり同一 IP から最大 3 件)
  *
- * TODO: 実際のレートリミットロジックを実装する（Redis / DB ベースのカウンター）
+ * TODO(#192): CAPTCHA / レートリミットを実装するまでは本番無効化。
+ * apps/web 側の `isLeaderApplicationEnabledServer()` で本番ではゲートしている。
+ * Redis / DB ベースのカウンターで実装する。
  *
  * @param _ipAddress - リクエスト元 IP
  * @returns 常に ok を返す（スタブ実装）
@@ -337,7 +338,9 @@ function checkIpRateLimit(_ipAddress: string): Result<void, { type: "RATE_LIMIT_
 /**
  * CAPTCHA 検証 (A-3)
  *
- * TODO: reCAPTCHA / hCaptcha / Turnstile 等の実際の検証ロジックを実装する
+ * TODO(#192): CAPTCHA / レートリミットを実装するまでは本番無効化。
+ * apps/web 側の `isLeaderApplicationEnabledServer()` で本番ではゲートしている。
+ * reCAPTCHA / hCaptcha / Turnstile 等の検証ロジックで差し替える。
  *
  * @param _token - CAPTCHA トークン
  * @returns 常に ok を返す（スタブ実装）

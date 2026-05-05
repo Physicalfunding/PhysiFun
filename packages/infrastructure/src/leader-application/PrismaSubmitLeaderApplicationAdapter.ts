@@ -58,7 +58,8 @@ interface CreateLeaderApplicationParams {
   readonly skillItemDeadline: string | null;
   readonly timeReturn: string | null;
   readonly skillItemReturn: string | null;
-  readonly experienceOffered: string | null;
+  /** Issue #192 PR #198 review M1 で NOT NULL 化（schema.prisma 同期） */
+  readonly experienceOffered: string;
 
   readonly submittedAt: Date;
 }

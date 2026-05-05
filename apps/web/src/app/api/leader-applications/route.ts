@@ -9,9 +9,11 @@ import {
   conflictResponse,
   errorResponse,
   internalErrorResponse,
+  serviceUnavailableResponse,
 } from "@/lib/api/response";
 import { getSubmitLeaderApplicationPort } from "@/lib/di/leader-application";
 import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
+import { isLeaderApplicationEnabledServer } from "@/lib/featureFlags";
 
 /**
  * UseCase のエラー型に応じた HTTP レスポンスを返す
@@ -44,8 +46,16 @@ function handleUseCaseError(error: SubmitLeaderApplicationError) {
 /**
  * POST /api/leader-applications
  * リーダー応募を送信する
+ *
+ * TODO(#192): CAPTCHA / IP レートリミットがスタブのままなので、本番環境では
+ * `LEADER_APPLICATION_ENABLED` flag を立てるまで 503 を返す。
  */
 export async function POST(request: NextRequest) {
+  // フィーチャーフラグゲート (PR #198 review C1)
+  if (!isLeaderApplicationEnabledServer()) {
+    return serviceUnavailableResponse("リーダー応募の受付は現在準備中です");
+  }
+
   try {
     const body = await request.json();
     const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";

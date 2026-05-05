@@ -14,19 +14,33 @@ test("リーダー応募フォームから応募を送信し、成功画面が�
   await page.goto(`${WEB_BASE_URL}/apply`);
 
   // 基本情報
-  await page.getByLabel("表示名").fill(TEST_LEADER.displayName);
+  await page.getByLabel("お名前").fill(TEST_LEADER.displayName);
+  await page.getByLabel("電話番号").fill(TEST_LEADER.phoneNumber);
   await page.getByLabel("メールアドレス").fill(TEST_LEADER.email);
 
-  // プロジェクト情報
+  // プロジェクト詳細
   await page.getByLabel("プロジェクトタイトル").fill(TEST_LEADER.projectTitle);
   await page.getByLabel("プロジェクト概要").fill(TEST_LEADER.projectSummary);
-  await page.getByLabel("プロジェクトストーリー").fill(TEST_LEADER.projectStory);
+  await page.getByLabel("プロジェクト説明（想い）").fill(TEST_LEADER.projectStory);
   await page.getByLabel("プロジェクトカテゴリ").selectOption(TEST_LEADER.projectCategory);
 
-  // 活動場所・予定
+  // プロジェクトの進捗
+  await page.getByLabel("準備中（企画・調整中）").check();
+
+  // 募集内容: 時間（やる気）
+  await page.getByLabel("時間（やる気）での支援を募集する").check();
+  await page.getByLabel("活動内容").fill(TEST_LEADER.activityContent);
+  await page.getByLabel("開催場所").fill(TEST_LEADER.eventLocation);
+  await page.getByLabel("実施期間").fill(TEST_LEADER.eventPeriod);
+  await page.getByLabel("募集人数").fill(String(TEST_LEADER.recruitCount));
+
+  // リターン
+  await page.getByLabel("体験できること").fill(TEST_LEADER.experienceOffered);
+  await page.getByLabel("時間用リターン").fill(TEST_LEADER.timeReturn);
+
+  // 活動場所
   await page.getByLabel("都道府県").selectOption(TEST_LEADER.prefectureCode);
   await page.getByLabel("市区町村").fill(TEST_LEADER.municipality);
-  await page.getByLabel("活動予定").fill(TEST_LEADER.plannedActivities);
 
   // 利用規約同意
   await page.getByLabel(/利用規約/).check();

@@ -2,6 +2,7 @@ import { AccountId } from "../../account/value-objects/AccountId";
 import { ProjectPhase } from "../../project/value-objects/ProjectPhase";
 import { type Result, err, ok } from "../../shared/result";
 import type { LeaderApplicationStateError } from "../errors/LeaderApplicationError";
+import type { LeaderApplicationRecruitmentType } from "../constants";
 import { LeaderApplicationId } from "../value-objects/LeaderApplicationId";
 import { LeaderApplicationStatus } from "../value-objects/LeaderApplicationStatus";
 import { ProjectDraft } from "../value-objects/ProjectDraft";
@@ -10,6 +11,48 @@ import { ProjectDraft } from "../value-objects/ProjectDraft";
  * 却下理由の文字数上限（次回ミーティングで再確認。Phase 1 仮値 2000 文字）
  */
 const MAX_REVIEWER_NOTE_LENGTH = 2000;
+
+/**
+ * 応募スナップショットの追加フィールド (Issue #192 PR3〜PR5)
+ *
+ * `LeaderApplication` 集約は本来 ProjectDraft で企画情報を保持していたが、
+ * 応募フォームの拡張で追加された連絡先・募集タイプ・体験提供文・条件付き必須
+ * フィールド群は ProjectDraft のスコープ外であるため、エンティティ側に
+ * 「応募時のスナップショット」として保持する。
+ *
+ * Phase 1 ではドメインロジック（approve / reject）はこれらの値に依存しない
+ * （ProjectDraft の不変条件のみで承認可能）が、永続化からの round-trip と
+ * 将来の運営画面表示用に reconstruct パスでもエンティティに載せておく。
+ */
+export interface LeaderApplicationSnapshot {
+  readonly phoneNumber: string | null;
+  readonly progress: ProjectPhase;
+  readonly recruitmentTypes: readonly LeaderApplicationRecruitmentType[];
+  readonly experienceOffered: string | null;
+  // TIME 募集枠
+  readonly eventLocation: string | null;
+  readonly eventPeriod: string | null;
+  readonly recruitCount: number | null;
+  readonly timeReturn: string | null;
+  // SKILL_ITEM 募集枠
+  readonly skillItemNeeds: string | null;
+  readonly skillItemDeadline: string | null;
+  readonly skillItemReturn: string | null;
+}
+
+const EMPTY_SNAPSHOT: LeaderApplicationSnapshot = {
+  phoneNumber: null,
+  progress: "PLANNING",
+  recruitmentTypes: [],
+  experienceOffered: null,
+  eventLocation: null,
+  eventPeriod: null,
+  recruitCount: null,
+  timeReturn: null,
+  skillItemNeeds: null,
+  skillItemDeadline: null,
+  skillItemReturn: null,
+};
 
 /**
  * LeaderApplication 集約ルート
@@ -33,7 +76,8 @@ export class LeaderApplication {
     private readonly _progress: ProjectPhase,
     private readonly _submittedAt: Date,
     private _reviewedAt: Date | null,
-    private _reviewerNote: string | null
+    private _reviewerNote: string | null,
+    private readonly _snapshot: LeaderApplicationSnapshot
   ) {}
 
   /**
@@ -54,6 +98,8 @@ export class LeaderApplication {
     submittedAt?: Date;
     /** 省略時は `LeaderApplicationId.generate()`。 */
     id?: LeaderApplicationId;
+    /** 応募スナップショット（連絡先・募集タイプ等）。省略時は EMPTY_SNAPSHOT。 */
+    snapshot?: LeaderApplicationSnapshot;
   }): LeaderApplication {
     return new LeaderApplication(
       input.id ?? LeaderApplicationId.generate(),
@@ -63,7 +109,8 @@ export class LeaderApplication {
       input.progress ?? ProjectPhase.PLANNING,
       input.submittedAt ?? new Date(),
       null,
-      null
+      null,
+      input.snapshot ?? EMPTY_SNAPSHOT
     );
   }
 
@@ -85,6 +132,11 @@ export class LeaderApplication {
     submittedAt: Date;
     reviewedAt: Date | null;
     reviewerNote: string | null;
+    /**
+     * 応募スナップショット（PR3〜PR5 で追加された応募フォーム拡張フィールド）。
+     * 旧データに未設定の場合は `EMPTY_SNAPSHOT` 同等の null セットを渡してよい。
+     */
+    snapshot?: LeaderApplicationSnapshot;
   }): LeaderApplication {
     return new LeaderApplication(
       input.id,
@@ -94,7 +146,8 @@ export class LeaderApplication {
       input.progress ?? ProjectPhase.PLANNING,
       input.submittedAt,
       input.reviewedAt,
-      input.reviewerNote
+      input.reviewerNote,
+      input.snapshot ?? EMPTY_SNAPSHOT
     );
   }
 
@@ -134,6 +187,16 @@ export class LeaderApplication {
 
   get reviewerNote(): string | null {
     return this._reviewerNote;
+  }
+
+  /**
+   * 応募スナップショット（PR3〜PR5 で追加された応募フォーム拡張フィールド一式）。
+   *
+   * approve / reject ロジックでは参照しないが、永続化からの round-trip 確認や
+   * 運営画面での表示に使用するため readonly で公開する。
+   */
+  get snapshot(): LeaderApplicationSnapshot {
+    return this._snapshot;
   }
 
   // ---- State transitions ----
