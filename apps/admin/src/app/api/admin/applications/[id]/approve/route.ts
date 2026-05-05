@@ -107,9 +107,12 @@ function mapApproveError(error: ApproveLeaderApplicationError) {
     case "PROJECT_MAPPING_FAILED":
       // Issue #192 PR5: Project マッピング失敗（応募バリデーション通過後の異常）。
       // クライアントの再試行で解決しないサーバー側の異常状態のため 500 を返す。
-      return internalErrorResponse(
-        `応募内容から初期プロジェクトを生成できませんでした: ${error.reason}`
+      // 内部詳細 (reason) はサーバーログにのみ残し、レスポンスには汎用メッセージを返す。
+      console.error(
+        "[api] admin/applications/[id]/approve PROJECT_MAPPING_FAILED:",
+        error.reason
       );
+      return internalErrorResponse("初期プロジェクトの作成に失敗しました");
     case "MAX_PROJECTS_REACHED":
       // Project 件数上限超過（CONFLICT 推奨: 既存リソースの状態と新規作成要求が競合）
       return conflictResponse(
