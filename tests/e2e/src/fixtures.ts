@@ -29,8 +29,22 @@ export const TEST_LEADER = {
   /** 東京都 (JIS X 0401 "13") */
   prefectureCode: "13",
   municipality: "千代田区",
-  plannedActivities:
-    "E2Eテスト用の活動予定です。毎週土曜日に地域コミュニティの集まりを開催します。",
+  /** 電話番号（Issue #192 PR2 で Account / LeaderApplication に追加） */
+  phoneNumber: "090-1234-5678",
+  /** 活動内容（Issue #192 PR3 で plannedActivities → activityContent に改名） */
+  activityContent: "E2Eテスト用の活動内容です。毎週土曜日に地域コミュニティの集まりを開催します。",
+  /** プロジェクトの進捗（必須・ProjectPhase enum 値） */
+  progress: "PLANNING",
+  /** 体験できること（必須・〜150） */
+  experienceOffered: "地域住民との交流を通じて新しいつながりを得られます。",
+  /** 開催場所（TIME 募集枠で必須） */
+  eventLocation: "千代田区コミュニティセンター",
+  /** 実施期間（TIME 募集枠で必須） */
+  eventPeriod: "2026年6月〜10月",
+  /** 募集人数（TIME 募集枠で必須） */
+  recruitCount: 5,
+  /** 時間用リターン（TIME 募集枠で必須・〜200） */
+  timeReturn: "活動後の交流会への招待・お礼状",
 } as const;
 
 /** テスト用 admin アカウントデータ (setup で seed される) (#145: magic link 方式のためパスワード不要) */

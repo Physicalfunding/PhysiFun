@@ -231,11 +231,6 @@ describe("ProjectDraft", () => {
       expect(PROJECT_DRAFT_LIMITS.projectStory).toBe(300);
       expect(PROJECT_DRAFT_LIMITS.activityContent).toBe(200);
     });
-
-    it("plannedActivities は activityContent の後方互換別名として併存する", () => {
-      // PR4 で UI が再編されたタイミングで削除予定
-      expect(PROJECT_DRAFT_LIMITS.plannedActivities).toBe(PROJECT_DRAFT_LIMITS.activityContent);
-    });
   });
 
   describe("equals", () => {

@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/components/common/Toast";
 import { PREFECTURES } from "@/lib/prefectures";
 import {
   CATEGORY_MASTER,
+  LEADER_APPLICATION_LIMITS,
+  LeaderApplicationRecruitmentType,
   PHONE_NUMBER_ALLOWED_CHARS_PATTERN,
   PHONE_NUMBER_MAX_LENGTH,
   PROJECT_DRAFT_LIMITS,
+  PROJECT_PHASE_LABELS,
+  ProjectPhase,
 } from "@physifun/domain";
 
 // ==================== フロントエンド用バリデーションスキーマ ====================
@@ -36,63 +40,214 @@ function snsUrlField(label: string) {
     .optional();
 }
 
-const applyFormSchema = z.object({
-  displayName: z.string().min(1, "お名前を入力してください").max(50, "お名前は 50 文字以内です"),
-  phoneNumber: z
-    .string()
-    .max(PHONE_NUMBER_MAX_LENGTH, `電話番号は ${PHONE_NUMBER_MAX_LENGTH} 文字以内です`)
-    .refine(
-      (v) => v === "" || PHONE_NUMBER_ALLOWED_CHARS_PATTERN.test(v),
-      "電話番号は数字・ハイフン・プラス・括弧・半角スペースのみで入力してください"
-    )
-    .optional(),
-  email: z
-    .string()
-    .min(1, "メールアドレスを入力してください")
-    .email("無効なメールアドレス形式です"),
-  projectTitle: z
-    .string()
-    .min(1, "プロジェクトタイトルを入力してください")
-    .max(
-      PROJECT_DRAFT_LIMITS.projectTitle,
-      `プロジェクトタイトルは ${PROJECT_DRAFT_LIMITS.projectTitle} 文字以内です`
-    ),
-  projectSummary: z
-    .string()
-    .min(1, "プロジェクト概要を入力してください")
-    .max(
-      PROJECT_DRAFT_LIMITS.projectSummary,
-      `プロジェクト概要は ${PROJECT_DRAFT_LIMITS.projectSummary} 文字以内です`
-    ),
-  projectStory: z
-    .string()
-    .min(1, "プロジェクトストーリーを入力してください")
-    .max(
-      PROJECT_DRAFT_LIMITS.projectStory,
-      `プロジェクトストーリーは ${PROJECT_DRAFT_LIMITS.projectStory} 文字以内です`
-    ),
-  projectCategory: z.string().min(1, "プロジェクトカテゴリを選択してください"),
-  prefectureCode: z.string().min(1, "都道府県を選択してください"),
-  municipality: z.string().max(50, "市区町村は 50 文字以内です").optional(),
-  plannedActivities: z
-    .string()
-    .min(1, "活動予定を入力してください")
-    .max(
-      PROJECT_DRAFT_LIMITS.plannedActivities,
-      `活動予定は ${PROJECT_DRAFT_LIMITS.plannedActivities} 文字以内です`
-    ),
-  snsLinks: z
-    .object({
-      x: snsUrlField("X"),
-      instagram: snsUrlField("Instagram"),
-      facebook: snsUrlField("Facebook"),
-      website: snsUrlField("Website"),
-    })
-    .optional(),
-  agreeTerms: z.literal(true, {
-    errorMap: () => ({ message: "利用規約に同意してください" }),
-  }),
-});
+/**
+ * フォーム入力用 Zod スキーマ
+ *
+ * Issue #192 PR4: 応募フォーム拡張に対応する 5 セクション構造に再編。
+ * サーバー側 `submitLeaderApplicationInputSchema` と整合する。
+ * 条件付き必須は `superRefine` で担保（recruitmentTypes の選択値による分岐）。
+ */
+const applyFormSchema = z
+  .object({
+    // 1. 基本情報
+    displayName: z.string().min(1, "お名前を入力してください").max(50, "お名前は 50 文字以内です"),
+    phoneNumber: z
+      .string()
+      .max(PHONE_NUMBER_MAX_LENGTH, `電話番号は ${PHONE_NUMBER_MAX_LENGTH} 文字以内です`)
+      .refine(
+        (v) => v === "" || PHONE_NUMBER_ALLOWED_CHARS_PATTERN.test(v),
+        "電話番号は数字・ハイフン・プラス・括弧・半角スペースのみで入力してください"
+      )
+      .optional(),
+    email: z
+      .string()
+      .min(1, "メールアドレスを入力してください")
+      .email("無効なメールアドレス形式です"),
+
+    // 2. プロジェクト詳細
+    projectTitle: z
+      .string()
+      .min(1, "プロジェクトタイトルを入力してください")
+      .max(
+        PROJECT_DRAFT_LIMITS.projectTitle,
+        `プロジェクトタイトルは ${PROJECT_DRAFT_LIMITS.projectTitle} 文字以内です`
+      ),
+    projectSummary: z
+      .string()
+      .min(1, "プロジェクト概要を入力してください")
+      .max(
+        PROJECT_DRAFT_LIMITS.projectSummary,
+        `プロジェクト概要は ${PROJECT_DRAFT_LIMITS.projectSummary} 文字以内です`
+      ),
+    projectStory: z
+      .string()
+      .min(1, "プロジェクト説明（想い）を入力してください")
+      .max(
+        PROJECT_DRAFT_LIMITS.projectStory,
+        `プロジェクト説明（想い）は ${PROJECT_DRAFT_LIMITS.projectStory} 文字以内です`
+      ),
+    projectCategory: z.string().min(1, "プロジェクトカテゴリを選択してください"),
+
+    // 3. プロジェクトの進捗
+    progress: z.nativeEnum(ProjectPhase, {
+      errorMap: () => ({ message: "進捗を選択してください" }),
+    }),
+
+    // 4. 募集内容
+    recruitmentTypes: z
+      .array(z.nativeEnum(LeaderApplicationRecruitmentType))
+      .min(1, "募集内容を 1 件以上選択してください"),
+
+    // 4-a. 時間（やる気）募集枠（条件付き必須）
+    activityContent: z
+      .string()
+      .max(
+        PROJECT_DRAFT_LIMITS.activityContent,
+        `活動内容は ${PROJECT_DRAFT_LIMITS.activityContent} 文字以内です`
+      )
+      .optional(),
+    eventLocation: z
+      .string()
+      .max(
+        LEADER_APPLICATION_LIMITS.eventLocation,
+        `開催場所は ${LEADER_APPLICATION_LIMITS.eventLocation} 文字以内です`
+      )
+      .optional(),
+    eventPeriod: z
+      .string()
+      .max(
+        LEADER_APPLICATION_LIMITS.eventPeriod,
+        `実施期間は ${LEADER_APPLICATION_LIMITS.eventPeriod} 文字以内です`
+      )
+      .optional(),
+    /**
+     * 募集人数（TIME 必須）
+     *
+     * `react-hook-form` の `register("recruitCount", { valueAsNumber: true })` で
+     * number 化しているため、ここでは number として受け取る。未入力は NaN になるので
+     * `nan().or(...)` ではなく `unknown` を経由して superRefine 側で判定する。
+     */
+    recruitCount: z.union([z.number().int().min(1), z.nan()]).optional(),
+
+    // 4-b. スキル・モノ募集枠（条件付き必須）
+    skillItemNeeds: z
+      .string()
+      .max(
+        LEADER_APPLICATION_LIMITS.skillItemNeeds,
+        `募集したい内容は ${LEADER_APPLICATION_LIMITS.skillItemNeeds} 文字以内です`
+      )
+      .optional(),
+    skillItemDeadline: z
+      .string()
+      .max(
+        LEADER_APPLICATION_LIMITS.skillItemDeadline,
+        `期限は ${LEADER_APPLICATION_LIMITS.skillItemDeadline} 文字以内です`
+      )
+      .optional(),
+
+    // 5. リターン
+    experienceOffered: z
+      .string()
+      .min(1, "体験できることを入力してください")
+      .max(
+        LEADER_APPLICATION_LIMITS.experienceOffered,
+        `体験できることは ${LEADER_APPLICATION_LIMITS.experienceOffered} 文字以内です`
+      ),
+    timeReturn: z
+      .string()
+      .max(
+        LEADER_APPLICATION_LIMITS.timeReturn,
+        `時間用リターンは ${LEADER_APPLICATION_LIMITS.timeReturn} 文字以内です`
+      )
+      .optional(),
+    skillItemReturn: z
+      .string()
+      .max(
+        LEADER_APPLICATION_LIMITS.skillItemReturn,
+        `スキル・モノ用リターンは ${LEADER_APPLICATION_LIMITS.skillItemReturn} 文字以内です`
+      )
+      .optional(),
+
+    // 6. 活動場所
+    prefectureCode: z.string().min(1, "都道府県を選択してください"),
+    municipality: z.string().max(50, "市区町村は 50 文字以内です").optional(),
+
+    // 7. SNS リンク
+    snsLinks: z
+      .object({
+        x: snsUrlField("X"),
+        instagram: snsUrlField("Instagram"),
+        facebook: snsUrlField("Facebook"),
+        website: snsUrlField("Website"),
+      })
+      .optional(),
+
+    // 8. 利用規約同意
+    agreeTerms: z.literal(true, {
+      errorMap: () => ({ message: "利用規約に同意してください" }),
+    }),
+  })
+  .superRefine((data, ctx) => {
+    const hasTime = data.recruitmentTypes.includes(LeaderApplicationRecruitmentType.TIME);
+    if (hasTime) {
+      const required: Array<{ field: keyof typeof data; message: string }> = [
+        { field: "activityContent", message: "活動内容を入力してください" },
+        { field: "eventLocation", message: "開催場所を入力してください" },
+        { field: "eventPeriod", message: "実施期間を入力してください" },
+        { field: "timeReturn", message: "時間用リターンを入力してください" },
+      ];
+      for (const { field, message } of required) {
+        const value = data[field];
+        if (
+          value === undefined ||
+          value === null ||
+          (typeof value === "string" && value.trim() === "")
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field as string],
+            message,
+          });
+        }
+      }
+      if (
+        data.recruitCount === undefined ||
+        data.recruitCount === null ||
+        Number.isNaN(data.recruitCount)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["recruitCount"],
+          message: "募集人数を入力してください",
+        });
+      }
+    }
+
+    const hasSkillItem = data.recruitmentTypes.includes(
+      LeaderApplicationRecruitmentType.SKILL_ITEM
+    );
+    if (hasSkillItem) {
+      const required: Array<{ field: keyof typeof data; message: string }> = [
+        { field: "skillItemNeeds", message: "募集したい内容を入力してください" },
+        { field: "skillItemDeadline", message: "期限を入力してください" },
+        { field: "skillItemReturn", message: "スキル・モノ用リターンを入力してください" },
+      ];
+      for (const { field, message } of required) {
+        const value = data[field];
+        if (
+          value === undefined ||
+          value === null ||
+          (typeof value === "string" && value.trim() === "")
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field as string],
+            message,
+          });
+        }
+      }
+    }
+  });
 
 type ApplyFormData = z.infer<typeof applyFormSchema>;
 
@@ -106,12 +261,14 @@ const inputClassName = (hasError: boolean) =>
   }`;
 
 const labelClassName = "block text-sm font-medium text-gray-700";
+const sectionClassName = "rounded-lg border border-gray-200 bg-white p-6 shadow-sm";
+const sectionHeadingClassName = "mb-4 text-lg font-semibold text-gray-900";
 
 // ==================== コンポーネント ====================
 
 /**
  * ApplyForm
- * リーダー応募フォームコンポーネント
+ * リーダー応募フォームコンポーネント (Issue #192 PR4 で 5 セクション構造に再編)
  */
 export function ApplyForm() {
   const { showToast } = useToast();
@@ -121,10 +278,12 @@ export function ApplyForm() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<ApplyFormData>({
     resolver: zodResolver(applyFormSchema),
     defaultValues: {
+      recruitmentTypes: [],
       snsLinks: {
         x: "",
         instagram: "",
@@ -133,6 +292,13 @@ export function ApplyForm() {
       },
     },
   });
+
+  // 募集内容のチェックボックス状態を監視（条件付き表示用）
+  const recruitmentTypes = useWatch({ control, name: "recruitmentTypes" }) ?? [];
+  const showTimeFields = recruitmentTypes.includes(LeaderApplicationRecruitmentType.TIME);
+  const showSkillItemFields = recruitmentTypes.includes(
+    LeaderApplicationRecruitmentType.SKILL_ITEM
+  );
 
   const onSubmit = async (data: ApplyFormData) => {
     setIsLoading(true);
@@ -184,9 +350,9 @@ export function ApplyForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      {/* 基本情報 */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">基本情報</h2>
+      {/* 1. 基本情報 */}
+      <section className={sectionClassName}>
+        <h2 className={sectionHeadingClassName}>1. 基本情報</h2>
         <div className="space-y-4">
           {/* お名前 */}
           <div>
@@ -243,11 +409,11 @@ export function ApplyForm() {
             {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* プロジェクト情報 */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">プロジェクト情報</h2>
+      {/* 2. プロジェクト詳細 */}
+      <section className={sectionClassName}>
+        <h2 className={sectionHeadingClassName}>2. プロジェクト詳細</h2>
         <div className="space-y-4">
           {/* プロジェクトタイトル */}
           <div>
@@ -261,6 +427,9 @@ export function ApplyForm() {
               className={inputClassName(!!errors.projectTitle)}
               aria-invalid={errors.projectTitle ? "true" : "false"}
             />
+            <p className="mt-1 text-xs text-gray-500">
+              推奨 50〜60 文字。最大 {PROJECT_DRAFT_LIMITS.projectTitle} 文字
+            </p>
             {errors.projectTitle && (
               <p className="mt-1 text-sm text-red-600">{errors.projectTitle.message}</p>
             )}
@@ -286,14 +455,14 @@ export function ApplyForm() {
             )}
           </div>
 
-          {/* プロジェクトストーリー */}
+          {/* プロジェクト説明（想い） */}
           <div>
             <label htmlFor="projectStory" className={labelClassName}>
-              プロジェクトストーリー <span className="text-red-500">*</span>
+              プロジェクト説明（想い） <span className="text-red-500">*</span>
             </label>
             <textarea
               id="projectStory"
-              rows={8}
+              rows={6}
               {...register("projectStory")}
               className={inputClassName(!!errors.projectStory)}
               aria-invalid={errors.projectStory ? "true" : "false"}
@@ -329,13 +498,264 @@ export function ApplyForm() {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 活動場所・予定 */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">活動場所・予定</h2>
+      {/* 3. プロジェクトの進捗 */}
+      <section className={sectionClassName}>
+        <h2 className={sectionHeadingClassName}>3. プロジェクトの進捗</h2>
+        <p className="mb-3 text-sm text-gray-600">
+          現在のプロジェクトの進行状況を 1 つ選んでください。<span className="text-red-500">*</span>
+        </p>
+        <div className="space-y-2">
+          {Object.values(ProjectPhase).map((phase) => (
+            <div key={phase} className="flex items-center gap-2">
+              <input
+                id={`progress-${phase}`}
+                type="radio"
+                value={phase}
+                {...register("progress")}
+                className="h-4 w-4 border-gray-300 text-orange-600 focus:ring-orange-500"
+              />
+              <label htmlFor={`progress-${phase}`} className="text-sm text-gray-700">
+                {PROJECT_PHASE_LABELS[phase]}
+              </label>
+            </div>
+          ))}
+        </div>
+        {errors.progress && <p className="mt-2 text-sm text-red-600">{errors.progress.message}</p>}
+      </section>
+
+      {/* 4. 募集内容 */}
+      <section className={sectionClassName}>
+        <h2 className={sectionHeadingClassName}>4. 募集内容</h2>
+        <p className="mb-3 text-sm text-gray-600">
+          募集する支援の種類を 1 つ以上選んでください（複数可）。
+          <span className="text-red-500">*</span>
+        </p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              id="recruitmentType-time"
+              type="checkbox"
+              value={LeaderApplicationRecruitmentType.TIME}
+              {...register("recruitmentTypes")}
+              className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+            />
+            <label htmlFor="recruitmentType-time" className="text-sm text-gray-700">
+              時間（やる気）での支援を募集する
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              id="recruitmentType-skill-item"
+              type="checkbox"
+              value={LeaderApplicationRecruitmentType.SKILL_ITEM}
+              {...register("recruitmentTypes")}
+              className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+            />
+            <label htmlFor="recruitmentType-skill-item" className="text-sm text-gray-700">
+              スキル・モノでの支援を募集する
+            </label>
+          </div>
+        </div>
+        {errors.recruitmentTypes && (
+          <p className="mt-2 text-sm text-red-600">{errors.recruitmentTypes.message}</p>
+        )}
+
+        {/* 4-a. 時間（やる気）枠 */}
+        {showTimeFields && (
+          <div className="mt-6 space-y-4 border-l-4 border-orange-200 pl-4">
+            <h3 className="text-base font-medium text-gray-900">時間（やる気）募集の詳細</h3>
+
+            <div>
+              <label htmlFor="activityContent" className={labelClassName}>
+                活動内容 <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="activityContent"
+                rows={3}
+                {...register("activityContent")}
+                className={inputClassName(!!errors.activityContent)}
+                aria-invalid={errors.activityContent ? "true" : "false"}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                最大 {PROJECT_DRAFT_LIMITS.activityContent} 文字
+              </p>
+              {errors.activityContent && (
+                <p className="mt-1 text-sm text-red-600">{errors.activityContent.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="eventLocation" className={labelClassName}>
+                開催場所 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="eventLocation"
+                type="text"
+                {...register("eventLocation")}
+                className={inputClassName(!!errors.eventLocation)}
+                aria-invalid={errors.eventLocation ? "true" : "false"}
+              />
+              {errors.eventLocation && (
+                <p className="mt-1 text-sm text-red-600">{errors.eventLocation.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="eventPeriod" className={labelClassName}>
+                実施期間 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="eventPeriod"
+                type="text"
+                placeholder="例: 2026年6月〜10月"
+                {...register("eventPeriod")}
+                className={inputClassName(!!errors.eventPeriod)}
+                aria-invalid={errors.eventPeriod ? "true" : "false"}
+              />
+              {errors.eventPeriod && (
+                <p className="mt-1 text-sm text-red-600">{errors.eventPeriod.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="recruitCount" className={labelClassName}>
+                募集人数 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="recruitCount"
+                type="number"
+                min={1}
+                step={1}
+                {...register("recruitCount", { valueAsNumber: true })}
+                className={inputClassName(!!errors.recruitCount)}
+                aria-invalid={errors.recruitCount ? "true" : "false"}
+              />
+              {errors.recruitCount && (
+                <p className="mt-1 text-sm text-red-600">{errors.recruitCount.message}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 4-b. スキル・モノ枠 */}
+        {showSkillItemFields && (
+          <div className="mt-6 space-y-4 border-l-4 border-orange-200 pl-4">
+            <h3 className="text-base font-medium text-gray-900">スキル・モノ募集の詳細</h3>
+
+            <div>
+              <label htmlFor="skillItemNeeds" className={labelClassName}>
+                募集したい内容 <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="skillItemNeeds"
+                rows={3}
+                {...register("skillItemNeeds")}
+                className={inputClassName(!!errors.skillItemNeeds)}
+                aria-invalid={errors.skillItemNeeds ? "true" : "false"}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                最大 {LEADER_APPLICATION_LIMITS.skillItemNeeds} 文字
+              </p>
+              {errors.skillItemNeeds && (
+                <p className="mt-1 text-sm text-red-600">{errors.skillItemNeeds.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="skillItemDeadline" className={labelClassName}>
+                期限 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="skillItemDeadline"
+                type="text"
+                placeholder="例: 2026年7月末まで"
+                {...register("skillItemDeadline")}
+                className={inputClassName(!!errors.skillItemDeadline)}
+                aria-invalid={errors.skillItemDeadline ? "true" : "false"}
+              />
+              {errors.skillItemDeadline && (
+                <p className="mt-1 text-sm text-red-600">{errors.skillItemDeadline.message}</p>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* 5. リターン */}
+      <section className={sectionClassName}>
+        <h2 className={sectionHeadingClassName}>5. リターン</h2>
         <div className="space-y-4">
-          {/* 都道府県 */}
+          <div>
+            <label htmlFor="experienceOffered" className={labelClassName}>
+              体験できること <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              id="experienceOffered"
+              rows={3}
+              {...register("experienceOffered")}
+              className={inputClassName(!!errors.experienceOffered)}
+              aria-invalid={errors.experienceOffered ? "true" : "false"}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              支援者が応募・参加することで体験できることを記載してください。最大{" "}
+              {LEADER_APPLICATION_LIMITS.experienceOffered} 文字
+            </p>
+            {errors.experienceOffered && (
+              <p className="mt-1 text-sm text-red-600">{errors.experienceOffered.message}</p>
+            )}
+          </div>
+
+          {showTimeFields && (
+            <div>
+              <label htmlFor="timeReturn" className={labelClassName}>
+                時間用リターン <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="timeReturn"
+                rows={3}
+                {...register("timeReturn")}
+                className={inputClassName(!!errors.timeReturn)}
+                aria-invalid={errors.timeReturn ? "true" : "false"}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                時間（やる気）支援者へのリターン。最大 {LEADER_APPLICATION_LIMITS.timeReturn} 文字
+              </p>
+              {errors.timeReturn && (
+                <p className="mt-1 text-sm text-red-600">{errors.timeReturn.message}</p>
+              )}
+            </div>
+          )}
+
+          {showSkillItemFields && (
+            <div>
+              <label htmlFor="skillItemReturn" className={labelClassName}>
+                スキル・モノ用リターン <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="skillItemReturn"
+                rows={3}
+                {...register("skillItemReturn")}
+                className={inputClassName(!!errors.skillItemReturn)}
+                aria-invalid={errors.skillItemReturn ? "true" : "false"}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                スキル・モノ支援者へのリターン。最大 {LEADER_APPLICATION_LIMITS.skillItemReturn}{" "}
+                文字
+              </p>
+              {errors.skillItemReturn && (
+                <p className="mt-1 text-sm text-red-600">{errors.skillItemReturn.message}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 6. 活動場所 */}
+      <section className={sectionClassName}>
+        <h2 className={sectionHeadingClassName}>6. 活動場所</h2>
+        <div className="space-y-4">
           <div>
             <label htmlFor="prefectureCode" className={labelClassName}>
               都道府県 <span className="text-red-500">*</span>
@@ -358,7 +778,6 @@ export function ApplyForm() {
             )}
           </div>
 
-          {/* 市区町村 */}
           <div>
             <label htmlFor="municipality" className={labelClassName}>
               市区町村
@@ -374,32 +793,12 @@ export function ApplyForm() {
               <p className="mt-1 text-sm text-red-600">{errors.municipality.message}</p>
             )}
           </div>
-
-          {/* 活動予定 */}
-          <div>
-            <label htmlFor="plannedActivities" className={labelClassName}>
-              活動予定 <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              id="plannedActivities"
-              rows={4}
-              {...register("plannedActivities")}
-              className={inputClassName(!!errors.plannedActivities)}
-              aria-invalid={errors.plannedActivities ? "true" : "false"}
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              最大 {PROJECT_DRAFT_LIMITS.plannedActivities} 文字
-            </p>
-            {errors.plannedActivities && (
-              <p className="mt-1 text-sm text-red-600">{errors.plannedActivities.message}</p>
-            )}
-          </div>
         </div>
-      </div>
+      </section>
 
-      {/* SNS リンク */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">SNS リンク</h2>
+      {/* 7. SNS リンク */}
+      <section className={sectionClassName}>
+        <h2 className={sectionHeadingClassName}>7. SNS リンク</h2>
         <p className="mb-4 text-sm text-gray-500">
           任意項目です。入力するとプロフィールに表示されます。
         </p>
@@ -468,10 +867,10 @@ export function ApplyForm() {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 利用規約同意 */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      {/* 8. 利用規約同意 */}
+      <section className={sectionClassName}>
         <div className="flex items-start gap-3">
           <input
             id="agreeTerms"
@@ -488,7 +887,7 @@ export function ApplyForm() {
         {errors.agreeTerms && (
           <p className="mt-2 text-sm text-red-600">{errors.agreeTerms.message}</p>
         )}
-      </div>
+      </section>
 
       {/* 送信ボタン */}
       <button

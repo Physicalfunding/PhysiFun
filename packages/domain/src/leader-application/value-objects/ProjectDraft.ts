@@ -21,10 +21,6 @@ import { SnsLinks, type SnsLinksError } from "../../shared/value-objects/SnsLink
  * `activityContent` は応募時の「時間（やる気）」枠で必須となる条件付き必須項目。
  * ProjectDraft VO 自体では nullable として保持し、必須化は呼び出し側
  * (SubmitLeaderApplicationUseCase の Zod superRefine) で担保する。
- *
- * NOTE: 旧フィールド名 `plannedActivities` は ApplyForm.tsx (PR4 で再編予定) からの
- * 互換参照を維持するため、`activityContent` の値を別名として併存させる。
- * PR4 で UI が再編されたタイミングで削除する。
  */
 const LIMITS = {
   projectTitle: 60,
@@ -174,13 +170,5 @@ function normalizeText(
 
 /**
  * ProjectDraft の文字数上限（Single Source of Truth）。
- *
- * `plannedActivities` キーは ApplyForm.tsx (PR4 で再編予定) からの後方互換参照のため、
- * 新フィールド `activityContent` の値を別名として併存させる。
- * PR4 マージ時にこの後方互換キーを削除する。
  */
-export const PROJECT_DRAFT_LIMITS = {
-  ...LIMITS,
-  /** @deprecated Use `activityContent`. ApplyForm.tsx 互換のため一時的に残置（PR4 で削除）。 */
-  plannedActivities: LIMITS.activityContent,
-} as const;
+export const PROJECT_DRAFT_LIMITS = LIMITS;
