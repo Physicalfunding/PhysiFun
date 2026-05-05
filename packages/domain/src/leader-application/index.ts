@@ -1,5 +1,6 @@
 export {
   LEADER_APPLICATION_LIMITS,
+  LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS,
   LeaderApplicationRecruitmentType,
   RECRUITMENT_TYPE_VALUES,
   isLeaderApplicationRecruitmentType,

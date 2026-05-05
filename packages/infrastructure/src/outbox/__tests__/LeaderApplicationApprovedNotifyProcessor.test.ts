@@ -22,6 +22,7 @@ describe("LeaderApplicationApprovedNotifyProcessor", () => {
       applicationId: "app-1",
       accountId: "acc-1",
       email: "leader@example.com",
+      projectId: "proj-1",
       ...overrides,
     },
     createdAt: new Date("2026-05-01T00:00:00Z"),
@@ -49,8 +50,16 @@ describe("LeaderApplicationApprovedNotifyProcessor", () => {
     expect(mailSender.sentMessages[0].to).toBe("winner@example.com");
   });
 
-  it("本文にログイン URL を含む", async () => {
-    await processor.process(makeMessage());
+  it("projectId 付き payload では /my/projects/[id] への CTA を含む（Issue #192 PR5）", async () => {
+    await processor.process(makeMessage({ projectId: "proj-xyz" }));
+
+    const sent = mailSender.sentMessages[0];
+    expect(sent.text).toContain("https://app.physifun.com/my/projects/proj-xyz");
+    expect(sent.html).toContain("https://app.physifun.com/my/projects/proj-xyz");
+  });
+
+  it("projectId 無し payload（旧メッセージ後方互換）ではログイン URL を含む", async () => {
+    await processor.process(makeMessage({ projectId: undefined }));
 
     const sent = mailSender.sentMessages[0];
     expect(sent.text).toContain("https://app.physifun.com/login");

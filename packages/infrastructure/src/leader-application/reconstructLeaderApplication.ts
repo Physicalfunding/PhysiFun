@@ -5,9 +5,10 @@ import {
   AccountId,
   type LeaderApplicationRecruitmentType,
   type LeaderApplicationStatus,
-  type ProjectPhase,
   ProjectDraft,
   ProjectLocation,
+  ProjectPhase,
+  isProjectPhase,
   SnsLinks,
 } from "@physifun/domain";
 
@@ -21,6 +22,10 @@ import {
  * experienceOffered / phoneNumber / eventLocation / eventPeriod / recruitCount /
  * skillItemNeeds / skillItemDeadline / timeReturn / skillItemReturn）も
  * `LeaderApplication.snapshot` にスレッドし、round-trip を完全にする。
+ *
+ * Issue #192 PR5: 永続化層から復元する progress は型ガードで検証する。
+ * 不正値は PLANNING にフォールバックする（ProjectPhase は遷移バリデーションのない
+ * 単純ラベルなので fallback で安全に復元できる）。
  */
 export function reconstructLeaderApplication(row: {
   id: string;
@@ -35,12 +40,13 @@ export function reconstructLeaderApplication(row: {
   /** Issue #192 PR3 で `plannedActivities` から改名・nullable 化 */
   activityContent: string | null;
   snsLinks: unknown;
+  /** Issue #192 PR3 で追加された進捗フェーズ。Prisma の ProjectPhase enum 値（string）。 */
+  progress: string;
   submittedAt: Date;
   reviewedAt: Date | null;
   reviewerNote: string | null;
   // Issue #192 PR3〜PR5 拡張フィールド
   phoneNumber: string | null;
-  progress: ProjectPhase;
   recruitmentTypes: readonly LeaderApplicationRecruitmentType[];
   /** Issue #192 PR #198 review M1: DB 上 NOT NULL */
   experienceOffered: string;
@@ -86,9 +92,13 @@ export function reconstructLeaderApplication(row: {
   if (!draftResult.ok)
     throw new Error(`Invalid ProjectDraft: ${JSON.stringify(draftResult.error)}`);
 
+  const progress: ProjectPhase = isProjectPhase(row.progress)
+    ? row.progress
+    : ProjectPhase.PLANNING;
+
   const snapshot: LeaderApplicationSnapshot = {
     phoneNumber: row.phoneNumber,
-    progress: row.progress,
+    progress,
     recruitmentTypes: row.recruitmentTypes,
     experienceOffered: row.experienceOffered,
     eventLocation: row.eventLocation,
@@ -105,6 +115,7 @@ export function reconstructLeaderApplication(row: {
     accountId: accountIdResult.value,
     status: row.status as LeaderApplicationStatus,
     projectDraft: draftResult.value,
+    progress,
     submittedAt: row.submittedAt,
     reviewedAt: row.reviewedAt,
     reviewerNote: row.reviewerNote,

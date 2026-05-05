@@ -33,6 +33,7 @@ export type {
 export {
   ApproveLeaderApplicationUseCase,
   LEADER_APPLICATION_APPROVED_NOTIFY_TYPE,
+  MaxProjectsReachedError,
   type ApproveLeaderApplicationInput,
   type ApproveLeaderApplicationOutput,
   type ApproveLeaderApplicationError,
