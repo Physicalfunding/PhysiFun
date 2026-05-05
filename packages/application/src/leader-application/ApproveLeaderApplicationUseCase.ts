@@ -11,6 +11,7 @@ import {
 } from "@physifun/domain";
 import type { ApproveLeaderApplicationPort } from "./ports/ApproveLeaderApplicationPort";
 import type { AccountRole } from "../shared/AccountRole";
+import { MAX_PROJECTS_PER_LEADER } from "../project/CreateProjectDraftUseCase";
 
 // ==================== Outbox メッセージ種別 ====================
 
@@ -32,6 +33,11 @@ export interface ApproveLeaderApplicationOutput {
    * 承認時に自動生成された Project の ID（Issue #192 PR5）。
    */
   readonly projectId: string;
+  /**
+   * 承認前から既に LEADER ロールを持っていたかどうか。
+   * 管理 UI で「すでにリーダーだった」ケースを区別するために使用する。
+   */
+  readonly wasAlreadyLeader: boolean;
 }
 
 // ==================== エラー型 ====================
@@ -48,7 +54,8 @@ export type ApproveLeaderApplicationError =
   | { readonly type: "ACCOUNT_NOT_FOUND" }
   | { readonly type: "NOT_PENDING" }
   | { readonly type: "REVIEWER_NOT_FOUND" }
-  | { readonly type: "PROJECT_MAPPING_FAILED"; readonly reason: string };
+  | { readonly type: "PROJECT_MAPPING_FAILED"; readonly reason: string }
+  | { readonly type: "MAX_PROJECTS_REACHED"; readonly max: number };
 
 // ==================== 入力 DTO ====================
 
@@ -133,41 +140,61 @@ export class ApproveLeaderApplicationUseCase {
       : [...account.roles, "LEADER"];
 
     // 4. 応募内容から初期 Project（DRAFT）を構築する
-    const projectResult = buildInitialProject(application);
+    const now = new Date();
+    const projectResult = buildInitialProject(application, now);
     if (!projectResult.ok) {
       return err({ type: "PROJECT_MAPPING_FAILED", reason: projectResult.error });
     }
     const project = projectResult.value;
 
     // 5-7. 承認処理をトランザクションで実行
-    const now = new Date();
     const outboxMessageId = randomUUID();
     const projectIdStr = project.id.toString();
 
-    await this.port.executeApproval({
-      application,
-      accountId: account.id,
-      newRoles,
-      reviewedAt: now,
-      project,
-      outboxMessage: {
-        id: outboxMessageId,
-        type: LEADER_APPLICATION_APPROVED_NOTIFY_TYPE,
-        payload: {
-          applicationId: application.id.toString(),
-          accountId: account.id,
-          email: account.email,
-          // Issue #192 PR5: 通知メールの CTA URL（/my/projects/[id]）に使用
-          projectId: projectIdStr,
+    try {
+      await this.port.executeApproval({
+        application,
+        accountId: account.id,
+        newRoles,
+        reviewedAt: now,
+        project,
+        maxProjectsPerLeader: MAX_PROJECTS_PER_LEADER,
+        outboxMessage: {
+          id: outboxMessageId,
+          type: LEADER_APPLICATION_APPROVED_NOTIFY_TYPE,
+          payload: {
+            applicationId: application.id.toString(),
+            accountId: account.id,
+            email: account.email,
+            // Issue #192 PR5: 通知メールの CTA URL（/my/projects/[id]）に使用
+            projectId: projectIdStr,
+          },
         },
-      },
-    });
+      });
+    } catch (e) {
+      if (e instanceof MaxProjectsReachedError) {
+        return err({ type: "MAX_PROJECTS_REACHED", max: MAX_PROJECTS_PER_LEADER });
+      }
+      throw e;
+    }
 
     return ok({
       applicationId: application.id.toString(),
       accountId: account.id,
       projectId: projectIdStr,
+      wasAlreadyLeader: alreadyLeader,
     });
+  }
+}
+
+/**
+ * 承認時に Project 件数上限（MAX_PROJECTS_PER_LEADER）を超えていた場合に
+ * Port 実装からスローされるエラー。UseCase 側で MAX_PROJECTS_REACHED に変換する。
+ */
+export class MaxProjectsReachedError extends Error {
+  constructor() {
+    super("Max projects per leader reached");
+    this.name = "MaxProjectsReachedError";
   }
 }
 
@@ -193,11 +220,14 @@ export class ApproveLeaderApplicationUseCase {
  *   status          → DRAFT
  *   phase           → progress
  *
- * NOTE: `Project.reconstruct` を使うのは、`Project.createDraft` は VISION/DRAFT 固定で
- * フィールドの初期値を細かく指定できないため。Project 自体は新規だが、新規でも
- * 「特定の初期値を持つ Project」を生成するには reconstruct が適している。
+ * NOTE: `Project.createForLeaderApproval` は createDraft（VISION/null 固定）と
+ * reconstruct（バリデーションなし）の中間に位置するファクトリで、
+ * 応募内容から派生した初期値を受け取りつつドメインバリデーション（trim/長さ）を通す。
  */
-function buildInitialProject(application: LeaderApplication): Result<Project, string> {
+function buildInitialProject(
+  application: LeaderApplication,
+  now: Date
+): Result<Project, string> {
   const draft = application.projectDraft;
 
   // ProjectLocation を再構築（draft.location と同等の値だが Project 用に独立した VO として扱う）
@@ -215,25 +245,24 @@ function buildInitialProject(application: LeaderApplication): Result<Project, st
   // コピーすれば Issue #192 の「TIME 含む場合のみマップ。それ以外は null」と等価になる。
   const activityPlan = draft.activityContent;
 
-  const now = new Date();
-
-  return ok(
-    Project.reconstruct({
-      id: ProjectId.generate(),
-      ownerAccountId: application.accountId,
-      title: draft.projectTitle,
-      coverImageUrl: null,
-      category: draft.projectCategory,
-      location: locationResult.value,
-      phase: application.progress,
-      publishStatus: "DRAFT",
-      summary: draft.projectSummary,
-      body: draft.projectStory,
-      leaderIntroduction: null,
-      snsLinks: draft.snsLinks,
-      activityPlan,
-      createdAt: now,
-      updatedAt: now,
-    })
-  );
+  const projectResult = Project.createForLeaderApproval({
+    id: ProjectId.generate(),
+    ownerAccountId: application.accountId,
+    title: draft.projectTitle,
+    coverImageUrl: null,
+    category: draft.projectCategory,
+    location: locationResult.value,
+    phase: application.progress,
+    summary: draft.projectSummary,
+    body: draft.projectStory,
+    leaderIntroduction: null,
+    snsLinks: draft.snsLinks,
+    activityPlan,
+    createdAt: now,
+    updatedAt: now,
+  });
+  if (!projectResult.ok) {
+    return err(`invalid project: ${JSON.stringify(projectResult.error)}`);
+  }
+  return ok(projectResult.value);
 }

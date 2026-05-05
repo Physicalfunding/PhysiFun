@@ -6,6 +6,7 @@ import {
   ProjectDraft,
   ProjectLocation,
   ProjectPhase,
+  isProjectPhase,
   SnsLinks,
 } from "@physifun/domain";
 
@@ -67,12 +68,17 @@ export function reconstructLeaderApplication(row: {
   if (!draftResult.ok)
     throw new Error(`Invalid ProjectDraft: ${JSON.stringify(draftResult.error)}`);
 
+  // Issue #199 H3: 永続化層から復元する progress は型ガードで検証する。
+  // 不正値は PLANNING にフォールバックする（既存の status の as cast の扱いに合わせず、
+  // ProjectPhase は遷移バリデーションのない単純ラベルなので fallback で安全に復元できる）。
+  const progress: ProjectPhase = isProjectPhase(row.progress) ? row.progress : ProjectPhase.PLANNING;
+
   return LeaderApplication.reconstruct({
     id: idResult.value,
     accountId: accountIdResult.value,
     status: row.status as LeaderApplicationStatus,
     projectDraft: draftResult.value,
-    progress: row.progress as ProjectPhase,
+    progress,
     submittedAt: row.submittedAt,
     reviewedAt: row.reviewedAt,
     reviewerNote: row.reviewerNote,

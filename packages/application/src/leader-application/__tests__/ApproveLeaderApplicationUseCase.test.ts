@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
-import { ApproveLeaderApplicationUseCase } from "../ApproveLeaderApplicationUseCase";
+import {
+  ApproveLeaderApplicationUseCase,
+  MaxProjectsReachedError,
+} from "../ApproveLeaderApplicationUseCase";
 import type {
   ApproveLeaderApplicationPort,
   AccountForApproval,
@@ -108,6 +111,9 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
   /** executeApproval で渡されたパラメータを記録 */
   approvalParams: Parameters<ApproveLeaderApplicationPort["executeApproval"]>[0][] = [];
 
+  /** 既存 Project 件数（同一 leader）— count >= maxProjectsPerLeader で MaxProjectsReachedError をスロー */
+  existingProjectCount = 0;
+
   async findApplicationById(id: string): Promise<LeaderApplication | null> {
     return this.applications.find((a) => a.id.toString() === id) ?? null;
   }
@@ -123,6 +129,9 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
   async executeApproval(
     params: Parameters<ApproveLeaderApplicationPort["executeApproval"]>[0]
   ): Promise<void> {
+    if (this.existingProjectCount >= params.maxProjectsPerLeader) {
+      throw new MaxProjectsReachedError();
+    }
     this.approvalParams.push(params);
   }
 }
@@ -469,4 +478,67 @@ describe("ApproveLeaderApplicationUseCase", () => {
 
     expect(port.approvalParams).toHaveLength(0);
   });
+
+  // ---- wasAlreadyLeader フラグ（M1） ----
+
+  it("初回 LEADER 付与の場合 wasAlreadyLeader=false", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount({ roles: ["SUPPORTER"] }));
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.wasAlreadyLeader).toBe(false);
+  });
+
+  it("既に LEADER ロール保持の場合 wasAlreadyLeader=true", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount({ roles: ["SUPPORTER", "LEADER"] }));
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.wasAlreadyLeader).toBe(true);
+  });
+
+  // ---- MAX_PROJECTS_REACHED（H1） ----
+
+  it("Project 件数上限超過時に MAX_PROJECTS_REACHED を返す", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+    port.existingProjectCount = 10; // MAX_PROJECTS_PER_LEADER と同値
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("MAX_PROJECTS_REACHED");
+    if (result.error.type !== "MAX_PROJECTS_REACHED") return;
+    expect(result.error.max).toBe(10);
+  });
+
+  it("Project 件数上限未満なら承認は成功する（boundary: count = max-1）", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+    port.existingProjectCount = 9;
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
 });

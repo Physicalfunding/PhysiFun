@@ -11,6 +11,7 @@ import {
   validationErrorResponse,
   notFoundResponse,
   unprocessableEntityResponse,
+  conflictResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
 import { getAuthenticatedAdminId } from "@/lib/api/auth";
@@ -77,8 +78,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return successResponse({
       applicationId: result.value.applicationId,
       accountId: result.value.accountId,
-      // Issue #192 PR5: 承認時に自動生成された Project ID
+      // 管理 UI のリダイレクト先に使用
       projectId: result.value.projectId,
+      // 管理 UI が「すでにリーダーだった」ケースを区別するためのフラグ
+      wasAlreadyLeader: result.value.wasAlreadyLeader,
     });
   } catch (e) {
     console.error("[api] admin/applications/[id]/approve POST error:", e);
@@ -102,9 +105,15 @@ function mapApproveError(error: ApproveLeaderApplicationError) {
       // #157 M3: reviewer が DISABLED に落ちた稀ケース。401 を返して再ログインを促す。
       return unauthorizedResponse();
     case "PROJECT_MAPPING_FAILED":
-      // Issue #192 PR5: Project マッピング失敗（応募バリデーション通過後の異常）
-      return unprocessableEntityResponse(
+      // Issue #192 PR5: Project マッピング失敗（応募バリデーション通過後の異常）。
+      // クライアントの再試行で解決しないサーバー側の異常状態のため 500 を返す。
+      return internalErrorResponse(
         `応募内容から初期プロジェクトを生成できませんでした: ${error.reason}`
+      );
+    case "MAX_PROJECTS_REACHED":
+      // Project 件数上限超過（CONFLICT 推奨: 既存リソースの状態と新規作成要求が競合）
+      return conflictResponse(
+        `リーダーあたりの Project 件数上限（${error.max} 件）に達しています`
       );
     default: {
       const _exhaustive: never = error;

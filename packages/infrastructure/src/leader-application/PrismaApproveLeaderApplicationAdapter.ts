@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import type { LeaderApplication, Project } from "@physifun/domain";
+import { MaxProjectsReachedError } from "@physifun/application";
 import { prisma } from "../database/client";
 import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
 
@@ -87,23 +88,36 @@ export class PrismaApproveLeaderApplicationAdapter {
     reviewedAt: Date;
     /** Issue #192 PR5: 承認時に同時作成する初期 Project（DRAFT） */
     project: Project;
+    /** リーダーあたりの Project 件数上限（同一トランザクション内で count チェック） */
+    maxProjectsPerLeader: number;
     outboxMessage: { id: string; type: string; payload: unknown };
   }): Promise<void> {
     const p = params.project;
-    await prisma.$transaction([
-      prisma.leaderApplication.update({
+    // interactive transaction: 件数チェック + 4 操作をアトミックに実行（TOCTOU 防止）
+    await prisma.$transaction(async (tx) => {
+      // Project 件数上限チェック（同一 tx 内）
+      const count = await tx.project.count({
+        where: { ownerAccountId: params.accountId },
+      });
+      if (count >= params.maxProjectsPerLeader) {
+        throw new MaxProjectsReachedError();
+      }
+
+      await tx.leaderApplication.update({
         where: { id: params.application.id.toString() },
         data: {
           status: "APPROVED",
           reviewedAt: params.reviewedAt,
         },
-      }),
-      prisma.account.update({
+      });
+
+      await tx.account.update({
         where: { id: params.accountId },
         data: { roles: { set: params.newRoles } },
-      }),
+      });
+
       // Issue #192 PR5: 応募内容から派生した初期 Project を DRAFT で同一トランザクションに INSERT
-      prisma.project.create({
+      await tx.project.create({
         data: {
           id: p.id.toString(),
           ownerAccountId: p.ownerAccountId.toString(),
@@ -130,14 +144,15 @@ export class PrismaApproveLeaderApplicationAdapter {
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
         },
-      }),
-      prisma.leaderApplicationOutboxMessage.create({
+      });
+
+      await tx.leaderApplicationOutboxMessage.create({
         data: {
           id: params.outboxMessage.id,
           type: params.outboxMessage.type,
           payload: params.outboxMessage.payload as Prisma.InputJsonValue,
         },
-      }),
-    ]);
+      });
+    });
   }
 }

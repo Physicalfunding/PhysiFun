@@ -416,4 +416,79 @@ describe("Project", () => {
       expect(project.phase).toBe(ProjectPhase.PLANNING);
     });
   });
+
+  describe("createForLeaderApproval", () => {
+    function baseInput() {
+      return {
+        id: ProjectId.generate(),
+        ownerAccountId: AccountId.generate(),
+        title: "承認時に作成された Project",
+        coverImageUrl: null,
+        category: "COMMUNITY" as const,
+        location: validLocation(),
+        phase: ProjectPhase.PLANNING,
+        summary: "応募内容由来のサマリー",
+        body: "応募内容由来の本文",
+        leaderIntroduction: null,
+        snsLinks: emptySns(),
+        activityPlan: "応募内容由来の活動計画",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
+
+    it("有効な入力で DRAFT の Project を生成する", () => {
+      const result = Project.createForLeaderApproval(baseInput());
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.value.publishStatus).toBe(PublishStatus.DRAFT);
+      expect(result.value.title).toBe("承認時に作成された Project");
+      expect(result.value.summary).toBe("応募内容由来のサマリー");
+      expect(result.value.body).toBe("応募内容由来の本文");
+      expect(result.value.activityPlan).toBe("応募内容由来の活動計画");
+      expect(result.value.phase).toBe(ProjectPhase.PLANNING);
+    });
+
+    it("title が空文字なら TITLE_REQUIRED", () => {
+      const result = Project.createForLeaderApproval({ ...baseInput(), title: "" });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("TITLE_REQUIRED");
+    });
+
+    it("title が 100 文字超なら TITLE_TOO_LONG", () => {
+      const tooLong = "あ".repeat(101);
+      const result = Project.createForLeaderApproval({ ...baseInput(), title: tooLong });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("TITLE_TOO_LONG");
+    });
+
+    it("body が 10000 文字超なら BODY_TOO_LONG", () => {
+      const tooLong = "あ".repeat(10001);
+      const result = Project.createForLeaderApproval({ ...baseInput(), body: tooLong });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.error.type).toBe("BODY_TOO_LONG");
+    });
+
+    it("title 前後の空白はトリムされる", () => {
+      const result = Project.createForLeaderApproval({ ...baseInput(), title: "  test  " });
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.value.title).toBe("test");
+    });
+
+    it("nullable フィールドは null をそのまま受け入れる", () => {
+      const result = Project.createForLeaderApproval({
+        ...baseInput(),
+        summary: null,
+        body: null,
+        leaderIntroduction: null,
+        activityPlan: null,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.value.summary).toBeNull();
+      expect(result.value.body).toBeNull();
+      expect(result.value.leaderIntroduction).toBeNull();
+      expect(result.value.activityPlan).toBeNull();
+    });
+  });
 });
