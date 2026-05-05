@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from "@jest/globals";
-import { ApproveLeaderApplicationUseCase } from "../ApproveLeaderApplicationUseCase";
+import {
+  ApproveLeaderApplicationUseCase,
+  MaxProjectsReachedError,
+} from "../ApproveLeaderApplicationUseCase";
 import type {
   ApproveLeaderApplicationPort,
   AccountForApproval,
@@ -11,6 +14,8 @@ import {
   LeaderApplicationStatus,
   ProjectDraft,
   ProjectLocation,
+  ProjectPhase,
+  PublishStatus,
   SnsLinks,
   AccountId,
 } from "@physifun/domain";
@@ -18,11 +23,11 @@ import {
 // ==================== テストヘルパー ====================
 
 /** テスト用の最小限の ProjectDraft を生成 */
-function createTestProjectDraft(): ProjectDraft {
-  const location = ProjectLocation.create({ prefectureCode: "13" });
+function createTestProjectDraft(overrides?: { activityContent?: string | null }): ProjectDraft {
+  const location = ProjectLocation.create({ prefectureCode: "13", municipality: "渋谷区" });
   if (!location.ok) throw new Error("ProjectLocation creation failed");
 
-  const snsLinks = SnsLinks.create({});
+  const snsLinks = SnsLinks.create({ x: "https://x.com/test" });
   if (!snsLinks.ok) throw new Error("SnsLinks creation failed");
 
   const draft = ProjectDraft.create({
@@ -32,7 +37,10 @@ function createTestProjectDraft(): ProjectDraft {
       "テストプロジェクトのストーリーです。これはテスト用のストーリーで、十分な長さが必要です。テストプロジェクトのストーリーです。",
     projectCategory: "COMMUNITY",
     location: location.value,
-    activityContent: "テスト活動内容です。これはテスト用の活動計画です。",
+    activityContent:
+      overrides?.activityContent === undefined
+        ? "テスト活動内容です。これはテスト用の活動計画です。"
+        : overrides.activityContent,
     snsLinks: snsLinks.value,
   });
   if (!draft.ok) throw new Error("ProjectDraft creation failed");
@@ -50,6 +58,8 @@ function pendingApplication(overrides?: {
   id?: string;
   accountId?: string;
   status?: "PENDING" | "APPROVED" | "REJECTED";
+  progress?: ProjectPhase;
+  activityContent?: string | null;
 }): LeaderApplication {
   const idResult = LeaderApplicationId.from(overrides?.id ?? APP_ID_STR);
   if (!idResult.ok) throw new Error("LeaderApplicationId creation failed");
@@ -63,7 +73,8 @@ function pendingApplication(overrides?: {
     id: idResult.value,
     accountId: accountIdResult.value,
     status,
-    projectDraft: createTestProjectDraft(),
+    projectDraft: createTestProjectDraft({ activityContent: overrides?.activityContent }),
+    progress: overrides?.progress ?? ProjectPhase.PLANNING,
     submittedAt: new Date("2025-01-01T00:00:00Z"),
     reviewedAt:
       status !== LeaderApplicationStatus.PENDING ? new Date("2025-01-02T00:00:00Z") : null,
@@ -100,6 +111,9 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
   /** executeApproval で渡されたパラメータを記録 */
   approvalParams: Parameters<ApproveLeaderApplicationPort["executeApproval"]>[0][] = [];
 
+  /** 既存 Project 件数（同一 leader）— count >= maxProjectsPerLeader で MaxProjectsReachedError をスロー */
+  existingProjectCount = 0;
+
   async findApplicationById(id: string): Promise<LeaderApplication | null> {
     return this.applications.find((a) => a.id.toString() === id) ?? null;
   }
@@ -115,6 +129,9 @@ class InMemoryApproveLeaderApplicationPort implements ApproveLeaderApplicationPo
   async executeApproval(
     params: Parameters<ApproveLeaderApplicationPort["executeApproval"]>[0]
   ): Promise<void> {
+    if (this.existingProjectCount >= params.maxProjectsPerLeader) {
+      throw new MaxProjectsReachedError();
+    }
     this.approvalParams.push(params);
   }
 }
@@ -133,7 +150,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
 
   // ---- ハッピーパス ----
 
-  it("PENDING 応募を承認すると applicationId と accountId が返る", async () => {
+  it("PENDING 応募を承認すると applicationId / accountId / projectId が返る", async () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
@@ -147,6 +164,9 @@ describe("ApproveLeaderApplicationUseCase", () => {
 
     expect(result.value.applicationId).toBe(APP_ID_STR);
     expect(result.value.accountId).toBe(ACCOUNT_ID_STR);
+    expect(result.value.projectId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
   });
 
   it("executeApproval が正しいパラメータで呼ばれる", async () => {
@@ -161,6 +181,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(params.accountId).toBe(ACCOUNT_ID_STR);
     expect(params.newRoles).toEqual(["SUPPORTER", "LEADER"]);
     expect(params.reviewedAt).toBeInstanceOf(Date);
+    expect(params.project).toBeDefined();
   });
 
   it("Account.roles に LEADER が追加される（既存ロール維持）", async () => {
@@ -197,6 +218,64 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(result.ok).toBe(true);
   });
 
+  // ---- Project 自動生成（Issue #192 PR5） ----
+
+  it("承認時に DRAFT の Project が 1 件作成される", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
+
+    const project = port.approvalParams[0].project;
+    expect(project.publishStatus).toBe(PublishStatus.DRAFT);
+  });
+
+  it("Project の各フィールドが LeaderApplication 由来で正しくマップされる", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
+
+    const project = port.approvalParams[0].project;
+    expect(project.ownerAccountId.toString()).toBe(ACCOUNT_ID_STR);
+    expect(project.title).toBe("テストプロジェクト");
+    expect(project.summary).toBe("テストプロジェクトの概要です。これはテスト用のサマリーです。");
+    expect(project.body).toContain("テストプロジェクトのストーリー");
+    expect(project.category).toBe("COMMUNITY");
+    expect(project.location?.prefectureCode).toBe("13");
+    expect(project.location?.municipality).toBe("渋谷区");
+    expect(project.coverImageUrl).toBeNull();
+    expect(project.leaderIntroduction).toBeNull();
+    expect(project.snsLinks.x).toBe("https://x.com/test");
+  });
+
+  it("progress がそのまま Project.phase にコピーされる", async () => {
+    port.applications.push(pendingApplication({ progress: ProjectPhase.READY }));
+    port.accounts.push(supporterAccount());
+
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
+
+    expect(port.approvalParams[0].project.phase).toBe(ProjectPhase.READY);
+  });
+
+  it("activityContent あり → Project.activityPlan にマップ", async () => {
+    port.applications.push(pendingApplication({ activityContent: "毎週末ワークショップ開催" }));
+    port.accounts.push(supporterAccount());
+
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
+
+    expect(port.approvalParams[0].project.activityPlan).toBe("毎週末ワークショップ開催");
+  });
+
+  it("activityContent なし（SKILL_ITEM 単独想定）→ Project.activityPlan は null", async () => {
+    port.applications.push(pendingApplication({ activityContent: null }));
+    port.accounts.push(supporterAccount());
+
+    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
+
+    expect(port.approvalParams[0].project.activityPlan).toBeNull();
+  });
+
   // ---- Outbox メッセージ ----
 
   it("Outbox メッセージの type が approved.notify_applicant", async () => {
@@ -209,7 +288,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(outbox.type).toBe("approved.notify_applicant");
   });
 
-  it("Outbox メッセージの payload に applicationId, accountId, email が含まれる", async () => {
+  it("Outbox メッセージの payload に applicationId, accountId, email, projectId が含まれる", async () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount({ email: "leader@example.com" }));
 
@@ -219,10 +298,13 @@ describe("ApproveLeaderApplicationUseCase", () => {
       applicationId: string;
       accountId: string;
       email: string;
+      projectId: string;
     };
     expect(payload.applicationId).toBe(APP_ID_STR);
     expect(payload.accountId).toBe(ACCOUNT_ID_STR);
     expect(payload.email).toBe("leader@example.com");
+    // projectId は execute() の結果と一致する
+    expect(payload.projectId).toBe(port.approvalParams[0].project.id.toString());
   });
 
   it("Outbox メッセージの id が UUID 形式", async () => {
@@ -357,7 +439,9 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(result.error.type).toBe("NOT_PENDING");
   });
 
-  it("Account が既に LEADER ロールを持っている場合 ALREADY_LEADER", async () => {
+  // ---- 重複承認（Issue #192 PR5: ALREADY_LEADER 撤廃） ----
+
+  it("既に LEADER ロールを持っていても承認は成功し、Project は新規作成される", async () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount({ roles: ["SUPPORTER", "LEADER"] }));
 
@@ -366,10 +450,24 @@ describe("ApproveLeaderApplicationUseCase", () => {
       reviewerId: REVIEWER_ID_STR,
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Project は新規作成される
+    expect(port.approvalParams).toHaveLength(1);
+    expect(port.approvalParams[0].project).toBeDefined();
+  });
 
-    expect(result.error.type).toBe("ALREADY_LEADER");
+  it("既に LEADER ロールを持っているアカウントは roles 更新がスキップされる", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount({ roles: ["SUPPORTER", "LEADER"] }));
+
+    await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
+
+    // 既存ロールがそのまま渡される（重複追加なし）
+    expect(port.approvalParams[0].newRoles).toEqual(["SUPPORTER", "LEADER"]);
   });
 
   it("NOT_PENDING の場合は executeApproval が呼ばれない", async () => {
@@ -381,12 +479,66 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(port.approvalParams).toHaveLength(0);
   });
 
-  it("ALREADY_LEADER の場合は executeApproval が呼ばれない", async () => {
+  // ---- wasAlreadyLeader フラグ（M1） ----
+
+  it("初回 LEADER 付与の場合 wasAlreadyLeader=false", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount({ roles: ["SUPPORTER"] }));
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.wasAlreadyLeader).toBe(false);
+  });
+
+  it("既に LEADER ロール保持の場合 wasAlreadyLeader=true", async () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount({ roles: ["SUPPORTER", "LEADER"] }));
 
-    await useCase.execute({ applicationId: APP_ID_STR, reviewerId: REVIEWER_ID_STR });
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
 
-    expect(port.approvalParams).toHaveLength(0);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.wasAlreadyLeader).toBe(true);
   });
+
+  // ---- MAX_PROJECTS_REACHED（H1） ----
+
+  it("Project 件数上限超過時に MAX_PROJECTS_REACHED を返す", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+    port.existingProjectCount = 10; // MAX_PROJECTS_PER_LEADER と同値
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("MAX_PROJECTS_REACHED");
+    if (result.error.type !== "MAX_PROJECTS_REACHED") return;
+    expect(result.error.max).toBe(10);
+  });
+
+  it("Project 件数上限未満なら承認は成功する（boundary: count = max-1）", async () => {
+    port.applications.push(pendingApplication());
+    port.accounts.push(supporterAccount());
+    port.existingProjectCount = 9;
+
+    const result = await useCase.execute({
+      applicationId: APP_ID_STR,
+      reviewerId: REVIEWER_ID_STR,
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
 });

@@ -22,9 +22,12 @@ export function ReviewActions({ applicationId }: ReviewActionsProps) {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [reviewerNote, setReviewerNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Issue #192 PR5: 承認成功時に「すでにリーダーだった」ケースを管理者に伝えるための注意喚起
+  const [notice, setNotice] = useState<string | null>(null);
 
   function requestApprove() {
     setError(null);
+    setNotice(null);
     setShowApproveDialog(true);
   }
 
@@ -50,6 +53,11 @@ export function ReviewActions({ applicationId }: ReviewActionsProps) {
       }
 
       setShowApproveDialog(false);
+      // Issue #192 PR5: すでにリーダーだったケース（重複承認）は新規ロール付与が起きていないため
+      // 管理者に注意喚起する。Project は冪等的に既存のものが返却される。
+      if (data.data?.wasAlreadyLeader === true) {
+        setNotice("このアカウントはすでにリーダー権限を保持していました。既存のプロジェクトを使用します。");
+      }
       router.refresh();
     } catch {
       setShowApproveDialog(false);
@@ -108,6 +116,15 @@ export function ReviewActions({ applicationId }: ReviewActionsProps) {
 
         {error && (
           <div className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        )}
+
+        {notice && (
+          <div
+            className="mb-4 rounded-md bg-yellow-50 px-4 py-3 text-sm text-yellow-800"
+            role="status"
+          >
+            {notice}
+          </div>
         )}
 
         <div className="flex gap-3">

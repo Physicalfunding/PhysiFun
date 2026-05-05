@@ -107,6 +107,90 @@ export class Project {
   }
 
   /**
+   * リーダー応募承認時に DRAFT プロジェクトを作成する。
+   *
+   * createDraft が VISION/null 固定の最小生成なのに対し、
+   * 応募内容から派生した初期値（summary, body, location, phase, snsLinks など）
+   * を持つ Project を生成するためのファクトリ。
+   *
+   * - title は必須（trim/長さチェック）
+   * - summary/body/leaderIntroduction/activityPlan は任意。trim 後の長さ上限を検証
+   * - publishStatus は DRAFT 固定（公開時必須項目チェックは走らない）
+   */
+  static createForLeaderApproval(input: {
+    id: ProjectId;
+    ownerAccountId: AccountId;
+    title: string;
+    coverImageUrl: string | null;
+    category: ProjectCategory | null;
+    location: ProjectLocation | null;
+    phase: ProjectPhase;
+    summary: string | null;
+    body: string | null;
+    leaderIntroduction: string | null;
+    snsLinks: SnsLinks;
+    activityPlan: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): Result<Project, ProjectUpdateError> {
+    const trimmedTitle = input.title.trim();
+    if (trimmedTitle.length === 0) {
+      return err({ type: "TITLE_REQUIRED" });
+    }
+    if (trimmedTitle.length > LIMITS.title) {
+      return err({
+        type: "TITLE_TOO_LONG",
+        maxLength: LIMITS.title,
+        actualLength: trimmedTitle.length,
+      });
+    }
+
+    const summary = validateNullableTextStandalone(
+      input.summary,
+      LIMITS.summary,
+      "SUMMARY_TOO_LONG"
+    );
+    if (!summary.ok) return summary;
+
+    const body = validateNullableTextStandalone(input.body, LIMITS.body, "BODY_TOO_LONG");
+    if (!body.ok) return body;
+
+    const intro = validateNullableTextStandalone(
+      input.leaderIntroduction,
+      LIMITS.leaderIntroduction,
+      "LEADER_INTRODUCTION_TOO_LONG"
+    );
+    if (!intro.ok) return intro;
+
+    const plan = validateNullableTextStandalone(
+      input.activityPlan,
+      LIMITS.activityPlan,
+      "ACTIVITY_PLAN_TOO_LONG"
+    );
+    if (!plan.ok) return plan;
+
+    return ok(
+      new Project(
+        input.id,
+        input.ownerAccountId,
+        trimmedTitle,
+        input.coverImageUrl,
+        input.category,
+        input.location,
+        input.phase,
+        PublishStatus.DRAFT,
+        summary.value,
+        body.value,
+        intro.value,
+        input.snsLinks,
+        plan.value,
+        input.createdAt,
+        input.updatedAt
+      )
+    );
+  }
+
+  /**
    * 永続化層からの復元。
    */
   static reconstruct(input: {
@@ -427,6 +511,27 @@ export class Project {
     }
     return ok(trimmed.length === 0 ? null : trimmed);
   }
+}
+
+/**
+ * 静的ファクトリ用の null 許容テキスト検証（mutation なし）。
+ * undefined は受け取らない（明示的に null を渡す前提）。
+ */
+function validateNullableTextStandalone(
+  value: string | null,
+  maxLength: number,
+  errorType: ProjectUpdateError["type"]
+): Result<string | null, ProjectUpdateError> {
+  if (value === null) return ok(null);
+  const trimmed = value.trim();
+  if (trimmed.length > maxLength) {
+    return err({
+      type: errorType,
+      maxLength,
+      actualLength: trimmed.length,
+    } as ProjectUpdateError);
+  }
+  return ok(trimmed.length === 0 ? null : trimmed);
 }
 
 function getMissingPublicationFieldsFrom(fields: {

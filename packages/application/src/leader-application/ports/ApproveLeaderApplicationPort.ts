@@ -5,7 +5,7 @@
  * インフラストラクチャ層と通信する。インフラ層が実装を提供する。
  */
 
-import type { LeaderApplication } from "@physifun/domain";
+import type { LeaderApplication, Project } from "@physifun/domain";
 import type { AccountRole } from "../../shared/AccountRole";
 import type { AdminReviewer } from "../../shared/AdminReviewer";
 
@@ -51,14 +51,28 @@ export interface ApproveLeaderApplicationPort {
    * 承認処理をトランザクションで実行する。
    *
    * - LeaderApplication.status を APPROVED に更新
-   * - Account.roles に LEADER を追加
-   * - OutboxMessage を作成
+   * - Account.roles に LEADER を追加（既に LEADER の場合 UseCase 側でスキップ判断、
+   *   Port には常に既存ロールを含むスナップショットが渡される）
+   * - 新規 Project（DRAFT）を 1 件作成（Issue #192 PR5）
+   *   同一トランザクション内で件数上限（maxProjectsPerLeader）チェックを行い、
+   *   超過時は `MaxProjectsReachedError` をスローする。
+   * - OutboxMessage を作成（payload には新規 projectId を含む）
    */
   executeApproval(params: {
     application: LeaderApplication;
     accountId: string;
     newRoles: AccountRole[];
     reviewedAt: Date;
+    /**
+     * 承認時に同時作成する初期 Project（DRAFT）。
+     * Issue #192 PR5 で追加。LeaderApplication の応募内容から派生させた値を持つ。
+     */
+    project: Project;
+    /**
+     * リーダーあたりの Project 件数上限（全ステータス合計）。
+     * 同一トランザクション内で count チェックされ、超過時は MaxProjectsReachedError を throw する。
+     */
+    maxProjectsPerLeader: number;
     outboxMessage: {
       id: string;
       type: string;
