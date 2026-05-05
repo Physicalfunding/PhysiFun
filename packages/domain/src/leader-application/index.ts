@@ -7,6 +7,7 @@ export {
 export {
   LEADER_APPLICATION_REVIEWER_NOTE_MAX_LENGTH,
   LeaderApplication,
+  type LeaderApplicationSnapshot,
 } from "./entities/LeaderApplication";
 export type { LeaderApplicationStateError } from "./errors/LeaderApplicationError";
 export type { LeaderApplicationRepository } from "./repositories/LeaderApplicationRepository";

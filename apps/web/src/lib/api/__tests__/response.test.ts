@@ -1,5 +1,12 @@
 /**
+ * @jest-environment node
+ */
+/**
  * APIレスポンスユーティリティのテスト
+ *
+ * `NextResponse` は Web Fetch API の `Request` グローバルに依存するため、
+ * 既定の jsdom 環境では `ReferenceError: Request is not defined` で落ちる。
+ * Node 環境を明示する。
  */
 import { describe, expect, it } from "@jest/globals";
 import {
@@ -11,6 +18,7 @@ import {
   unauthorizedResponse,
   forbiddenResponse,
   conflictResponse,
+  serviceUnavailableResponse,
 } from "../response";
 
 describe("ApiResponse", () => {
@@ -70,6 +78,13 @@ describe("ApiResponse", () => {
     it("409ステータスで競合エラーを返す", () => {
       const response = conflictResponse("このメールアドレスは既に登録されています");
       expect(response.status).toBe(409);
+    });
+  });
+
+  describe("serviceUnavailableResponse", () => {
+    it("503ステータスでサービス利用不可エラーを返す", () => {
+      const response = serviceUnavailableResponse("準備中です");
+      expect(response.status).toBe(503);
     });
   });
 });

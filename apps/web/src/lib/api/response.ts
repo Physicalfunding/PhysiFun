@@ -11,7 +11,8 @@ export type ApiErrorCode =
   | "NOT_FOUND" // 404
   | "CONFLICT" // 409
   | "UNPROCESSABLE_ENTITY" // 422
-  | "INTERNAL_ERROR"; // 500
+  | "INTERNAL_ERROR" // 500
+  | "SERVICE_UNAVAILABLE"; // 503
 
 /**
  * APIレスポンスの型定義
@@ -134,4 +135,16 @@ export function unprocessableEntityResponse(message: string): NextResponse {
  */
 export function internalErrorResponse(message = "サーバーエラーが発生しました"): NextResponse {
   return errorResponse(message, "INTERNAL_ERROR", 500);
+}
+
+/**
+ * サービス利用不可レスポンス（503）
+ *
+ * フィーチャーフラグでエンドポイントを無効化している場合や、
+ * 一時的にサービスを停止している場合に使用する。
+ */
+export function serviceUnavailableResponse(
+  message = "現在この機能は利用できません"
+): NextResponse {
+  return errorResponse(message, "SERVICE_UNAVAILABLE", 503);
 }

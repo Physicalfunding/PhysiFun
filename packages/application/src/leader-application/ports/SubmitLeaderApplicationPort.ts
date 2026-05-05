@@ -87,7 +87,14 @@ export interface CreateLeaderApplicationParams {
   // リターン情報
   readonly timeReturn: string | null;
   readonly skillItemReturn: string | null;
-  readonly experienceOffered: string | null; // 必須（アプリ層で担保）
+  /**
+   * 体験できること（必須）
+   *
+   * Issue #192 PR #198 review M1 で DB を NOT NULL 化したのに合わせて、
+   * Port 型からも `null` を取り除き string で固定する。
+   * UseCase 側の Zod スキーマで trim + min(1) を担保しているため、空文字は来ない。
+   */
+  readonly experienceOffered: string;
 
   readonly submittedAt: Date;
 }

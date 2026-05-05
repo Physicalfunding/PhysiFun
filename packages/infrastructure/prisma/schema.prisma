@@ -108,7 +108,9 @@ model LeaderApplication {
   // リターン情報
   timeReturn        String? @db.Text // TIME 選択時
   skillItemReturn   String? @db.Text // SKILL_ITEM 選択時
-  experienceOffered String? @db.Text // 必須（DB は nullable、アプリ層で必須化）
+  /// 必須。Issue #192 PR #198 review M1 で nullable から NOT NULL に変更。
+  /// 既存 NULL 行は migration でバックフィル済み。
+  experienceOffered String  @db.Text
 
   submittedAt DateTime  @default(now())
   reviewedAt  DateTime?

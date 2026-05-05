@@ -95,6 +95,51 @@ describe("LeaderApplication", () => {
       expect(app.submittedAt).toEqual(submittedAt);
       expect(app.reviewedAt).toEqual(reviewedAt);
     });
+
+    it("snapshot 省略時は空のスナップショットがセットされる", () => {
+      const app = LeaderApplication.reconstruct({
+        id: LeaderApplicationId.generate(),
+        accountId,
+        status: LeaderApplicationStatus.PENDING,
+        projectDraft: draft,
+        submittedAt: new Date(),
+        reviewedAt: null,
+        reviewerNote: null,
+      });
+      expect(app.snapshot.recruitmentTypes).toEqual([]);
+      expect(app.snapshot.phoneNumber).toBeNull();
+      expect(app.snapshot.experienceOffered).toBeNull();
+    });
+
+    it("snapshot を渡して復元すると getter から取得できる (PR #198 H2)", () => {
+      const app = LeaderApplication.reconstruct({
+        id: LeaderApplicationId.generate(),
+        accountId,
+        status: LeaderApplicationStatus.PENDING,
+        projectDraft: draft,
+        submittedAt: new Date(),
+        reviewedAt: null,
+        reviewerNote: null,
+        snapshot: {
+          phoneNumber: "090-1234-5678",
+          progress: "PLANNING",
+          recruitmentTypes: ["TIME"],
+          experienceOffered: "古民家再生体験",
+          eventLocation: "京都市内",
+          eventPeriod: "2026年6月〜10月",
+          recruitCount: 10,
+          timeReturn: "活動証明書",
+          skillItemNeeds: null,
+          skillItemDeadline: null,
+          skillItemReturn: null,
+        },
+      });
+      expect(app.snapshot.phoneNumber).toBe("090-1234-5678");
+      expect(app.snapshot.recruitmentTypes).toEqual(["TIME"]);
+      expect(app.snapshot.experienceOffered).toBe("古民家再生体験");
+      expect(app.snapshot.recruitCount).toBe(10);
+      expect(app.snapshot.eventLocation).toBe("京都市内");
+    });
   });
 
   describe("approve", () => {

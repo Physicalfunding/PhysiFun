@@ -1,8 +1,11 @@
 import {
   LeaderApplication,
+  type LeaderApplicationSnapshot,
   LeaderApplicationId,
   AccountId,
+  type LeaderApplicationRecruitmentType,
   type LeaderApplicationStatus,
+  type ProjectPhase,
   ProjectDraft,
   ProjectLocation,
   SnsLinks,
@@ -12,6 +15,12 @@ import {
  * Prisma の行データからドメインエンティティを復元する共通ヘルパー
  *
  * Approve/Reject の Port 実装で共用する。
+ *
+ * PR #198 review H2:
+ * PR3〜PR5 で追加された応募フォーム拡張フィールド（progress / recruitmentTypes /
+ * experienceOffered / phoneNumber / eventLocation / eventPeriod / recruitCount /
+ * skillItemNeeds / skillItemDeadline / timeReturn / skillItemReturn）も
+ * `LeaderApplication.snapshot` にスレッドし、round-trip を完全にする。
  */
 export function reconstructLeaderApplication(row: {
   id: string;
@@ -29,6 +38,19 @@ export function reconstructLeaderApplication(row: {
   submittedAt: Date;
   reviewedAt: Date | null;
   reviewerNote: string | null;
+  // Issue #192 PR3〜PR5 拡張フィールド
+  phoneNumber: string | null;
+  progress: ProjectPhase;
+  recruitmentTypes: readonly LeaderApplicationRecruitmentType[];
+  /** Issue #192 PR #198 review M1: DB 上 NOT NULL */
+  experienceOffered: string;
+  eventLocation: string | null;
+  eventPeriod: string | null;
+  recruitCount: number | null;
+  skillItemNeeds: string | null;
+  skillItemDeadline: string | null;
+  timeReturn: string | null;
+  skillItemReturn: string | null;
 }): LeaderApplication {
   const idResult = LeaderApplicationId.from(row.id);
   if (!idResult.ok) throw new Error(`Invalid LeaderApplicationId: ${row.id}`);
@@ -64,6 +86,20 @@ export function reconstructLeaderApplication(row: {
   if (!draftResult.ok)
     throw new Error(`Invalid ProjectDraft: ${JSON.stringify(draftResult.error)}`);
 
+  const snapshot: LeaderApplicationSnapshot = {
+    phoneNumber: row.phoneNumber,
+    progress: row.progress,
+    recruitmentTypes: row.recruitmentTypes,
+    experienceOffered: row.experienceOffered,
+    eventLocation: row.eventLocation,
+    eventPeriod: row.eventPeriod,
+    recruitCount: row.recruitCount,
+    timeReturn: row.timeReturn,
+    skillItemNeeds: row.skillItemNeeds,
+    skillItemDeadline: row.skillItemDeadline,
+    skillItemReturn: row.skillItemReturn,
+  };
+
   return LeaderApplication.reconstruct({
     id: idResult.value,
     accountId: accountIdResult.value,
@@ -72,5 +108,6 @@ export function reconstructLeaderApplication(row: {
     submittedAt: row.submittedAt,
     reviewedAt: row.reviewedAt,
     reviewerNote: row.reviewerNote,
+    snapshot,
   });
 }

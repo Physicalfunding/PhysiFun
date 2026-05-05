@@ -378,7 +378,9 @@ export function ApplyForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...submitData,
-          captchaToken: "stub", // A-3 未決: CAPTCHA スタブ
+          // TODO(#192): CAPTCHA を実装するまで本番では feature flag で無効化している。
+          // 実装後はこの "stub" 文字列を実トークンに差し替える。
+          captchaToken: "stub",
         }),
       });
 
