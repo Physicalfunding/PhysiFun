@@ -346,7 +346,10 @@ export function ApplyForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  // Container は callback ref + state で管理する。useRef にすると ref の更新時に
+  // useEffect が再実行されないため、条件付きレンダー (`{TURNSTILE_SITE_KEY && ...}`)
+  // とスクリプトロードの順序によっては widget が初期化されないケースがある。
+  const [turnstileContainer, setTurnstileContainer] = useState<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
   const [turnstileScriptLoaded, setTurnstileScriptLoaded] = useState(false);
 
@@ -415,10 +418,10 @@ export function ApplyForm() {
   useEffect(() => {
     if (!TURNSTILE_SITE_KEY) return;
     if (!turnstileScriptLoaded) return;
-    if (!turnstileContainerRef.current) return;
+    if (!turnstileContainer) return;
     if (typeof window === "undefined" || !window.turnstile) return;
 
-    const widgetId = window.turnstile.render(turnstileContainerRef.current, {
+    const widgetId = window.turnstile.render(turnstileContainer, {
       sitekey: TURNSTILE_SITE_KEY,
       callback: (token: string) => setCaptchaToken(token),
       "expired-callback": () => setCaptchaToken(null),
@@ -433,7 +436,7 @@ export function ApplyForm() {
         turnstileWidgetIdRef.current = null;
       }
     };
-  }, [turnstileScriptLoaded]);
+  }, [turnstileScriptLoaded, turnstileContainer]);
 
   const onSubmit = async (data: ApplyFormData) => {
     // CAPTCHA 必須環境（site key 設定済み）でトークン未取得なら送信させない
@@ -1070,7 +1073,7 @@ export function ApplyForm() {
             onLoad={() => setTurnstileScriptLoaded(true)}
           />
           <div className="flex justify-center">
-            <div ref={turnstileContainerRef} aria-label="CAPTCHA" />
+            <div ref={setTurnstileContainer} aria-label="CAPTCHA" />
           </div>
         </>
       )}

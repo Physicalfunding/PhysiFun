@@ -37,7 +37,13 @@ export function getLeaderApplicationIpRateLimitPort(): IpRateLimitPort {
     consume(ipAddress) {
       const result = consumeRateLimit("leaderApplicationSubmit", ipAddress);
       if (!result.ok) {
-        return err({ type: "RATE_LIMIT_EXCEEDED" });
+        return err({
+          type: "RATE_LIMIT_EXCEEDED",
+          limit: result.limit,
+          remaining: result.remaining,
+          retryAfterSeconds: result.retryAfterSeconds,
+          reset: result.reset,
+        });
       }
       return ok(undefined);
     },

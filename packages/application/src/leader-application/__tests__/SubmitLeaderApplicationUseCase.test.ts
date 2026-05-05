@@ -76,7 +76,14 @@ class FakeIpRateLimit implements IpRateLimitPort {
   consume(ipAddress: string) {
     this.calls.push(ipAddress);
     if (this.shouldExceed) {
-      return err({ type: "RATE_LIMIT_EXCEEDED" as const });
+      const retryAfter = 1800;
+      return err({
+        type: "RATE_LIMIT_EXCEEDED" as const,
+        limit: 3,
+        remaining: 0,
+        retryAfterSeconds: retryAfter,
+        reset: Math.floor(Date.now() / 1000) + retryAfter,
+      });
     }
     return ok(undefined);
   }

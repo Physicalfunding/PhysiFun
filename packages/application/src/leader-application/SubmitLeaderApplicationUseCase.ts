@@ -21,7 +21,7 @@ import {
 } from "@physifun/domain";
 import { z } from "zod";
 import type { CaptchaVerifierPort } from "./ports/CaptchaVerifierPort";
-import type { IpRateLimitPort } from "./ports/IpRateLimitPort";
+import type { IpRateLimitExceededError, IpRateLimitPort } from "./ports/IpRateLimitPort";
 import type { SubmitLeaderApplicationPort } from "./ports/SubmitLeaderApplicationPort";
 
 // ==================== 入力バリデーション ====================
@@ -313,7 +313,7 @@ export type SubmitLeaderApplicationError =
       readonly type: "VALIDATION_ERROR";
       readonly issues: Array<{ path: string; message: string }>;
     }
-  | { readonly type: "RATE_LIMIT_EXCEEDED" }
+  | IpRateLimitExceededError
   | { readonly type: "CAPTCHA_VERIFICATION_FAILED" }
   | {
       readonly type: "DUPLICATE_PENDING_APPLICATION";
@@ -429,7 +429,7 @@ export class SubmitLeaderApplicationUseCase {
     // 2. IP レートリミットチェック
     const rateLimitResult = this.rateLimit.consume(validated.ipAddress);
     if (!rateLimitResult.ok) {
-      return err({ type: "RATE_LIMIT_EXCEEDED" });
+      return err(rateLimitResult.error);
     }
 
     // 3. CAPTCHA 検証

@@ -20,6 +20,12 @@ import { err, ok } from "@physifun/domain";
 const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 /**
+ * siteverify 呼び出しのタイムアウト (ms)。
+ * Cloudflare 側が応答しない場合に応募 API がハングしないよう短めに切る。
+ */
+const TURNSTILE_SITEVERIFY_TIMEOUT_MS = 5_000;
+
+/**
  * Turnstile siteverify API のレスポンス（必要な部分のみ）
  * https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
  */
@@ -60,6 +66,7 @@ export function createTurnstileCaptchaVerifier(): CaptchaVerifierPort {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: params.toString(),
+          signal: AbortSignal.timeout(TURNSTILE_SITEVERIFY_TIMEOUT_MS),
         });
         if (!res.ok) {
           console.error("[captcha] siteverify HTTP error:", res.status);

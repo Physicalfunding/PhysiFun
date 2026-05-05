@@ -7,7 +7,7 @@ import {
   successResponse,
   validationErrorResponse,
   conflictResponse,
-  errorResponse,
+  forbiddenResponse,
   internalErrorResponse,
 } from "@/lib/api/response";
 import {
@@ -16,6 +16,7 @@ import {
   getSubmitLeaderApplicationPort,
 } from "@/lib/di/leader-application";
 import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
+import { rateLimitExceededResponse } from "@/lib/rateLimit";
 
 /**
  * UseCase のエラー型に応じた HTTP レスポンスを返す
@@ -33,13 +34,18 @@ function handleUseCaseError(error: SubmitLeaderApplicationError) {
       return validationErrorResponse("入力内容を確認してください", fields);
     }
     case "RATE_LIMIT_EXCEEDED":
-      return errorResponse(
-        "送信回数の上限に達しました。しばらく時間をおいてから再度お試しください",
-        "UNPROCESSABLE_ENTITY",
-        429
-      );
+      // ポートが返した rate limit メタデータを使い、既存ルートと整合する
+      // `Retry-After` / `X-RateLimit-*` ヘッダー付きの 429 を返す。
+      return rateLimitExceededResponse({
+        ok: false,
+        limit: error.limit,
+        remaining: error.remaining,
+        retryAfterSeconds: error.retryAfterSeconds,
+        reset: error.reset,
+      });
     case "CAPTCHA_VERIFICATION_FAILED":
-      return validationErrorResponse("CAPTCHA の検証に失敗しました");
+      // ボット判定の失敗はフィールド検証エラーではないので 403 で返す。
+      return forbiddenResponse("CAPTCHA の検証に失敗しました。再度お試しください");
     case "DUPLICATE_PENDING_APPLICATION":
       return conflictResponse("このメールアドレスでは既に応募が登録されています");
   }
@@ -55,6 +61,9 @@ function handleUseCaseError(error: SubmitLeaderApplicationError) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    // NOTE (Issue #200): `x-forwarded-for` の最左 IP は Vercel edge が信頼できる値で
+    // 書き換える前提。セルフホスト/別 PaaS にデプロイする場合はクライアント任意で
+    // 偽装可能になり、レートリミット回避が成立する点に注意。
     const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 
     const useCase = new SubmitLeaderApplicationUseCase(
