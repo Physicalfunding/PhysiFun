@@ -8,10 +8,10 @@ PhysiFun のドメイン層（`packages/domain/`）の構造を、アグリゲ�
 - **正本**: コード（`packages/domain/src/`）。本書はその**構造意図の地図**
 - **揮発度**: 中（機能追加時に同 PR で更新）
 - **関連**:
+  - `00_terminology.md` — コード視点の用語集（作成予定）
   - `03_data-model.md` — Prisma schema → ER 図（DB レベルの詳細）
   - `04_security-design.md` — Account / AdminAccount の認証・認可
   - `05_key-flows/` — 状態遷移を起こすユースケースのシーケンス図
-  - `docs-repository/docs/202604_初回リリースに向けた計画/用語集.md` — ユビキタス言語
 
 ---
 
@@ -203,7 +203,7 @@ flowchart LR
 - 1 アカウントあたり **合計 10 件**（DRAFT + PENDING_REVIEW + PUBLISHED）
 - 1 アカウントあたり **PUBLISHED は最大 3 件**
 
-> 数値は仮値。詳細は `docs-repository/docs/202604_初回リリースに向けた計画/プロジェクト.md` の「件数上限の判定ルール」参照。
+> 数値は仮値（運営ポリシーで調整される想定）。判定は `CreateProjectDraftUseCase` 内で行う。
 
 ### 3.10 関連ユースケース
 
@@ -491,13 +491,12 @@ type Result<T, E> =
   - `SupportRecruitment` をルート、`RecruitmentSchedule` を子エンティティ（同一トランザクションで一貫性が必要）
   - `SupportTicket` は別アグリゲート（Supporter 起点で生成・キャンセルされるため）
 - Project との関係: `SupportRecruitment.projectId` は **参照のみ**（Project が Recruitment を直接持たない）
-- 詳細仕様: `docs-repository/docs/202604_初回リリースに向けた計画/サポート募集.md`
 
 ### 8.3 リターン概念に関する注意
 
-ペルソナ作成過程で **「リターンは設定必須・リーダー設計・金銭リターンも可」** という方針が確定済み（`docs-repository/docs/requirements/personas/01_リーダー_プライマリ_中村駿.md` §9 参照）。
+業務側で **「リターンは設定必須・リーダー設計・金銭リターンも可」** という方針が確定している（詳細はビジネス側ドキュメント参照）。
 
-ただし現行の `用語集.md` では「リターン不採用」と記載されている。**Recruitment 実装時にリターン関連エンティティを再設計する必要あり**（廃止された `Return.ts` の復活または新設計）。
+一方、過去のドメインスナップショットでは「リターン不採用」とされていた経緯があり、ドメイン層には現状リターン関連エンティティが存在しない。**Recruitment 実装時にリターン関連エンティティを新設または復活する必要あり**（廃止された `Return.ts` の再設計を含む）。
 
 ---
 
