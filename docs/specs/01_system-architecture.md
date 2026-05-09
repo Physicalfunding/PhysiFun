@@ -87,11 +87,11 @@ flowchart LR
     Root -->|別 Vercel プロジェクト| WebVercel[Vercel: web]
     AdminSub -->|別 Vercel プロジェクト| AdminVercel[Vercel: admin]
 
-    WebVercel -->|Cookie: __Secure-next-auth...| WebCookie[domain=&lt;domain&gt;<br/>host-only]
-    AdminVercel -->|Cookie: __Secure-next-auth...| AdminCookie[domain=admin.&lt;domain&gt;<br/>host-only]
+    WebVercel -->|Cookie: __Secure-next-auth| WebCookie["domain=&lt;domain&gt; host-only"]
+    AdminVercel -->|Cookie: __Secure-next-auth| AdminCookie["domain=admin.&lt;domain&gt; host-only"]
 
-    WebVercel -.->|NEXTAUTH_SECRET A<br/>(環境変数)| EnvA[環境変数 A]
-    AdminVercel -.->|NEXTAUTH_SECRET B<br/>+ ADMIN_MAGIC_LINK_HMAC_SECRET| EnvB[環境変数 B]
+    WebVercel -.->|NEXTAUTH_SECRET A| EnvA["環境変数 A"]
+    AdminVercel -.->|NEXTAUTH_SECRET B<br/>+ ADMIN_MAGIC_LINK_HMAC_SECRET| EnvB["環境変数 B"]
 ```
 
 ### 2.1 完全分離の効果
@@ -201,12 +201,12 @@ flowchart TB
 ```mermaid
 sequenceDiagram
     actor Client as Browser
-    participant Route as API Route<br/>(apps/web/app/api)
-    participant DI as DI Container<br/>(lib/di)
-    participant UC as UseCase<br/>(packages/application)
-    participant Repo as Repository IF<br/>(packages/domain)
-    participant Adapter as Prisma Adapter<br/>(packages/infrastructure)
-    participant DB as PostgreSQL<br/>(Supabase)
+    participant Route as API Route
+    participant DI as DI Container
+    participant UC as UseCase
+    participant Repo as Repository IF
+    participant Adapter as Prisma Adapter
+    participant DB as PostgreSQL
     participant Outbox as Outbox Worker
     participant Mail as Resend
 
