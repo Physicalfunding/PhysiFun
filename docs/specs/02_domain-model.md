@@ -242,19 +242,45 @@ flowchart LR
 
 ### 4.3 値オブジェクト：ProjectDraft
 
-応募時のプロジェクト案を **スナップショット** として保持する複合値オブジェクト。
+応募時の **プロジェクト案＋募集情報＋連絡情報** をスナップショットとして保持する複合値オブジェクト。
+Issue #192 PR3-PR5（migration `20260501020000_extend_leader_application_fields` / `20260505010000_make_experience_offered_required`）で大幅拡張された。
+
+#### プロジェクト案
 
 | フィールド | 制約 |
 |---|---|
-| `projectTitle` | 必須・最大 100 文字 |
-| `projectSummary` | 必須・最大 300 文字 |
-| `projectStory` | 必須・最大 5000 文字 |
+| `projectTitle` | 必須・最大 60 文字（PR3 で 100→60 に短縮） |
+| `projectSummary` | 必須・最大 150 文字 |
+| `projectStory` | 必須・最大 300 文字（Markdown） |
 | `projectCategory` | `ProjectCategory` |
-| `location` | `ProjectLocation` |
-| `plannedActivities` | 必須・最大 1000 文字 |
+| `location` | `ProjectLocation`（都道府県必須＋市町村任意） |
 | `snsLinks` | `SnsLinks` |
+| `progress` | `ProjectPhase`（応募時点のフェーズ） |
 
-> 💡 `ProjectDraft` は **`Project` と直接リンクしない**。応募時の意図を保存するためのスナップショットで、承認後は `Project.create()` の入力として使われるが、参照関係は持たない。
+#### 連絡情報
+
+| フィールド | 制約 |
+|---|---|
+| `phoneNumber` | 任意・最大 20 文字 |
+
+#### 募集情報
+
+| フィールド | 制約 |
+|---|---|
+| `recruitmentTypes` | `LeaderApplicationRecruitmentType[]` 必須（`TIME` / `SKILL_ITEM` から 1 件以上） |
+| `experienceOffered` | 必須（提供できる体験の内容） |
+| `activityContent` | `TIME` 選択時のみ必須（旧 `plannedActivities` をリネーム） |
+| `eventLocation` | `TIME` 選択時のみ |
+| `eventPeriod` | `TIME` 選択時のみ |
+| `recruitCount` | `TIME` 選択時のみ・1 以上 |
+| `skillItemNeeds` | `SKILL_ITEM` 選択時のみ |
+| `skillItemDeadline` | `SKILL_ITEM` 選択時のみ |
+| `timeReturn` | `TIME` 選択時のみ・リターン情報 |
+| `skillItemReturn` | `SKILL_ITEM` 選択時のみ・リターン情報 |
+
+> 💡 文字数上限・ラベル・選択肢は `packages/domain/src/leader-application/constants.ts` に集約（SSOT）。
+> 💡 `LeaderApplicationRecruitmentType` (`TIME` / `SKILL_ITEM`) は `RecruitmentType` (`ACTIVITY`、`SupportRecruitment` 用) と **別 enum**。応募時の希望タイプと、実際の募集投稿タイプは概念的に異なるため意図的に分けている（名前空間衝突回避）。
+> 💡 `ProjectDraft` は **`Project` と直接リンクしない**。応募時の意図を保存するためのスナップショットで、承認後は初期 `Project` 生成の入力として使われるが、参照関係は持たない（後述の `ApproveLeaderApplicationUseCase` 参照）。
 
 ### 4.4 リポジトリ
 
@@ -286,7 +312,13 @@ stateDiagram-v2
 `packages/application/src/leader-application/`
 
 - `SubmitLeaderApplicationUseCase`
+  - reCAPTCHA / IP rate limit / 重複応募チェックを含む（PR #200 / #201 で追加）
+  - ports: `CaptchaVerifierPort` / `IpRateLimitPort`
 - `ApproveLeaderApplicationUseCase`
+  - PENDING → APPROVED 遷移
+  - 対象 Account に `LEADER` ロールを付与
+  - **承認時に初期 `Project` を自動生成**（PR #199 で追加。応募時のスナップショットを Project の初期値として転写）
+  - Outbox イベント発行
 - `RejectLeaderApplicationUseCase`
   - 連続却下防止のため **10 分のクールダウン**を持つ
 
@@ -509,3 +541,4 @@ type Result<T, E> =
 | 日付 | 改訂内容 | 担当 |
 |---|---|---|
 | 2026-05-09 | 初稿作成（Phase 1 実装時点のドメイン層を整理） | 設計チーム |
+| 2026-05-09 | PR #199-#201 のドリフト反映：ProjectDraft 拡張 / 承認時の初期 Project 自動生成 / captcha・rate limit ports | 設計チーム |

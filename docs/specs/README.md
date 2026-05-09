@@ -20,13 +20,13 @@ PhysiFun の設計レイヤー（実装の構造意図）をまとめたディ�
 
 ## ドキュメント一覧
 
-| ファイル | 揮発度 | 内容 |
-|---|---|---|
-| `01_system-architecture.md` | 低 | システム構成図（インフラ＋monorepo 全体俯瞰） |
-| `02_domain-model.md` | 中 | アグリゲート・状態遷移・不変条件 |
-| `03_data-model.md` | 中 | ER 図（Prisma schema 視覚化）+ 主要 FK・インデックス |
-| `04_security-design.md` | 中 | 認証アーキ / 認可 / データ保護 / 脅威モデル |
-| `05_key-flows/` | 中 | 主要フローのシーケンス図（応募・公開審査・Magic Link・Outbox 等） |
+| ファイル | 揮発度 | 状態 | 内容 |
+|---|---|---|---|
+| `01_system-architecture.md` | 低 | ⏭ 未着手 | システム構成図（インフラ＋monorepo 全体俯瞰） |
+| `02_domain-model.md` | 中 | ✅ 公開済み | アグリゲート・状態遷移・不変条件 |
+| `03_data-model.md` | 中〜高 | ✅ 公開済み | ER 図（Prisma schema 視覚化）+ 主要 FK・インデックス |
+| `04_security-design.md` | 中 | ⏭ 未着手 | 認証アーキ / 認可 / データ保護 / 脅威モデル |
+| `05_key-flows/` | 中 | ⏭ 未着手 | 主要フローのシーケンス図（応募・公開審査・Magic Link・Outbox 等） |
 
 ## 関連ドキュメント
 
