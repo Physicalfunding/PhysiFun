@@ -22,7 +22,7 @@ PhysiFun の設計レイヤー（実装の構造意図）をまとめたディ�
 
 | ファイル | 揮発度 | 状態 | 内容 |
 |---|---|---|---|
-| `00_terminology.md` | 低 | ⏭ 未着手 | エンジニア視点の最小用語集（ユビキタス言語のコード関連サブセット） |
+| `00_terminology.md` | 低 | ✅ 公開済み | エンジニア視点の最小用語集（コード上の用語と意図の対訳） |
 | `01_system-architecture.md` | 低 | ⏭ 未着手 | システム構成図（インフラ＋monorepo 全体俯瞰） |
 | `02_domain-model.md` | 中 | ✅ 公開済み | アグリゲート・状態遷移・不変条件 |
 | `03_data-model.md` | 中〜高 | ✅ 公開済み | ER 図（Prisma schema 視覚化）+ 主要 FK・インデックス |
@@ -33,7 +33,7 @@ PhysiFun の設計レイヤー（実装の構造意図）をまとめたディ�
 
 - 既存技術ドキュメント: `.docs/tech.md` / `.docs/structure.md` / `.docs/dev-rule.md`
 - 開発ルール: `CLAUDE.md`
-- 用語集（コード視点）: `docs/specs/00_terminology.md`（作成予定）
+- 用語集（コード視点）: `docs/specs/00_terminology.md`
 
 > **方針**: 本ディレクトリは PhysiFun リポジトリ内で**自己完結**する。実装作業に必要な情報はこのリポジトリだけで揃うようにする。
 > ビジネス側（ペルソナ・戦略・Phase 計画など）は別リポジトリ（docs-repository）で管理されているが、本書からは**参照しない**。
