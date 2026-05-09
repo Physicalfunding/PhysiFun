@@ -22,7 +22,7 @@
 | **物理削除しない AdminAccount** | 監査履歴を保護（`status: DISABLED` で論理無効化） |
 | **`AdminAccount` を `Account` と分離** | 認証手段・脅威モデル・Cookie が完全に異なるため独立アグリゲートとして管理 |
 
-詳細は `04_security-design.md`（作成予定）参照。
+詳細は `04_security-design.md` 参照。
 
 ---
 
@@ -201,4 +201,4 @@ flowchart LR
 
 ### 7.6 セキュリティ詳細
 
-脅威モデル・防御層の俯瞰は `04_security-design.md`（作成予定）に集約する予定。
+脅威モデル・防御層の俯瞰は `04_security-design.md` に集約。

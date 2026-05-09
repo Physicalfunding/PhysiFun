@@ -22,4 +22,4 @@ PhysiFun の主要なユースケースをシーケンス図で表現したド�
 
 - ドメイン層の状態遷移: `02_domain-model.md`
 - DB レベルの整合性: `03_data-model.md`
-- 認証アーキ全般: `04_security-design.md`（作成予定）
+- 認証アーキ全般: `04_security-design.md`
