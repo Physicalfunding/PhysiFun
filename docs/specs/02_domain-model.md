@@ -8,7 +8,7 @@ PhysiFun のドメイン層（`packages/domain/`）の構造を、アグリゲ�
 - **正本**: コード（`packages/domain/src/`）。本書はその**構造意図の地図**
 - **揮発度**: 中（機能追加時に同 PR で更新）
 - **関連**:
-  - `00_terminology.md` — コード視点の用語集（作成予定）
+  - `00_terminology.md` — コード視点の用語集
   - `03_data-model.md` — Prisma schema → ER 図（DB レベルの詳細）
   - `04_security-design.md` — Account / AdminAccount の認証・認可
   - `05_key-flows/` — 状態遷移を起こすユースケースのシーケンス図
