@@ -15,9 +15,7 @@ const LP_NAV: NavItem[] = [
   { label: "FAQ", href: "/#faq" },
 ];
 
-const MY_NAV: NavItem[] = [
-  { label: "マイプロジェクト", href: "/my/projects" },
-];
+const MY_NAV: NavItem[] = [{ label: "マイプロジェクト", href: "/my/projects" }];
 
 function resolveNav(pathname: string | null): NavItem[] {
   if (!pathname || pathname === "/") return LP_NAV;
