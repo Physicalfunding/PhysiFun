@@ -1,5 +1,4 @@
 // Common UI Components
-export { Header } from "./Header";
 export { Footer } from "./Footer";
 export { Button } from "./Button";
 export { Card, CardHeader, CardTitle, CardContent, CardFooter } from "./Card";

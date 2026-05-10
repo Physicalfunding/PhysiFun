@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_JP } from "next/font/google";
 import { SessionProvider } from "@/components/providers/SessionProvider";
-import { Header } from "@/components/common/Header";
+import { LpHeader } from "@/components/top/LpHeader";
 import { Footer } from "@/components/common/Footer";
 import "./globals.css";
+import "@/components/top/lp.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,7 +38,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${notoSansJP.variable} antialiased min-h-screen flex flex-col`}
       >
         <SessionProvider>
-          <Header />
+          <LpHeader />
           <main className="flex-1">{children}</main>
           <Footer />
         </SessionProvider>
