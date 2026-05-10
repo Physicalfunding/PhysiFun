@@ -10,7 +10,7 @@ import "./lp.css";
 
 /**
  * Phase 1: トップページ LP（7 セクション構成）
- * 設計参照: apps/web/public/design_handoff_top_lp/
+ * Hero=B / Cycle=A / Category=A / Process=A / Voice=C / Support=A / CTA=A
  */
 export function Phase1LP() {
   return (
