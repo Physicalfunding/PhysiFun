@@ -1,25 +1,49 @@
 import type { ReactElement } from "react";
 
 const Compass = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="12" cy="12" r="9" />
     <path d="M16 8l-2 6-6 2 2-6z" />
   </svg>
 );
 const Shield = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z" />
     <path d="M9 12l2 2 4-4" />
   </svg>
 );
 const Camera = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M3 8h4l2-3h6l2 3h4v11H3z" />
     <circle cx="12" cy="13" r="3.5" />
   </svg>
 );
 const Network = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="12" cy="6" r="2.5" />
     <circle cx="5" cy="18" r="2.5" />
     <circle cx="19" cy="18" r="2.5" />
@@ -27,13 +51,25 @@ const Network = () => (
   </svg>
 );
 const Wallet = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M3 7v12a2 2 0 002 2h14a2 2 0 002-2v-9H5a2 2 0 010-3h14V7" />
     <circle cx="17" cy="14" r="1.2" />
   </svg>
 );
 const Book = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M4 4h7a3 3 0 013 3v14H7a3 3 0 01-3-3z" />
     <path d="M20 4h-7a3 3 0 00-3 3v14h7a3 3 0 003-3z" />
   </svg>

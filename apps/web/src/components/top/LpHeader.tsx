@@ -36,13 +36,7 @@ export function LpHeader() {
     <>
       <header className="lp-header">
         <Link href="/" className="logo" aria-label="フィジファン トップへ">
-          <Image
-            src="/images/logo-black.png"
-            alt="フィジファン"
-            width={140}
-            height={34}
-            priority
-          />
+          <Image src="/images/logo-black.png" alt="フィジファン" width={140} height={34} priority />
         </Link>
 
         <nav className="nav" aria-label="メインナビゲーション">

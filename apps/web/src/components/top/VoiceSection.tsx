@@ -32,8 +32,7 @@ const VOICES: Voice[] = [
     place: "KAGOSHIMA",
     bg: "linear-gradient(160deg, #f4dba0 0%, #c98842 50%, #6e4920 100%)",
     label: "RECIPE",
-    quote:
-      "私が言葉にできなかった『願い』を、ちゃんと拾ってくれた。それだけで前に進めた。",
+    quote: "私が言葉にできなかった『願い』を、ちゃんと拾ってくれた。それだけで前に進めた。",
   },
   {
     initials: "HF",

@@ -1,25 +1,49 @@
 import type { ReactElement } from "react";
 
 const Edit = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M16 3l5 5-12 12H4v-5z" />
     <path d="M14 5l5 5" />
   </svg>
 );
 const Chat = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M21 15a3 3 0 01-3 3H8l-5 4V6a3 3 0 013-3h12a3 3 0 013 3z" />
   </svg>
 );
 const Megaphone = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M3 11v2l11 5V6z" />
     <path d="M14 8h3a3 3 0 010 6h-3" />
     <path d="M7 18l1 4h3l-1-4" />
   </svg>
 );
 const Hands = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M8 11V5a2 2 0 014 0v6" />
     <path d="M12 11V4a2 2 0 014 0v9" />
     <path d="M16 11V6a2 2 0 014 0v10c0 3-3 6-7 6s-6-2-7-4l-3-6a2 2 0 013-2l2 3" />
@@ -90,8 +114,8 @@ export function ProcessSection() {
             集めて、<span className="em">動かす</span>。
           </h2>
           <p className="lead">
-            リーダーになるのに、特別な資格はいりません。
-            小さな「やってみたい」を、4 ステップで現場まで運びます。
+            リーダーになるのに、特別な資格はいりません。 小さな「やってみたい」を、4
+            ステップで現場まで運びます。
           </p>
         </div>
 

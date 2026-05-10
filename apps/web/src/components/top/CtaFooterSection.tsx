@@ -123,7 +123,12 @@ export function CtaFooterSection() {
             <div className="col">
               <h4>Follow</h4>
               <div className="sns-row">
-                <a href="https://www.instagram.com/" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+                <a
+                  href="https://www.instagram.com/"
+                  aria-label="Instagram"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <svg viewBox="0 0 24 24">
                     <rect x="3" y="3" width="18" height="18" rx="5" />
                     <circle cx="12" cy="12" r="4" />
@@ -135,13 +140,23 @@ export function CtaFooterSection() {
                     <path d="M4 4l16 16M20 4L4 20" />
                   </svg>
                 </a>
-                <a href="https://note.com/" aria-label="note" target="_blank" rel="noopener noreferrer">
+                <a
+                  href="https://note.com/"
+                  aria-label="note"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <svg viewBox="0 0 24 24">
                     <path d="M5 5h11l3 3v11H5z" />
                     <path d="M9 10h7M9 14h6" />
                   </svg>
                 </a>
-                <a href="https://www.youtube.com/" aria-label="YouTube" target="_blank" rel="noopener noreferrer">
+                <a
+                  href="https://www.youtube.com/"
+                  aria-label="YouTube"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <svg viewBox="0 0 24 24">
                     <rect x="2.5" y="6" width="19" height="12" rx="3" />
                     <path d="M11 10v4l3.5-2z" fill="currentColor" stroke="none" />

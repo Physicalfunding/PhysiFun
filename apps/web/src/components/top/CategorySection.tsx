@@ -3,13 +3,25 @@
 import { useState, type ReactElement } from "react";
 
 const Clock = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="12" cy="12" r="9" />
     <path d="M12 7v5l3.5 2" />
   </svg>
 );
 const Users = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="9" cy="8" r="3" />
     <path d="M3 20c0-3 3-5 6-5s6 2 6 5" />
     <circle cx="17" cy="9" r="2.5" />
@@ -22,7 +34,13 @@ const ArrowRight = () => (
   </svg>
 );
 const Grid = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <rect x="3" y="3" width="7" height="7" rx="1" />
     <rect x="14" y="3" width="7" height="7" rx="1" />
     <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -30,39 +48,75 @@ const Grid = () => (
   </svg>
 );
 const Hammer = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M14 4l6 6-3 3-6-6z" />
     <path d="M11 7l-7 7 3 3 7-7" />
   </svg>
 );
 const ChefHat = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M6 14c-2 0-3-1.5-3-3.5C3 8 5 7 7 7c0-3 8-3 8 0 2 0 4 1 4 3.5 0 2-1 3.5-3 3.5" />
     <path d="M6 14h12v5a1 1 0 01-1 1H7a1 1 0 01-1-1z" />
   </svg>
 );
 const Brush = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M16 3l5 5-9 9H7v-5z" />
     <path d="M7 17l-3 4 4-3" />
   </svg>
 );
 const Sprout = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M12 21V11" />
     <path d="M8 9c0-3 4-4 4 0 0-4 4-3 4 0 0 3-4 5-4 5s-4-2-4-5z" />
     <path d="M5 14c-2 0-3-2-3-4 2 0 4 1 4 4z" />
   </svg>
 );
 const Music = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M9 18V5l11-2v13" />
     <circle cx="6" cy="18" r="3" />
     <circle cx="17" cy="16" r="3" />
   </svg>
 );
 const Camera = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    strokeWidth={1.6}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M3 8h4l2-3h6l2 3h4v11H3z" />
     <circle cx="12" cy="13" r="3.5" />
   </svg>
@@ -365,11 +419,7 @@ export function CategorySection() {
         <div className="sample-stage" key={active}>
           <div className="grid">
             <article className="featured">
-              <div
-                className="pic img-ph"
-                data-label={main.label}
-                style={{ background: main.bg }}
-              >
+              <div className="pic img-ph" data-label={main.label} style={{ background: main.bg }}>
                 <span className="badge-feat">サンプルプロジェクト</span>
                 <div className="tags">
                   {main.tags.map((t) => (
@@ -395,9 +445,7 @@ export function CategorySection() {
                 <div className="hours-hero">
                   <Clock />
                   <span className="num">{main.hours}</span>
-                  <span className="lab">
-                    時間が集まりました / 目標 {main.target} 時間
-                  </span>
+                  <span className="lab">時間が集まりました / 目標 {main.target} 時間</span>
                 </div>
                 <div className="meta">
                   <div className="who">
@@ -416,11 +464,7 @@ export function CategorySection() {
 
             <div className="side">
               <article className="small side-only">
-                <div
-                  className="pic img-ph"
-                  data-label={side.label}
-                  style={{ background: side.bg }}
-                >
+                <div className="pic img-ph" data-label={side.label} style={{ background: side.bg }}>
                   <span className="tag">{side.tags[0]}</span>
                 </div>
                 <div className="body">
