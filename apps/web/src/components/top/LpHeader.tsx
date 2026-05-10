@@ -3,16 +3,29 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 
-const NAV = [
-  { label: "サービス", href: "#cycle" },
-  { label: "事例", href: "#category" },
-  { label: "はじめかた", href: "#process" },
-  { label: "FAQ", href: "#faq" },
+type NavItem = { label: string; href: string };
+
+const LP_NAV: NavItem[] = [
+  { label: "サービス", href: "/#cycle" },
+  { label: "事例", href: "/#category" },
+  { label: "はじめかた", href: "/#process" },
+  { label: "FAQ", href: "/#faq" },
 ];
 
+const MY_NAV: NavItem[] = [{ label: "マイプロジェクト", href: "/my/projects" }];
+
+function resolveNav(pathname: string | null): NavItem[] {
+  if (!pathname || pathname === "/") return LP_NAV;
+  if (pathname.startsWith("/my")) return MY_NAV;
+  return [];
+}
+
 export function LpHeader() {
+  const pathname = usePathname();
+  const nav = resolveNav(pathname);
   const { data: session, status } = useSession();
   const [userOpen, setUserOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -39,13 +52,17 @@ export function LpHeader() {
           <Image src="/images/logo-black.png" alt="フィジファン" width={140} height={34} priority />
         </Link>
 
-        <nav className="nav" aria-label="メインナビゲーション">
-          {NAV.map((n) => (
-            <a key={n.href} href={n.href} className="nav-item">
-              {n.label}
-            </a>
-          ))}
-        </nav>
+        {nav.length > 0 ? (
+          <nav className="nav" aria-label="メインナビゲーション">
+            {nav.map((n) => (
+              <Link key={n.href} href={n.href} className="nav-item">
+                {n.label}
+              </Link>
+            ))}
+          </nav>
+        ) : (
+          <span aria-hidden="true" />
+        )}
 
         <div className="right">
           {status === "loading" ? null : session ? (
@@ -110,10 +127,10 @@ export function LpHeader() {
 
       {mobileOpen && (
         <div className="lp-mobile-panel">
-          {NAV.map((n) => (
-            <a key={n.href} href={n.href} onClick={() => setMobileOpen(false)}>
+          {nav.map((n) => (
+            <Link key={n.href} href={n.href} onClick={() => setMobileOpen(false)}>
               {n.label}
-            </a>
+            </Link>
           ))}
           {session ? (
             <>
