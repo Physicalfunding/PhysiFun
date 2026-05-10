@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 // `@physifun/ui-shared` の index 経由だと SafeSnsLink.tsx (JSX) を巻き込むため、
 // `next.config.ts` ローダ (Node, JSX 非対応) がビルドに失敗する。
 // JSX を含まない純粋な設定モジュールのみを subpath export から読み込む。
 import { buildImageRemotePatterns } from "@physifun/ui-shared/config/image-remote-patterns";
+
+// monorepo root（`apps/web` から 2 階層上）。
+// `/Users/.../github/package.json` のような無関係な親 package.json を
+// Turbopack が workspace root と誤検出して node_modules 解決が壊れるのを防ぐ。
+const monorepoRoot = path.join(__dirname, "..", "..");
 
 /**
  * Next.js 設定
@@ -148,6 +154,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Turbopack / Webpack のワークスペース root を明示する（無関係な親 package.json を避ける）。
+  turbopack: {
+    root: monorepoRoot,
+  },
+  outputFileTracingRoot: monorepoRoot,
   images: {
     // 開発環境では Next.js の画像最適化を無効化する（プライベート IP 最適化の
     // 回避、ローカル Supabase Storage の読み込み対応のため）。
