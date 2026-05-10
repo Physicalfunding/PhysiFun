@@ -1,66 +1,117 @@
 import Link from "next/link";
 
-/**
- * ヒーローセクション
- *
- * 背景動画 → その下にキャッチコピー + CTA
- */
+const CATS = [
+  { label: "建築・古民家", cls: "cf-1" },
+  { label: "カフェ・飲食", cls: "cf-2" },
+  { label: "キャンプ場", cls: "cf-3" },
+  { label: "農業", cls: "cf-4" },
+  { label: "イベント", cls: "cf-5" },
+  { label: "スポーツ", cls: "cf-6" },
+];
+
+const STATS = [
+  { lab: "LEADERS", val: "012" },
+  { lab: "PROJECTS", val: "034" },
+  { lab: "SUPPORT HOURS", val: "1,280h" },
+];
+
+function Arrow() {
+  return (
+    <span className="btn-arrow" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M5 12h14" />
+        <path d="M13 5l7 7-7 7" />
+      </svg>
+    </span>
+  );
+}
+
 export function HeroSection() {
   return (
-    <>
-      {/* 動画セクション */}
-      <section className="relative w-full h-[70vh] sm:h-[80vh] overflow-hidden">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source src="/videos/hero.mp4" type="video/mp4" />
-        </video>
-      </section>
+    <section id="hero" className="hero-root">
+      <div className="heroB">
+        <div className="grid">
+          <div className="left">
+            <div>
+              <span className="crumb">
+                <span className="chip">FOR LEADERS</span>
+                起案者を募集しています
+              </span>
 
-      {/* テキスト + CTAセクション */}
-      <section className="bg-physifun-red py-16 sm:py-20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          {/* キャッチコピー */}
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight tracking-wide">
-            あなたの「好き」が、
-            <br />
-            誰かの「助け」になる。
-            <br />
-            最高のフィジファン体験を。
-          </h1>
+              <h1>
+                あなたの<span className="em">「好き」</span>が、
+                <br />
+                誰かの<span className="em">「助け」</span>になる。
+                <span className="sm">最高のフィジファン体験を。</span>
+              </h1>
 
-          {/* 説明文 */}
-          <p className="mt-8 text-sm sm:text-base md:text-lg text-white/90 max-w-3xl mx-auto leading-relaxed">
-            誰でもジャンルを問わず、【起案者（リーダー）】として、
-            <br className="hidden sm:block" />
-            プロジェクト（こんなことをやってみたい）を提案でき、
-            <br className="hidden sm:block" />
-            その想いに共感した方は【支援者（サポーター）】として、
-            <br className="hidden sm:block" />
-            【スキル・時間（＝フィジカル）】で支援できる{" "}
-            <span className="font-bold">&ldquo;現場共創&rdquo;</span> サービスです。
-          </p>
+              <p className="sub">
+                <span className="lp-nobr">フィジファン</span>は、
+                <b>金銭ではなくスキルと時間</b>
+                でプロジェクトを支援する
+                <span className="lp-nobr">マッチングプラットフォーム</span>
+                。古民家再生・米作り・DIY・キャンプ場運営──現場で一緒に汗をかいてくれる仲間と出会えます。
+              </p>
 
-          {/* サービス名の由来 */}
-          <p className="mt-8 inline-block border-2 border-white px-6 py-2 text-sm sm:text-base md:text-lg font-bold text-physifun-red bg-white tracking-wider">
-            フィジカル（Physical）＋クラウドファンディング（Crowdfunding）
-          </p>
+              <div className="cta-row">
+                <Link href="/apply" className="lp-btn btn-primary-terra">
+                  プロジェクトをつくってみる
+                  <Arrow />
+                </Link>
+                <p className="micro">
+                  <b>公開は無料。</b>
+                  <br />
+                  成立まで手数料 0 円。いつでも辞められます。
+                </p>
+              </div>
+            </div>
 
-          {/* CTA */}
-          <div className="mt-10">
-            <Link
-              href="/apply"
-              className="inline-flex items-center rounded-full bg-white px-8 py-4 text-lg font-bold text-physifun-red shadow-lg hover:bg-gray-100 transition-colors"
-            >
-              プロジェクトをつくってみる
-            </Link>
+            <div>
+              <div className="cat-pills">
+                {CATS.map((c) => (
+                  <span key={c.label} className={`cat ${c.cls}`}>
+                    {c.label}
+                  </span>
+                ))}
+              </div>
+              <div className="footnote">
+                {STATS.map((s) => (
+                  <div key={s.lab} className="col">
+                    <div className="lab">{s.lab}</div>
+                    <div className="val">{s.val}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="right">
+            <video autoPlay muted loop playsInline preload="metadata">
+              <source src="/videos/hero.mp4" type="video/mp4" />
+            </video>
+            <div className="veil" aria-hidden="true" />
+
+            <div className="quote-card">
+              <div className="qmark" aria-hidden="true">
+                &ldquo;
+              </div>
+              <div className="q">
+                「完成品」よりも、
+                <br />
+                共に汗をかいた『時間』を贈りたい。
+              </div>
+              <div className="who">— PHYSIFUN MANIFESTO</div>
+            </div>
           </div>
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }

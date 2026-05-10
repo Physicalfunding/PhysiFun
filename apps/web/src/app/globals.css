@@ -6,6 +6,45 @@
   --physifun-red: #c62828;
   --physifun-red-dark: #a31d1d;
   --physifun-red-light: #e53935;
+
+  /* LP Design Tokens */
+  --pf-red: #c62828;
+  --pf-red-dark: #a31d1d;
+  --pf-red-light: #e53935;
+  --pf-red-soft: #f5d4d4;
+
+  --warm-ink: #2a221e;
+  --warm-ink-soft: #4a3e38;
+  --warm-mute: #847868;
+  --cream: #faf7f2;
+  --cream-100: #f3eee5;
+  --cream-200: #e8e0d3;
+  --line: #ddd5c7;
+  --muted: #847868;
+
+  --terracotta: #b8552d;
+  --terracotta-dark: #934220;
+  --terracotta-soft: #d68a64;
+  --moss: #4d5a3a;
+  --moss-dark: #3a4429;
+
+  --kaki: #d4663d;
+  --kaki-dark: #aa4f2c;
+  --indigo: #2a4a5e;
+  --indigo-dark: #1c3544;
+  --sand: #f5ede0;
+
+  --hb-terra: #b8552d;
+  --hb-terra-dark: #934220;
+  --hb-terra-deep: #6b2f17;
+  --hb-cream: #faf7f2;
+  --hb-cream-100: #f3eee5;
+  --hb-cream-200: #e8e0d3;
+  --hb-ink: #2a221e;
+
+  --font-jp: var(--font-noto-sans-jp), "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-serif-jp: "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  --font-en: var(--font-geist-sans), "Inter", -apple-system, sans-serif;
 }
 
 @theme inline {

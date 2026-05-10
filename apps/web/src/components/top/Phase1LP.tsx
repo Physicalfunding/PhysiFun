@@ -1,23 +1,28 @@
+import { LpHeader } from "./LpHeader";
 import { HeroSection } from "./HeroSection";
 import { CycleSection } from "./CycleSection";
 import { CategorySection } from "./CategorySection";
-import { PhilosophySection } from "./PhilosophySection";
+import { ProcessSection } from "./ProcessSection";
+import { VoiceSection } from "./VoiceSection";
+import { SupportSection } from "./SupportSection";
+import { CtaFooterSection } from "./CtaFooterSection";
+import "./lp.css";
 
 /**
- * Phase 1: トップページ LP
- *
- * HPデザイン Page 1・2 に基づくランディングページ
+ * Phase 1: トップページ LP（7 セクション構成）
+ * Hero=B / Cycle=A / Category=A / Process=A / Voice=C / Support=A / CTA=A
  */
 export function Phase1LP() {
   return (
-    <div className="min-h-screen">
-      {/* Page 1: ヒーロー + サービス説明 + 循環図 */}
+    <>
+      <LpHeader />
       <HeroSection />
       <CycleSection />
-
-      {/* Page 2: カテゴリ + プロジェクト事例 + 理念文 */}
       <CategorySection />
-      <PhilosophySection />
-    </div>
+      <ProcessSection />
+      <VoiceSection />
+      <SupportSection />
+      <CtaFooterSection />
+    </>
   );
 }
