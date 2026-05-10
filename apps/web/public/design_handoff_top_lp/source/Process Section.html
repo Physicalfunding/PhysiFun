@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Process Section — 3 Variants / Physifun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&family=Shippori+Mincho:wght@500;700&family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="process/process-styles.css?v=1" />
+<style>
+  body { margin: 0; background: #ededed; font-family: "Noto Sans JP", sans-serif; }
+  .stage-frame { background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="process/process-variants.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+function App() {
+  return (
+    <DesignCanvas title="Physifun — Process Section" subtitle="リーダー募集 LP / Section 04 — はじめかた 3 案">
+      <DCSection id="A" title="案 A — 横スパインステップ / physifun-red" subtitle="4 ステップを横一列に。所要時間バッジと添え書きで『簡単そう』を伝える王道型。最後に無料相談 CTA を配置">
+        <DCArtboard id="A-desktop" label="A / Desktop 1440" width={1440} height={900}>
+          <div className="stage-frame" data-screen-label="Process A — Desktop">
+            <ProcessA />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="A-mobile" label="A / Mobile 390" width={390} height={1700}>
+          <div className="stage-frame" data-screen-label="Process A — Mobile">
+            <ProcessA mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="B" title="案 B — カード積層型 / テラコッタ × クリーム" subtitle="各ステップを大きなカードで縦積み。誰が・何を・どれくらいでが一望できる、検討モードに合う情報密度">
+        <DCArtboard id="B-desktop" label="B / Desktop 1440" width={1440} height={1200}>
+          <div className="stage-frame" data-screen-label="Process B — Desktop">
+            <ProcessB />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="B-mobile" label="B / Mobile 390" width={390} height={1700}>
+          <div className="stage-frame" data-screen-label="Process B — Mobile">
+            <ProcessB mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="C" title="案 C — 旅路型 / 柿 × 藍" subtitle="左右ジグザグの『物語』配置。各ステップに先輩リーダーの一言を添える、感情に寄り添う型">
+        <DCArtboard id="C-desktop" label="C / Desktop 1440" width={1440} height={1400}>
+          <div className="stage-frame" data-screen-label="Process C — Desktop">
+            <ProcessC />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="C-mobile" label="C / Mobile 390" width={390} height={1900}>
+          <div className="stage-frame" data-screen-label="Process C — Mobile">
+            <ProcessC mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

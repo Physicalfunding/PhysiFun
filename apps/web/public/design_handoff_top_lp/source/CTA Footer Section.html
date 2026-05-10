@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CTA / Footer — 3 Variants / Physifun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&family=Shippori+Mincho:wght@500;700&family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="cta/cta-styles.css?v=1" />
+<style>
+  body { margin: 0; background: #ededed; font-family: "Noto Sans JP", sans-serif; }
+  .stage-frame { background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="cta/cta-variants.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+function App() {
+  return (
+    <DesignCanvas title="Physifun — CTA / Footer" subtitle="リーダー募集 LP / Section 07-08 — CTA + Footer 3 案。全案 physifun-red ベタ + 黒フッター + 数字再強調">
+      <DCSection id="A" title="案 A — 大きな問いかけ + 左右非対称" subtitle="左に問い + ボタン、右に数字。背景に淡い『?』。シンプルに本気の人を捕まえる王道型">
+        <DCArtboard id="A-desktop" label="A / Desktop 1440" width={1440} height={1180}>
+          <div className="stage-frame" data-screen-label="CTA A — Desktop">
+            <CtaA />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="A-mobile" label="A / Mobile 390" width={390} height={2120}>
+          <div className="stage-frame" data-screen-label="CTA A — Mobile">
+            <CtaA mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="B" title="案 B — 問い + 3 ステップカード" subtitle="応募 / 相談 / FAQ を 3 段階で並列。ハードル低いユーザーも拾う回遊型。応募カードは深紅で強調">
+        <DCArtboard id="B-desktop" label="B / Desktop 1440" width={1440} height={1400}>
+          <div className="stage-frame" data-screen-label="CTA B — Desktop">
+            <CtaB />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="B-mobile" label="B / Mobile 390" width={390} height={2940}>
+          <div className="stage-frame" data-screen-label="CTA B — Mobile">
+            <CtaB mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="C" title="案 C — センター揃え、マニフェスト型" subtitle="問い + 副題 + 2 ボタンを中央揃え。下に 3 つの数字。LP 締めくくりに『静かな熱量』を残す型">
+        <DCArtboard id="C-desktop" label="C / Desktop 1440" width={1440} height={1500}>
+          <div className="stage-frame" data-screen-label="CTA C — Desktop">
+            <CtaC />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="C-mobile" label="C / Mobile 390" width={390} height={2250}>
+          <div className="stage-frame" data-screen-label="CTA C — Mobile">
+            <CtaC mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

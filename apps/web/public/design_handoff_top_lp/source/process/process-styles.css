@@ -1,0 +1,657 @@
+/* =========================================
+   Process / 始め方 Section — 3 variants
+   ========================================= */
+
+:root {
+  --pf-red: #c62828;
+  --pf-red-dark: #a31d1d;
+  --warm-ink: #2a221e;
+  --warm-ink-soft: #4a3e38;
+  --warm-mute: #847868;
+  --cream: #faf7f2;
+  --cream-100: #f3eee5;
+  --cream-200: #e8e0d3;
+  --line: #ddd5c7;
+  --terracotta: #b8552d;
+  --moss: #4d5a3a;
+  --kaki: #d4663d;
+  --kaki-dark: #aa4f2c;
+  --indigo: #2a4a5e;
+  --sand: #f5ede0;
+}
+
+.proc-root {
+  font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif;
+  color: var(--warm-ink);
+  font-feature-settings: "palt";
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 共通ヘッダ ---------- */
+.proc-head {
+  text-align: center;
+  margin-bottom: 56px;
+}
+.proc-head .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+.proc-head .eyebrow .dot {
+  width: 6px; height: 6px; border-radius: 999px; background: currentColor;
+}
+.proc-head h2 {
+  margin-top: 18px;
+  font-size: clamp(28px, 3.4vw, 42px);
+  font-weight: 800;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+}
+.proc-head h2 .em {
+  position: relative;
+  display: inline-block;
+  padding: 0 0.05em;
+}
+.proc-head h2 .em::after {
+  content: "";
+  position: absolute;
+  left: 4%; right: 4%; bottom: 6%;
+  height: 0.32em;
+  border-radius: 999px;
+  z-index: -1;
+  opacity: 0.25;
+  background: currentColor;
+}
+.proc-head .lead {
+  margin-top: 16px;
+  color: var(--warm-ink-soft);
+  font-size: 15px;
+  line-height: 1.95;
+  max-width: 620px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* =========================================
+   案 A — 横スパインステップ / physifun-red
+   横一列のステップを線でつなぎ、所要時間と添え書きを入れる
+   ========================================= */
+.procA {
+  background: #fff;
+  padding: 80px 40px;
+}
+.procA .proc-head .eyebrow { color: var(--pf-red); border-color: rgba(198, 40, 40, 0.35); }
+.procA .proc-head h2 .em::after { background: var(--pf-red); }
+
+.procA .steps {
+  max-width: 1240px;
+  margin: 0 auto;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+}
+
+.procA .spine {
+  position: absolute;
+  top: 38px;
+  left: 12.5%;
+  right: 12.5%;
+  height: 2px;
+  background: repeating-linear-gradient(to right, var(--pf-red) 0 6px, transparent 6px 12px);
+  z-index: 0;
+}
+
+.procA .step {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+.procA .step .num-circle {
+  width: 76px; height: 76px;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--pf-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -2px;
+  box-shadow: 0 0 0 8px #fff;
+  font-family: "Geist", sans-serif;
+  font-weight: 800;
+  font-size: 28px;
+  color: var(--pf-red);
+  position: relative;
+}
+.procA .step .num-circle .dur {
+  position: absolute;
+  bottom: -10px;
+  right: -8px;
+  font-family: "Geist", sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  background: var(--warm-ink);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.procA .step h3 {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+}
+.procA .step .icon-box {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: var(--cream);
+  border: 1px solid var(--cream-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.procA .step .icon-box svg {
+  width: 22px; height: 22px;
+  stroke: var(--pf-red);
+  fill: none;
+  stroke-width: 1.6;
+}
+.procA .step p {
+  font-size: 13px;
+  line-height: 1.95;
+  color: var(--warm-ink-soft);
+  margin: 0;
+}
+.procA .step .tip {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--warm-mute);
+  padding-left: 10px;
+  border-left: 2px solid var(--cream-200);
+  line-height: 1.7;
+}
+
+.procA .footer-cta {
+  margin: 56px auto 0;
+  max-width: 880px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 28px;
+  background: var(--cream);
+  border-radius: 18px;
+  border: 1px solid var(--cream-200);
+}
+.procA .footer-cta .text {
+  font-size: 13px;
+  color: var(--warm-ink-soft);
+  line-height: 1.7;
+}
+.procA .footer-cta .text b { color: var(--warm-ink); }
+.procA .footer-cta a {
+  flex-shrink: 0;
+  background: var(--pf-red);
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.procA .footer-cta a svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2; }
+
+/* mobile A — 縦スパイン */
+.procA.mobile { padding: 48px 20px 56px; }
+.procA.mobile .proc-head { margin-bottom: 36px; }
+.procA.mobile .steps {
+  grid-template-columns: 1fr;
+  gap: 28px;
+  padding-left: 38px;
+}
+.procA.mobile .spine {
+  top: 0; bottom: 0;
+  left: 36px; right: auto;
+  width: 2px; height: auto;
+  background: repeating-linear-gradient(to bottom, var(--pf-red) 0 6px, transparent 6px 12px);
+}
+.procA.mobile .step {
+  position: relative;
+}
+.procA.mobile .step .num-circle {
+  position: absolute;
+  left: -76px;
+  top: 0;
+  width: 56px; height: 56px;
+  font-size: 22px;
+}
+.procA.mobile .step h3 { font-size: 16px; }
+.procA.mobile .footer-cta {
+  flex-direction: column;
+  align-items: stretch;
+  text-align: center;
+  padding: 22px;
+  margin-top: 40px;
+}
+.procA.mobile .footer-cta a { justify-content: center; }
+
+/* =========================================
+   案 B — カード積層型 / テラコッタ × クリーム
+   各ステップを大きなカードとして積み、所要時間バッジ、誰が何をするかを明示
+   ========================================= */
+.procB {
+  background: var(--cream);
+  padding: 80px 40px;
+}
+.procB .proc-head .eyebrow { color: var(--terracotta); border-color: rgba(184, 85, 45, 0.35); }
+.procB .proc-head h2 .em { color: var(--terracotta); }
+.procB .proc-head h2 .em::after { background: var(--terracotta); }
+
+.procB .stack {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.procB .card {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 28px;
+  align-items: stretch;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 28px 32px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+.procB .card:hover {
+  border-color: var(--terracotta);
+  transform: translateX(4px);
+  box-shadow: 0 18px 40px -28px rgba(184, 85, 45, 0.4);
+}
+.procB .card .num {
+  font-family: "Geist", sans-serif;
+  font-weight: 800;
+  font-size: 56px;
+  line-height: 1;
+  color: var(--terracotta);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 4px;
+}
+.procB .card .body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.procB .card .body .meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.procB .card .body .meta-row .who {
+  font-size: 11px;
+  color: var(--warm-mute);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.procB .card .body .meta-row .dur-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--cream);
+  border: 1px solid var(--cream-200);
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--warm-ink-soft);
+}
+.procB .card .body .meta-row .dur-pill svg {
+  width: 12px; height: 12px;
+  stroke: var(--terracotta);
+  fill: none;
+  stroke-width: 1.8;
+}
+.procB .card .body h3 {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.55;
+  letter-spacing: 0.03em;
+  color: var(--warm-ink);
+}
+.procB .card .body p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.95;
+  color: var(--warm-ink-soft);
+}
+.procB .card .body .checks {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.procB .card .body .checks span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--warm-ink-soft);
+}
+.procB .card .body .checks span svg {
+  width: 12px; height: 12px;
+  stroke: var(--terracotta);
+  fill: none;
+  stroke-width: 2;
+}
+
+.procB .card .visual {
+  width: 140px;
+  border-radius: 14px;
+  background: var(--cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.procB .card .visual svg {
+  width: 56px; height: 56px;
+  stroke: var(--terracotta);
+  fill: none;
+  stroke-width: 1.4;
+}
+
+.procB .arrow-down {
+  display: flex;
+  justify-content: center;
+  margin: -8px 0 -8px 60px;
+}
+.procB .arrow-down svg {
+  width: 18px; height: 32px;
+  stroke: rgba(184, 85, 45, 0.5);
+  fill: none;
+  stroke-width: 1.5;
+}
+
+/* mobile B */
+.procB.mobile { padding: 48px 20px 56px; }
+.procB.mobile .proc-head { margin-bottom: 36px; }
+.procB.mobile .card {
+  grid-template-columns: 56px 1fr;
+  gap: 16px;
+  padding: 22px;
+}
+.procB.mobile .card .num { font-size: 40px; padding-top: 0; }
+.procB.mobile .card .body h3 { font-size: 16px; }
+.procB.mobile .card .visual {
+  display: none;
+}
+.procB.mobile .arrow-down { margin-left: 32px; }
+
+/* =========================================
+   案 C — 旅路型 / 柿 × 藍 × クリーム
+   左右ジグザグの「物語」配置。各ステップにシーン的なビジュアルと、リーダーの心情を添える
+   ========================================= */
+.procC {
+  background: var(--sand);
+  padding: 80px 40px;
+}
+.procC .proc-head .eyebrow {
+  color: var(--indigo);
+  border-color: rgba(42, 74, 94, 0.3);
+}
+.procC .proc-head h2 .em { color: var(--kaki-dark); }
+.procC .proc-head h2 .em::after { background: var(--kaki); opacity: 0.3; }
+
+.procC .journey {
+  max-width: 1080px;
+  margin: 0 auto;
+  position: relative;
+}
+.procC .journey::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 0; bottom: 60px;
+  width: 1px;
+  border-left: 1px dashed rgba(42, 74, 94, 0.35);
+  transform: translateX(-0.5px);
+}
+
+.procC .scene {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  gap: 0;
+  margin-bottom: 56px;
+}
+.procC .scene:last-of-type { margin-bottom: 0; }
+
+.procC .scene .pip {
+  width: 56px; height: 56px;
+  border-radius: 999px;
+  background: var(--sand);
+  border: 2px solid var(--indigo);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Geist", sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--indigo);
+  position: relative;
+  z-index: 1;
+}
+.procC .scene .pip::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
+  border: 1px dashed rgba(42, 74, 94, 0.25);
+}
+
+.procC .scene .panel {
+  background: #fff;
+  border-radius: 22px;
+  padding: 26px 28px;
+  border: 1px solid rgba(42, 74, 94, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-self: center;
+}
+.procC .scene.right .panel { grid-column: 3; }
+.procC .scene.left .panel { grid-column: 1; text-align: right; }
+.procC .scene.left .panel .checks { justify-content: flex-end; }
+.procC .scene.left .panel .quote { text-align: right; }
+.procC .scene.left .panel .icon-row { justify-content: flex-end; }
+
+.procC .scene .panel .icon-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.procC .scene .panel .icon-row .ico {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: var(--sand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.procC .scene .panel .icon-row .ico svg {
+  width: 18px; height: 18px;
+  stroke: var(--kaki-dark);
+  fill: none;
+  stroke-width: 1.6;
+}
+.procC .scene .panel .icon-row .label {
+  font-family: "Geist", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--warm-mute);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.procC .scene .panel h3 {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  color: var(--warm-ink);
+  font-family: "Shippori Mincho", serif;
+}
+.procC .scene .panel p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.95;
+  color: var(--warm-ink-soft);
+}
+.procC .scene .panel .quote {
+  margin-top: 4px;
+  padding: 10px 14px;
+  background: var(--sand);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--warm-ink);
+  line-height: 1.7;
+  font-style: italic;
+  position: relative;
+}
+.procC .scene .panel .quote::before {
+  content: "\201C";
+  font-size: 28px;
+  color: var(--kaki);
+  position: absolute;
+  top: -2px;
+  left: 6px;
+  font-family: serif;
+}
+.procC .scene .panel .quote em {
+  font-style: normal;
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--warm-mute);
+  text-align: right;
+}
+
+.procC .scene.right .visual { grid-column: 1; }
+.procC .scene.left .visual { grid-column: 3; }
+.procC .scene .visual {
+  align-self: center;
+  text-align: center;
+  padding: 0 22px;
+}
+.procC .scene .visual .meta {
+  font-family: "Geist Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--indigo);
+  margin-bottom: 6px;
+}
+.procC .scene .visual .dur {
+  font-family: "Geist", sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--kaki-dark);
+}
+.procC .scene .visual .dur .unit {
+  font-size: 13px;
+  color: var(--warm-ink-soft);
+  font-weight: 600;
+  margin-left: 4px;
+}
+.procC .scene .visual .desc {
+  font-size: 11px;
+  color: var(--warm-mute);
+  margin-top: 4px;
+  line-height: 1.7;
+}
+
+.procC .end-mark {
+  text-align: center;
+  margin-top: 24px;
+  position: relative;
+  z-index: 2;
+}
+.procC .end-mark .star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px; height: 64px;
+  border-radius: 999px;
+  background: var(--kaki);
+  color: #fff;
+  font-family: "Shippori Mincho", serif;
+  font-weight: 700;
+}
+.procC .end-mark .star svg {
+  width: 28px; height: 28px;
+  stroke: #fff;
+  fill: none;
+  stroke-width: 1.4;
+}
+.procC .end-mark .text {
+  margin-top: 14px;
+  font-family: "Shippori Mincho", serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--indigo);
+}
+
+/* mobile C */
+.procC.mobile { padding: 48px 20px 56px; }
+.procC.mobile .proc-head { margin-bottom: 36px; }
+.procC.mobile .journey::before {
+  left: 28px;
+}
+.procC.mobile .scene {
+  grid-template-columns: 56px 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.procC.mobile .scene .pip {
+  width: 44px; height: 44px;
+  font-size: 15px;
+  margin: 4px 0 0;
+}
+.procC.mobile .scene.left .panel,
+.procC.mobile .scene.right .panel {
+  grid-column: 2;
+  text-align: left;
+  padding: 20px 22px;
+}
+.procC.mobile .scene.left .panel .checks,
+.procC.mobile .scene.left .panel .quote,
+.procC.mobile .scene.left .panel .icon-row { text-align: left; justify-content: flex-start; }
+.procC.mobile .scene .panel h3 { font-size: 16px; }
+.procC.mobile .scene .visual {
+  display: none;
+}
+.procC.mobile .end-mark { margin-top: 8px; }

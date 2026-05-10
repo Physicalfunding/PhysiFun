@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cycle Section — 3 Variants / Physifun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&family=Shippori+Mincho:wght@500;700&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="cycle/cycle-styles.css?v=1" />
+<style>
+  body { margin: 0; background: #ededed; font-family: "Noto Sans JP", sans-serif; }
+  .stage-frame { background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="cycle/cycle-variants.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+function App() {
+  return (
+    <DesignCanvas title="Physifun — Cycle Section" subtitle="リーダー募集 LP / Section 02 — 循環図 3 案">
+      <DCSection id="A" title="案 A — 矢印フロー型 / physifun-red" subtitle="左→中→右→下→左 の循環を曲線矢印で明示。中央にブランドシンボル、各ノードに具体例を衛星配置">
+        <DCArtboard id="A-desktop" label="A / Desktop 1440" width={1440} height={1100}>
+          <div className="stage-frame" data-screen-label="Cycle A — Desktop">
+            <CycleA />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="A-mobile" label="A / Mobile 390" width={390} height={1500}>
+          <div className="stage-frame" data-screen-label="Cycle A — Mobile">
+            <CycleA mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="B" title="案 B — 三角構造型 / テラコッタ × 苔" subtitle="リーダー / サポーター / フィジファン の三者関係。各辺に動詞ラベル(①②③)。クリーム背景で柔らかく">
+        <DCArtboard id="B-desktop" label="B / Desktop 1440" width={1440} height={1000}>
+          <div className="stage-frame" data-screen-label="Cycle B — Desktop">
+            <CycleB />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="B-mobile" label="B / Mobile 390" width={390} height={1300}>
+          <div className="stage-frame" data-screen-label="Cycle B — Mobile">
+            <CycleB mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="C" title="案 C — ストーリーカード型 / 柿 × 藍" subtitle="提案→共感→実行→リターン の 4 コマ。1 つのプロジェクトの旅を追体験する読み物的な構成">
+        <DCArtboard id="C-desktop" label="C / Desktop 1440" width={1440} height={900}>
+          <div className="stage-frame" data-screen-label="Cycle C — Desktop">
+            <CycleC />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="C-mobile" label="C / Mobile 390" width={390} height={2100}>
+          <div className="stage-frame" data-screen-label="Cycle C — Mobile">
+            <CycleC mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 /**
  * Footer
  * サイト共通フッターコンポーネント
+ *
+ * トップページ（/）は LP 内に CTA + Footer 一体型を持つため非表示。
  */
 export function Footer() {
+  const pathname = usePathname();
+  if (pathname === "/") return null;
+
   const currentYear = new Date().getFullYear();
 
   return (

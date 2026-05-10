@@ -1,0 +1,898 @@
+/* =========================================
+   フィジファン Hero v2 — Soft & Warm
+   ========================================= */
+
+:root {
+  /* ベース（ブランド赤） */
+  --pf-red: #c62828;
+  --pf-red-dark: #a31d1d;
+  --pf-red-light: #e53935;
+  --pf-red-soft: #f5d4d4;
+
+  /* 共通: 暖かみのある黒 / 生成り */
+  --warm-ink: #2a221e;
+  --warm-ink-soft: #4a3e38;
+  --cream: #faf7f2;
+  --cream-100: #f3eee5;
+  --cream-200: #e8e0d3;
+  --line: #ddd5c7;
+  --muted: #847868;
+
+  /* 案 B: 土 + 苔 */
+  --terracotta: #b8552d;
+  --terracotta-dark: #934220;
+  --moss: #4d5a3a;
+  --moss-dark: #3a4429;
+
+  /* 案 C: 朝夕 */
+  --kaki: #d4663d;
+  --kaki-dark: #aa4f2c;
+  --indigo: #2a4a5e;
+  --indigo-dark: #1c3544;
+  --sand: #f5ede0;
+
+  --font-jp: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-serif-jp: "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  --font-en: "Geist", "Inter", -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.hero-root {
+  font-family: var(--font-jp);
+  color: var(--warm-ink);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "palt";
+  letter-spacing: 0.02em;
+}
+
+/* ---------- ビデオ要素 ---------- */
+.video-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---------- 共通: ボタン ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border: none;
+  cursor: pointer;
+  transition: transform .25s ease, box-shadow .25s ease, background .25s ease;
+  font-family: inherit;
+  text-decoration: none;
+  font-feature-settings: "palt";
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-arrow {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  transition: background .25s ease, transform .25s ease;
+}
+.btn:hover .btn-arrow { transform: translateX(2px); }
+.btn-arrow svg { width: 13px; height: 13px; }
+
+.btn-primary-red {
+  background: var(--pf-red);
+  color: #fff;
+  padding: 18px 30px;
+  font-size: 17px;
+  border-radius: 999px;
+  box-shadow: 0 14px 30px -12px rgba(198,40,40,.55);
+}
+.btn-primary-red:hover { background: var(--pf-red-dark); }
+
+.btn-primary-terra {
+  background: var(--terracotta);
+  color: #fff;
+  padding: 18px 30px;
+  font-size: 17px;
+  border-radius: 999px;
+  box-shadow: 0 14px 30px -12px rgba(184,85,45,.55);
+}
+.btn-primary-terra:hover { background: var(--terracotta-dark); }
+
+.btn-primary-kaki {
+  background: var(--kaki);
+  color: #fff;
+  padding: 18px 30px;
+  font-size: 17px;
+  border-radius: 999px;
+  box-shadow: 0 14px 30px -12px rgba(212,102,61,.55);
+}
+.btn-primary-kaki:hover { background: var(--kaki-dark); }
+
+.btn-on-photo {
+  background: #fff;
+  color: var(--pf-red);
+  padding: 18px 30px;
+  font-size: 17px;
+  border-radius: 999px;
+  box-shadow: 0 18px 40px -16px rgba(0,0,0,.55);
+}
+.btn-on-photo .btn-arrow { background: rgba(198,40,40,.12); color: var(--pf-red); }
+
+/* ---------- 共通: カテゴリピル ---------- */
+.cat-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.cat-pills .cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(0,0,0,0.06);
+  color: var(--warm-ink);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+.cat-pills .cat::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--pf-red);
+}
+.cat-pills .cat.cf-2::before { background: #d4923d; }
+.cat-pills .cat.cf-3::before { background: #6b8e3d; }
+.cat-pills .cat.cf-4::before { background: #b8552d; }
+.cat-pills .cat.cf-5::before { background: #2a4a5e; }
+.cat-pills .cat.cf-6::before { background: #6e3d8e; }
+
+/* ---------- 共通: ロゴ重ね ---------- */
+.brand-stamp {
+  display: block;
+  max-width: 100%;
+}
+.brand-stamp img {
+  display: block;
+  width: clamp(260px, 36vw, 460px);
+  max-width: 90%;
+  height: auto;
+  filter: drop-shadow(0 4px 20px rgba(0,0,0,0.25));
+}
+
+/* =========================================
+   案 A — 動画オーバーレイ + 柔らか赤
+   ========================================= */
+.heroA {
+  position: relative;
+  width: 100%;
+  background: var(--cream);
+  overflow: hidden;
+}
+
+.heroA .topbar {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 32px;
+  padding: 22px 40px;
+  background: rgba(250, 247, 242, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.heroA .topbar .logo img { height: 34px; }
+.heroA .topbar .nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+.heroA .topbar .apply {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--pf-red);
+  color: #fff;
+  padding: 11px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
+.heroA .topbar .apply::after {
+  content: "→";
+  font-size: 14px;
+  margin-left: 2px;
+}
+
+.heroA .stage {
+  position: relative;
+  height: clamp(540px, 64vw, 700px);
+  background: #1a1410;
+  overflow: hidden;
+  width: 100%;
+}
+.heroA .stage video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(1.05) contrast(0.95);
+  display: block;
+}
+.heroA .stage .veil {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 30%, rgba(26,20,16,0.45) 100%),
+    linear-gradient(180deg, rgba(26,20,16,0.18) 0%, rgba(26,20,16,0) 30%, rgba(26,20,16,0) 70%, rgba(250,247,242,0.95) 100%);
+}
+.heroA .stage .center {
+  position: absolute; inset: 0;
+  width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 22px;
+  text-align: center;
+  padding: 0 24px;
+}
+.heroA .stage .center .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.92);
+  color: var(--warm-ink);
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+.heroA .stage .center .eyebrow .dot {
+  width: 7px; height: 7px;
+  background: var(--pf-red);
+  border-radius: 999px;
+  animation: softpulse 2s ease-in-out infinite;
+}
+@keyframes softpulse {
+  0%,100% { opacity: 1; transform: scale(1);}
+  50% { opacity: .5; transform: scale(.7);}
+}
+.heroA .stage .center .brand-stamp img {
+  filter: drop-shadow(0 8px 30px rgba(0,0,0,0.5));
+}
+
+.heroA .band {
+  position: relative;
+  background: var(--pf-red);
+  padding: 56px 40px 64px;
+  color: #fff;
+  margin-top: -1px;
+}
+.heroA .band::before {
+  /* 上端を有機的にカーブさせる */
+  content: "";
+  position: absolute;
+  top: -1px; left: 0; right: 0;
+  height: 32px;
+  background: var(--pf-red);
+  clip-path: ellipse(120% 100% at 50% 100%);
+}
+.heroA .band .container {
+  max-width: 980px;
+  margin: 0 auto;
+  text-align: center;
+}
+.heroA .band h1 {
+  font-size: clamp(28px, 4.2vw, 52px);
+  font-weight: 800;
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+}
+.heroA .band h1 .em {
+  position: relative;
+  display: inline-block;
+  font-style: normal;
+  padding: 0 0.1em;
+}
+.heroA .band h1 .em::after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 4%;
+  height: 0.36em;
+  background: rgba(255,255,255,0.22);
+  border-radius: 999px;
+  z-index: -1;
+}
+.heroA .band .sub {
+  margin-top: 28px;
+  font-size: 15px;
+  line-height: 2.0;
+  color: rgba(255,255,255,0.9);
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.heroA .band .origin {
+  margin-top: 28px;
+  display: inline-block;
+  background: #fff;
+  color: var(--pf-red);
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.heroA .band .cta-row {
+  margin-top: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.heroA .band .cta-row .micro {
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.06em;
+}
+
+.heroA .cats {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  padding: 0 24px;
+  display: flex;
+  justify-content: center;
+}
+
+/* heroA mobile */
+.heroA.mobile .topbar {
+  grid-template-columns: auto auto;
+  padding: 14px 18px;
+  gap: 12px;
+}
+.heroA.mobile .topbar .nav { display: none; }
+.heroA.mobile .topbar .logo img { height: 26px; }
+.heroA.mobile .topbar .apply { padding: 8px 14px; font-size: 11px; }
+.heroA.mobile .cats {
+  top: 76px;
+  overflow-x: auto;
+  width: 100%;
+  padding: 0 18px;
+  justify-content: flex-start;
+}
+.heroA.mobile .cat-pills { flex-wrap: nowrap; }
+.heroA.mobile .stage { height: 380px; }
+.heroA.mobile .stage .center .eyebrow { font-size: 10px; padding: 6px 12px; }
+.heroA.mobile .stage .center .brand-stamp img { width: 200px; }
+.heroA.mobile .band { padding: 36px 22px 44px; }
+.heroA.mobile .band h1 { font-size: 24px; line-height: 1.55; }
+.heroA.mobile .band .sub { font-size: 13px; line-height: 1.95; margin-top: 22px; }
+.heroA.mobile .band .origin { font-size: 11px; padding: 8px 16px; }
+
+
+/* =========================================
+   案 B — 縦分割アシメ + 土+苔（アーシー）
+   ========================================= */
+.heroB {
+  width: 100%;
+  background: var(--cream);
+  color: var(--warm-ink);
+  overflow: hidden;
+}
+.heroB .topbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 40px;
+  border-bottom: 1px solid var(--line);
+  background: var(--cream);
+}
+.heroB .topbar .logo img { height: 34px; }
+.heroB .topbar .nav { display: flex; gap: 4px; align-items: center; justify-content: flex-start; padding-left: 24px; }
+.heroB .topbar .apply {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--terracotta);
+  color: #fff;
+  padding: 11px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
+
+.heroB .grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 720px;
+  align-items: stretch;
+}
+
+.heroB .left {
+  padding: 64px 48px 64px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--cream);
+  position: relative;
+}
+.heroB .left .crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--cream-100);
+  border-radius: 999px;
+  padding: 8px 16px 8px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--terracotta-dark);
+  align-self: flex-start;
+  letter-spacing: 0.06em;
+}
+.heroB .left .crumb .chip {
+  background: var(--terracotta);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+.heroB .left h1 {
+  margin-top: 28px;
+  font-size: clamp(32px, 4.4vw, 60px);
+  font-weight: 800;
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+}
+.heroB .left h1 .em {
+  position: relative;
+  display: inline-block;
+  color: var(--terracotta);
+  padding: 0 0.05em;
+}
+.heroB .left h1 .em::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0.05em;
+  height: 0.32em;
+  background: rgba(184,85,45,0.18);
+  border-radius: 999px;
+  z-index: -1;
+}
+.heroB .left h1 .sm {
+  display: block;
+  margin-top: 16px;
+  font-size: 0.55em;
+  font-weight: 700;
+  color: var(--warm-ink-soft);
+}
+
+.heroB .left .sub {
+  margin-top: 28px;
+  max-width: 480px;
+  font-size: 15px;
+  line-height: 2.0;
+  color: var(--warm-ink-soft);
+}
+.heroB .left .sub b {
+  color: var(--warm-ink);
+  font-weight: 700;
+  background: linear-gradient(transparent 60%, rgba(184,85,45,0.16) 60%);
+  padding: 0 0.1em;
+}
+
+.heroB .left .cta-row {
+  margin-top: 36px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.heroB .left .micro {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.heroB .left .micro b { color: var(--warm-ink); font-weight: 700; }
+
+.heroB .left .footnote {
+  margin-top: 48px;
+  display: flex;
+  gap: 36px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.heroB .left .footnote .col .lab {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  font-weight: 500;
+}
+.heroB .left .footnote .col .val {
+  font-family: var(--font-en);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--moss-dark);
+  margin-top: 4px;
+}
+
+/* 右: 動画 + マニフェスト引用 */
+.heroB .right {
+  position: relative;
+  background: var(--moss-dark);
+  overflow: hidden;
+}
+.heroB .right video {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  filter: saturate(0.95) contrast(0.95);
+  display: block;
+}
+.heroB .right .veil {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(180deg, rgba(58,68,41,0.25) 0%, rgba(58,68,41,0) 30%, rgba(58,68,41,0.7) 100%);
+}
+.heroB .right .frame {
+  position: absolute;
+  inset: 32px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.25);
+  pointer-events: none;
+}
+
+.heroB .right .badge {
+  position: absolute;
+  top: 56px;
+  left: 56px;
+  background: rgba(250,247,242,0.95);
+  color: var(--moss-dark);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  backdrop-filter: blur(8px);
+}
+.heroB .right .badge .dot {
+  width: 7px; height: 7px;
+  border-radius: 999px;
+  background: var(--terracotta);
+  animation: softpulse 2s ease-in-out infinite;
+}
+
+.heroB .right .quote-card {
+  position: absolute;
+  left: 56px; right: 56px; bottom: 56px;
+  background: rgba(250,247,242,0.95);
+  backdrop-filter: blur(12px);
+  border-radius: 22px;
+  padding: 28px 32px;
+}
+.heroB .right .quote-card .qmark {
+  font-family: var(--font-serif-jp);
+  font-size: 56px;
+  line-height: 0.6;
+  color: var(--terracotta);
+  margin-bottom: 8px;
+}
+.heroB .right .quote-card .q {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: var(--warm-ink);
+  letter-spacing: 0.04em;
+}
+.heroB .right .quote-card .who {
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+/* heroB mobile */
+.heroB.mobile .topbar {
+  padding: 14px 18px;
+  grid-template-columns: auto auto;
+  gap: 12px;
+}
+.heroB.mobile .topbar .nav { display: none; }
+.heroB.mobile .topbar .logo img { height: 26px; }
+.heroB.mobile .topbar .apply { padding: 8px 14px; font-size: 11px; }
+.heroB.mobile .grid { display: block; min-height: 0; }
+.heroB.mobile .left { padding: 32px 22px 36px; }
+.heroB.mobile .left h1 { font-size: 28px; line-height: 1.5; }
+.heroB.mobile .left .sub { font-size: 13px; line-height: 1.95; margin-top: 22px; }
+.heroB.mobile .left .cta-row { flex-direction: column; align-items: stretch; gap: 12px; margin-top: 28px; }
+.heroB.mobile .left .cta-row .btn { justify-content: center; }
+.heroB.mobile .left .footnote { margin-top: 32px; gap: 24px; padding-top: 20px; }
+.heroB.mobile .left .footnote .col .val { font-size: 18px; }
+.heroB.mobile .right { height: 380px; }
+.heroB.mobile .right .frame { inset: 16px; border-radius: 16px; }
+.heroB.mobile .right .badge { top: 32px; left: 32px; padding: 7px 12px; font-size: 11px; }
+.heroB.mobile .right .quote-card { left: 28px; right: 28px; bottom: 28px; padding: 20px 22px; border-radius: 16px; }
+.heroB.mobile .right .quote-card .q { font-size: 14px; }
+.heroB.mobile .right .quote-card .qmark { font-size: 40px; }
+
+
+/* =========================================
+   案 C — グラデ統合 + 朝夕（柿×藍）
+   ========================================= */
+.heroC {
+  position: relative;
+  width: 100%;
+  background: var(--sand);
+  overflow: hidden;
+}
+.heroC .topbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 40px;
+  position: relative;
+  z-index: 4;
+}
+.heroC .topbar .logo img { height: 34px; }
+.heroC .topbar .nav { display: flex; gap: 4px; padding-left: 24px; }
+.heroC .topbar .apply {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--indigo);
+  color: var(--sand);
+  padding: 11px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 999px;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
+
+.heroC .stage {
+  position: relative;
+  height: clamp(620px, 70vw, 780px);
+  background: #1c1410;
+  overflow: hidden;
+  border-radius: 0;
+}
+.heroC .stage video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  filter: saturate(1.05);
+  display: block;
+}
+.heroC .stage .grad {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 40%, rgba(212,102,61,0.0) 30%, rgba(212,102,61,0.35) 100%),
+    linear-gradient(180deg,
+      rgba(245,237,224,0.1) 0%,
+      rgba(212,102,61,0) 25%,
+      rgba(212,102,61,0.45) 70%,
+      rgba(212,102,61,0.92) 100%);
+}
+.heroC .stage .grad-side {
+  position: absolute; inset: 0;
+  background: linear-gradient(110deg,
+    rgba(28,20,16,0.6) 0%,
+    rgba(28,20,16,0.25) 22%,
+    rgba(28,20,16,0) 50%);
+}
+
+.heroC .stage .cats-overlay {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  width: max-content;
+  max-width: calc(100% - 48px);
+}
+
+.heroC .stage .brand-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.heroC .stage .brand-center .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(245,237,224,0.92);
+  color: var(--warm-ink);
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+.heroC .stage .brand-center .eyebrow .dot {
+  width: 7px; height: 7px;
+  background: var(--kaki);
+  border-radius: 999px;
+  animation: softpulse 2s ease-in-out infinite;
+}
+.heroC .stage .brand-center .brand-stamp img {
+  filter: drop-shadow(0 8px 30px rgba(0,0,0,0.45));
+  width: clamp(260px, 36vw, 480px);
+}
+.heroC .stage .brand-center .tagline {
+  font-family: var(--font-serif-jp);
+  font-size: clamp(18px, 1.8vw, 24px);
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.35);
+}
+
+.heroC .stage .copy-bottom {
+  position: absolute;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: 100%;
+  padding: 0 32px;
+  text-align: center;
+}
+.heroC .stage .copy-bottom h1 {
+  font-size: clamp(22px, 2.6vw, 34px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+}
+.heroC .stage .copy-bottom h1 .em {
+  position: relative;
+  display: inline-block;
+  background: var(--kaki);
+  padding: 0 0.18em;
+  border-radius: 6px;
+  margin: 0 0.04em;
+}
+.heroC .stage .copy-bottom .cta-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.heroC .stage .copy-bottom .cta-row .micro {
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.06em;
+}
+
+.heroC .strip {
+  position: relative;
+  z-index: 2;
+  background: var(--indigo);
+  color: var(--sand);
+  padding: 22px 40px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+}
+.heroC .strip .lab {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.heroC .strip .lab .iconbox {
+  width: 32px; height: 32px;
+  background: var(--sand);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.heroC .strip .lab .iconbox img { width: 100%; height: 100%; object-fit: contain; }
+.heroC .strip .stats {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+}
+.heroC .strip .stats .col .lab2 {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: rgba(245,237,224,0.7);
+}
+.heroC .strip .stats .col .val {
+  font-family: var(--font-en);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.heroC .strip .scroll {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: rgba(245,237,224,0.85);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.heroC .strip .scroll .line {
+  width: 24px; height: 1px;
+  background: rgba(245,237,224,0.7);
+}
+
+/* heroC mobile */
+.heroC.mobile .topbar {
+  padding: 14px 18px;
+  grid-template-columns: auto auto;
+  gap: 12px;
+}
+.heroC.mobile .topbar .nav { display: none; }
+.heroC.mobile .topbar .logo img { height: 26px; }
+.heroC.mobile .topbar .apply { padding: 8px 14px; font-size: 11px; }
+.heroC.mobile .stage { height: 600px; }
+.heroC.mobile .stage .cats-overlay {
+  width: 100%;
+  padding: 0 18px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.heroC.mobile .stage .cats-overlay .cat-pills { flex-wrap: nowrap; }
+.heroC.mobile .stage .brand-center { transform: translate(-50%, -65%); }
+.heroC.mobile .stage .brand-center .brand-stamp img { width: 200px; }
+.heroC.mobile .stage .brand-center .tagline { font-size: 14px; }
+.heroC.mobile .stage .copy-bottom h1 { font-size: 18px; line-height: 1.6; }
+.heroC.mobile .stage .copy-bottom .cta-row { flex-direction: column; gap: 10px; align-items: center; }
+.heroC.mobile .stage .copy-bottom { bottom: 28px; }
+.heroC.mobile .strip {
+  padding: 16px 18px;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  text-align: left;
+}
+.heroC.mobile .strip .scroll { display: none; }
+.heroC.mobile .strip .stats { justify-content: flex-start; gap: 24px; }
+.heroC.mobile .strip .stats .col .val { font-size: 16px; }
+
+/* ---------- ナビアイテム共通 ---------- */
+.nav-item {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--warm-ink-soft);
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  transition: background .2s ease;
+}
+.nav-item:hover { background: var(--cream-100); }

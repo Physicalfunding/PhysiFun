@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
 
@@ -9,15 +10,15 @@ import { useState } from "react";
  * Header
  * サイト共通ヘッダーコンポーネント
  *
- * 新 Phase 1（リーダー募集 + リーダー機能）時点の表示:
- * - ロゴ（`/`）
- * - リーダー応募リンク（非ログイン時、`/apply`）
- * - ログインリンク（非ログイン時、`/login`）
- * - ログイン済み時: プロフィール / マイプロジェクト / ログアウトのドロップダウン
+ * トップページ（/）は LP 専用 LpHeader を内包しているため、
+ * 共通ヘッダーは非表示にする。
  */
 export function Header() {
+  const pathname = usePathname();
   const { data: session, status } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  if (pathname === "/") return null;
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" });

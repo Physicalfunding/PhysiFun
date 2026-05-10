@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Support Section — 3 Variants / Physifun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&family=Shippori+Mincho:wght@500;700&family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="support/support-styles.css?v=1" />
+<style>
+  body { margin: 0; background: #ededed; font-family: "Noto Sans JP", sans-serif; }
+  .stage-frame { background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="support/support-variants.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+function App() {
+  return (
+    <DesignCanvas title="Physifun — Support Section" subtitle="リーダー募集 LP / Section 06 — サポート体制 / なぜフィジファンか 3 案">
+      <DCSection id="A" title="案 A — 6 つのサポート / グリッド型 / 白" subtitle="伴走・保険・撮影・発信・費用・コミュニティの 6 項目をアイコン + 短文カードで整理。情報量と読みやすさのバランス型">
+        <DCArtboard id="A-desktop" label="A / Desktop 1440" width={1440} height={920}>
+          <div className="stage-frame" data-screen-label="Support A — Desktop">
+            <SupportA />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="A-mobile" label="A / Mobile 390" width={390} height={1900}>
+          <div className="stage-frame" data-screen-label="Support A — Mobile">
+            <SupportA mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="B" title="案 B — 比較表型 / クリーム × テラコッタ" subtitle="『ふつうの場と違うところ』を一目で。検討モードに刺さる説得型">
+        <DCArtboard id="B-desktop" label="B / Desktop 1440" width={1440} height={780}>
+          <div className="stage-frame" data-screen-label="Support B — Desktop">
+            <SupportB />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="B-mobile" label="B / Mobile 390" width={390} height={1750}>
+          <div className="stage-frame" data-screen-label="Support B — Mobile">
+            <SupportB mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="C" title="案 C — ステートメント縦積み / 砂 × 藍" subtitle="『なぜそれが大事か』(藍) → 『私たちがすること』(白) を交互に。3 つの理念で深く語る型">
+        <DCArtboard id="C-desktop" label="C / Desktop 1440" width={1440} height={1080}>
+          <div className="stage-frame" data-screen-label="Support C — Desktop">
+            <SupportC />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="C-mobile" label="C / Mobile 390" width={390} height={1900}>
+          <div className="stage-frame" data-screen-label="Support C — Mobile">
+            <SupportC mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

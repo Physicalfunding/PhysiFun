@@ -1,0 +1,198 @@
+/* Support Section Styles */
+.sup-root {
+  --red: #e63946;
+  --terra: #c97b5e;
+  --kaki: #d97651;
+  --ai: #1f3a5f;
+  --moss: #6b8e4e;
+  --cream: #f6f0e4;
+  --sand: #ece4d3;
+  --ink: #1a1a1a;
+  --sub: #5a5a5a;
+  --line: #e4e0d8;
+  font-family: "Noto Sans JP", sans-serif;
+  color: var(--ink);
+  width: 100%;
+  box-sizing: border-box;
+}
+.sup-root * { box-sizing: border-box; }
+
+.sup-head { padding: 64px 80px 40px; }
+.sup-root.mobile .sup-head { padding: 40px 24px 24px; }
+.sup-head .eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: "Geist Mono", monospace;
+  font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--sub);
+}
+.sup-head .eyebrow .dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--red);
+}
+.sup-head h2 {
+  font-family: "Shippori Mincho", serif;
+  font-weight: 700;
+  font-size: 64px; line-height: 1.2;
+  margin: 18px 0 20px;
+  letter-spacing: -0.01em;
+}
+.sup-root.mobile .sup-head h2 { font-size: 40px; }
+.sup-head h2 .em { color: var(--red); }
+.sup-head .lead {
+  font-size: 17px; line-height: 1.9; color: var(--sub);
+  max-width: 620px; margin: 0;
+}
+.sup-root.mobile .sup-head .lead { font-size: 15px; }
+
+/* ===== A — Grid ===== */
+.supA { background: #fff; }
+.supA .grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 0; border-top: 1px solid var(--line);
+  margin: 0 80px 80px;
+}
+.supA.mobile .grid {
+  grid-template-columns: 1fr; margin: 0 24px 40px;
+}
+.supA .item {
+  padding: 36px 32px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.supA .item:nth-child(3n) { border-right: none; }
+.supA.mobile .item { border-right: none; padding: 28px 4px; }
+.supA .ico {
+  display: inline-flex; width: 44px; height: 44px;
+  color: var(--red);
+}
+.supA .ico svg { width: 100%; height: 100%; stroke: currentColor; }
+.supA h3 {
+  font-family: "Shippori Mincho", serif; font-weight: 700;
+  font-size: 22px; margin: 18px 0 10px;
+}
+.supA .item p {
+  font-size: 14px; line-height: 1.85; color: var(--sub); margin: 0 0 16px;
+}
+.supA .meta {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px; letter-spacing: 0.08em; color: var(--terra);
+  border-top: 1px solid var(--line); padding-top: 12px;
+}
+
+/* ===== B — Compare table ===== */
+.supB { background: var(--cream); }
+.supB .table {
+  margin: 0 80px 32px; background: #fff;
+  border: 1px solid var(--line); border-radius: 4px;
+  overflow: hidden;
+}
+.supB.mobile .table { margin: 0 24px 24px; }
+.supB .row { display: grid; grid-template-columns: 1.2fr 1.4fr 1.4fr; }
+.supB .row + .row { border-top: 1px solid var(--line); }
+.supB .cell {
+  padding: 22px 28px; font-size: 14px; line-height: 1.7;
+}
+.supB .row.head .cell {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--sub); padding: 14px 28px; background: var(--sand);
+}
+.supB .row.head .cell.us { color: var(--terra); font-weight: 600; }
+.supB .cell.label {
+  font-family: "Shippori Mincho", serif;
+  font-size: 18px; font-weight: 700;
+  border-right: 1px solid var(--line);
+}
+.supB .cell.label .sub {
+  display: block; font-family: "Noto Sans JP", sans-serif;
+  font-weight: 400; font-size: 12px; color: var(--sub); margin-top: 4px;
+}
+.supB .cell.us {
+  background: #fbf6ec;
+  border-right: 1px solid var(--line);
+}
+.supB .check {
+  display: inline-flex; align-items: center; gap: 10px;
+  color: var(--terra); font-weight: 600;
+}
+.supB .check svg { width: 16px; height: 16px; stroke: currentColor; flex-shrink: 0; }
+.supB .x { color: #999; }
+.supB.mobile .row { grid-template-columns: 1fr; }
+.supB.mobile .row.head { display: none; }
+.supB.mobile .cell {
+  border-right: none !important; padding: 14px 20px;
+}
+.supB.mobile .cell::before {
+  content: attr(data-mlabel);
+  display: block; font-family: "Geist Mono", monospace;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--sub); margin-bottom: 6px;
+}
+.supB.mobile .cell.label::before { display: none; }
+.supB.mobile .cell + .cell { border-top: 1px dashed var(--line); }
+.supB .footnote {
+  margin: 0 80px 64px; font-size: 11px; color: #999;
+  font-family: "Geist Mono", monospace;
+}
+.supB.mobile .footnote { margin: 0 24px 40px; }
+
+/* ===== C — Statement stack ===== */
+.supC { background: var(--sand); }
+.supC .stack { margin: 0 80px 80px; }
+.supC.mobile .stack { margin: 0 24px 40px; }
+.supC .row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  background: var(--ai); color: #fff;
+  margin-bottom: 24px;
+}
+.supC.mobile .row { grid-template-columns: 1fr; margin-bottom: 16px; }
+.supC .left { padding: 48px 44px; }
+.supC.mobile .left { padding: 32px 24px 8px; }
+.supC .pill {
+  display: inline-block;
+  font-family: "Geist Mono", monospace;
+  font-size: 11px; letter-spacing: 0.18em;
+  border: 1px solid rgba(255,255,255,0.4);
+  padding: 5px 10px; border-radius: 999px;
+  color: rgba(255,255,255,0.85);
+}
+.supC .left h3 {
+  font-family: "Shippori Mincho", serif; font-weight: 700;
+  font-size: 30px; line-height: 1.5;
+  margin: 20px 0 16px; letter-spacing: -0.005em;
+}
+.supC.mobile .left h3 { font-size: 22px; }
+.supC .left p {
+  font-size: 14px; line-height: 1.95; color: rgba(255,255,255,0.78);
+  margin: 0;
+}
+.supC .right {
+  background: #fff; color: var(--ink);
+  padding: 48px 44px;
+}
+.supC.mobile .right { padding: 24px; }
+.supC .ico-row {
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 16px; border-bottom: 1px solid var(--line);
+}
+.supC .ico-row .ico {
+  width: 32px; height: 32px; color: var(--kaki);
+}
+.supC .ico-row .ico svg { width: 100%; height: 100%; stroke: currentColor; }
+.supC .ico-row .label {
+  font-family: "Geist Mono", monospace;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--sub);
+}
+.supC .right ul {
+  list-style: none; padding: 0; margin: 20px 0 0;
+}
+.supC .right li {
+  font-size: 14px; line-height: 1.8;
+  padding: 12px 0 12px 28px; position: relative;
+  border-bottom: 1px dashed var(--line);
+}
+.supC .right li:last-child { border-bottom: none; }
+.supC .right li::before {
+  content: ""; position: absolute; left: 4px; top: 22px;
+  width: 14px; height: 1px; background: var(--kaki);
+}

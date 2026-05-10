@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Category Section — 3 Variants / Physifun</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800;900&family=Shippori+Mincho:wght@500;700&family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="category/category-styles.css?v=1" />
+<style>
+  body { margin: 0; background: #ededed; font-family: "Noto Sans JP", sans-serif; }
+  .stage-frame { background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="category/category-variants.jsx"></script>
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+function App() {
+  return (
+    <DesignCanvas title="Physifun — Category Section" subtitle="リーダー募集 LP / Section 03 — カテゴリから探す（LP 用 採用案 + HP 用参考案）">
+      <DCSection id="A" title="【LP 採用案】案 A — サンプル切替型 / physifun-red" subtitle="カテゴリタブで 1〜2 件のサンプルプロジェクトが切り替わる。一覧ではなく『フィジファンではこんな現場が動いています』を見せる LP 用構成。モバイルではメイン 1 件のみ表示し、セクションを短く保つ">
+        <DCArtboard id="A-desktop" label="A / Desktop 1440" width={1440} height={920}>
+          <div className="stage-frame" data-screen-label="Category A — Desktop">
+            <CategoryA />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="A-mobile" label="A / Mobile 390" width={390} height={1080}>
+          <div className="stage-frame" data-screen-label="Category A — Mobile">
+            <CategoryA mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="B" title="【HP 参考案】案 B — グリッド整列型 / テラコッタ × 苔" subtitle="将来的なホームページの一覧ページ用。6 件を均等に並べた比較しやすい一覧体験">
+        <DCArtboard id="B-desktop" label="B / Desktop 1440" width={1440} height={1180}>
+          <div className="stage-frame" data-screen-label="Category B — Desktop">
+            <CategoryB />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="B-mobile" label="B / Mobile 390" width={390} height={2400}>
+          <div className="stage-frame" data-screen-label="Category B — Mobile">
+            <CategoryB mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="C" title="【HP 参考案】案 C — タイムライン型 / 柿 × 藍" subtitle="将来的なホームページの一覧ページ用。募集中 / 進行中 / 完了 の 3 レーンでライフサイクルを可視化">
+        <DCArtboard id="C-desktop" label="C / Desktop 1440" width={1440} height={1500}>
+          <div className="stage-frame" data-screen-label="Category C — Desktop">
+            <CategoryC />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="C-mobile" label="C / Mobile 390" width={390} height={3200}>
+          <div className="stage-frame" data-screen-label="Category C — Mobile">
+            <CategoryC mobile />
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
