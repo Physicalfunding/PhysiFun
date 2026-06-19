@@ -63,6 +63,18 @@ bun run typecheck    # 型チェック
 
 ---
 
+## Skills（Claude 用手順書）
+
+`.claude/skills/` 配下に、繰り返す定型作業の手順を Skill として用意している。
+関連作業のときに自動でロードされる（常時読み込みの CLAUDE.md とは別レイヤー）。
+
+| Skill | 用途 |
+|---|---|
+| `add-usecase` | application 層に UseCase を追加する（`Result` 型・Port DI・併設ユニットテスト必須の規範手順とテンプレート） |
+| `verify-and-pr` | コミット / PR 前のローカル検証（CI と一致）と、承認 → push → PR → CodeRabbit フロー |
+
+---
+
 ## 開発フロー・PR ルールの詳細
 
 詳細は `.docs/dev-rule.md` を参照。
