@@ -1,4 +1,4 @@
-import { PrismaProjectCommandAdapter } from "@physifun/infrastructure";
+import { KyselyProjectCommandAdapter } from "@physifun/infrastructure/src/kysely";
 import type {
   ApproveProjectPublicationPort,
   RejectProjectPublicationPort,
@@ -14,7 +14,7 @@ import type { Project, ProjectReviewFeedback } from "@physifun/domain";
  * Route Handler が @physifun/infrastructure を直接参照しないようにする。
  */
 export function getApproveProjectPublicationPort(): ApproveProjectPublicationPort {
-  const adapter = new PrismaProjectCommandAdapter();
+  const adapter = new KyselyProjectCommandAdapter();
   return {
     findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
@@ -32,7 +32,7 @@ export function getApproveProjectPublicationPort(): ApproveProjectPublicationPor
  * RejectProjectPublicationUseCase 用のポート生成ヘルパー
  */
 export function getRejectProjectPublicationPort(): RejectProjectPublicationPort {
-  const adapter = new PrismaProjectCommandAdapter();
+  const adapter = new KyselyProjectCommandAdapter();
   return {
     findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
@@ -48,7 +48,7 @@ export function getRejectProjectPublicationPort(): RejectProjectPublicationPort 
  * ForceUnpublishProjectUseCase 用のポート生成ヘルパー
  */
 export function getForceUnpublishProjectPort(): ForceUnpublishProjectPort {
-  const adapter = new PrismaProjectCommandAdapter();
+  const adapter = new KyselyProjectCommandAdapter();
   return {
     findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),

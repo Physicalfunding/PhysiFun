@@ -15,14 +15,22 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "bun run prisma/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:kysely:codegen": "kysely-codegen --dialect postgres --out-file src/database/kysely/types.generated.ts",
+    "db:atlas:diff": "atlas migrate diff --env local",
+    "db:atlas:apply": "atlas migrate apply --env local",
+    "db:atlas:status": "atlas migrate status --env local",
+    "db:atlas:lint": "atlas migrate lint --env local --latest 1",
+    "db:atlas:inspect": "atlas schema inspect --env local --url \"$DATABASE_URL\" --format '{{ sql . }}'"
   },
   "dependencies": {
     "@physifun/application": "workspace:*",
     "@physifun/domain": "workspace:*",
     "@prisma/client": "^6.9.0",
     "bcryptjs": "^3.0.3",
+    "kysely": "^0.29.2",
     "next-auth": "^4.24.11",
+    "pg": "^8.21.0",
     "resend": "^6.9.3"
   },
   "devDependencies": {
@@ -30,7 +38,9 @@
     "@testcontainers/postgresql": "^11.14.0",
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "dotenv": "^16.4.5",
+    "kysely-codegen": "^0.20.0",
     "prisma": "^6.9.0",
     "testcontainers": "^11.14.0",
     "typescript": "^5",

@@ -79,3 +79,4 @@ bun run typecheck    # 型チェック
 | `.docs/dev-rule.md` | 開発フロー・PR ルール |
 | `.docs/requirements.md` | 要件定義 |
 | `.docs/design.md` | 設計書 |
+| `.docs/db-migration-kysely-atlas.md` | DB 層移行ガイド（Prisma → Kysely + Atlas、PoC: project ドメイン移行済み） |
