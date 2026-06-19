@@ -1,14 +1,15 @@
-import { BcryptPasswordHasher, PrismaActivateAccountAdapter } from "@physifun/infrastructure";
+import { BcryptPasswordHasher } from "@physifun/infrastructure";
+import { KyselyActivateAccountAdapter } from "@physifun/infrastructure/src/kysely";
 import type { ActivateAccountPort, PasswordHasher } from "@physifun/application";
 
 /**
- * ActivateAccountUseCase 用のポート生成ヘルパー
+ * ActivateAccountUseCase 用のポート生成ヘルパー（#223 で Kysely 実装へ移行）
  *
- * infrastructure の Prisma アダプタを ActivateAccountPort インターフェースに
+ * infrastructure の Kysely アダプタを ActivateAccountPort インターフェースに
  * 適合させる。アダプタは stateless なので DI 関数ごとに独自インスタンス化する。
  */
 export function getActivateAccountPort(): ActivateAccountPort {
-  return new PrismaActivateAccountAdapter();
+  return new KyselyActivateAccountAdapter();
 }
 
 /**
