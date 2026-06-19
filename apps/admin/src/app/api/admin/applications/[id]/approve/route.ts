@@ -3,7 +3,7 @@ import {
   ApproveLeaderApplicationUseCase,
   type ApproveLeaderApplicationError,
 } from "@physifun/application";
-import { PrismaApproveLeaderApplicationAdapter } from "@physifun/infrastructure";
+import { KyselyApproveLeaderApplicationAdapter } from "@physifun/infrastructure/src/kysely";
 import { isUuidV4 } from "@physifun/domain";
 import {
   successResponse,
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
     }
 
-    const adapter = new PrismaApproveLeaderApplicationAdapter();
+    const adapter = new KyselyApproveLeaderApplicationAdapter();
     const useCase = new ApproveLeaderApplicationUseCase(adapter);
     const result = await useCase.execute({ applicationId: id, reviewerId });
 

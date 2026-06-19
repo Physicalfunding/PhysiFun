@@ -3,7 +3,7 @@ import {
   RejectLeaderApplicationUseCase,
   type RejectLeaderApplicationError,
 } from "@physifun/application";
-import { PrismaRejectLeaderApplicationAdapter } from "@physifun/infrastructure";
+import { KyselyRejectLeaderApplicationAdapter } from "@physifun/infrastructure/src/kysely";
 import { isUuidV4 } from "@physifun/domain";
 import {
   successResponse,
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       });
     }
 
-    const adapter = new PrismaRejectLeaderApplicationAdapter();
+    const adapter = new KyselyRejectLeaderApplicationAdapter();
     const useCase = new RejectLeaderApplicationUseCase(adapter);
     const result = await useCase.execute({
       applicationId: id,

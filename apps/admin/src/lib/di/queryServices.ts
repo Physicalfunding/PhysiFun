@@ -2,14 +2,16 @@ import { unstable_cache } from "next/cache";
 import {
   PrismaAdminAccountRepository,
   PrismaAdminAuditLogQueryService,
-  PrismaLeaderApplicationQueryService,
   PrismaOutboxQueryService,
   type AdminAuditLogFilter,
   type AdminAuditLogListResult,
   type AdminAuditLogQueryService,
   type LeaderApplicationQueryService,
 } from "@physifun/infrastructure";
-import { KyselyProjectQueryService } from "@physifun/infrastructure/src/kysely";
+import {
+  KyselyLeaderApplicationQueryService,
+  KyselyProjectQueryService,
+} from "@physifun/infrastructure/src/kysely";
 import type { AdminAccountRepository } from "@physifun/domain";
 
 /**
@@ -27,9 +29,9 @@ import type { AdminAccountRepository } from "@physifun/domain";
  *   当面具象クラスを返す (インターフェース化は別 Issue 予定)。
  */
 
-/** LeaderApplication Query Service を生成 */
+/** LeaderApplication Query Service を生成（#222 で Kysely 実装へ移行） */
 export function getLeaderApplicationQueryService(): LeaderApplicationQueryService {
-  return new PrismaLeaderApplicationQueryService();
+  return new KyselyLeaderApplicationQueryService();
 }
 
 /**

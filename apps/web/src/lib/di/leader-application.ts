@@ -1,22 +1,11 @@
-import { PrismaSubmitLeaderApplicationAdapter } from "@physifun/infrastructure";
-import type {
-  CaptchaVerifierPort,
-  IpRateLimitPort,
-  SubmitLeaderApplicationPort,
-} from "@physifun/application";
+import type { CaptchaVerifierPort, IpRateLimitPort } from "@physifun/application";
 import { err, ok } from "@physifun/domain";
 import { createTurnstileCaptchaVerifier } from "@/lib/captcha";
 import { consumeRateLimit } from "@/lib/rateLimit";
 
-/**
- * SubmitLeaderApplicationUseCase 用のポート生成ヘルパー
- *
- * infrastructure の Prisma アダプタを SubmitLeaderApplicationPort に適合させる。
- * アダプタは stateless なので DI 関数ごとに独自インスタンス化する。
- */
-export function getSubmitLeaderApplicationPort(): SubmitLeaderApplicationPort {
-  return new PrismaSubmitLeaderApplicationAdapter();
-}
+// NOTE: SubmitLeaderApplicationPort（Kysely 実装）の DI は ESM/Jest 隔離のため
+// `leader-application-submit.ts` に分離している。このファイルは IP レートリミットポートの
+// Jest テストから import されるため、Kysely を読み込む実装を持ち込まない。
 
 /**
  * CAPTCHA 検証ポート（Cloudflare Turnstile 実装）。
