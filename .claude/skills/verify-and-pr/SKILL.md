@@ -31,7 +31,7 @@ bun run build                     # web ビルド                    … ci: bui
 ```bash
 bun --filter @physifun/infrastructure test   # Testcontainers + vitest … ci: test-infrastructure
 ```
-> Testcontainers が PostgreSQL を起動するため **Docker が必要**。ローカルに Docker が無い場合はここだけ CI に委ねてよいが、その旨を PR / 報告に明記する。インフラ層（Prisma リポジトリ等）を変更したときは特に CI 結果を確認すること。
+> Testcontainers が PostgreSQL を起動するため **Docker が必要**。ローカルに Docker が無い場合はここだけ CI に委ねてよいが、その旨を PR / 報告に明記する。インフラ層（Kysely リポジトリ実装等）を変更したときは特に CI 結果を確認すること。
 
 ### よく使う絞り込み
 ```bash

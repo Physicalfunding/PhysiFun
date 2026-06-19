@@ -14,7 +14,7 @@ PhysiFun の application 層に新しいユースケースを追加するとき�
 ## 大原則（守らないと CI / レビューで弾かれる）
 
 - **UseCase は `Result<Output, Error>` を返す。例外を投げて制御フローに使わない**（`@physifun/domain` の `ok` / `err`）。
-- **外部ライブラリ（Prisma / Supabase）に直接依存しない**。インフラはすべて **Port インターフェース**経由で注入する。
+- **外部ライブラリ（Kysely / Supabase など DB クライアント・外部 SDK）に直接依存しない**。インフラはすべて **Port インターフェース**経由で注入する。
 - **エラーは判別共用体**（`type` フィールド付き）。HTTP ステータスへの変換は呼び出し側（Route Handler）の責務。
 - **ユニットテストは必須**。テストが無い／落ちる UseCase は「未完了」。これがループ／PR の終了条件（→ `verify-and-pr` skill）。
 - ビジネスロジックを Route Handler や infrastructure に書かない。ロジックの置き場は UseCase とドメイン。

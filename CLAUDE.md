@@ -47,7 +47,7 @@ bun run typecheck    # 型チェック
 
 ## 禁止事項
 
-- `infrastructure/` 以外で Supabase SDK・Prisma を直接呼ばない
+- `infrastructure/` 以外で Supabase SDK・DB クライアント（Kysely）を直接呼ばない
 - API Route Handler にビジネスロジックを書かない
 - `domain/` に外部ライブラリへの依存を持ち込まない
 - 不必要なファイル・関数・型を生成しない（過剰な抽象化をしない）
