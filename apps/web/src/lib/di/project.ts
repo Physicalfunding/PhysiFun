@@ -1,4 +1,7 @@
-import { PrismaProjectQueryService, PrismaProjectCommandAdapter } from "@physifun/infrastructure";
+import {
+  KyselyProjectQueryService,
+  KyselyProjectCommandAdapter,
+} from "@physifun/infrastructure/src/kysely";
 import type {
   ApproveProjectPublicationPort,
   ProjectQueryPort,
@@ -11,7 +14,7 @@ import type {
 import type { Project, ProjectReviewFeedback } from "@physifun/domain";
 
 export function getProjectQueryService(): ProjectQueryPort {
-  return new PrismaProjectQueryService();
+  return new KyselyProjectQueryService();
 }
 
 /**
@@ -20,11 +23,11 @@ export function getProjectQueryService(): ProjectQueryPort {
  * PublicProjectQueryPort を介してインフラ層の具象クラスに依存しない。
  */
 export function getPublicProjectQueryService(): PublicProjectQueryPort {
-  return new PrismaProjectQueryService();
+  return new KyselyProjectQueryService();
 }
 
 export function getProjectCommandAdapter() {
-  return new PrismaProjectCommandAdapter();
+  return new KyselyProjectCommandAdapter();
 }
 
 /**
@@ -42,7 +45,7 @@ export function getProjectCommandAdapter() {
  * 明示的に分離し、将来 Port 単位で実装差し替え（モック化等）をしやすくするための意図的な設計。
  */
 export function getProjectStatusPort() {
-  const adapter = new PrismaProjectCommandAdapter();
+  const adapter = new KyselyProjectCommandAdapter();
   return {
     findProjectById: (id: string) => adapter.findProjectById(id),
     saveProject: (project: Project) => adapter.saveProjectWithOptionalFeedback({ project }),
@@ -61,7 +64,7 @@ export function getProjectStatusPort() {
  * 明示的に分離している。
  */
 export function getRequestPublishPort(): RequestPublishPort {
-  const adapter = new PrismaProjectCommandAdapter();
+  const adapter = new KyselyProjectCommandAdapter();
   return {
     findProjectById: (id: string) => adapter.findProjectById(id),
     executeInTransaction: (params: {
@@ -87,7 +90,7 @@ export function getRequestPublishPort(): RequestPublishPort {
  * Port ごとの依存関係を明示的に分離する。
  */
 export function getApproveProjectPublicationPort(): ApproveProjectPublicationPort {
-  const adapter = new PrismaProjectCommandAdapter();
+  const adapter = new KyselyProjectCommandAdapter();
   return {
     findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
@@ -112,7 +115,7 @@ export function getApproveProjectPublicationPort(): ApproveProjectPublicationPor
  * PrismaProjectCommandAdapter は stateless なため DI 関数ごとに独自インスタンス化する。
  */
 export function getRejectProjectPublicationPort(): RejectProjectPublicationPort {
-  const adapter = new PrismaProjectCommandAdapter();
+  const adapter = new KyselyProjectCommandAdapter();
   return {
     findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),
@@ -138,7 +141,7 @@ export function getRejectProjectPublicationPort(): RejectProjectPublicationPort 
  * 分離するための意図的な設計。
  */
 export function getForceUnpublishProjectPort(): ForceUnpublishProjectPort {
-  const adapter = new PrismaProjectCommandAdapter();
+  const adapter = new KyselyProjectCommandAdapter();
   return {
     findAdminReviewerById: (id: string) => adapter.findAdminReviewerById(id),
     findProjectById: (id: string) => adapter.findProjectById(id),

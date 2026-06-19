@@ -4,12 +4,12 @@ import {
   PrismaAdminAuditLogQueryService,
   PrismaLeaderApplicationQueryService,
   PrismaOutboxQueryService,
-  PrismaProjectQueryService,
   type AdminAuditLogFilter,
   type AdminAuditLogListResult,
   type AdminAuditLogQueryService,
   type LeaderApplicationQueryService,
 } from "@physifun/infrastructure";
+import { KyselyProjectQueryService } from "@physifun/infrastructure/src/kysely";
 import type { AdminAccountRepository } from "@physifun/domain";
 
 /**
@@ -38,8 +38,8 @@ export function getLeaderApplicationQueryService(): LeaderApplicationQueryServic
  * NOTE: admin 向けメソッド群 (findManyForAdmin / findDetailForAdmin / countByStatus) を
  * 扱うインターフェースが未整備のため具象クラスを返している。インターフェース化は別 Issue で対応予定。
  */
-export function getProjectQueryService(): PrismaProjectQueryService {
-  return new PrismaProjectQueryService();
+export function getProjectQueryService(): KyselyProjectQueryService {
+  return new KyselyProjectQueryService();
 }
 
 /**
