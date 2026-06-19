@@ -1,10 +1,8 @@
+import { prisma, type OutboxWorkerBase } from "@physifun/infrastructure";
 import {
   buildLeaderApplicationOutboxWorker,
   buildProjectOutboxWorker,
-  prisma,
-  type OutboxWorker,
-  type ProjectOutboxWorker,
-} from "@physifun/infrastructure";
+} from "@physifun/infrastructure/src/kysely";
 
 /**
  * Outbox 周りの DI ヘルパー (#187 PR2)
@@ -19,11 +17,11 @@ import {
  */
 
 /** LeaderApplicationOutboxMessage 用 Worker (admin の applications/[id]/approve|reject から利用) */
-export function getLeaderApplicationOutboxWorker(): OutboxWorker {
+export function getLeaderApplicationOutboxWorker(): OutboxWorkerBase {
   return buildLeaderApplicationOutboxWorker(prisma);
 }
 
 /** ProjectOutboxMessage 用 Worker (admin の projects/[id]/approve|reject|force-unpublish から利用) */
-export function getProjectOutboxWorker(): ProjectOutboxWorker {
+export function getProjectOutboxWorker(): OutboxWorkerBase {
   return buildProjectOutboxWorker(prisma);
 }

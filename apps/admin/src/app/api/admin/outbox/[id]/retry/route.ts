@@ -1,10 +1,10 @@
 import { type NextRequest } from "next/server";
 import { isUuidV4 } from "@physifun/domain";
 import {
-  PrismaOutboxCommandAdapter,
+  KyselyOutboxCommandAdapter,
   isValidOutboxSource,
   type OutboxSource,
-} from "@physifun/infrastructure";
+} from "@physifun/infrastructure/src/kysely";
 import {
   successResponse,
   unauthorizedResponse,
@@ -16,7 +16,7 @@ import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { logAdminAction } from "@/lib/api/auditLog";
 import { enforceAdminRateLimit } from "@/lib/rateLimit";
 
-const commandAdapter = new PrismaOutboxCommandAdapter();
+const commandAdapter = new KyselyOutboxCommandAdapter();
 
 /**
  * POST /api/admin/outbox/:id/retry

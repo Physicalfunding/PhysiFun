@@ -3,8 +3,11 @@ export { isUniqueConstraintError } from "./database/isUniqueConstraintError";
 
 export type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "./outbox";
 export {
-  OutboxWorker,
-  ProjectOutboxWorker,
+  OutboxWorkerBase,
+  type OutboxDelegate,
+  type OutboxRow,
+  type OutboxUpdate,
+  type OutboxWorkerOptions,
   ActivationEmailProcessor,
   ACTIVATION_EMAIL_TYPE,
   type ActivationEmailPayload,
@@ -28,9 +31,9 @@ export {
   type ProjectForceUnpublishedPayload,
   type AccountEmailLookup,
   PrismaAccountEmailLookup,
-  buildLeaderApplicationOutboxWorker,
-  buildProjectOutboxWorker,
 } from "./outbox";
+// NOTE: Kysely を読み込む Worker composition（buildLeader/ProjectOutboxWorker）は
+// サブバレル `@physifun/infrastructure/src/kysely` から公開する（#226 / ESM・Jest 隔離）。
 
 export type { MailMessage, MailSender, MailSendError } from "./mail";
 export { ResendMailSender } from "./mail";
