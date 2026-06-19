@@ -48,3 +48,26 @@ export {
   KyselyCleanupExpiredAccountsAdapter,
   type CleanupExpiredAccountsPort,
 } from "./account/KyselyCleanupExpiredAccountsAdapter";
+
+// admin-account ドメイン（#224。NextAuth カスタム Adapter は #225 で別途）
+export { KyselyAdminAccountRepository } from "./admin-account/KyselyAdminAccountRepository";
+export {
+  KyselyAdminAuditLogQueryService,
+  type AdminAuditLogQueryService,
+  type AdminAuditLogListItem,
+  type AdminAuditLogListResult,
+  type AdminAuditLogFilter,
+} from "./admin-account/KyselyAdminAuditLogQueryService";
+export {
+  writeAdminAuditLog,
+  type WriteAdminAuditLogParams,
+} from "./admin-account/KyselyAdminAuditLogAdapter";
+export { KyselyAdminAuthGcAdapter } from "./admin-account/KyselyAdminAuthGcAdapter";
+export {
+  isActiveAdminByEmail,
+  findAdminAccountIdByEmail,
+} from "./admin-account/kyselyAdminAccountLookup";
+export {
+  revokeAdminSessions,
+  disableAdminAccountAndRevokeSessions,
+} from "./admin-account/kyselyAdminSession";

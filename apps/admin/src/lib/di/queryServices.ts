@@ -1,7 +1,5 @@
 import { unstable_cache } from "next/cache";
 import {
-  PrismaAdminAccountRepository,
-  PrismaAdminAuditLogQueryService,
   PrismaOutboxQueryService,
   type AdminAuditLogFilter,
   type AdminAuditLogListResult,
@@ -9,6 +7,8 @@ import {
   type LeaderApplicationQueryService,
 } from "@physifun/infrastructure";
 import {
+  KyselyAdminAccountRepository,
+  KyselyAdminAuditLogQueryService,
   KyselyLeaderApplicationQueryService,
   KyselyProjectQueryService,
 } from "@physifun/infrastructure/src/kysely";
@@ -61,7 +61,7 @@ export function getOutboxQueryService(): PrismaOutboxQueryService {
  * 戻り型は domain IF に揃えて呼び出し側が実装に依存しないようにする。
  */
 export function getAdminAccountRepository(): AdminAccountRepository {
-  return new PrismaAdminAccountRepository();
+  return new KyselyAdminAccountRepository();
 }
 
 // ==================== AdminAuditLog メタデータキャッシュ ====================
@@ -172,5 +172,5 @@ export class CachedAdminAuditLogQueryService implements AdminAuditLogQueryServic
  * そのため audit-logs ページでは「最新の一覧」と「最大 60 秒古い drop-down 選択肢」が混在する。
  */
 export function getAdminAuditLogQueryService(): AdminAuditLogQueryService {
-  return new CachedAdminAuditLogQueryService(new PrismaAdminAuditLogQueryService());
+  return new CachedAdminAuditLogQueryService(new KyselyAdminAuditLogQueryService());
 }
