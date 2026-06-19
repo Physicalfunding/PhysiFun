@@ -26,6 +26,20 @@ const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0
 const TURNSTILE_SITEVERIFY_TIMEOUT_MS = 5_000;
 
 /**
+ * Cloudflare 公式の「テスト用 secret key」と、その siteverify が必ず返す結果。
+ *
+ * これらは Cloudflare 側で結果が固定された特別なキーで、E2E / CI はこれを使う。
+ * ローカルで結果を即決し `challenges.cloudflare.com` への外部通信を行わないことで、
+ * テストをネットワーク非依存・高速・安定にする。本番は実キーを使うためこの分岐には
+ * 入らない（実キーがこれらの値に一致することはない）ので、本番の検証挙動は変わらない。
+ * https://developers.cloudflare.com/turnstile/troubleshooting/testing/
+ */
+const TURNSTILE_TEST_SECRET_RESULTS: Readonly<Record<string, "pass" | "fail">> = {
+  "1x0000000000000000000000000000000AA": "pass", // Always passes
+  "2x0000000000000000000000000000000AA": "fail", // Always fails
+};
+
+/**
  * Turnstile siteverify API のレスポンス（必要な部分のみ）
  * https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
  */
@@ -70,6 +84,16 @@ export function createTurnstileCaptchaVerifier(): CaptchaVerifierPort {
           "[captcha] TURNSTILE_SECRET_KEY is not set; bypassing verification (non-production)"
         );
         return ok(undefined);
+      }
+
+      // Cloudflare 公式のテスト用キーは結果が固定なので、外部 siteverify を呼ばずに
+      // 即時応答する（E2E / CI のネットワーク非依存・安定化用）。本番の実キーはここに
+      // 一致しないため、この分岐は本番では発火しない。
+      const testKeyResult = TURNSTILE_TEST_SECRET_RESULTS[secret];
+      if (testKeyResult !== undefined) {
+        return testKeyResult === "pass"
+          ? ok(undefined)
+          : err({ type: "CAPTCHA_VERIFICATION_FAILED" });
       }
 
       const params = new URLSearchParams();

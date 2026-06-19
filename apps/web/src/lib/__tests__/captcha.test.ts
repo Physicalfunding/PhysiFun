@@ -52,6 +52,35 @@ describe("createTurnstileCaptchaVerifier", () => {
     });
   });
 
+  describe("Cloudflare テスト用 secret key（外部通信せず即決）", () => {
+    // E2E / CI が本番ビルド (next start = NODE_ENV=production) で動くケースを再現する。
+    beforeEach(() => {
+      (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    });
+
+    it("Always passes キー (1x...) は fetch せず ok を返す", async () => {
+      process.env.TURNSTILE_SECRET_KEY = "1x0000000000000000000000000000000AA";
+
+      const verifier = createTurnstileCaptchaVerifier();
+      const result = await verifier.verify({ token: "dev-bypass", remoteIp: "1.2.3.4" });
+
+      expect(result.ok).toBe(true);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it("Always fails キー (2x...) は fetch せず CAPTCHA_VERIFICATION_FAILED を返す", async () => {
+      process.env.TURNSTILE_SECRET_KEY = "2x0000000000000000000000000000000AA";
+
+      const verifier = createTurnstileCaptchaVerifier();
+      const result = await verifier.verify({ token: "anything", remoteIp: "1.2.3.4" });
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.type).toBe("CAPTCHA_VERIFICATION_FAILED");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe("siteverify 呼び出し", () => {
     beforeEach(() => {
       (process.env as Record<string, string | undefined>).NODE_ENV = "production";

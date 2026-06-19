@@ -28,12 +28,22 @@ const E2E_NEXTAUTH_SECRET = "e2e-test-secret-do-not-use-in-production";
 export const E2E_ADMIN_MAGIC_LINK_HMAC_SECRET =
   "e2e-admin-magic-link-hmac-secret-do-not-use-in-production";
 export const E2E_CRON_SECRET = "e2e-cron-secret-do-not-use-in-production";
+// Cloudflare Turnstile 公式のテスト用 secret key（"Always passes"）。#200 の応募
+// フォーム CAPTCHA 検証用。captcha.ts がこのキーを検知すると外部通信せず検証パスする
+// ため、CI を `challenges.cloudflare.com` へのネットワーク依存なしで安定実行できる。
+// 実キーではないので本番では使わないこと。
+// https://developers.cloudflare.com/turnstile/troubleshooting/testing/
+const E2E_TURNSTILE_SECRET_KEY = "1x0000000000000000000000000000000AA";
 
 const webServerEnv = {
   PORT: String(WEB_PORT),
   NEXTAUTH_SECRET: E2E_NEXTAUTH_SECRET,
   NEXTAUTH_URL: WEB_BASE_URL,
   DATABASE_URL: process.env.DATABASE_URL ?? "",
+  // #200: 応募フォームの CAPTCHA。テスト用キーで siteverify を呼ばず検証パスさせる。
+  // NEXT_PUBLIC_TURNSTILE_SITE_KEY は敢えて未設定にして widget を描画させない
+  // (フロントは captchaToken: "dev-bypass" を送り、サーバーがテストキーで通す)。
+  TURNSTILE_SECRET_KEY: E2E_TURNSTILE_SECRET_KEY,
   // Supabase 関連はダミー値でも Phase 1 E2E は通る (Storage 不使用)
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "dummy-anon-key",
