@@ -1,6 +1,5 @@
 import { unstable_cache } from "next/cache";
 import {
-  PrismaOutboxQueryService,
   type AdminAuditLogFilter,
   type AdminAuditLogListResult,
   type AdminAuditLogQueryService,
@@ -10,6 +9,7 @@ import {
   KyselyAdminAccountRepository,
   KyselyAdminAuditLogQueryService,
   KyselyLeaderApplicationQueryService,
+  KyselyOutboxQueryService,
   KyselyProjectQueryService,
 } from "@physifun/infrastructure/src/kysely";
 import type { AdminAccountRepository } from "@physifun/domain";
@@ -50,8 +50,8 @@ export function getProjectQueryService(): KyselyProjectQueryService {
  * NOTE: `PrismaOutboxQueryService` は現状インターフェースを implements しておらず
  * 具象クラスを返している。インターフェース化は別 Issue で対応予定。
  */
-export function getOutboxQueryService(): PrismaOutboxQueryService {
-  return new PrismaOutboxQueryService();
+export function getOutboxQueryService(): KyselyOutboxQueryService {
+  return new KyselyOutboxQueryService();
 }
 
 /**

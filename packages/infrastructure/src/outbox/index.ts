@@ -3,10 +3,9 @@ export {
   OutboxWorkerBase,
   type OutboxDelegate,
   type OutboxRow,
+  type OutboxUpdate,
   type OutboxWorkerOptions,
 } from "./OutboxWorkerBase";
-export { OutboxWorker } from "./OutboxWorker";
-export { ProjectOutboxWorker } from "./ProjectOutboxWorker";
 export {
   ActivationEmailProcessor,
   ACTIVATION_EMAIL_TYPE,
@@ -44,4 +43,5 @@ export {
 } from "./processors/ProjectForceUnpublishedNotifyProcessor";
 export type { AccountEmailLookup } from "./processors/types";
 export { PrismaAccountEmailLookup } from "./processors/PrismaAccountEmailLookup";
-export { buildLeaderApplicationOutboxWorker, buildProjectOutboxWorker } from "./composition";
+// NOTE: Kysely を読み込む Worker composition（buildLeader/ProjectOutboxWorker）は ESM/Jest 隔離のため
+// メイン barrel ではなくサブバレル `@physifun/infrastructure/src/kysely` から公開する（#226）。

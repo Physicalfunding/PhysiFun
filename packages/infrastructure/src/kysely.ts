@@ -71,3 +71,20 @@ export {
   revokeAdminSessions,
   disableAdminAccountAndRevokeSessions,
 } from "./admin-account/kyselyAdminSession";
+
+// outbox ドメイン（#226。claim を FOR UPDATE SKIP LOCKED 化）
+export { KyselyOutboxDelegate, type OutboxTableName } from "./outbox/KyselyOutboxDelegate";
+export {
+  buildLeaderApplicationOutboxWorker,
+  buildProjectOutboxWorker,
+} from "./outbox/kyselyComposition";
+export {
+  KyselyOutboxQueryService,
+  deriveOutboxStatus,
+  isValidSource as isValidOutboxSource,
+  isValidStatus as isValidOutboxStatus,
+  type OutboxSource,
+  type OutboxStatus,
+  type OutboxListItem,
+} from "./outbox/admin/KyselyOutboxQueryService";
+export { KyselyOutboxCommandAdapter } from "./outbox/admin/KyselyOutboxCommandAdapter";
