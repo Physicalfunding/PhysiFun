@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "kysely";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { MaxProjectsReachedError } from "@physifun/application";
 import { KyselyLeaderApplicationQueryService } from "../../src/leader-application/KyselyLeaderApplicationQueryService";
@@ -64,7 +65,7 @@ describe("Kysely LeaderApplication 実装 integration", () => {
         projectTitle: opts?.projectTitle ?? "地域清掃プロジェクト",
         projectSummary: "プロジェクト概要",
         projectStory: "プロジェクトストーリー",
-        projectCategory: "community",
+        projectCategory: "COMMUNITY",
         prefectureCode: "13",
         municipality: "渋谷区",
         activityContent: "活動内容の説明",
@@ -99,19 +100,21 @@ describe("Kysely LeaderApplication 実装 integration", () => {
 
       await submitAdapter.executeInTransaction(params);
 
-      // accounts.roles（ネイティブ enum 配列）を直接読み出して検証
+      // ネイティブ enum 配列（roles / recruitmentTypes）は ::text[] へキャストして
+      // 実際に配列として格納されていることを直接確認する（pg の text[] パーサで解析させる）。
       const accountRow = await db
         .selectFrom("accounts")
-        .select(["roles", "email", "status"])
+        .select(["status"])
+        .select((eb) => sql<string[]>`${eb.ref("roles")}::text[]`.as("roles"))
         .where("id", "=", params.account.id)
         .executeTakeFirstOrThrow();
       expect(accountRow.roles).toEqual(["SUPPORTER"]);
       expect(accountRow.status).toBe("PENDING_EMAIL_CONFIRMATION");
 
-      // leader_applications.recruitmentTypes（ネイティブ enum 配列）と snsLinks（jsonb）を検証
       const appRow = await db
         .selectFrom("leader_applications")
-        .select(["recruitmentTypes", "snsLinks", "progress"])
+        .select(["snsLinks", "progress"])
+        .select((eb) => sql<string[]>`${eb.ref("recruitmentTypes")}::text[]`.as("recruitmentTypes"))
         .where("id", "=", params.leaderApplication.id)
         .executeTakeFirstOrThrow();
       expect(appRow.recruitmentTypes).toEqual(["TIME", "SKILL_ITEM"]);
@@ -122,6 +125,10 @@ describe("Kysely LeaderApplication 実装 integration", () => {
         website: null,
       });
       expect(appRow.progress).toBe("PLANNING");
+
+      // QueryService 経由（parsePgEnumArray でパース済み）でも一致することを確認
+      const detail = await queryService.findById(params.leaderApplication.id);
+      expect(detail!.recruitmentTypes).toEqual(["TIME", "SKILL_ITEM"]);
 
       // outbox 行が同一 tx で作成されている
       const outboxCount = await db
@@ -317,12 +324,9 @@ describe("Kysely LeaderApplication 実装 integration", () => {
       expect(appRow.status).toBe("APPROVED");
       expect(appRow.reviewedAt).not.toBeNull();
 
-      const accountRow = await db
-        .selectFrom("accounts")
-        .select("roles")
-        .where("id", "=", params.account.id)
-        .executeTakeFirstOrThrow();
-      expect(accountRow.roles).toEqual(["SUPPORTER", "LEADER"]);
+      // roles（enum 配列）は findAccountById 経由でパース済み配列として検証する
+      const account = await approveAdapter.findAccountById(params.account.id);
+      expect(account!.roles).toEqual(["SUPPORTER", "LEADER"]);
 
       const projectRow = await db
         .selectFrom("projects")
@@ -378,12 +382,9 @@ describe("Kysely LeaderApplication 実装 integration", () => {
         .executeTakeFirstOrThrow();
       expect(appRow.status).toBe("PENDING");
 
-      const accountRow = await db
-        .selectFrom("accounts")
-        .select("roles")
-        .where("id", "=", params.account.id)
-        .executeTakeFirstOrThrow();
-      expect(accountRow.roles).toEqual(["SUPPORTER"]);
+      // roles も未更新（findAccountById 経由でパース済み配列として検証）
+      const account = await approveAdapter.findAccountById(params.account.id);
+      expect(account!.roles).toEqual(["SUPPORTER"]);
 
       const outboxCount = await db
         .selectFrom("leader_application_outbox_messages")
@@ -437,7 +438,7 @@ describe("Kysely LeaderApplication 実装 integration", () => {
       ownerAccountId,
       title: "初期プロジェクト",
       coverImageUrl: null,
-      category: "community",
+      category: "COMMUNITY",
       prefectureCode: "13",
       municipality: "渋谷区",
       phase: "PLANNING",

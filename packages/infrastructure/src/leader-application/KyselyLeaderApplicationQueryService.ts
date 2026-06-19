@@ -5,6 +5,7 @@ import {
   ProjectPhase,
 } from "@physifun/domain";
 import { db } from "../database/kysely/client";
+import { parsePgEnumArray } from "../database/kysely/pgArray";
 import type {
   LeaderApplicationQueryService,
   LeaderApplicationDetail,
@@ -138,8 +139,11 @@ export class KyselyLeaderApplicationQueryService implements LeaderApplicationQue
       // Prisma 版と同じく、永続化層の値はドメインの型ガードで安全に絞り込む。
       // 不正値（既知 enum 外）は PLANNING にフォールバックする。
       progress: isProjectPhase(row.progress) ? row.progress : ProjectPhase.PLANNING,
-      // 不正値（既知 enum 外）は黙って除外する防御的フィルタ（Prisma 版と同一）。
-      recruitmentTypes: row.recruitmentTypes.filter(isLeaderApplicationRecruitmentType),
+      // pg はネイティブ enum 配列を文字列で返すため parsePgEnumArray で配列化したうえで、
+      // 不正値（既知 enum 外）は黙って除外する防御的フィルタを掛ける（Prisma 版と同一）。
+      recruitmentTypes: parsePgEnumArray(row.recruitmentTypes).filter(
+        isLeaderApplicationRecruitmentType
+      ),
       eventLocation: row.eventLocation,
       eventPeriod: row.eventPeriod,
       recruitCount: row.recruitCount,

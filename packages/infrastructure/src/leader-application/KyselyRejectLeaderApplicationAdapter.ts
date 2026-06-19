@@ -1,5 +1,6 @@
-import type { LeaderApplication } from "@physifun/domain";
+import type { LeaderApplication, LeaderApplicationRecruitmentType } from "@physifun/domain";
 import { db } from "../database/kysely/client";
+import { parsePgEnumArray } from "../database/kysely/pgArray";
 import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
 
 /**
@@ -19,7 +20,13 @@ export class KyselyRejectLeaderApplicationAdapter {
       .where("id", "=", id)
       .executeTakeFirst();
     if (!row) return null;
-    return reconstructLeaderApplication(row);
+    // pg はネイティブ enum 配列を文字列で返すため、reconstruct へ渡す前に配列化する。
+    return reconstructLeaderApplication({
+      ...row,
+      recruitmentTypes: parsePgEnumArray(
+        row.recruitmentTypes
+      ) as LeaderApplicationRecruitmentType[],
+    });
   }
 
   async executeRejectionInTransaction(params: {

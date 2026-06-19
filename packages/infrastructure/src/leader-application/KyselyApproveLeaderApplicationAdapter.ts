@@ -1,7 +1,12 @@
-import type { LeaderApplication, Project } from "@physifun/domain";
+import type {
+  LeaderApplication,
+  LeaderApplicationRecruitmentType,
+  Project,
+} from "@physifun/domain";
 import { MaxProjectsReachedError } from "@physifun/application";
 import type { Insertable } from "kysely";
 import { db } from "../database/kysely/client";
+import { parsePgEnumArray } from "../database/kysely/pgArray";
 import type { ProjectsTable, Role } from "../database/kysely/types";
 import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
 
@@ -47,7 +52,13 @@ export class KyselyApproveLeaderApplicationAdapter {
       .where("id", "=", id)
       .executeTakeFirst();
     if (!row) return null;
-    return reconstructLeaderApplication(row);
+    // pg はネイティブ enum 配列を文字列で返すため、reconstruct へ渡す前に配列化する。
+    return reconstructLeaderApplication({
+      ...row,
+      recruitmentTypes: parsePgEnumArray(
+        row.recruitmentTypes
+      ) as LeaderApplicationRecruitmentType[],
+    });
   }
 
   /**
@@ -66,7 +77,8 @@ export class KyselyApproveLeaderApplicationAdapter {
     return {
       id: row.id,
       status: row.status as AccountForApproval["status"],
-      roles: row.roles as AccountRole[],
+      // pg はネイティブ enum 配列（roles）を文字列で返すため配列化する。
+      roles: parsePgEnumArray(row.roles) as AccountRole[],
       email: row.email,
     };
   }
