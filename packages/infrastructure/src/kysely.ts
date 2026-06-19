@@ -8,8 +8,8 @@
  * `transpilePackages` 方式も効かない）。
  *
  * そこで Kysely を読み込む実装は、全所から import されるメイン barrel には載せず、
- * このサブバレルに隔離する。Kysely を使う DI（project / leader-application ドメイン）だけが
- * ここを import し、Prisma ベースの DI / それを読む Jest テストは Kysely を一切ロードしない。
+ * このサブバレルに隔離する。Kysely を使う DI（project / leader-application / account ドメイン）
+ * だけがここを import し、Prisma ベースの DI / それを読む Jest テストは Kysely を一切ロードしない。
  *
  * 利用側:
  *   import { KyselyProjectQueryService } from "@physifun/infrastructure/src/kysely";
@@ -33,3 +33,18 @@ export {
 } from "./leader-application/KyselySubmitLeaderApplicationAdapter";
 export { KyselyApproveLeaderApplicationAdapter } from "./leader-application/KyselyApproveLeaderApplicationAdapter";
 export { KyselyRejectLeaderApplicationAdapter } from "./leader-application/KyselyRejectLeaderApplicationAdapter";
+
+// account ドメイン（#223）
+export {
+  KyselyActivateAccountAdapter,
+  type AccountForActivation,
+} from "./account/KyselyActivateAccountAdapter";
+export {
+  KyselyAuthenticateAdapter,
+  type AuthenticatedAccount,
+  type AccountRole as AuthenticatedAccountRole,
+} from "./account/KyselyAuthenticateAdapter";
+export {
+  KyselyCleanupExpiredAccountsAdapter,
+  type CleanupExpiredAccountsPort,
+} from "./account/KyselyCleanupExpiredAccountsAdapter";

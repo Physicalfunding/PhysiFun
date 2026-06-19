@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { CleanupExpiredPendingAccountsUseCase } from "@physifun/application";
-import { PrismaCleanupExpiredAccountsAdapter } from "@physifun/infrastructure";
+import { KyselyCleanupExpiredAccountsAdapter } from "@physifun/infrastructure/src/kysely";
 
 /**
  * 期限切れ PENDING_EMAIL_CONFIRMATION アカウント削除 Cron エンドポイント
@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const port = new PrismaCleanupExpiredAccountsAdapter();
+  const port = new KyselyCleanupExpiredAccountsAdapter();
   const useCase = new CleanupExpiredPendingAccountsUseCase(port);
   const result = await useCase.execute();
 
