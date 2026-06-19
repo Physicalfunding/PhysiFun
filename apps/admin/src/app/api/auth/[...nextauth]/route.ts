@@ -2,13 +2,12 @@ import NextAuth from "next-auth";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import {
-  findAdminAccountIdByEmail,
   getAdminMagicLinkHmacSecret,
   verifyMagicLinkSignature,
-  writeAdminAuditLog,
   MAGIC_LINK_SIGNATURE_PARAM,
   MAGIC_LINK_EXPIRES_PARAM,
 } from "@physifun/infrastructure";
+import { findAdminAccountIdByEmail, writeAdminAuditLog } from "@physifun/infrastructure/src/kysely";
 import { authOptions } from "@/lib/auth";
 
 /**

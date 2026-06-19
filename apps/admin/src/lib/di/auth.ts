@@ -4,9 +4,9 @@ import {
   createAdminPrismaAdapter,
   createSendAdminMagicLink,
   getAdminMagicLinkHmacSecret,
-  isActiveAdminByEmail,
   type MailSender,
 } from "@physifun/infrastructure";
+import { isActiveAdminByEmail } from "@physifun/infrastructure/src/kysely";
 import { EMAIL_MAGIC_LINK_MAX_AGE_MIN } from "../auth-constants";
 
 /**

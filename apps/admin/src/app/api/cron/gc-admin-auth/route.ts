@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { PrismaAdminAuthGcAdapter } from "@physifun/infrastructure";
+import { KyselyAdminAuthGcAdapter } from "@physifun/infrastructure/src/kysely";
 
 /**
  * 期限切れ AdminSession / AdminVerificationToken GC Cron
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const adapter = new PrismaAdminAuthGcAdapter();
+    const adapter = new KyselyAdminAuthGcAdapter();
     const result = await adapter.deleteExpired();
     console.log(
       `[cron] gc-admin-auth: sessions=${result.deletedSessions} tokens=${result.deletedVerificationTokens}`
