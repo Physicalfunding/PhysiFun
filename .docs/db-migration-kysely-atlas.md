@@ -3,7 +3,7 @@
 クエリ層を **Kysely**（SQL ライクな型安全クエリビルダ）へ、スキーマ/マイグレーション管理を
 **Atlas**（宣言的＋ versioned）へ段階移行するための方針と手順。型生成は **kysely-codegen** を併用する。
 
-> ステータス: **PoC（`project` ドメインのみ移行済み）**。他ドメインは Prisma のまま共存。
+> ステータス: **クエリ層の主要ドメイン（`project` / `leader-application` / `account` / `admin-account` / `outbox` ＋ NextAuth カスタム Adapter）を Kysely 化済み**（#222–#227）。スキーマ管理の Atlas baseline 確立（#228）以降は未着手で、Prisma が引き続きスキーマ定義（`schema.prisma`）・マイグレーションの正。
 
 ---
 
@@ -88,23 +88,52 @@ export DATABASE_URL="postgresql://...";   # 適用先
 export ATLAS_DEV_URL="docker://postgres/16/dev";  # 任意（未設定でも atlas.hcl の既定で Docker 起動）
 ```
 
-### 5.2 既存 DB からのブートストラップ（baseline）
-Prisma が作った現行スキーマを Atlas の世界へ引き継ぐ:
+### 5.2 既存 DB からの baseline 確立（#228）
 
+Prisma が作った現行スキーマを Atlas の versioned migration へ「適用済み」として引き継ぐ手順。
+**実 DDL は一切流さず**、Atlas の revision 追跡（`atlas_schema_revisions`）に baseline を記録するだけ。
+
+#### 前提
+- `atlas` CLI が PATH にある（§5.1）。
+- **Docker が起動している**（`ATLAS_DEV_URL` 未設定時、atlas が差分計算用の使い捨て dev DB を
+  `docker://postgres/16` で自動起動・破棄するため）。
+- `DATABASE_URL` が baseline 対象 DB を指す。本番をベースライン化するなら本番接続文字列
+  （`schema inspect` は読み取りのみで安全）。
+- **まずはドライラン推奨**: ローカルで `docker run -e POSTGRES_PASSWORD=pw -p 5432:5432 -d postgres:16`
+  を起動し `DATABASE_URL` をそこへ向け、`bun --cwd packages/infrastructure run db:migrate:deploy`
+  （= `prisma migrate deploy`）で現行スキーマを再現してから下記を試すと安全。
+
+#### 手順
 ```bash
 cd packages/infrastructure
 
-# 1. 現行 DB の状態を宣言的ソースとして取り込む
-bun run db:atlas:inspect > atlas/schema.sql
+# 1. 現行 DB の状態を宣言的ソース atlas/schema.sql に取り込む
+#    （bun run 経由はスクリプトのエコー行が混入し得るので atlas を直接呼ぶ）
+atlas schema inspect --env local --url "$DATABASE_URL" --format '{{ sql . }}' > atlas/schema.sql
 
-# 2. baseline migration を生成（schema.sql ⇔ 空の migration dir の差分）
+# 2. schema.sql ⇔ 空の migration dir の差分から baseline migration を生成
+#    （atlas/migrations/<version>_baseline.sql と atlas.sum が生成される。dev DB に Docker を使用）
 atlas migrate diff baseline --env local
 
-# 3. 既存 DB には baseline を「適用済み」として記録（実 DDL は流さない）
-atlas migrate apply --env local --baseline <生成された baseline のバージョン>
+# 3. 生成された baseline の version（ファイル名の数値プレフィックス）を確認
+ls atlas/migrations/      # 例: 20260620090000_baseline.sql → version = 20260620090000
+
+# 4. 既存 DB に baseline を「適用済み」として記録（実 DDL は流さない）
+atlas migrate apply --env local --baseline 20260620090000
 ```
 
-以降、`prisma migrate` は使わず Atlas に一本化する。
+#### 検証（DoD）
+```bash
+atlas migrate status --env local        # baseline が Applied と表示される（= bun run db:atlas:status）
+atlas migrate diff verify --env local   # "no changes" で migration ファイルが作られない＝現行スキーマと一致
+```
+`status` が baseline を Applied と示し、`diff` が新規ファイルを生成しなければ DoD 達成。
+手順 4 のあと `diff` が差分を出す場合は `schema.sql` と DB が食い違っているので内容を確認する
+（生成された不要ファイルは削除）。
+
+> 部分 unique index（`WHERE status='PENDING'`）等、Prisma で諦めていた定義はこの段階で
+> `schema.sql` に取り込める（§5.3）。以降 `prisma migrate` は使わず Atlas に一本化（#229）。
+> 各フラグの正確な挙動は Atlas 公式ドキュメント（atlasgo.io）も参照のこと。
 
 ### 5.3 日々のスキーマ変更フロー
 ```bash
@@ -130,12 +159,13 @@ bun run db:kysely:codegen
 
 ## 6. 残作業（今後のドメイン移行）
 
-- [ ] `leader-application` / `account` / `admin-account` / `outbox` の Kysely 実装。
-  - Outbox の claim は `FOR UPDATE SKIP LOCKED` ベースへ置換すると、現状の緩い型付け
-    （`Record<string, unknown>`）と擬似ロックを同時に改善できる。
-  - 一意制約判定は pg の `error.code === '23505'`（`isUniqueConstraintError` の Kysely 版）。
-  - NextAuth カスタム Adapter（`AdminPrismaAdapter`）の Kysely 再実装。
-- [ ] `atlas/schema.sql` の baseline 確立 → `prisma migrate` 撤去 → `test/globalSetup.ts` 差し替え。
+- [x] `project`（PoC）/ `leader-application`（#222）/ `account`（#223）/ `admin-account`（#224）/
+      `outbox`（#226）の Kysely 実装。Outbox の claim は `FOR UPDATE SKIP LOCKED` ベースへ置換済み。
+- [x] 一意制約判定の pg 版 `isUniqueConstraintError`（`error.code === '23505'`、#227）。
+- [x] NextAuth カスタム Adapter の Kysely 再実装（`createAdminKyselyAdapter`、#225）。
+- [ ] **`atlas/schema.sql` の baseline 確立（#228、§5.2 の runbook 参照）** ← 次のステップ。
+      Docker + Atlas CLI + 対象 DB が必要。
+- [ ] `prisma migrate` 撤去 → `test/globalSetup.ts` を Atlas へ差し替え（#229）。
 - [ ] 全ドメイン移行後に `@prisma/client` / `prisma` を依存から削除し、`types.ts` を
-      kysely-codegen 生成物へ一本化。
+      kysely-codegen 生成物へ一本化（#230）。
 - [ ] `.docs/tech.md` / `.docs/structure.md` の「Prisma」記述を更新。
