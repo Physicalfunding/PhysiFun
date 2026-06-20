@@ -1,21 +1,14 @@
+import type {
+  AdminOutboxQueryPort,
+  OutboxSource,
+  OutboxStatus,
+  OutboxListItem,
+} from "@physifun/application";
 import { prisma } from "../../database/client";
 
-// ==================== 型定義 ====================
-
-export type OutboxSource = "leaderApplication" | "project";
-
-export type OutboxStatus = "pending" | "retrying" | "dead-lettered" | "sent";
-
-export interface OutboxListItem {
-  readonly id: string;
-  readonly type: string;
-  readonly createdAt: Date;
-  readonly sentAt: Date | null;
-  readonly attempts: number;
-  readonly lastError: string | null;
-  readonly nextRetryAt: Date | null;
-  readonly deadLetteredAt: Date | null;
-}
+// 型は application 層の AdminOutboxQueryPort に定義（#231）。
+// 既存 import 互換のため infra からも type-only で再 export する。
+export type { OutboxSource, OutboxStatus, OutboxListItem } from "@physifun/application";
 
 // ==================== ステータス導出 ====================
 
@@ -83,7 +76,7 @@ const selectFields = {
 
 // ==================== QueryService ====================
 
-export class PrismaOutboxQueryService {
+export class PrismaOutboxQueryService implements AdminOutboxQueryPort {
   async findMany(
     source: OutboxSource,
     options: { status?: OutboxStatus; page: number; perPage: number }

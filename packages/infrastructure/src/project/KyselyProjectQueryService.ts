@@ -5,18 +5,20 @@ import type {
   ProjectListResult,
   ProjectDetailDTO,
   ProjectPublicDetailDTO,
+  AdminProjectQueryPort,
+  ProjectAdminListResult,
+  ProjectAdminDetail,
 } from "@physifun/application";
 import { db } from "../database/kysely/client";
-import type { ProjectAdminListResult, ProjectAdminDetail } from "./PrismaProjectQueryService";
 
-// admin 向け DTO 型は既存の Prisma 実装と共通のものを再利用する（PoC 段階のため）。
-// Prisma 実装を撤去する際にこれらの型を中立なモジュールへ移動する。
+// admin 向け DTO 型は application 層の AdminProjectQueryPort に定義（#231）。
+// 既存 import 互換のため infra からも type-only で再 export する。
 export type {
   ProjectAdminListItem,
   ProjectAdminListResult,
-  ProjectAdminDetail,
   ProjectReviewFeedbackHistoryItem,
-} from "./PrismaProjectQueryService";
+  ProjectAdminDetail,
+} from "@physifun/application";
 
 // ==================== 定数 ====================
 
@@ -34,7 +36,9 @@ const ADMIN_REVIEW_FEEDBACK_HISTORY_LIMIT = 5;
  * `PrismaProjectQueryService` と同一の公開メソッド・戻り値を提供する drop-in 実装。
  * CQRS の Q 側として、ドメインエンティティを経由せず DB 行から直接 DTO へマップする。
  */
-export class KyselyProjectQueryService implements ProjectQueryPort, PublicProjectQueryPort {
+export class KyselyProjectQueryService
+  implements ProjectQueryPort, PublicProjectQueryPort, AdminProjectQueryPort
+{
   async findProjectsByOwner(
     accountId: string,
     params?: { page?: number; perPage?: number }

@@ -5,90 +5,20 @@ import type {
   ProjectListResult,
   ProjectDetailDTO,
   ProjectPublicDetailDTO,
+  AdminProjectQueryPort,
+  ProjectAdminListResult,
+  ProjectAdminDetail,
 } from "@physifun/application";
 import { prisma } from "../database/client";
 
-// ==================== ADMIN 向け DTO ====================
-
-/**
- * 運営審査一覧の 1 件
- *
- * リーダー向けの ProjectListResult とは別途定義し、owner 情報を付与する。
- */
-export interface ProjectAdminListItem {
-  readonly id: string;
-  readonly title: string;
-  readonly status: PublishStatus;
-  readonly phase: ProjectPhase;
-  readonly category: string | null;
-  readonly prefectureCode: string | null;
-  readonly municipality: string | null;
-  readonly ownerDisplayName: string;
-  readonly ownerEmail: string;
-  /**
-   * 並び替えおよび一覧表示で使う「更新タイムスタンプ」。
-   * - PENDING_REVIEW: publishRequestedAt
-   * - PUBLISHED:      publishedAt
-   * - DRAFT:          updatedAt
-   */
-  readonly sortedAt: Date;
-  readonly updatedAt: Date;
-}
-
-export interface ProjectAdminListResult {
-  readonly items: ProjectAdminListItem[];
-  readonly totalCount: number;
-}
-
-/**
- * ADMIN 向け審査フィードバック履歴 1 件
- */
-export interface ProjectReviewFeedbackHistoryItem {
-  readonly id: string;
-  readonly action: ReviewAction;
-  readonly note: string | null;
-  readonly reviewerId: string;
-  readonly reviewerEmail: string;
-  readonly reviewedAt: Date;
-}
-
-/**
- * ADMIN 向け詳細 DTO
- *
- * owner-check なしで取得し、owner 情報・審査履歴を含める。
- */
-export interface ProjectAdminDetail {
-  readonly id: string;
-  readonly title: string;
-  readonly summary: string | null;
-  readonly body: string | null;
-  readonly leaderIntroduction: string | null;
-  readonly coverImageUrl: string | null;
-  readonly category: string | null;
-  readonly prefectureCode: string | null;
-  readonly municipality: string | null;
-  readonly snsLinks: {
-    x: string | null;
-    instagram: string | null;
-    facebook: string | null;
-    website: string | null;
-  } | null;
-  readonly activityPlan: string | null;
-  readonly status: PublishStatus;
-  readonly phase: ProjectPhase;
-  readonly publishRequestedAt: Date | null;
-  readonly publishedAt: Date | null;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  readonly owner: {
-    readonly accountId: string;
-    readonly displayName: string;
-    readonly email: string;
-    readonly bio: string | null;
-  };
-  /** 最新 N 件の審査履歴 (reviewedAt 降順) */
-  readonly reviewFeedbacks: ProjectReviewFeedbackHistoryItem[];
-}
+// admin 向け DTO 型は application 層の AdminProjectQueryPort に定義（#231）。
+// 既存 import 互換のため infra からも type-only で再 export する。
+export type {
+  ProjectAdminListItem,
+  ProjectAdminListResult,
+  ProjectReviewFeedbackHistoryItem,
+  ProjectAdminDetail,
+} from "@physifun/application";
 
 // ==================== 定数 ====================
 
@@ -110,7 +40,9 @@ const ADMIN_REVIEW_FEEDBACK_HISTORY_LIMIT = 5;
  * - リーダー向け: findProjectsByOwner / findProjectDetailForOwner (owner-check あり)
  * - 運営向け    : findManyForAdmin / findDetailForAdmin / countByStatus (owner-check なし)
  */
-export class PrismaProjectQueryService implements ProjectQueryPort, PublicProjectQueryPort {
+export class PrismaProjectQueryService
+  implements ProjectQueryPort, PublicProjectQueryPort, AdminProjectQueryPort
+{
   async findProjectsByOwner(
     accountId: string,
     params?: { page?: number; perPage?: number }

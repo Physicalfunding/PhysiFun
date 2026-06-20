@@ -114,6 +114,23 @@ export type {
   ProjectPublicDetailDTO,
 } from "./project/ports/ProjectQueryPort";
 
+// AdminProjectQueryPort (#231)
+export type {
+  AdminProjectQueryPort,
+  ProjectAdminListItem,
+  ProjectAdminListResult,
+  ProjectReviewFeedbackHistoryItem,
+  ProjectAdminDetail,
+} from "./project/ports/AdminProjectQueryPort";
+
+// AdminOutboxQueryPort (#231)
+export type {
+  AdminOutboxQueryPort,
+  OutboxSource,
+  OutboxStatus,
+  OutboxListItem,
+} from "./outbox/ports/AdminOutboxQueryPort";
+
 // RequestPublishUseCase
 export {
   RequestPublishUseCase,
