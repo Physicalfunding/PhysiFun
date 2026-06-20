@@ -19,6 +19,7 @@ import {
   revokeAdminSessions,
 } from "../../src/admin-account/kyselyAdminSession";
 import { db } from "../../src/database/kysely/client";
+import { isUniqueConstraintError } from "../../src/database/isUniqueConstraintError";
 import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
 
 /**
@@ -92,6 +93,22 @@ describe("Kysely admin-account 実装 integration", () => {
 
       const byEmail = await repo.findByEmail(adminEmail("repo@example.com"));
       expect(byEmail!.id.toString()).toBe(id);
+    });
+
+    it("同一 email の二重 create は pg の一意制約違反 (23505) を送出し isUniqueConstraintError で判定できる", async () => {
+      const email = "race@example.com";
+      await repo.create(buildAdminAccount({ email }));
+
+      // POST /api/admin/members の findByEmail→create レース条件を模した二重 insert。
+      // email unique index に弾かれ、Kysely は pg の DatabaseError(23505) をラップせず送出する。
+      let caught: unknown;
+      try {
+        await repo.create(buildAdminAccount({ email }));
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught).toBeDefined();
+      expect(isUniqueConstraintError(caught)).toBe(true);
     });
 
     it("update で status / updatedAt を更新する", async () => {

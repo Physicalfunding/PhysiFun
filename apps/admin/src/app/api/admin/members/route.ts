@@ -129,9 +129,10 @@ export async function POST(request: NextRequest) {
       return conflictResponse("このメールアドレスのメンバーは既に登録されています");
     }
 
-    // PR #164 H-1: findByEmail と create の間のレース条件で DB 側 unique index (P2002) に
-    // 弾かれる可能性があるため、Prisma の一意制約違反を 409 Conflict として透過的に返す。
-    // Prisma runtime 値は infra 層に閉じた `isUniqueConstraintError` ヘルパーで判定する。
+    // PR #164 H-1 / #227: findByEmail と create の間のレース条件で DB 側 unique index に
+    // 弾かれる可能性があるため、一意制約違反 (pg SQLSTATE 23505) を 409 Conflict として
+    // 透過的に返す。AdminAccount リポジトリは Kysely 化済み (#224) のため pg の DatabaseError が
+    // 送出される。ドライバ固有値は infra 層に閉じた `isUniqueConstraintError` ヘルパーで判定する。
     try {
       await repo.create(admin);
     } catch (err) {
