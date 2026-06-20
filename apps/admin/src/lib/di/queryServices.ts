@@ -13,6 +13,7 @@ import {
   KyselyProjectQueryService,
 } from "@physifun/infrastructure/src/kysely";
 import type { AdminAccountRepository } from "@physifun/domain";
+import type { AdminProjectQueryPort, AdminOutboxQueryPort } from "@physifun/application";
 
 /**
  * admin Server Component / Route Handler 向け QueryService DI ヘルパー
@@ -35,22 +36,20 @@ export function getLeaderApplicationQueryService(): LeaderApplicationQueryServic
 }
 
 /**
- * Project Query Service を生成
+ * Project Query Service を生成（#231 で admin 向けメソッドを Port 化）
  *
- * NOTE: admin 向けメソッド群 (findManyForAdmin / findDetailForAdmin / countByStatus) を
- * 扱うインターフェースが未整備のため具象クラスを返している。インターフェース化は別 Issue で対応予定。
+ * 戻り型は application 層の `AdminProjectQueryPort` に揃え、呼び出し側を実装に依存させない。
  */
-export function getProjectQueryService(): KyselyProjectQueryService {
+export function getProjectQueryService(): AdminProjectQueryPort {
   return new KyselyProjectQueryService();
 }
 
 /**
- * Outbox Query Service を生成
+ * Outbox Query Service を生成（#231 で Port 化）
  *
- * NOTE: `PrismaOutboxQueryService` は現状インターフェースを implements しておらず
- * 具象クラスを返している。インターフェース化は別 Issue で対応予定。
+ * 戻り型は application 層の `AdminOutboxQueryPort` に揃え、呼び出し側を実装に依存させない。
  */
-export function getOutboxQueryService(): KyselyOutboxQueryService {
+export function getOutboxQueryService(): AdminOutboxQueryPort {
   return new KyselyOutboxQueryService();
 }
 

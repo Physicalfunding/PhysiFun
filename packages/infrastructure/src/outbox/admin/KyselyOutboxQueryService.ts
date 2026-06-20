@@ -1,17 +1,17 @@
 import type { SelectQueryBuilder } from "kysely";
+import type {
+  AdminOutboxQueryPort,
+  OutboxListItem,
+  OutboxSource,
+  OutboxStatus,
+} from "@physifun/application";
 import { db } from "../../database/kysely/client";
 import type { DB } from "../../database/kysely/types";
-import type { OutboxListItem, OutboxSource, OutboxStatus } from "./PrismaOutboxQueryService";
 
-// ステータス導出・バリデーション・型は Prisma 版と共通のものを再利用する（純粋関数 / 型のみ）。
-export {
-  deriveOutboxStatus,
-  isValidSource,
-  isValidStatus,
-  type OutboxSource,
-  type OutboxStatus,
-  type OutboxListItem,
-} from "./PrismaOutboxQueryService";
+// 型は application 層の AdminOutboxQueryPort に定義（#231）。ステータス導出・バリデーションの
+// 純粋関数は Prisma 版と共通のものを再利用する。既存 import 互換のため再 export する。
+export { deriveOutboxStatus, isValidSource, isValidStatus } from "./PrismaOutboxQueryService";
+export type { OutboxSource, OutboxStatus, OutboxListItem } from "@physifun/application";
 
 type OutboxTableName = "leader_application_outbox_messages" | "project_outbox_messages";
 
@@ -26,7 +26,7 @@ function tableFor(source: OutboxSource): OutboxTableName {
  *
  * `PrismaOutboxQueryService` と同一 API の drop-in。
  */
-export class KyselyOutboxQueryService {
+export class KyselyOutboxQueryService implements AdminOutboxQueryPort {
   async findMany(
     source: OutboxSource,
     options: { status?: OutboxStatus; page: number; perPage: number }
