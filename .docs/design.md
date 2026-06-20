@@ -32,7 +32,9 @@
 #### データベース・ORM
 
 - **PostgreSQL** - リレーショナルデータベース
-- **Prisma** - 型安全な ORM
+- **Kysely** - 型安全な SQL クエリビルダ（Repository / QueryService 実装。Prisma から順次移行中）
+- **Prisma** - `schema.prisma`（スキーマ定義の正）・マイグレーション・seed。Repository 実装は Kysely へ移行中
+- **Atlas** - 宣言的スキーマ管理への移行を計画（PoC 段階、`.docs/db-migration-kysely-atlas.md` 参照）
 
 #### 認証
 
@@ -85,86 +87,59 @@
               ↑ implemented by
 ┌─────────────────────────────────────────┐
 │   Infrastructure Layer                  │
-│   - Prisma Repository Implementations   │
-│   - External API Clients                │
-│   - Database Migrations                 │
+│   - Kysely / Prisma Repository 実装      │
+│     （Prisma → Kysely へ移行中）         │
+│   - QueryService（CQRS の Query 側）     │
+│   - External API Clients / Outbox Worker │
+│   - Database Migrations（Prisma → Atlas）│
 └─────────────────────────────────────────┘
 ```
 
 ### 1.3 ディレクトリ構成
 
+bun workspaces によるモノレポ。一般ユーザ向け (`apps/web`) と運営管理 (`apps/admin`) を別 Next.js アプリに分離し、ドメイン / アプリケーション / インフラの各レイヤーを `packages/` に集約する。ディレクトリ構成・命名規則の最新かつ詳細は [`.docs/structure.md`](./structure.md) を参照。
+
 ```
-src/
-├── app/                        # Presentation Layer (Next.js App Router)
-│   ├── (public)/              # 公開ページグループ
-│   │   ├── page.tsx           # ホームページ
-│   │   ├── projects/          # プロジェクト一覧・詳細
-│   │   └── search/            # 検索ページ
-│   ├── my/                    # マイページグループ（認証必須）
-│   │   ├── layout.tsx         # マイページレイアウト
-│   │   ├── profile/           # プロフィール
-│   │   ├── project/           # プロジェクト管理
-│   │   ├── participations/    # 参加予定一覧
-│   │   └── messages/          # メッセージ
-│   └── api/                   # API Routes
-│       ├── auth/              # 認証API
-│       ├── users/             # ユーザーAPI
-│       ├── projects/          # プロジェクトAPI
-│       ├── schedules/         # スケジュールAPI
-│       ├── participations/    # 参加申し込みAPI
-│       └── messages/          # メッセージAPI
+PhysiFun/
+├── apps/
+│   ├── web/                       # 一般ユーザ向け Next.js（port 3000）
+│   │   └── src/
+│   │       ├── app/               # Presentation: ページ + API Route Handler（薄い BFF）
+│   │       ├── components/        # UI コンポーネント
+│   │       ├── infrastructure/    # web 固有インフラ（画像アップロード等）
+│   │       └── lib/               # DI・認証・API ヘルパー
+│   │
+│   └── admin/                     # 運営管理 Next.js（port 3001、別 Vercel プロジェクト）
+│       └── src/
+│           ├── app/               # 運営ダッシュボード（応募 / プロジェクト審査・メンバー管理・監査ログ）+ API
+│           ├── components/
+│           └── lib/di/            # QueryService / Repository をリクエストスコープで DI
 │
-├── components/                 # UI Components (Client Components)
-│   ├── auth/                  # 認証関連コンポーネント
-│   ├── project/               # プロジェクト関連
-│   ├── schedule/              # スケジュール関連
-│   └── common/                # 共通コンポーネント
+├── packages/
+│   ├── domain/                    # Domain Layer（外部ライブラリ非依存）
+│   │   ├── account/               # Account, Role
+│   │   ├── admin-account/         # AdminAccount（admin 専用 / Magic Link 認証）
+│   │   ├── leader-application/    # LeaderApplication
+│   │   ├── project/               # Project, ProjectPhase, PublishStatus
+│   │   └── shared/                # Result 型・共通値オブジェクト
+│   │
+│   ├── application/               # Application Layer
+│   │   └── src/<domain>/          # UseCase + ports/（Port インターフェース。infra が実装）
+│   │
+│   ├── infrastructure/            # Infrastructure Layer（DB / 外部サービス）
+│   │   ├── src/<domain>/          # Kysely* / Prisma* の Repository・QueryService・Adapter
+│   │   ├── src/database/          # client.ts（Prisma）/ kysely/（Kysely クライアント・生成型）
+│   │   ├── src/{outbox,mail,security}/  # Outbox Worker / Resend / パスワードハッシュ
+│   │   ├── prisma/                # schema.prisma（スキーマの正）・マイグレーション・seed
+│   │   └── atlas/                 # Atlas 設定（宣言的スキーマ移行 / PoC, #228）
+│   │
+│   └── ui-shared/                 # 両アプリ共有 UI コンポーネント
 │
-├── application/                # Application Layer
-│   └── use-cases/             # ユースケース
-│       ├── auth/              # 認証ユースケース
-│       ├── project/           # プロジェクトユースケース
-│       ├── schedule/          # スケジュールユースケース
-│       ├── participation/     # 参加申し込みユースケース
-│       └── message/           # メッセージユースケース
-│
-├── domain/                     # Domain Layer
-│   ├── account/               # アカウント集約
-│   │   ├── entities/
-│   │   ├── value-objects/
-│   │   ├── repositories/
-│   │   └── services/
-│   ├── project/               # プロジェクト集約
-│   │   ├── entities/
-│   │   ├── value-objects/
-│   │   ├── repositories/
-│   │   └── services/
-│   ├── schedule/              # スケジュール集約
-│   │   ├── entities/
-│   │   ├── value-objects/
-│   │   ├── repositories/
-│   │   └── services/
-│   ├── participation/         # 参加申し込み集約
-│   │   ├── entities/
-│   │   ├── value-objects/
-│   │   ├── repositories/
-│   │   └── services/
-│   └── message/               # メッセージ集約
-│       ├── entities/
-│       ├── repositories/
-│       └── services/
-│
-└── infrastructure/             # Infrastructure Layer
-    └── database/
-        ├── prisma/
-        │   └── schema.prisma  # Prismaスキーマ定義
-        └── repositories/      # リポジトリ実装
-            ├── UserRepository.ts
-            ├── ProjectRepository.ts
-            ├── ScheduleRepository.ts
-            ├── ParticipationRepository.ts
-            └── MessageRepository.ts
+├── .docs/                         # 設計・運用ドキュメント
+└── docs-repository/               # フェーズ別の最新仕様書
 ```
+
+> 旧構成（単一 `src/` 直下、`schedule` / `participation` / `message` 等の bounded context）は廃止済み。Phase 1 スコープと廃止された旧 context の詳細は [`.docs/structure.md`](./structure.md) を参照。
 
 ---
 
@@ -1686,4 +1661,4 @@ jobs:
 
 **バージョン:** 1.0
 **作成日:** 2026-01-03
-**最終更新:** 2026-01-03
+**最終更新:** 2026-06-20（§1 システムアーキテクチャの構成図・Infrastructure 記述を現行 monorepo / Kysely 構成へ更新。#232）
