@@ -49,7 +49,7 @@ export {
   type CleanupExpiredAccountsPort,
 } from "./account/KyselyCleanupExpiredAccountsAdapter";
 
-// admin-account ドメイン（#224。NextAuth カスタム Adapter は #225 で別途）
+// admin-account ドメイン（#224）
 export { KyselyAdminAccountRepository } from "./admin-account/KyselyAdminAccountRepository";
 export {
   KyselyAdminAuditLogQueryService,
@@ -71,6 +71,8 @@ export {
   revokeAdminSessions,
   disableAdminAccountAndRevokeSessions,
 } from "./admin-account/kyselyAdminSession";
+// NextAuth v4 カスタム Adapter（#225）
+export { createAdminKyselyAdapter } from "./admin-account/AdminKyselyAdapter";
 
 // outbox ドメイン（#226。claim を FOR UPDATE SKIP LOCKED 化）
 export { KyselyOutboxDelegate, type OutboxTableName } from "./outbox/KyselyOutboxDelegate";
