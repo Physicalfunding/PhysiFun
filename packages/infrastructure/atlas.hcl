@@ -26,7 +26,7 @@ env "local" {
 
   // Atlas が内部差分計算に使う一時 DB。
   // ローカルに Docker があれば docker:// ドライバが最も手軽（自動起動・破棄）。
-  dev = var.dev_url != "" ? var.dev_url : "docker://postgres/16/dev?search_path=public"
+  dev = var.dev_url != "" ? var.dev_url : "docker://postgres/17/dev?search_path=public"
 
   // 望ましいスキーマ（宣言的ソース）。`atlas schema inspect` で生成・更新する。
   src = "file://atlas/schema.sql"
