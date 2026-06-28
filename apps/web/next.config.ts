@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 import createMDX from "@next/mdx";
-import remarkGfm from "remark-gfm";
 import path from "node:path";
 // `@physifun/ui-shared` の index 経由だと SafeSnsLink.tsx (JSX) を巻き込むため、
 // `next.config.ts` ローダ (Node, JSX 非対応) がビルドに失敗する。
@@ -189,17 +188,11 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // 実験的な機能（将来的に有効化）
   experimental: {
-    // Partial Prerendering（将来的に有効化）
-    // ppr: true,
+    mdxRs: true,
   },
 };
 
-const withMDX = createMDX({
-  options: {
-    remarkPlugins: [remarkGfm],
-  },
-});
+const withMDX = createMDX({});
 
 export default withMDX(nextConfig);
