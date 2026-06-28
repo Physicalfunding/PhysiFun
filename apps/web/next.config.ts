@@ -189,7 +189,8 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
-    mdxRs: true,
+    // Partial Prerendering（将来的に有効化）
+    // ppr: true,
   },
 };
 
