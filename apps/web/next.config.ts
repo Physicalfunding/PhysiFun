@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import createMDX from "@next/mdx";
 import path from "node:path";
 // `@physifun/ui-shared` の index 経由だと SafeSnsLink.tsx (JSX) を巻き込むため、
 // `next.config.ts` ローダ (Node, JSX 非対応) がビルドに失敗する。
@@ -155,7 +154,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  pageExtensions: ["js", "jsx", "ts", "tsx", "mdx"],
+  pageExtensions: ["js", "jsx", "ts", "tsx"],
   // Turbopack / Webpack のワークスペース root を明示する（無関係な親 package.json を避ける）。
   turbopack: {
     root: monorepoRoot,
@@ -194,6 +193,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-const withMDX = createMDX({});
-
-export default withMDX(nextConfig);
+export default nextConfig;
