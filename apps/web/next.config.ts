@@ -154,6 +154,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  pageExtensions: ["js", "jsx", "ts", "tsx"],
   // Turbopack / Webpack のワークスペース root を明示する（無関係な親 package.json を避ける）。
   turbopack: {
     root: monorepoRoot,
@@ -186,7 +187,6 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // 実験的な機能（将来的に有効化）
   experimental: {
     // Partial Prerendering（将来的に有効化）
     // ppr: true,
