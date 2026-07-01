@@ -34,7 +34,7 @@ function createTestProjectDraft(): ProjectDraft {
     projectTitle: "テストプロジェクト",
     projectSummary: "テストプロジェクトの概要",
     projectStory: "テストプロジェクトのストーリー",
-    projectCategory: "COMMUNITY",
+    projectCategory: "EVENT",
     location: location.value,
     activityContent: "テスト活動内容",
     snsLinks: snsLinks.value,

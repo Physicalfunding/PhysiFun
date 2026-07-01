@@ -59,7 +59,7 @@ function createProjectWithStatus(publishStatus: PublishStatus): Project {
     ownerAccountId: createOwnerAccountId(),
     title: "テストプロジェクト",
     coverImageUrl: "https://example.com/cover.jpg",
-    category: "KOMINKA",
+    category: "FOOD",
     location: createTokyoLocation(),
     phase: ProjectPhase.VISION,
     publishStatus,

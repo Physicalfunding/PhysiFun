@@ -20,7 +20,7 @@ function validInput(): Parameters<typeof ProjectDraft.create>[0] {
     projectTitle: "古民家再生プロジェクト",
     projectSummary: "築100年の古民家をコミュニティ拠点として再生する",
     projectStory: "# 想い\n古民家に込められた歴史を次世代に繋ぎたい",
-    projectCategory: "KOMINKA",
+    projectCategory: "FOOD",
     location: validLocation(),
     activityContent: "週末 DIY イベント、解体作業、清掃活動",
     snsLinks: emptySns(),
@@ -206,7 +206,7 @@ describe("ProjectDraft", () => {
       it("CATEGORY_MASTER の値なら OK", () => {
         const result = ProjectDraft.create({
           ...validInput(),
-          projectCategory: "RICE_FARMING",
+          projectCategory: "NATURE",
         });
         expect(result.ok).toBe(true);
       });

@@ -274,11 +274,11 @@ describe("UpdateProjectDraftUseCase", () => {
     const result = await useCase.execute({
       projectId: PROJECT_ID_STR,
       accountId: OWNER_ACCOUNT_ID_STR,
-      category: "KOMINKA",
+      category: "FOOD",
     });
 
     expect(result.ok).toBe(true);
-    expect(port.savedProjects[0].category).toBe("KOMINKA");
+    expect(port.savedProjects[0].category).toBe("FOOD");
   });
 
   // ---- location VO エラー ----

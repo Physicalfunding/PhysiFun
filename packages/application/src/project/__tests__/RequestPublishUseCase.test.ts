@@ -31,7 +31,7 @@ function createFullDraft(ownerAccountId: AccountId, title = "古民家再生プ�
   const project = result.value;
   const updateResult = project.update({
     coverImageUrl: "https://example.com/image.jpg",
-    category: "KOMINKA",
+    category: "FOOD",
     location: validLocation(),
     phase: ProjectPhase.VISION,
     summary: "築100年の古民家を再生する",

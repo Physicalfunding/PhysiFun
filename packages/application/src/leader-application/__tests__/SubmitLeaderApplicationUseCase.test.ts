@@ -106,7 +106,7 @@ function validInput(
     projectTitle: "古民家を再生するプロジェクト",
     projectSummary: "地域の古民家を若者の交流拠点として再生します。",
     projectStory: "過疎化が進む地域の古民家を活用し、若者が集まれる場所を作ります。",
-    projectCategory: "KOMINKA",
+    projectCategory: "FOOD",
     prefectureCode: "26",
     municipality: "京都市",
     snsLinks: {
@@ -191,7 +191,7 @@ describe("SubmitLeaderApplicationUseCase", () => {
     expect(app.accountId).toBe(account.id);
     expect(app.status).toBe("PENDING");
     expect(app.projectTitle).toBe("古民家を再生するプロジェクト");
-    expect(app.projectCategory).toBe("KOMINKA");
+    expect(app.projectCategory).toBe("FOOD");
     expect(app.prefectureCode).toBe("26");
     expect(app.municipality).toBe("京都市");
     expect(app.progress).toBe("PLANNING");
@@ -260,7 +260,7 @@ describe("SubmitLeaderApplicationUseCase", () => {
 
   it("無効なプロジェクトカテゴリの場合はバリデーションエラー", async () => {
     const result = await useCase.execute(
-      validInput({ projectCategory: "INVALID_CATEGORY" as "KOMINKA" })
+      validInput({ projectCategory: "INVALID_CATEGORY" as "FOOD" })
     );
 
     expect(result.ok).toBe(false);

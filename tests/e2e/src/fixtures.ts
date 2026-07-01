@@ -25,7 +25,7 @@ export const TEST_LEADER = {
   projectStory:
     "E2Eテスト用のプロジェクトストーリーです。\nPlaywrightによる自動テストで Phase 1 メインフロー全体を検証します。",
   /** CATEGORY_MASTER のいずれか (packages/domain/src/shared/value-objects/ProjectCategory.ts) */
-  projectCategory: "COMMUNITY",
+  projectCategory: "EVENT",
   /** 東京都 (JIS X 0401 "13") */
   prefectureCode: "13",
   municipality: "千代田区",
@@ -58,7 +58,7 @@ export const TEST_PROJECT = {
   body: "E2Eテストプロジェクト（編集後）の詳細テキストです。\n自動テストで公開申請まで検証します。",
   leaderIntroduction: "E2Eテストのリーダー紹介です。",
   activityPlan: "E2Eテストの活動計画です。毎週末に活動します。",
-  category: "COMMUNITY",
+  category: "EVENT",
   prefectureCode: "13",
   municipality: "千代田区",
 } as const;

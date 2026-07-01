@@ -1,23 +1,19 @@
 /**
  * ProjectCategory
  *
- * プロジェクトのカテゴリ。Phase 1 仮決定の 7 値セット。
- * 次回ミーティングで最終値域を決定する（`プロジェクト.md` 参照）。
+ * プロジェクトのカテゴリ。初版リリース向けに確定した 4 値セット。
  *
  * カテゴリマスターは `CATEGORY_MASTER` に集約し、UI 側の選択肢も
  * この配列から生成する想定（ラベルを編集しやすくするため）。
  *
- * 注: Phase 1 では #57 (LeaderApplication ドメイン) の `ProjectDraft` VO から
- * 参照される。将来 Project ドメイン (#71) 実装時に共有配置を再検討する。
+ * 注: DB には value を文字列で保持する（enum ではない）。値を変更・削除する
+ * 場合は既存レコードの category 値との整合に注意する。
  */
 export const CATEGORY_MASTER = [
-  { value: "KOMINKA", label: "古民家再生" },
-  { value: "RICE_FARMING", label: "米作り" },
-  { value: "FARMING", label: "その他農業" },
-  { value: "DIY", label: "DIY・ものづくり" },
-  { value: "EVENT", label: "地域イベント" },
-  { value: "COMMUNITY", label: "コミュニティ運営" },
-  { value: "OTHER", label: "その他" },
+  { value: "MANUFACTURING", label: "ものづくり・製品開発" },
+  { value: "FOOD", label: "飲食・古民家" },
+  { value: "NATURE", label: "農作業・キャンプ場（自然）" },
+  { value: "EVENT", label: "イベント" },
 ] as const;
 
 export type ProjectCategory = (typeof CATEGORY_MASTER)[number]["value"];

@@ -174,7 +174,7 @@ describe("Kysely account 実装 integration", () => {
           projectTitle: "タイトル",
           projectSummary: "概要",
           projectStory: "ストーリー",
-          projectCategory: "COMMUNITY",
+          projectCategory: "EVENT",
           prefectureCode: "13",
           progress: "PLANNING",
           recruitmentTypes: ["TIME"],

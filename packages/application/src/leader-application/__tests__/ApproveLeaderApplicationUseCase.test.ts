@@ -35,7 +35,7 @@ function createTestProjectDraft(overrides?: { activityContent?: string | null })
     projectSummary: "テストプロジェクトの概要です。これはテスト用のサマリーです。",
     projectStory:
       "テストプロジェクトのストーリーです。これはテスト用のストーリーで、十分な長さが必要です。テストプロジェクトのストーリーです。",
-    projectCategory: "COMMUNITY",
+    projectCategory: "EVENT",
     location: location.value,
     activityContent:
       overrides?.activityContent === undefined
@@ -241,7 +241,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(project.title).toBe("テストプロジェクト");
     expect(project.summary).toBe("テストプロジェクトの概要です。これはテスト用のサマリーです。");
     expect(project.body).toContain("テストプロジェクトのストーリー");
-    expect(project.category).toBe("COMMUNITY");
+    expect(project.category).toBe("EVENT");
     expect(project.location?.prefectureCode).toBe("13");
     expect(project.location?.municipality).toBe("渋谷区");
     expect(project.coverImageUrl).toBeNull();
