@@ -18,7 +18,7 @@ function buildProjectDraft(): ProjectDraft {
     projectTitle: "古民家再生プロジェクト",
     projectSummary: "築100年の古民家を再生する",
     projectStory: "想いと背景",
-    projectCategory: "KOMINKA",
+    projectCategory: "FOOD",
     location: location.value,
     activityContent: "週末イベント",
     snsLinks: sns.value,

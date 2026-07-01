@@ -33,7 +33,7 @@ function createFullDraft(): Project {
   const project = unwrapDraft({ title: "古民家再生プロジェクト" });
   const updateResult = project.update({
     coverImageUrl: "https://example.com/image.jpg",
-    category: "KOMINKA",
+    category: "FOOD",
     location: validLocation(),
     phase: ProjectPhase.VISION,
     summary: "築100年の古民家を再生する",
@@ -116,7 +116,7 @@ describe("Project", () => {
       const result = project.update({
         title: "更新タイトル",
         coverImageUrl: "https://example.com/new.jpg",
-        category: "DIY",
+        category: "MANUFACTURING",
         location: validLocation(),
         phase: ProjectPhase.PLANNING,
         summary: "概要",
@@ -127,7 +127,7 @@ describe("Project", () => {
       });
       expect(result.ok).toBe(true);
       expect(project.title).toBe("更新タイトル");
-      expect(project.category).toBe("DIY");
+      expect(project.category).toBe("MANUFACTURING");
       expect(project.phase).toBe(ProjectPhase.PLANNING);
     });
 
@@ -154,7 +154,7 @@ describe("Project", () => {
 
     it("category null は許容", () => {
       const project = unwrapDraft();
-      project.update({ category: "KOMINKA" });
+      project.update({ category: "FOOD" });
       const result = project.update({ category: null });
       expect(result.ok).toBe(true);
       expect(project.category).toBeNull();
@@ -384,7 +384,7 @@ describe("Project", () => {
         ownerAccountId,
         title: "復元テスト",
         coverImageUrl: "https://example.com/img.jpg",
-        category: "KOMINKA",
+        category: "FOOD",
         location: validLocation(),
         phase: ProjectPhase.EXECUTION,
         publishStatus: PublishStatus.PUBLISHED,
@@ -424,7 +424,7 @@ describe("Project", () => {
         ownerAccountId: AccountId.generate(),
         title: "承認時に作成された Project",
         coverImageUrl: null,
-        category: "COMMUNITY" as const,
+        category: "EVENT" as const,
         location: validLocation(),
         phase: ProjectPhase.PLANNING,
         summary: "応募内容由来のサマリー",

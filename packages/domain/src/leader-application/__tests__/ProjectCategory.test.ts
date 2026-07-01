@@ -6,8 +6,8 @@ import {
 } from "../../shared/value-objects/ProjectCategory";
 
 describe("ProjectCategory", () => {
-  it("CATEGORY_MASTER は 7 値を持つ", () => {
-    expect(CATEGORY_MASTER).toHaveLength(7);
+  it("CATEGORY_MASTER は 4 値を持つ", () => {
+    expect(CATEGORY_MASTER).toHaveLength(4);
   });
 
   it("isProjectCategory は定義済み値に対して true を返す", () => {
@@ -22,7 +22,7 @@ describe("ProjectCategory", () => {
   });
 
   it("型の値域として使える", () => {
-    const c: ProjectCategory = "KOMINKA";
+    const c: ProjectCategory = "FOOD";
     expect(isProjectCategory(c)).toBe(true);
   });
 });

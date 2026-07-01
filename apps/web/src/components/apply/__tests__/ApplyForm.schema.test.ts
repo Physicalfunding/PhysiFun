@@ -22,7 +22,7 @@ function baseValidInput(overrides: RawInput = {}): RawInput {
     projectTitle: "古民家を再生するプロジェクト",
     projectSummary: "地域の古民家を若者の交流拠点として再生します。",
     projectStory: "過疎化が進む地域の古民家を活用し、若者が集まれる場所を作ります。",
-    projectCategory: "KOMINKA",
+    projectCategory: "FOOD",
     progress: "PLANNING",
     recruitmentTypes: ["TIME"],
     activityContent: "月に 2 回のワークショップを開催し、DIY で改修を進めます。",

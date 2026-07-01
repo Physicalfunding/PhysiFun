@@ -61,7 +61,7 @@ function createProjectWithStatus(
     ownerAccountId: createOwnerAccountId(),
     title,
     coverImageUrl: "https://example.com/cover.jpg",
-    category: "KOMINKA",
+    category: "FOOD",
     location: createTokyoLocation(),
     phase: ProjectPhase.VISION,
     publishStatus,
