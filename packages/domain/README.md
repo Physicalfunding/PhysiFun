@@ -22,5 +22,4 @@ PhysiFun のドメイン層。エンティティ・値オブジェクト・リ�
 ## 利用上の注意
 
 - `package.json` の `main` / `types` は `./src/index.ts` を直接指している（Bun ワークスペース前提のソース直参照）
-- そのため **Jest（ts-jest 経由でない場合）や Node.js 直接実行からは import 不可**
-- 将来 Jest から参照する際は `moduleNameMapper` or `transform` で `@physifun/domain` を解決できるよう設定する必要あり
+- そのため Node.js 直接実行からは import 不可（bun / Vitest / Next.js など TypeScript を解決できる実行環境が必要）

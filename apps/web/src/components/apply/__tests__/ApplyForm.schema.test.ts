@@ -6,7 +6,7 @@
  * - experienceOffered の trim 検証（半角スペースのみで弾く）
  * - recruitCount の上限 (LEADER_APPLICATION_LIMITS.recruitCountMax)
  */
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { LEADER_APPLICATION_LIMITS } from "@physifun/domain";
 import { applyFormSchema } from "../ApplyForm";
 

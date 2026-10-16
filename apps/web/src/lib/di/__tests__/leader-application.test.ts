@@ -1,12 +1,10 @@
 /**
- * @jest-environment node
- */
-/**
  * `getLeaderApplicationIpRateLimitPort` の単体テスト (Issue #200)
  *
  * `consumeRateLimit` を呼ぶ薄いアダプタが、レートリミット結果のメタデータを
  * `IpRateLimitExceededError` に正しく載せ替えるかを検証する。
  */
+import { describe, it, expect, beforeEach } from "vitest";
 import { getLeaderApplicationIpRateLimitPort } from "../leader-application";
 import { __resetRateLimitForTests, RATE_LIMIT_CONFIGS } from "../../rateLimit";
 

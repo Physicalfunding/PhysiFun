@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "@jest/globals";
+import { describe, it, expect, beforeEach } from "vitest";
 import { err } from "@physifun/domain";
 import { NoopMailSender } from "../../mail/NoopMailSender";
 import {

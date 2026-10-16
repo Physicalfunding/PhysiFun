@@ -1,6 +1,4 @@
-/**
- * @jest-environment node
- */
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 
 /**
  * /api/cron/process-outbox の認証ロジックに関するテスト (#188 review L1)
@@ -10,12 +8,12 @@
  * - `next/server` の Request 等 Web 標準 API を使用するため node 環境で実行する
  */
 
-// `@/lib/di/outbox` を import すると Kysely（ESM 専用で Jest から読めない）と
+// `@/lib/di/outbox` を import すると Kysely の読み込みと
 // DB 接続の初期化が走るため、テストでは tick だけスタブする。
-const leaderTick = jest.fn();
-const projectTick = jest.fn();
+const leaderTick = vi.fn();
+const projectTick = vi.fn();
 
-jest.mock("@/lib/di/outbox", () => ({
+vi.mock("@/lib/di/outbox", () => ({
   getLeaderApplicationOutboxWorker: () => ({
     tick: leaderTick,
   }),

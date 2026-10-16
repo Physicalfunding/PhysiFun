@@ -93,7 +93,7 @@ flowchart TB
 | ホスティング | Vercel（web / admin は別プロジェクト） | — |
 | ランタイム | Node.js 22 以上 | kysely 0.29 の要件。ルート `package.json` の `engines` と `.nvmrc` で固定。Vercel の web / admin も 22 以上に設定する |
 | パッケージ管理 | Bun（workspaces） | — |
-| テスト | `bun test`（ユニット）/ Vitest + Testcontainers（infra 統合）/ Playwright（E2E） | web はローカルで Jest も利用可 |
+| テスト | Vitest（ユニット / infra 統合は + Testcontainers）/ Playwright（E2E） | ユニットはルートの `vitest.config.ts` で全パッケージをまとめて実行（#253） |
 
 > ⚠️ Supabase Auth は使わない（認証は NextAuth.js に統一）。Supabase SDK は `infrastructure` 層に閉じ込める。
 
@@ -225,7 +225,7 @@ PhysiFun/
 
 `<context>` は `account` / `admin-account` / `leader-application` / `project` / `outbox`（application・infrastructure のみ）。`recruitment` は未作成（#212 で追加予定）。
 
-> 💡 Kysely は ESM 専用のため、Kysely 実装はメイン barrel（`@physifun/infrastructure`）ではなくサブバレル `@physifun/infrastructure/src/kysely` から import する（Jest 隔離のため）。
+> 💡 Kysely 実装はメイン barrel（`@physifun/infrastructure`）ではなくサブバレル `@physifun/infrastructure/src/kysely` から import する（ESM 専用の kysely を Jest から隔離するために始めた分け方。Jest は #253 で撤去済みで、統合は別途対応予定）。
 
 ---
 

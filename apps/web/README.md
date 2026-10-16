@@ -102,9 +102,12 @@ bun run build              # プロダクションビルド
 bun run start              # ビルド済みアプリの起動
 bun run lint               # ESLint
 bun run typecheck          # tsc --noEmit
-bun run test               # Jest（ユニット / コンポーネントテスト）
-bun run test:watch         # Jest ウォッチモード
-bun run test:coverage      # カバレッジ取得
+```
+
+ユニットテストはリポジトリルートの `bun run test`（Vitest）で全パッケージまとめて実行する。web だけ回すなら:
+
+```bash
+bunx vitest run --project web    # リポジトリルートで実行
 ```
 
 ---

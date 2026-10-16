@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, jest } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ok, err, type Result } from "@physifun/domain";
 import {
   OutboxWorkerBase,
@@ -17,7 +17,7 @@ import type { OutboxMessage, OutboxProcessor, OutboxProcessError } from "../type
  */
 
 const mockClaimBatch =
-  jest.fn<
+  vi.fn<
     (params: {
       now: Date;
       claimExpiry: Date;
@@ -25,7 +25,7 @@ const mockClaimBatch =
       batchSize: number;
     }) => Promise<OutboxRow[]>
   >();
-const mockUpdate = jest.fn<(id: string, patch: OutboxUpdate) => Promise<void>>();
+const mockUpdate = vi.fn<(id: string, patch: OutboxUpdate) => Promise<void>>();
 
 const delegate: OutboxDelegate = {
   claimBatch: mockClaimBatch,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { PHONE_NUMBER_MAX_LENGTH, PhoneNumber } from "../value-objects/PhoneNumber";
 
 describe("PhoneNumber", () => {

@@ -1,28 +1,26 @@
 /**
- * @jest-environment node
- */
-/**
  * `apps/web/src/lib/captcha.ts` の単体テスト (Issue #200)
  *
  * fetch をモックして siteverify の各分岐をカバーする。
  */
+import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from "vitest";
 import { createTurnstileCaptchaVerifier } from "../captcha";
 
 describe("createTurnstileCaptchaVerifier", () => {
   const ORIGINAL_ENV = process.env;
-  let fetchSpy: jest.SpyInstance;
+  let fetchSpy: MockInstance;
 
   beforeEach(() => {
     process.env = { ...ORIGINAL_ENV };
-    fetchSpy = jest.spyOn(global, "fetch");
+    fetchSpy = vi.spyOn(global, "fetch");
     // console.* はテスト出力を汚すので黙らせる（呼び出し記録は維持される）
-    jest.spyOn(console, "warn").mockImplementation(() => undefined);
-    jest.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     process.env = ORIGINAL_ENV;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe("TURNSTILE_SECRET_KEY 未設定", () => {

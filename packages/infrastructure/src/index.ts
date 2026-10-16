@@ -1,7 +1,7 @@
 // ==================== メイン barrel ====================
-// DB アクセス（Kysely）を含む実装は ESM 専用パッケージ (kysely) を読み込むため、Jest (CommonJS) を使う
-// apps/web の barrel import から切り離す目的で、メインの index には載せず
-// サブバレル `@physifun/infrastructure/src/kysely` に分離している。
+// DB アクセス（Kysely）を含む実装は、ESM 専用の kysely を当時の Jest (CommonJS) から切り離す目的で
+// メインの index には載せず、サブバレル `@physifun/infrastructure/src/kysely` に分離している
+// （Jest は #253 で撤去済み。統合は別途対応）。
 // ここには DB に依存しない実装と、型・純粋関数だけを置く。
 
 export { isUniqueConstraintError } from "./database/isUniqueConstraintError";

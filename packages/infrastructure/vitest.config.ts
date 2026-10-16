@@ -5,8 +5,8 @@ import { defineConfig } from "vitest/config";
  *
  * 方針:
  * - 実 PostgreSQL に依存する integration test を扱う。Testcontainers を使う場合は Docker、スキーマ適用には Atlas CLI が必要。
- * - `bun test` との衝突を避けるため、テストファイルは `test/**` 配下の `*.vitest.ts` のみを対象にする
- *   (bun test は `*.test.ts` / `*.spec.ts` 系のみを拾うため、拡張子で自然に棲み分けできる)。
+ * - ユニットテスト（ルートの `vitest.config.ts`、`src/**\/*.test.ts`）と分けるため、
+ *   テストファイルは `test/**` 配下の `*.vitest.ts` のみを対象にする。
  * - globalSetup で Testcontainers 上に PostgreSQL を起動し、`atlas migrate apply` を実行したうえで
  *   各テストに DATABASE_URL を注入する。
  */

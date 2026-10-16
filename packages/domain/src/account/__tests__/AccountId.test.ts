@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { AccountId } from "../value-objects/AccountId";
 
 describe("AccountId", () => {

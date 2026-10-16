@@ -2,7 +2,7 @@
  * Toast コンポーネントのテスト
  * ユーザーへのフィードバック表示を検証
  */
-import { describe, expect, it, jest } from "@jest/globals";
+import { describe, expect, it, vi } from "vitest";
 
 // Toast コンポーネントのモック型定義
 type ToastType = "success" | "error" | "warning" | "info";
@@ -30,7 +30,7 @@ describe("Toast", () => {
         message: "成功しました",
         type: "success",
         isVisible: true,
-        onClose: jest.fn(),
+        onClose: vi.fn(),
       });
       expect(toast.isVisible).toBe(true);
     });
@@ -40,7 +40,7 @@ describe("Toast", () => {
         message: "成功しました",
         type: "success",
         isVisible: false,
-        onClose: jest.fn(),
+        onClose: vi.fn(),
       });
       expect(toast.isVisible).toBe(false);
     });
@@ -52,7 +52,7 @@ describe("Toast", () => {
         message: "プロジェクトを公開しました",
         type: "success",
         isVisible: true,
-        onClose: jest.fn(),
+        onClose: vi.fn(),
       });
       expect(toast.type).toBe("success");
       expect(toast.message).toBe("プロジェクトを公開しました");
@@ -63,7 +63,7 @@ describe("Toast", () => {
         message: "保存に失敗しました",
         type: "error",
         isVisible: true,
-        onClose: jest.fn(),
+        onClose: vi.fn(),
       });
       expect(toast.type).toBe("error");
       expect(toast.message).toBe("保存に失敗しました");
@@ -74,7 +74,7 @@ describe("Toast", () => {
         message: "入力内容を確認してください",
         type: "warning",
         isVisible: true,
-        onClose: jest.fn(),
+        onClose: vi.fn(),
       });
       expect(toast.type).toBe("warning");
     });
@@ -84,7 +84,7 @@ describe("Toast", () => {
         message: "データを読み込み中です",
         type: "info",
         isVisible: true,
-        onClose: jest.fn(),
+        onClose: vi.fn(),
       });
       expect(toast.type).toBe("info");
     });
@@ -92,7 +92,7 @@ describe("Toast", () => {
 
   describe("クローズ処理", () => {
     it("onClose コールバックが渡される", () => {
-      const onClose = jest.fn();
+      const onClose = vi.fn();
       const toast = mockToast({
         message: "テスト",
         type: "success",

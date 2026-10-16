@@ -177,10 +177,9 @@ bun run typecheck          # 型チェック（全 workspace）
 bun run format             # Prettier フォーマット
 
 # テスト
-bun run test               # web のユニットテスト
+bun run test               # ユニットテスト（Vitest。全パッケージ）
 bun run test:watch         # ウォッチモード
-bun run test:coverage      # カバレッジ
-bun run test:infra         # infrastructure 層（vitest）
+bun run test:infra         # infrastructure 層の統合テスト（Vitest + Testcontainers）
 bun run test:e2e           # Playwright E2E
 bun run test:e2e:ui        # Playwright UI モード
 

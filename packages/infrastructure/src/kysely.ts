@@ -2,14 +2,12 @@
  * Kysely 実装のサブバレル
  *
  * ## なぜメインの `index.ts` と分けるのか
- * `kysely` は ESM 専用パッケージ（`type: module`、CJS ビルド無し）。一方 apps/web の
- * ユニットテストは Jest (CommonJS) で動き、`next/jest` の `transformIgnorePatterns` は
- * node_modules を変換対象から外す（しかも bun の `.bun/<pkg>@<ver>/` レイアウトのため
- * `transpilePackages` 方式も効かない）。
+ * `kysely` は ESM 専用パッケージ（`type: module`、CJS ビルド無し）で、以前 apps/web のユニットテストに
+ * 使っていた Jest (CommonJS) からは読み込めなかった。そこで Kysely を読み込む実装は、全所から import
+ * されるメイン barrel には載せず、このサブバレルに隔離した。DB にアクセスする DI だけがここを import する。
  *
- * そこで Kysely を読み込む実装は、全所から import されるメイン barrel には載せず、
- * このサブバレルに隔離する。DB にアクセスする DI だけがここを import し、
- * Jest テストから読まれるモジュールは Kysely を一切ロードしない。
+ * テストは #253 で Vitest（ESM 対応）に統一したため隔離はもう不要だが、import 先の変更が多いので
+ * メイン barrel への統合は別途対応する。
  *
  * 利用側:
  *   import { KyselyProjectQueryService } from "@physifun/infrastructure/src/kysely";

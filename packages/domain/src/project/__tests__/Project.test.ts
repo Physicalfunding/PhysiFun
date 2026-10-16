@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { AccountId } from "../../account/value-objects/AccountId";
 import { ProjectLocation } from "../../shared/value-objects/ProjectLocation";
 import { SnsLinks } from "../../shared/value-objects/SnsLinks";

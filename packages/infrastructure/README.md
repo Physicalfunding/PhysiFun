@@ -26,16 +26,16 @@ Kysely 実装は ESM 専用のため、メイン barrel ではなくサブバレ
 ## 利用上の注意
 
 - `package.json` の `main` / `types` は `./src/index.ts` を直接指している（Bun ワークスペース前提のソース直参照）
-- Jest や Node.js 直接実行から import する際は `moduleNameMapper` 等の設定が必要
+- Node.js 直接実行から import する際は TypeScript を解決できる実行環境（bun / Vitest / Next.js など）が必要
 
 ## テスト (Issue #122)
 
 このパッケージは 2 系統のテストを持つ。
 
-### 1. `src/**/__tests__/*.test.ts` (bun test / Jest 互換)
+### 1. `src/**/__tests__/*.test.ts` (Vitest ユニットテスト)
 
 DB に接続しないユニットテスト（Outbox Worker / Mail / Bcrypt / HMAC 等）。
-リポジトリルートの `bun test apps packages` からまとめて実行される。Docker 不要。
+リポジトリルートの `bun run test`（ルートの `vitest.config.ts`）からまとめて実行される。Docker 不要。
 
 ### 2. `test/**/*.vitest.ts` (vitest + Testcontainers)
 
@@ -65,6 +65,6 @@ DB に接続しないユニットテスト（Outbox Worker / Mail / Bcrypt / HMA
 
 ### テストファイル配置ルール
 
-- `src/**/__tests__/*.test.ts` — Jest 互換の純粋なユニットテスト (bun test 対象)
-- `test/**/*.vitest.ts` — vitest + Testcontainers による integration test
-  - bun test は `*.test.ts` / `*.spec.ts` 系のみを拾うため、`*.vitest.ts` 命名で自然に棲み分けできる
+- `src/**/__tests__/*.test.ts` — 純粋なユニットテスト（ルートの `bun run test` 対象）
+- `test/**/*.vitest.ts` — vitest + Testcontainers による integration test（`bun run test:infra` 対象）
+  - ルートの Vitest 設定は `src/**/*.test.ts` だけを拾うため、`*.vitest.ts` 命名で棲み分けている

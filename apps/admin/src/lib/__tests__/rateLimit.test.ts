@@ -4,9 +4,9 @@
  * apps/web/src/lib/__tests__/rateLimit.test.ts と同構造で、
  * admin 特有のアクション (`adminRead` / `adminAction`) の動作を検証する。
  *
- * 実行: `bun test apps/admin/src/lib/__tests__/rateLimit.test.ts`
+ * 実行: `bunx vitest run apps/admin/src/lib/__tests__/rateLimit.test.ts`
  */
-import { describe, test, expect, beforeEach } from "bun:test";
+import { describe, test, expect, beforeEach } from "vitest";
 import {
   consumeAdminRateLimit,
   enforceAdminRateLimit,

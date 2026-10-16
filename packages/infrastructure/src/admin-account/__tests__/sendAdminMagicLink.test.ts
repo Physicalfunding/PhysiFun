@@ -1,4 +1,4 @@
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect } from "vitest";
 import { createSendAdminMagicLink } from "../sendAdminMagicLink";
 import { MAGIC_LINK_SIGNATURE_PARAM, computeMagicLinkSignature } from "../magicLinkHmac";
 import type { MailMessage, MailSender, MailSendError } from "../../mail/types";

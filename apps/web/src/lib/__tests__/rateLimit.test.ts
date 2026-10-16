@@ -1,6 +1,4 @@
-/**
- * @jest-environment node
- */
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   consumeRateLimit,
   enforceRateLimit,

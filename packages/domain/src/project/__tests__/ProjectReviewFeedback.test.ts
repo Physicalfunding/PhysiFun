@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { AccountId } from "../../account/value-objects/AccountId";
 import { ProjectReviewFeedback } from "../entities/ProjectReviewFeedback";
 import { ProjectId } from "../value-objects/ProjectId";

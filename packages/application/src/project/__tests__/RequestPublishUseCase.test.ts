@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "@jest/globals";
+import { describe, it, expect, beforeEach } from "vitest";
 import { AccountId, Project, ProjectLocation, ProjectPhase, SnsLinks } from "@physifun/domain";
 import { RequestPublishUseCase } from "../RequestPublishUseCase";
 import type {
