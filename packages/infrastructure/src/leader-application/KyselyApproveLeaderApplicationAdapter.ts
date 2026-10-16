@@ -7,7 +7,7 @@ import { MaxProjectsReachedError } from "@physifun/application";
 import type { Insertable } from "kysely";
 import { db } from "../database/kysely/client";
 import { parsePgEnumArray } from "../database/kysely/pgArray";
-import type { ProjectsTable, Role } from "../database/kysely/types";
+import type { Json, Projects, Role } from "../database/kysely/types";
 import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
 
 /**
@@ -152,7 +152,8 @@ export class KyselyApproveLeaderApplicationAdapter {
         .values({
           id: params.outboxMessage.id,
           type: params.outboxMessage.type,
-          payload: params.outboxMessage.payload,
+          // Port 上の payload は unknown だが、実体は JSON にできるオブジェクト（pg が jsonb として保存する）
+          payload: params.outboxMessage.payload as Json,
         })
         .execute();
     });
@@ -162,7 +163,7 @@ export class KyselyApproveLeaderApplicationAdapter {
 // ==================== マッピングヘルパー ====================
 
 /** Project 集約 → projects INSERT 値（承認時の初期 Project 作成用） */
-function toProjectInsert(p: Project): Insertable<ProjectsTable> {
+function toProjectInsert(p: Project): Insertable<Projects> {
   return {
     id: p.id.toString(),
     ownerAccountId: p.ownerAccountId.toString(),
@@ -184,8 +185,8 @@ function toProjectInsert(p: Project): Insertable<ProjectsTable> {
   };
 }
 
-/** snsLinks 値オブジェクト → jsonb 格納値（空なら {}、Prisma 版と同一挙動） */
-function serializeSnsLinks(p: Project): Record<string, unknown> {
+/** snsLinks 値オブジェクト → jsonb 格納値（空なら {}。旧 Prisma 版と同一挙動） */
+function serializeSnsLinks(p: Project): Json {
   return p.snsLinks.isEmpty()
     ? {}
     : {

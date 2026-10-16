@@ -10,8 +10,8 @@
  * - `next/server` の Request 等 Web 標準 API を使用するため node 環境で実行する
  */
 
-// `@/lib/di/outbox` を import すると `@physifun/infrastructure` 経由で
-// PrismaClient のコンストラクタが走るため、テストでは tick だけスタブする。
+// `@/lib/di/outbox` を import すると Kysely（ESM 専用で Jest から読めない）と
+// DB 接続の初期化が走るため、テストでは tick だけスタブする。
 const leaderTick = jest.fn();
 const projectTick = jest.fn();
 
@@ -75,7 +75,7 @@ describe("GET /api/cron/process-outbox - auth", () => {
   it("tick 失敗時は 500 で failedTicks にキー名のみ返し、エラーメッセージは含まない", async () => {
     process.env.CRON_SECRET = "test-secret";
     const dbError = new Error(
-      "PrismaClientKnownRequestError: relation 'leader_application_outbox_messages' does not exist"
+      'error: relation "leader_application_outbox_messages" does not exist'
     );
     leaderTick.mockRejectedValue(dbError);
 
@@ -92,7 +92,7 @@ describe("GET /api/cron/process-outbox - auth", () => {
       failedTicks: ["leader-application"],
     });
     // 内部エラーメッセージが漏出していないこと (#187 PR2 review MEDIUM 2)
-    expect(JSON.stringify(body)).not.toContain("Prisma");
+    expect(JSON.stringify(body)).not.toContain("leader_application_outbox_messages");
     expect(JSON.stringify(body)).not.toContain("relation");
   });
 });

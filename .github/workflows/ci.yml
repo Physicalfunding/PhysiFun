@@ -27,8 +27,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Run ESLint
         run: bun run lint
@@ -47,8 +45,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Check Prettier
         run: bun run format:check
@@ -67,8 +63,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Run TypeScript type check
         run: bun run typecheck
@@ -87,8 +81,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Run tests
         # tests/e2e の Playwright spec は bun test が拾わないよう apps/packages のみを対象にする
@@ -112,8 +104,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       # スキーマ適用（atlas migrate apply）に Atlas CLI を使う（#229）。
       # テーブル / enum / インデックスの適用はログイン不要の機能で足りるため cloud-token は渡さない。
@@ -142,8 +132,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
       - name: Build
         run: bun run build

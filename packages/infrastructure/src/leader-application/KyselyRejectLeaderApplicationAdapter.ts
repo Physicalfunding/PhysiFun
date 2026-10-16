@@ -1,6 +1,7 @@
 import type { LeaderApplication, LeaderApplicationRecruitmentType } from "@physifun/domain";
 import { db } from "../database/kysely/client";
 import { parsePgEnumArray } from "../database/kysely/pgArray";
+import type { Json } from "../database/kysely/types";
 import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
 
 /**
@@ -55,7 +56,8 @@ export class KyselyRejectLeaderApplicationAdapter {
         .values({
           id: params.outboxMessage.id,
           type: params.outboxMessage.type,
-          payload: params.outboxMessage.payload,
+          // Port 上の payload は unknown だが、実体は JSON にできるオブジェクト（pg が jsonb として保存する）
+          payload: params.outboxMessage.payload as Json,
         })
         .execute();
     });

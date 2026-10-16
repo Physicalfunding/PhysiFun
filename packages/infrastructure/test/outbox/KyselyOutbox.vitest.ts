@@ -8,6 +8,7 @@ import { KyselyOutboxQueryService } from "../../src/outbox/admin/KyselyOutboxQue
 import { KyselyOutboxCommandAdapter } from "../../src/outbox/admin/KyselyOutboxCommandAdapter";
 import { db } from "../../src/database/kysely/client";
 import { insertRow, resetDatabase } from "../helpers/db";
+import type { Json } from "../../src/database/kysely/types";
 
 /**
  * Kysely 版 Outbox 実装の integration test（#226）
@@ -44,7 +45,7 @@ describe("Kysely Outbox 実装 integration", () => {
     await insertRow("leader_application_outbox_messages", {
       id,
       type: overrides?.type ?? "ACTIVATION_EMAIL",
-      payload: (overrides?.payload ?? { email: "x@example.com" }) as object,
+      payload: (overrides?.payload ?? { email: "x@example.com" }) as Json,
       ...(overrides?.createdAt ? { createdAt: overrides.createdAt } : {}),
       sentAt: overrides?.sentAt ?? null,
       attempts: overrides?.attempts ?? 0,

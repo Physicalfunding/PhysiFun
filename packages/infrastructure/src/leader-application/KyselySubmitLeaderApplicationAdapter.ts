@@ -1,7 +1,7 @@
 import type { LeaderApplicationRecruitmentType, ProjectPhase } from "@physifun/domain";
 import type { Insertable } from "kysely";
 import { db } from "../database/kysely/client";
-import type { AccountsTable, LeaderApplicationsTable, Role } from "../database/kysely/types";
+import type { Accounts, Json, LeaderApplications, Role } from "../database/kysely/types";
 
 /**
  * SubmitLeaderApplicationPort で用いるアカウントの最小表現
@@ -121,7 +121,8 @@ export class KyselySubmitLeaderApplicationAdapter {
         .values({
           id: outboxMessage.id,
           type: outboxMessage.type,
-          payload: outboxMessage.payload,
+          // Port 上の payload は unknown だが、実体は JSON にできるオブジェクト（pg が jsonb として保存する）
+          payload: outboxMessage.payload as Json,
         })
         .execute();
     });
@@ -131,7 +132,7 @@ export class KyselySubmitLeaderApplicationAdapter {
 // ==================== マッピングヘルパー ====================
 
 /** Account 作成パラメータ → accounts INSERT 値 */
-function toAccountInsert(account: CreateAccountParams, now: Date): Insertable<AccountsTable> {
+function toAccountInsert(account: CreateAccountParams, now: Date): Insertable<Accounts> {
   return {
     id: account.id,
     email: account.email,
@@ -150,7 +151,7 @@ function toAccountInsert(account: CreateAccountParams, now: Date): Insertable<Ac
 function toLeaderApplicationInsert(
   app: CreateLeaderApplicationParams,
   now: Date
-): Insertable<LeaderApplicationsTable> {
+): Insertable<LeaderApplications> {
   return {
     id: app.id,
     accountId: app.accountId,

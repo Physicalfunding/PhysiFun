@@ -18,7 +18,6 @@
     "test:watch": "bun --filter @physifun/web test:watch",
     "test:coverage": "bun --filter @physifun/web test:coverage",
     "test:infra": "bun --filter @physifun/infrastructure test",
-    "db:generate": "bun --filter @physifun/infrastructure db:generate",
     "db:migrate:diff": "bun --filter @physifun/infrastructure db:migrate:diff",
     "db:migrate:deploy": "bun --filter @physifun/infrastructure db:migrate:deploy",
     "db:migrate:status": "bun --filter @physifun/infrastructure db:migrate:status",
