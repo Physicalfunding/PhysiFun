@@ -149,6 +149,8 @@ describe("verifyCsrf (admin)", () => {
     Object.defineProperty(process.env, "NODE_ENV", {
       value: origNodeEnv,
       configurable: true,
+      writable: true,
+      enumerable: true,
     });
   });
 
