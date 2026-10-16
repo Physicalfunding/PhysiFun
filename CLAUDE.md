@@ -1,4 +1,4 @@
-# PhysiFun（フィジファン）
+# Physical Founding
 
 ## プロジェクト概要
 
