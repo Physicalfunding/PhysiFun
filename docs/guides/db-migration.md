@@ -3,9 +3,7 @@
 DB アクセスは **Kysely**（SQL ライクな型安全クエリビルダ）、スキーマ / マイグレーション管理は
 **Atlas**（宣言的スキーマ + versioned migration）で行う。Prisma からの移行（Epic #221）の経緯もここに残す。
 
-> ステータス: **クエリ層・スキーマ管理とも移行済み**（#222〜#229）。
-> 残りは Prisma 依存（`prisma` / `@prisma/client` / `schema.prisma`）の削除と、`types.ts` の kysely-codegen 化（#230 後半）。
-> `schema.prisma` は `postinstall` の `prisma generate` のためだけに残っており、**正本ではない**（編集しない）。
+> ステータス: **移行完了**（Epic #221）。Prisma への依存はリポジトリから無くなった。
 
 ---
 
@@ -16,14 +14,14 @@ DB アクセスは **Kysely**（SQL ライクな型安全クエリビルダ）�
 | クエリ / コマンド | **Kysely**（`pg` ドライバ） | `packages/infrastructure/src/**/Kysely*.ts` |
 | スキーマの正本 | **`atlas/schema.sql`**（宣言的ソース） | `packages/infrastructure/atlas/schema.sql` |
 | マイグレーション | **Atlas**（`atlas migrate diff / apply`、versioned） | `packages/infrastructure/atlas/migrations/` |
-| DB 型 | 手書きの `types.ts`（#230 で kysely-codegen 生成物へ一本化予定） | `packages/infrastructure/src/database/kysely/types.ts` |
+| DB 型 | **kysely-codegen** の生成物（手で編集しない） | `packages/infrastructure/src/database/kysely/types.ts` |
 
 ---
 
 ## 2. 移行の経緯（最初に PoC として移行した `project` ドメインの例）
 
 - `src/database/kysely/client.ts` — Kysely シングルトン（`pg` Pool、pgBouncer 互換）。
-- `src/database/kysely/types.ts` — DB 型（**kysely-codegen 出力の手書きスタンドイン**）。
+- `src/database/kysely/types.ts` — DB 型（当時は手書き。#230 で kysely-codegen の生成物に置き換えた）。
 - `src/project/KyselyProjectQueryService.ts` — `PrismaProjectQueryService` と同一 API の drop-in。
 - `src/project/KyselyProjectCommandAdapter.ts` — `PrismaProjectCommandAdapter` と同一 API の drop-in
   （`$transaction` 相当、count→insert の TOCTOU、Outbox 書き込みを含む）。
@@ -61,17 +59,20 @@ E2E（Playwright）は Node の `require(esm)` で Kysely を読み込むため�
 
 ## 4. kysely-codegen（型生成）
 
-`types.ts` は手書きスタンドイン。実 DB から型を生成して照合・更新する:
+`src/database/kysely/types.ts` は、マイグレーション適用済みの DB から **kysely-codegen で生成する**（#230）。手で編集しない。
 
 ```bash
-# DATABASE_URL を対象 DB に向けて実行
-bun run db:kysely:codegen   # → src/database/kysely/types.generated.ts
+cd packages/infrastructure
+bun run db:kysely:codegen   # DATABASE_URL の DB（public スキーマ）から types.ts を生成
+bun run db:kysely:verify    # types.ts が DB と一致しているか確認（CI の E2E ジョブでも実行）
 ```
 
-> 注: kysely-codegen は NULL 許容カラムを `T | null`（INSERT 必須）で出力する。本 PoC の
-> `types.ts` は Prisma の「省略カラム = NULL」挙動に合わせ、NULL 許容かつ DEFAULT 無しの
-> カラムを **INSERT 省略可能**にしている（`Nullable<T>` ヘルパ）。生成物をそのまま採用する
-> 場合は、省略している INSERT 値に明示 `null` を渡すか、生成後に同等の後処理を入れる。
+- `DATABASE_URL` は shell の値、なければ `apps/web/.env.local`（→ `.env`）から読む
+- テーブル型は `Accounts` / `Projects` のようなパスカルケース、enum 型は `Role` / `Accountstatus` のような名前で出力される
+  （Postgres の enum 名を元に生成されるため、大文字小文字が崩れるものがある）
+- NULL 許容カラム（`T | null`）は Kysely の `Insertable` で INSERT 時に省略できる。`id` / `updatedAt` は DB に DEFAULT が無いため必須
+- jsonb カラムは `Json` 型。Port から `unknown` で渡る値（Outbox の `payload` など）を書き込むときは、`as Json` で明示する
+- 生成物は Prettier の対象外（`.prettierignore`）。整形すると `db:kysely:verify` が差分ありと判定するため
 
 ---
 
@@ -126,10 +127,11 @@ bun run db:migrate:diff add_some_column
 bun run db:migrate:lint
 # 4. ローカル DB に適用
 bun run db:migrate:deploy
-# 5. types.ts を更新（#230 後半で kysely-codegen 化予定。それまでは手で合わせる）
+# 5. Kysely の型を再生成する（types.ts も同じコミットに含める）
+bun run db:kysely:codegen
 ```
 
-- `schema.sql` / 生成したマイグレーション / `atlas.sum` は**同じコミットに含める**
+- `schema.sql` / 生成したマイグレーション / `atlas.sum` / `types.ts` は**同じコミットに含める**
 - コミット済みのマイグレーションは書き換えない（直すときは新しいマイグレーションを追加する）
 - `id` と `updatedAt` には DB 側の DEFAULT が無い（アプリ側で値を渡す）。新しいテーブルも同じ方針にそろえる
 
@@ -174,4 +176,4 @@ bun run db:migrate:status
 - [x] Outbox の email ルックアップを Kysely 化し、旧 `Prisma*` 実装・Prisma 版テストヘルパーを削除。統合テスト・E2E・seed も Kysely 化（#230 前半）。
 - [x] `atlas/schema.sql` と baseline を作成し、`prisma migrate` を撤去。テスト・CI のスキーマ適用を Atlas に切り替え（#228 / #229）。
 - [ ] ステージング DB に baseline を記録（5.5 の手順。PR マージ後に 1 回）。
-- [ ] `@prisma/client` / `prisma` / `schema.prisma` / `prisma.config.ts` を削除し、`types.ts` を kysely-codegen 生成物へ一本化（#230 後半）。
+- [x] `@prisma/client` / `prisma` / `schema.prisma` / `prisma.config.ts` を削除し、`types.ts` を kysely-codegen 生成物へ一本化（#230 後半）。

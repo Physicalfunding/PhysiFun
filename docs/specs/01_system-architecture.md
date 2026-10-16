@@ -83,7 +83,7 @@ flowchart TB
 | 認証（web） | NextAuth.js v4 Credentials Provider | JWT セッション、email + password |
 | 認証（admin） | NextAuth.js v4 EmailProvider（Magic Link） | Database セッション（TTL 1h）、`AdminAccount` 独立アグリゲート |
 | DB | PostgreSQL（Supabase） | web / admin で同一インスタンスを共有。`DATABASE_URL` は Transaction Pooler（pgBouncer）の URL |
-| クエリ | Kysely（`pg` ドライバ） | 全リポジトリ・QueryService を Prisma から移行済み |
+| クエリ | Kysely（`pg` ドライバ） | DB 型（`types.ts`）は kysely-codegen で DB から生成 |
 | スキーマ・マイグレーション | Atlas（`atlas/schema.sql` + versioned migration） | 運用手順は `docs/guides/db-migration.md` |
 | ストレージ | Supabase Storage（`project-images`） | 画像アップロードは実装途中（UI 未接続） |
 | メール | Resend | Outbox 経由で送信 |
@@ -181,7 +181,7 @@ flowchart TB
 |---|---|---|
 | `domain` | エンティティ / 値オブジェクト / リポジトリ IF / `Result` 型 | `02_domain-model.md` |
 | `application` | ユースケース（ビジネスロジック）+ ports | — |
-| `infrastructure` | Kysely 実装 / Outbox / メール / Bcrypt / HMAC / Prisma スキーマ・マイグレーション 等 | `03_data-model.md` |
+| `infrastructure` | Kysely 実装 / Outbox / メール / Bcrypt / HMAC / Atlas スキーマ・マイグレーション 等 | `03_data-model.md` |
 | `ui-shared` | 両アプリ共通の UI コンポーネント・設定 | — |
 
 ### 3.3 ディレクトリ構成

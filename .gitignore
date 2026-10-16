@@ -42,7 +42,6 @@ next-env.d.ts
 
 # .kiro
 .kiro/settings/*
-**/src/generated/prisma
 
 # movie
 *.mp4

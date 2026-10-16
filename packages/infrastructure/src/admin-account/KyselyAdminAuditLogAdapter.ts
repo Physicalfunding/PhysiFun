@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../database/kysely/client";
+import type { Json } from "../database/kysely/types";
 
 /**
  * AdminAuditLog 書き込み用パラメータ (#145 / #157 H2)
@@ -39,7 +40,7 @@ export async function writeAdminAuditLog(params: WriteAdminAuditLogParams): Prom
       targetType: params.targetType,
       targetId: params.targetId ?? null,
       // jsonb: オブジェクトは pg が直列化する。null は SQL NULL（読み取りは JS null で等価）。
-      metadata: params.metadata == null ? null : (params.metadata as Record<string, unknown>),
+      metadata: params.metadata == null ? null : (params.metadata as Json),
     })
     .execute();
 }

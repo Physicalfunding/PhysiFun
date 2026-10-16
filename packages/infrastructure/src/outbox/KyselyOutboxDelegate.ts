@@ -1,6 +1,6 @@
 import type { Updateable } from "kysely";
 import { db } from "../database/kysely/client";
-import type { OutboxMessagesTable } from "../database/kysely/types";
+import type { LeaderApplicationOutboxMessages } from "../database/kysely/types";
 import type { OutboxDelegate, OutboxRow, OutboxUpdate } from "./OutboxWorkerBase";
 
 /** Outbox 表名（leader-application / project の 2 ドメインで同一構造） */
@@ -64,7 +64,8 @@ export class KyselyOutboxDelegate implements OutboxDelegate {
   }
 
   async update(id: string, patch: OutboxUpdate): Promise<void> {
-    const set: Updateable<OutboxMessagesTable> = {};
+    // 2 つの Outbox テーブルは同一カラム構成のため、どちらの型でも更新値を表せる
+    const set: Updateable<LeaderApplicationOutboxMessages> = {};
     if (patch.sentAt !== undefined) set.sentAt = patch.sentAt;
     if (patch.attempts !== undefined) set.attempts = patch.attempts;
     if (patch.lastError !== undefined) set.lastError = patch.lastError;

@@ -6,6 +6,9 @@ coverage
 bun.lock
 *.md
 
+# kysely-codegen の生成物（整形すると db:kysely:verify が差分ありと判定するため対象外）
+packages/infrastructure/src/database/kysely/types.ts
+
 # Local-only directories (not tracked by git)
 .claude/worktrees
 tests/e2e/.auth

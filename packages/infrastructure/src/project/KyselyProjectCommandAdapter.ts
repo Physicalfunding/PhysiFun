@@ -9,7 +9,7 @@ import {
 } from "@physifun/application";
 import type { Insertable, Updateable, Transaction } from "kysely";
 import { db } from "../database/kysely/client";
-import type { DB, ProjectsTable, ProjectReviewFeedbacksTable } from "../database/kysely/types";
+import type { DB, Json, ProjectReviewFeedbacks, Projects } from "../database/kysely/types";
 import { reconstructProject } from "./reconstructProject";
 
 // ==================== 型定義（Prisma 版と構造的に一致させる） ====================
@@ -216,7 +216,7 @@ export class KyselyProjectCommandAdapter
 // ==================== マッピングヘルパー ====================
 
 /** Project 集約 → projects INSERT 値（全フィールド） */
-function toProjectInsert(p: Project, accountId: string): Insertable<ProjectsTable> {
+function toProjectInsert(p: Project, accountId: string): Insertable<Projects> {
   return {
     id: p.id.toString(),
     ownerAccountId: accountId,
@@ -238,7 +238,7 @@ function toProjectInsert(p: Project, accountId: string): Insertable<ProjectsTabl
 }
 
 /** Project 集約 → projects UPDATE 値（id/ownerAccountId/createdAt は更新しない） */
-function toProjectUpdate(p: Project): Updateable<ProjectsTable> {
+function toProjectUpdate(p: Project): Updateable<Projects> {
   return {
     title: p.title,
     coverImageUrl: p.coverImageUrl,
@@ -256,8 +256,8 @@ function toProjectUpdate(p: Project): Updateable<ProjectsTable> {
   };
 }
 
-/** snsLinks 値オブジェクト → jsonb 格納値（空なら {}、Prisma 版と同一挙動） */
-function serializeSnsLinks(p: Project): Record<string, unknown> {
+/** snsLinks 値オブジェクト → jsonb 格納値（空なら {}。旧 Prisma 版と同一挙動） */
+function serializeSnsLinks(p: Project): Json {
   return p.snsLinks.isEmpty()
     ? {}
     : {
@@ -268,7 +268,7 @@ function serializeSnsLinks(p: Project): Record<string, unknown> {
       };
 }
 
-function toFeedbackInsert(fb: ProjectReviewFeedback): Insertable<ProjectReviewFeedbacksTable> {
+function toFeedbackInsert(fb: ProjectReviewFeedback): Insertable<ProjectReviewFeedbacks> {
   return {
     id: fb.id.toString(),
     projectId: fb.projectId.toString(),
@@ -298,8 +298,9 @@ function insertProjectOutbox(
   trx: Transaction<DB>,
   message: CreateProjectOutboxMessageParams
 ): Promise<unknown> {
+  // Port 上の payload は unknown だが、実体は JSON にできるオブジェクト（pg が jsonb として保存する）
   return trx
     .insertInto("project_outbox_messages")
-    .values({ id: message.id, type: message.type, payload: message.payload })
+    .values({ id: message.id, type: message.type, payload: message.payload as Json })
     .execute();
 }

@@ -8,7 +8,7 @@ import {
 } from "@physifun/domain";
 import type { Insertable } from "kysely";
 import { db } from "../database/kysely/client";
-import type { AdminAccountsTable } from "../database/kysely/types";
+import type { AdminAccounts } from "../database/kysely/types";
 
 /**
  * AdminAccount 集約の Kysely リポジトリ実装（Prisma 版からの移行 / #224）
@@ -80,7 +80,7 @@ export class KyselyAdminAccountRepository implements AdminAccountRepository {
 // ==================== マッピングヘルパー ====================
 
 /** AdminAccount 集約 → admin_accounts INSERT 値 */
-function toInsert(a: AdminAccount): Insertable<AdminAccountsTable> {
+function toInsert(a: AdminAccount): Insertable<AdminAccounts> {
   return {
     id: a.id.toString(),
     email: a.email.toString(),

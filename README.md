@@ -38,7 +38,7 @@ monorepo（bun workspaces）構成で、以下の 2 つの Next.js アプリと�
 | `apps/admin` | 運営管理アプリ（応募審査 / プロジェクト審査 / 運営メンバー管理） | **3001** | [`apps/admin/README.md`](./apps/admin/README.md) |
 | `packages/domain` | ドメイン層（エンティティ / 値オブジェクト / リポジトリ IF） | ー | ー |
 | `packages/application` | アプリケーション層（ユースケース） | ー | ー |
-| `packages/infrastructure` | インフラ層（Kysely / Prisma スキーマ / Supabase Storage / メール送信 / Outbox） | ー | ー |
+| `packages/infrastructure` | インフラ層（Kysely / Atlas スキーマ・マイグレーション / メール送信 / Outbox） | ー | ー |
 | `packages/ui-shared` | 両アプリで共有する UI コンポーネント | ー | ー |
 
 DB（Supabase PostgreSQL）は web / admin で **同一インスタンスを共有**するが、Cookie / セッション / 環境変数は完全に分離されている（`AdminAccount` は `Account` と独立アグリゲート）。
