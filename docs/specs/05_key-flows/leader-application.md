@@ -182,4 +182,4 @@ API Route の `after()` callback で `Worker.tick()` を呼ぶが、**失敗し�
 
 ### 5.6 Zod スキーマがフィールド制約の SSoT
 
-応募フォームの文字数上限・正規表現は `apps/web/src/components/apply/...` の Zod スキーマと、`packages/domain/src/leader-application/value-objects/ProjectDraft.ts` の値オブジェクト検証、`packages/infrastructure/prisma/schema.prisma` の DB 制約が **3 重に並ぶ**。手動で同期する。
+応募フォームの文字数上限・正規表現は `apps/web/src/components/apply/...` の Zod スキーマと、`packages/domain/src/leader-application/value-objects/ProjectDraft.ts` の値オブジェクト検証、`packages/infrastructure/atlas/schema.sql` の DB 制約が **3 重に並ぶ**。手動で同期する。

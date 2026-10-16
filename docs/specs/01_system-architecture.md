@@ -84,7 +84,7 @@ flowchart TB
 | 認証（admin） | NextAuth.js v4 EmailProvider（Magic Link） | Database セッション（TTL 1h）、`AdminAccount` 独立アグリゲート |
 | DB | PostgreSQL（Supabase） | web / admin で同一インスタンスを共有。`DATABASE_URL` は Transaction Pooler（pgBouncer）の URL |
 | クエリ | Kysely（`pg` ドライバ） | 全リポジトリ・QueryService を Prisma から移行済み |
-| スキーマ・マイグレーション | Prisma（`schema.prisma` / `prisma migrate`） | Atlas へ移行予定（Epic #221、`docs/guides/db-migration.md`） |
+| スキーマ・マイグレーション | Atlas（`atlas/schema.sql` + versioned migration） | 運用手順は `docs/guides/db-migration.md` |
 | ストレージ | Supabase Storage（`project-images`） | 画像アップロードは実装途中（UI 未接続） |
 | メール | Resend | Outbox 経由で送信 |
 | CAPTCHA | Cloudflare Turnstile | リーダー応募フォーム |
@@ -208,8 +208,8 @@ PhysiFun/
 │   │   ├── src/<context>/             # KyselyXxxAdapter / KyselyXxxQueryService など
 │   │   ├── src/database/kysely/       # Kysely クライアント・DB 型
 │   │   ├── src/{outbox,mail,security}/
-│   │   ├── prisma/                    # schema.prisma / migrations / seed（Atlas 移行まで）
-│   │   ├── atlas/                     # Atlas 設定・マイグレーション（baseline 未確立）
+│   │   ├── atlas/                     # スキーマの正本（schema.sql）と versioned migration
+│   │   ├── scripts/                   # seed / Atlas CLI ラッパー
 │   │   └── test/                      # Vitest + Testcontainers の統合テスト
 │   └── ui-shared/src/
 ├── tests/e2e/                   # Playwright
@@ -428,7 +428,7 @@ flowchart TB
 
 **初回リリース → 一般公開の移行**は**ランタイムフィーチャーフラグではなくコード変更リリース**で行う方針（`docs/product.md` 参照）。
 
-> 💡 `SupportRecruitment` / `RecruitmentSchedule` / `SupportTicket` は **schema（`schema.prisma`）のみ存在**し、ドメイン層・UI 実装は無い。詳細は `02_domain-model.md` §8、`03_data-model.md` §3 参照。
+> 💡 `SupportRecruitment` / `RecruitmentSchedule` / `SupportTicket` は **schema（`atlas/schema.sql`）のみ存在**し、ドメイン層・UI 実装は無い。詳細は `02_domain-model.md` §8、`03_data-model.md` §3 参照。
 
 ---
 

@@ -16,7 +16,7 @@ PhysiFun リポジトリのドキュメントの地図。**迷ったらここか
 | [`specs/`](./specs/README.md) | 設計仕様（システム構成・ドメイン・データ・セキュリティ・主要フロー） | 実装前に構造を把握したいとき |
 | [`guides/dev-rule.md`](./guides/dev-rule.md) | 開発フロー・PR ルール・コーディング規約・テスト方針 | 実装・PR を作るとき |
 | [`guides/admin-setup.md`](./guides/admin-setup.md) | 運営アカウント（AdminAccount）のセットアップ・運用手順 | 運営メンバーを追加・無効化するとき |
-| [`guides/db-migration.md`](./guides/db-migration.md) | DB 層移行ガイド（Prisma → Kysely + Atlas）と残作業 | DB スキーマやクエリを触るとき |
+| [`guides/db-migration.md`](./guides/db-migration.md) | DB スキーマ・マイグレーション運用ガイド（Kysely + Atlas）と残作業 | DB スキーマやクエリを触るとき |
 
 ### specs の中身
 
