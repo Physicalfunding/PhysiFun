@@ -7,27 +7,24 @@ import type { OutboxProcessError, OutboxProcessor } from "../../src/outbox/types
 import { KyselyOutboxQueryService } from "../../src/outbox/admin/KyselyOutboxQueryService";
 import { KyselyOutboxCommandAdapter } from "../../src/outbox/admin/KyselyOutboxCommandAdapter";
 import { db } from "../../src/database/kysely/client";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { insertRow, resetDatabase } from "../helpers/db";
 
 /**
  * Kysely 版 Outbox 実装の integration test（#226）
  *
- * - シードは Prisma、検証対象は Kysely（delegate / QueryService / CommandAdapter）。
+ * - シードはテスト用ヘルパー（`helpers/db.ts`）、検証対象は Kysely（delegate / QueryService / CommandAdapter）。
  * - 実 PostgreSQL（Testcontainers）に対して、`FOR UPDATE SKIP LOCKED` の atomic claim・
  *   並行 claim の非二重化・送信/リトライ/dead-letter の round-trip を確認する。
  */
 const TABLE = "leader_application_outbox_messages" as const;
 
 describe("Kysely Outbox 実装 integration", () => {
-  const prisma = getTestPrisma();
-
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
     await db.destroy();
-    await disconnectTestPrisma();
   });
 
   async function seed(overrides?: {
@@ -44,20 +41,18 @@ describe("Kysely Outbox 実装 integration", () => {
     claimedBy?: string | null;
   }): Promise<string> {
     const id = overrides?.id ?? randomUUID();
-    await prisma.leaderApplicationOutboxMessage.create({
-      data: {
-        id,
-        type: overrides?.type ?? "ACTIVATION_EMAIL",
-        payload: (overrides?.payload ?? { email: "x@example.com" }) as object,
-        ...(overrides?.createdAt ? { createdAt: overrides.createdAt } : {}),
-        sentAt: overrides?.sentAt ?? null,
-        attempts: overrides?.attempts ?? 0,
-        lastError: overrides?.lastError ?? null,
-        nextRetryAt: overrides?.nextRetryAt ?? null,
-        deadLetteredAt: overrides?.deadLetteredAt ?? null,
-        claimedAt: overrides?.claimedAt ?? null,
-        claimedBy: overrides?.claimedBy ?? null,
-      },
+    await insertRow("leader_application_outbox_messages", {
+      id,
+      type: overrides?.type ?? "ACTIVATION_EMAIL",
+      payload: (overrides?.payload ?? { email: "x@example.com" }) as object,
+      ...(overrides?.createdAt ? { createdAt: overrides.createdAt } : {}),
+      sentAt: overrides?.sentAt ?? null,
+      attempts: overrides?.attempts ?? 0,
+      lastError: overrides?.lastError ?? null,
+      nextRetryAt: overrides?.nextRetryAt ?? null,
+      deadLetteredAt: overrides?.deadLetteredAt ?? null,
+      claimedAt: overrides?.claimedAt ?? null,
+      claimedBy: overrides?.claimedBy ?? null,
     });
     return id;
   }

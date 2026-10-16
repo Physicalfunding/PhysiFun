@@ -1,42 +1,40 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { PrismaAdminAuditLogQueryService } from "../../src/admin-account/PrismaAdminAuditLogQueryService";
-import { writeAdminAuditLog } from "../../src/admin-account/PrismaAdminAuditLogAdapter";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { KyselyAdminAuditLogQueryService } from "../../src/admin-account/KyselyAdminAuditLogQueryService";
+import { writeAdminAuditLog } from "../../src/admin-account/KyselyAdminAuditLogAdapter";
+import { db, insertRow, resetDatabase } from "../helpers/db";
 
 /**
- * PrismaAdminAuditLogQueryService の integration test (#149)
+ * KyselyAdminAuditLogQueryService の integration test (#149。#230 で Prisma 版から対象を移行)
  *
  * write 側 (`writeAdminAuditLog`, #145 / #157 H2) と組み合わせて、
  * 実 Postgres で fixture を積んだうえでフィルタ挙動を検証する。
  */
-describe("PrismaAdminAuditLogQueryService integration", () => {
-  const prisma = getTestPrisma();
-  const qs = new PrismaAdminAuditLogQueryService();
+describe("KyselyAdminAuditLogQueryService integration", () => {
+  const qs = new KyselyAdminAuditLogQueryService();
 
   beforeAll(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
-    await disconnectTestPrisma();
+    await db.destroy();
   });
 
   /**
    * 2 名の AdminAccount + 3 種類の action を 5 件登録するヘルパー。
-   * createdAt は Prisma の default(now()) に任せるが、僅差だと順序不定になるため
+   * createdAt は DB の DEFAULT now() に任せるが、僅差だと順序不定になるため
    * 明示的に `await` で直列化する (writeAdminAuditLog が順序保証してくれる)。
    */
   async function seedFixture(): Promise<{ aliceId: string; bobId: string }> {
-    const alice = await prisma.adminAccount.create({
-      data: { email: "alice@example.com", status: "ACTIVE" },
+    const alice = await insertRow("admin_accounts", {
+      email: "alice@example.com",
+      status: "ACTIVE",
     });
-    const bob = await prisma.adminAccount.create({
-      data: { email: "bob@example.com", status: "ACTIVE" },
-    });
+    const bob = await insertRow("admin_accounts", { email: "bob@example.com", status: "ACTIVE" });
 
     // 意図的にインターリーブして「新しい順」が効いているかを確認できるようにする
     await writeAdminAuditLog({

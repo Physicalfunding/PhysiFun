@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { PrismaProjectCommandAdapter } from "../../src/project/PrismaProjectCommandAdapter";
-import { PrismaApproveLeaderApplicationAdapter } from "../../src/leader-application/PrismaApproveLeaderApplicationAdapter";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { KyselyProjectCommandAdapter } from "../../src/project/KyselyProjectCommandAdapter";
+import { KyselyApproveLeaderApplicationAdapter } from "../../src/leader-application/KyselyApproveLeaderApplicationAdapter";
+import { db, insertRow, resetDatabase } from "../helpers/db";
 
 /**
  * findAdminReviewerById の integration test (#158 M6)
@@ -14,29 +14,26 @@ import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/p
  * Testcontainers 上の実 Postgres でこの契約を担保する。
  */
 describe("findAdminReviewerById (AdminAccount lookup) integration", () => {
-  const prisma = getTestPrisma();
-  const projectAdapter = new PrismaProjectCommandAdapter();
-  const leaderApplicationAdapter = new PrismaApproveLeaderApplicationAdapter();
+  const projectAdapter = new KyselyProjectCommandAdapter();
+  const leaderApplicationAdapter = new KyselyApproveLeaderApplicationAdapter();
 
   beforeAll(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
-    await disconnectTestPrisma();
+    await db.destroy();
   });
 
-  describe("PrismaProjectCommandAdapter.findAdminReviewerById", () => {
+  describe("KyselyProjectCommandAdapter.findAdminReviewerById", () => {
     it("ACTIVE な AdminAccount は { id, email } を返す", async () => {
-      const admin = await prisma.adminAccount.create({
-        data: {
-          email: "active-admin@example.com",
-          status: "ACTIVE",
-        },
+      const admin = await insertRow("admin_accounts", {
+        email: "active-admin@example.com",
+        status: "ACTIVE",
       });
 
       const result = await projectAdapter.findAdminReviewerById(admin.id);
@@ -45,11 +42,9 @@ describe("findAdminReviewerById (AdminAccount lookup) integration", () => {
     });
 
     it("DISABLED な AdminAccount は null を返す (未存在と区別しない契約)", async () => {
-      const admin = await prisma.adminAccount.create({
-        data: {
-          email: "disabled-admin@example.com",
-          status: "DISABLED",
-        },
+      const admin = await insertRow("admin_accounts", {
+        email: "disabled-admin@example.com",
+        status: "DISABLED",
       });
 
       const result = await projectAdapter.findAdminReviewerById(admin.id);
@@ -67,13 +62,11 @@ describe("findAdminReviewerById (AdminAccount lookup) integration", () => {
     });
   });
 
-  describe("PrismaApproveLeaderApplicationAdapter.findAdminReviewerById", () => {
+  describe("KyselyApproveLeaderApplicationAdapter.findAdminReviewerById", () => {
     it("ACTIVE な AdminAccount は { id, email } を返す", async () => {
-      const admin = await prisma.adminAccount.create({
-        data: {
-          email: "la-active-admin@example.com",
-          status: "ACTIVE",
-        },
+      const admin = await insertRow("admin_accounts", {
+        email: "la-active-admin@example.com",
+        status: "ACTIVE",
       });
 
       const result = await leaderApplicationAdapter.findAdminReviewerById(admin.id);
@@ -82,11 +75,9 @@ describe("findAdminReviewerById (AdminAccount lookup) integration", () => {
     });
 
     it("DISABLED な AdminAccount は null を返す", async () => {
-      const admin = await prisma.adminAccount.create({
-        data: {
-          email: "la-disabled-admin@example.com",
-          status: "DISABLED",
-        },
+      const admin = await insertRow("admin_accounts", {
+        email: "la-disabled-admin@example.com",
+        status: "DISABLED",
       });
 
       const result = await leaderApplicationAdapter.findAdminReviewerById(admin.id);

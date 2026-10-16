@@ -20,29 +20,27 @@ import {
 } from "../../src/admin-account/kyselyAdminSession";
 import { db } from "../../src/database/kysely/client";
 import { isUniqueConstraintError } from "../../src/database/isUniqueConstraintError";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { insertRow, insertRows, resetDatabase } from "../helpers/db";
 
 /**
  * Kysely 版 admin-account 実装の integration test（#224）
  *
- * - シードは Prisma（既存ヘルパー）と Kysely writeAdminAuditLog、検証対象は Kysely 実装。
+ * - シードはテスト用ヘルパー（`helpers/db.ts`）と Kysely writeAdminAuditLog、検証対象は Kysely 実装。
  * - 実 PostgreSQL（Testcontainers）に対して、リポジトリ CRUD / ページネーション・
  *   監査ログのフィルタ + JOIN + distinct・GC / 無効化の batched tx が Prisma 版と同じ結果に
  *   なることを確認する。
  */
 describe("Kysely admin-account 実装 integration", () => {
-  const prisma = getTestPrisma();
   const repo = new KyselyAdminAccountRepository();
   const auditQs = new KyselyAdminAuditLogQueryService();
   const gc = new KyselyAdminAuthGcAdapter();
 
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
     await db.destroy();
-    await disconnectTestPrisma();
   });
 
   function adminId(id: string): AdminAccountId {
@@ -137,14 +135,15 @@ describe("Kysely admin-account 実装 integration", () => {
 
     it("findAll は createdAt desc + id desc tie-breaker でページングし totalCount を返す", async () => {
       const sameInstant = new Date("2026-02-01T00:00:00.000Z");
-      await prisma.adminAccount.createMany({
-        data: Array.from({ length: 6 }, (_, i) => ({
+      await insertRows(
+        "admin_accounts",
+        Array.from({ length: 6 }, (_, i) => ({
           email: `tie-${i}@example.com`,
           status: "ACTIVE" as const,
           createdAt: sameInstant,
           updatedAt: sameInstant,
-        })),
-      });
+        }))
+      );
 
       const page1 = await repo.findAll({ page: 1, perPage: 3 });
       const page2 = await repo.findAll({ page: 2, perPage: 3 });
@@ -170,12 +169,11 @@ describe("Kysely admin-account 実装 integration", () => {
 
   describe("AuditLog（writeAdminAuditLog + QueryService）", () => {
     async function seedFixture(): Promise<void> {
-      const alice = await prisma.adminAccount.create({
-        data: { email: "alice@example.com", status: "ACTIVE" },
+      const alice = await insertRow("admin_accounts", {
+        email: "alice@example.com",
+        status: "ACTIVE",
       });
-      const bob = await prisma.adminAccount.create({
-        data: { email: "bob@example.com", status: "ACTIVE" },
-      });
+      const bob = await insertRow("admin_accounts", { email: "bob@example.com", status: "ACTIVE" });
 
       await writeAdminAuditLog({
         adminAccountId: alice.id,
@@ -284,39 +282,36 @@ describe("Kysely admin-account 実装 integration", () => {
 
   describe("AuthGc.deleteExpired", () => {
     it("期限切れの session / token を両テーブルから削除し、新しい行は残す", async () => {
-      const admin = await prisma.adminAccount.create({
-        data: { email: "gc@example.com", status: "ACTIVE" },
+      const admin = await insertRow("admin_accounts", {
+        email: "gc@example.com",
+        status: "ACTIVE",
       });
       const now = new Date("2026-06-01T00:00:00Z");
 
-      await prisma.adminSession.createMany({
-        data: [
-          {
-            adminAccountId: admin.id,
-            sessionToken: "expired-s",
-            expires: new Date("2026-05-01T00:00:00Z"),
-          },
-          {
-            adminAccountId: admin.id,
-            sessionToken: "fresh-s",
-            expires: new Date("2026-07-01T00:00:00Z"),
-          },
-        ],
-      });
-      await prisma.adminVerificationToken.createMany({
-        data: [
-          {
-            identifier: "a@example.com",
-            token: "expired-t",
-            expires: new Date("2026-05-01T00:00:00Z"),
-          },
-          {
-            identifier: "b@example.com",
-            token: "fresh-t",
-            expires: new Date("2026-07-01T00:00:00Z"),
-          },
-        ],
-      });
+      await insertRows("admin_sessions", [
+        {
+          adminAccountId: admin.id,
+          sessionToken: "expired-s",
+          expires: new Date("2026-05-01T00:00:00Z"),
+        },
+        {
+          adminAccountId: admin.id,
+          sessionToken: "fresh-s",
+          expires: new Date("2026-07-01T00:00:00Z"),
+        },
+      ]);
+      await insertRows("admin_verification_tokens", [
+        {
+          identifier: "a@example.com",
+          token: "expired-t",
+          expires: new Date("2026-05-01T00:00:00Z"),
+        },
+        {
+          identifier: "b@example.com",
+          token: "fresh-t",
+          expires: new Date("2026-07-01T00:00:00Z"),
+        },
+      ]);
 
       const result = await gc.deleteExpired(now);
       expect(result).toEqual({ deletedSessions: 1, deletedVerificationTokens: 1 });
@@ -330,11 +325,13 @@ describe("Kysely admin-account 実装 integration", () => {
 
   describe("lookup（isActiveAdminByEmail / findAdminAccountIdByEmail）", () => {
     it("ACTIVE は true、DISABLED / 未登録 は false。id は status 無視で引ける", async () => {
-      const active = await prisma.adminAccount.create({
-        data: { email: "active@example.com", status: "ACTIVE" },
+      const active = await insertRow("admin_accounts", {
+        email: "active@example.com",
+        status: "ACTIVE",
       });
-      const disabled = await prisma.adminAccount.create({
-        data: { email: "disabled@example.com", status: "DISABLED" },
+      const disabled = await insertRow("admin_accounts", {
+        email: "disabled@example.com",
+        status: "DISABLED",
       });
 
       expect(await isActiveAdminByEmail("Active@Example.com")).toBe(true);
@@ -350,23 +347,22 @@ describe("Kysely admin-account 実装 integration", () => {
 
   describe("session（revokeAdminSessions / disableAdminAccountAndRevokeSessions）", () => {
     it("revokeAdminSessions は対象アカウントの全セッションを削除し件数を返す", async () => {
-      const admin = await prisma.adminAccount.create({
-        data: { email: "revoke@example.com", status: "ACTIVE" },
+      const admin = await insertRow("admin_accounts", {
+        email: "revoke@example.com",
+        status: "ACTIVE",
       });
-      await prisma.adminSession.createMany({
-        data: [
-          {
-            adminAccountId: admin.id,
-            sessionToken: "s1",
-            expires: new Date("2026-12-01T00:00:00Z"),
-          },
-          {
-            adminAccountId: admin.id,
-            sessionToken: "s2",
-            expires: new Date("2026-12-01T00:00:00Z"),
-          },
-        ],
-      });
+      await insertRows("admin_sessions", [
+        {
+          adminAccountId: admin.id,
+          sessionToken: "s1",
+          expires: new Date("2026-12-01T00:00:00Z"),
+        },
+        {
+          adminAccountId: admin.id,
+          sessionToken: "s2",
+          expires: new Date("2026-12-01T00:00:00Z"),
+        },
+      ]);
 
       const count = await revokeAdminSessions(admin.id);
       expect(count).toBe(2);
@@ -380,26 +376,26 @@ describe("Kysely admin-account 実装 integration", () => {
     });
 
     it("disableAdminAccountAndRevokeSessions は DISABLED 化 + セッション全削除を 1 tx で行う", async () => {
-      const operator = await prisma.adminAccount.create({
-        data: { email: "operator@example.com", status: "ACTIVE" },
+      const operator = await insertRow("admin_accounts", {
+        email: "operator@example.com",
+        status: "ACTIVE",
       });
-      const target = await prisma.adminAccount.create({
-        data: { email: "target@example.com", status: "ACTIVE" },
+      const target = await insertRow("admin_accounts", {
+        email: "target@example.com",
+        status: "ACTIVE",
       });
-      await prisma.adminSession.createMany({
-        data: [
-          {
-            adminAccountId: target.id,
-            sessionToken: "t1",
-            expires: new Date("2026-12-01T00:00:00Z"),
-          },
-          {
-            adminAccountId: target.id,
-            sessionToken: "t2",
-            expires: new Date("2026-12-01T00:00:00Z"),
-          },
-        ],
-      });
+      await insertRows("admin_sessions", [
+        {
+          adminAccountId: target.id,
+          sessionToken: "t1",
+          expires: new Date("2026-12-01T00:00:00Z"),
+        },
+        {
+          adminAccountId: target.id,
+          sessionToken: "t2",
+          expires: new Date("2026-12-01T00:00:00Z"),
+        },
+      ]);
 
       const aggregate = await repo.findById(adminId(target.id));
       const disableResult = aggregate!.disable({ operatorId: adminId(operator.id) });

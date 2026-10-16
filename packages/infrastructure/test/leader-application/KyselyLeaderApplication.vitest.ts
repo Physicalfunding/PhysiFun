@@ -8,30 +8,27 @@ import { KyselyApproveLeaderApplicationAdapter } from "../../src/leader-applicat
 import { KyselyRejectLeaderApplicationAdapter } from "../../src/leader-application/KyselyRejectLeaderApplicationAdapter";
 import { reconstructProject } from "../../src/project/reconstructProject";
 import { db } from "../../src/database/kysely/client";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { resetDatabase } from "../helpers/db";
 
 /**
  * Kysely 版 leader-application 実装の integration test（#222）
  *
- * - 検証対象は Kysely 実装。シードは Kysely の Submit アダプタ（書き込みパス自体の検証も兼ねる）と
- *   一部 Prisma ヘルパーで行う。
+ * - 検証対象は Kysely 実装。シードは Kysely の Submit アダプタ（書き込みパス自体の検証も兼ねる）で行う。
  * - 実 PostgreSQL（Testcontainers）に対して、ネイティブ enum 配列（roles / recruitmentTypes）の
  *   読み書き・jsonb（snsLinks）・トランザクション境界が Prisma 版と同じ結果になることを確認する。
  */
 describe("Kysely LeaderApplication 実装 integration", () => {
-  const prisma = getTestPrisma();
   const queryService = new KyselyLeaderApplicationQueryService();
   const submitAdapter = new KyselySubmitLeaderApplicationAdapter();
   const approveAdapter = new KyselyApproveLeaderApplicationAdapter();
   const rejectAdapter = new KyselyRejectLeaderApplicationAdapter();
 
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
     await db.destroy();
-    await disconnectTestPrisma();
   });
 
   type SubmitParams = Parameters<KyselySubmitLeaderApplicationAdapter["executeInTransaction"]>[0];

@@ -1,5 +1,5 @@
-import { prisma } from "@physifun/infrastructure";
 import { ACTIVATION_EMAIL_TYPE } from "@physifun/infrastructure";
+import { db } from "./db";
 
 /**
  * LeaderApplicationOutbox から ACTIVATION_EMAIL メッセージを取得し、
@@ -18,10 +18,12 @@ export async function getActivationToken(email: string, timeoutMs = 10_000): Pro
   // 送信後に Outbox レコードが書き込まれるまで少しラグがあるかもしれないので
   // 短時間リトライする
   while (Date.now() < deadline) {
-    const message = await prisma.leaderApplicationOutboxMessage.findFirst({
-      where: { type: ACTIVATION_EMAIL_TYPE },
-      orderBy: { createdAt: "desc" },
-    });
+    const message = await db
+      .selectFrom("leader_application_outbox_messages")
+      .select("payload")
+      .where("type", "=", ACTIVATION_EMAIL_TYPE)
+      .orderBy("createdAt", "desc")
+      .executeTakeFirst();
 
     if (message) {
       const payload = message.payload as {

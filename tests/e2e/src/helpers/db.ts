@@ -1,33 +1,45 @@
 import { randomUUID } from "node:crypto";
-import { prisma } from "@physifun/infrastructure";
+import { kyselyDb as db } from "@physifun/infrastructure/src/kysely";
 import { TEST_ADMIN } from "../fixtures";
 
 /**
- * 全テーブルを FK 依存順で truncate する。
+ * E2E 用の DB ヘルパー（#230 で Prisma から Kysely へ移行）
  *
- * Phase 1 の全テーブルを deleteMany で空にする。
- * deleteMany は TRUNCATE より遅いが、Prisma の型安全が効き、
- * FK CASCADE を明示的にコントロールできるのでテスト用途では十分。
+ * NOTE: `id` / `updatedAt` は DB 側に DEFAULT が無い（旧 Prisma はクライアント側で埋めていた）ため、
+ * INSERT 時は明示的に渡す。
  */
-export async function truncateAll(): Promise<void> {
+
+/**
+ * 全テーブルを FK 依存順で空にする。
+ *
+ * 一括 TRUNCATE ではなく 1 テーブルずつ DELETE するのは、FK の削除順を明示的に
+ * コントロールするため（テスト用途では速度は十分）。
+ */
+const TABLES_IN_DELETE_ORDER = [
   // FK の子から親の順序で削除する
-  await prisma.supportTicket.deleteMany();
-  await prisma.recruitmentSchedule.deleteMany();
-  await prisma.supportRecruitment.deleteMany();
+  "support_tickets",
+  "recruitment_schedules",
+  "support_recruitments",
   // Project / LeaderApplication は AdminAccount を reviewer として参照する (onDelete: Restrict)
   // ため、AdminAccount 削除より先に消す必要がある。
-  await prisma.projectReviewFeedback.deleteMany();
-  await prisma.projectOutboxMessage.deleteMany();
-  await prisma.project.deleteMany();
-  await prisma.leaderApplicationOutboxMessage.deleteMany();
-  await prisma.leaderApplication.deleteMany();
-  await prisma.account.deleteMany();
+  "project_review_feedbacks",
+  "project_outbox_messages",
+  "projects",
+  "leader_application_outbox_messages",
+  "leader_applications",
+  "accounts",
   // AdminAccount 系は Account から独立 (#140 / #144 / #145)。
   // auditLog は adminAccountId を Restrict 参照しているため adminAccount より先に消す。
-  await prisma.adminAuditLog.deleteMany();
-  await prisma.adminSession.deleteMany();
-  await prisma.adminVerificationToken.deleteMany();
-  await prisma.adminAccount.deleteMany();
+  "admin_audit_logs",
+  "admin_sessions",
+  "admin_verification_tokens",
+  "admin_accounts",
+] as const;
+
+export async function truncateAll(): Promise<void> {
+  for (const table of TABLES_IN_DELETE_ORDER) {
+    await db.deleteFrom(table).execute();
+  }
 }
 
 /**
@@ -41,13 +53,54 @@ export async function seedAdminAccount(): Promise<{
   id: string;
   email: string;
 }> {
-  const admin = await prisma.adminAccount.create({
-    data: {
-      email: TEST_ADMIN.email,
-      status: "ACTIVE",
-    },
-  });
-  return { id: admin.id, email: admin.email };
+  return db
+    .insertInto("admin_accounts")
+    .values({ id: randomUUID(), email: TEST_ADMIN.email, status: "ACTIVE", updatedAt: new Date() })
+    .returning(["id", "email"])
+    .executeTakeFirstOrThrow();
+}
+
+/**
+ * 指定 email の AdminAccount を作成、または既存行の status を更新する（upsert）。
+ *
+ * spec 間で状態を引き継がないよう、各 spec の冒頭で使う。
+ */
+export async function upsertAdminAccount(
+  email: string,
+  status: "ACTIVE" | "DISABLED"
+): Promise<{ id: string }> {
+  const now = new Date();
+  return db
+    .insertInto("admin_accounts")
+    .values({ id: randomUUID(), email, status, updatedAt: now })
+    .onConflict((oc) => oc.column("email").doUpdateSet({ status, updatedAt: now }))
+    .returning("id")
+    .executeTakeFirstOrThrow();
+}
+
+/** 指定 email 宛ての AdminVerificationToken をすべて削除する。 */
+export async function deleteVerificationTokens(email: string): Promise<void> {
+  await db.deleteFrom("admin_verification_tokens").where("identifier", "=", email).execute();
+}
+
+/** 指定 email 宛ての AdminVerificationToken の件数を返す。 */
+export async function countVerificationTokens(email: string): Promise<number> {
+  const row = await db
+    .selectFrom("admin_verification_tokens")
+    .select((eb) => eb.fn.countAll<string>().as("count"))
+    .where("identifier", "=", email)
+    .executeTakeFirstOrThrow();
+  return Number(row.count);
+}
+
+/** 指定 email の AdminAccount に紐づく AdminSession を返す。 */
+export async function findAdminSessionsByEmail(email: string): Promise<{ sessionToken: string }[]> {
+  return db
+    .selectFrom("admin_sessions")
+    .innerJoin("admin_accounts", "admin_accounts.id", "admin_sessions.adminAccountId")
+    .select("admin_sessions.sessionToken")
+    .where("admin_accounts.email", "=", email)
+    .execute();
 }
 
 /**
@@ -66,14 +119,17 @@ export async function seedAdminSession(params: {
 }): Promise<{ sessionToken: string; expires: Date }> {
   const sessionToken = randomUUID();
   const expires = new Date(Date.now() + (params.expiresInMs ?? 60 * 60 * 1000));
-  await prisma.adminSession.create({
-    data: {
+  await db
+    .insertInto("admin_sessions")
+    .values({
+      id: randomUUID(),
       sessionToken,
       adminAccountId: params.adminAccountId,
       expires,
-    },
-  });
+      updatedAt: new Date(),
+    })
+    .execute();
   return { sessionToken, expires };
 }
 
-export { prisma };
+export { db };

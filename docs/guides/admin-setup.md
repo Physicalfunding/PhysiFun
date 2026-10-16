@@ -75,7 +75,7 @@ SEED_ADMIN_EMAIL=admin@your-domain.example
 bun --cwd packages/infrastructure run db:seed
 ```
 
-`packages/infrastructure/prisma/seed.ts` が `SEED_ADMIN_EMAIL` の `AdminAccount` を `ACTIVE` で upsert する。完了後は `SEED_ADMIN_EMAIL` を Vercel から削除して構わない。
+`packages/infrastructure/scripts/seed.ts` が `SEED_ADMIN_EMAIL` の `AdminAccount` を `ACTIVE` で upsert する。完了後は `SEED_ADMIN_EMAIL` を Vercel から削除して構わない。
 
 ### 代替: Supabase Studio から SQL 直接実行
 
