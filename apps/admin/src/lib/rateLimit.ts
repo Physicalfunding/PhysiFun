@@ -1,5 +1,6 @@
 import { createRateLimiter, type RateLimitResult } from "@physifun/infrastructure";
-import { NextResponse } from "next/server";
+import { rateLimitExceededResponse } from "@physifun/server-shared";
+import type { NextResponse } from "next/server";
 
 /**
  * apps/admin 用レート制限 (#145 / #157 H1)
@@ -59,35 +60,6 @@ export function consumeAdminRateLimit(
   return limiter.consume(action, subject, now);
 }
 
-export interface AdminRateLimitErrorBody {
-  success: false;
-  error: {
-    code: "TOO_MANY_REQUESTS";
-    message: string;
-    retryAfter: number;
-  };
-}
-
-export function adminRateLimitExceededResponse(result: AdminRateLimitResult): NextResponse {
-  const body: AdminRateLimitErrorBody = {
-    success: false,
-    error: {
-      code: "TOO_MANY_REQUESTS",
-      message: "リクエストが多すぎます。しばらく時間をおいて再度お試しください。",
-      retryAfter: result.retryAfterSeconds,
-    },
-  };
-  return NextResponse.json(body, {
-    status: 429,
-    headers: {
-      "Retry-After": String(result.retryAfterSeconds),
-      "X-RateLimit-Limit": String(result.limit),
-      "X-RateLimit-Remaining": String(result.remaining),
-      "X-RateLimit-Reset": String(result.reset),
-    },
-  });
-}
-
 /**
  * /api/admin/* 系の Route Handler 用。429 レスポンスを返すか null を返す。
  */
@@ -98,7 +70,7 @@ export async function enforceAdminRateLimit(
 ): Promise<NextResponse | null> {
   const result = await consumeAdminRateLimit(action, subject, now);
   if (!result.ok) {
-    return adminRateLimitExceededResponse(result);
+    return rateLimitExceededResponse(result);
   }
   return null;
 }

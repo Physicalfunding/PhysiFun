@@ -1,5 +1,9 @@
 import { getCurrentUserId } from "@/lib/session";
-import { successResponse, unauthorizedResponse, internalErrorResponse } from "@/lib/api/response";
+import {
+  successResponse,
+  unauthorizedResponse,
+  internalErrorResponse,
+} from "@physifun/server-shared";
 
 /**
  * 応募状況取得 API

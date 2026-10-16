@@ -2,6 +2,7 @@ import {
   LEADER_APPLICATION_RECRUITMENT_TYPE_LABELS,
   LeaderApplicationRecruitmentType,
   PROJECT_PHASE_LABELS,
+  getPrefectureName,
 } from "@physifun/domain";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -11,7 +12,6 @@ import { SafeSnsLink } from "@physifun/ui-shared";
 import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { getCategoryLabel } from "@/lib/category";
 import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
-import { getPrefectureName } from "@/lib/prefecture";
 
 // NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 // ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）

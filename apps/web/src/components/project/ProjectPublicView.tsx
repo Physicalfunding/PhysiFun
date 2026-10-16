@@ -1,14 +1,13 @@
 import Image from "next/image";
 import type { ProjectPublicDetailDTO } from "@physifun/application";
-import type { ProjectPhase } from "@physifun/domain";
+import { PREFECTURE_MASTER, type ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
-import { PREFECTURES } from "@/lib/prefectures";
 import { SafeSnsLink, isAllowedImageUrl } from "@physifun/ui-shared";
 import { ProjectPublicTabs } from "./ProjectPublicTabs";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
-  PREFECTURES.map((p) => [p.code, p.name])
+  PREFECTURE_MASTER.map((p) => [p.code, p.name])
 );
 
 const SNS_LABEL: Record<string, string> = {

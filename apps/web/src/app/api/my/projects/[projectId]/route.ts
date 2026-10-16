@@ -11,7 +11,7 @@ import {
   validationErrorResponse,
   errorResponse,
   internalErrorResponse,
-} from "@/lib/api/response";
+} from "@physifun/server-shared";
 import { projectFormSchema } from "@/lib/validations/projectFormSchema";
 
 /**

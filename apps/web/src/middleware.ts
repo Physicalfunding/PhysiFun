@@ -2,7 +2,7 @@ import { withAuth } from "next-auth/middleware";
 import type { NextRequestWithAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import type { NextFetchEvent, NextRequest } from "next/server";
-import { verifyCsrf } from "@/lib/csrf";
+import { verifyCsrf } from "@physifun/server-shared";
 
 /**
  * Middleware エントリポイント

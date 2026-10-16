@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyCsrf } from "@/lib/csrf";
+import { verifyCsrf } from "@physifun/server-shared";
 
 /**
  * 運営管理アプリ認証ミドルウェア (#145 / #166)

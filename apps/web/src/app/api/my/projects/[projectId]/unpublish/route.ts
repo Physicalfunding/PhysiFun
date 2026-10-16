@@ -10,7 +10,7 @@ import {
   errorResponse,
   validationErrorResponse,
   internalErrorResponse,
-} from "@/lib/api/response";
+} from "@physifun/server-shared";
 
 /**
  * UseCase のエラー型に応じた HTTP レスポンスを返す

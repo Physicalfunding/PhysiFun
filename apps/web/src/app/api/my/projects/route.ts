@@ -11,7 +11,7 @@ import {
   forbiddenResponse,
   errorResponse,
   internalErrorResponse,
-} from "@/lib/api/response";
+} from "@physifun/server-shared";
 
 /**
  * GET /api/my/projects

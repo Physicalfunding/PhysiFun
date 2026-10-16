@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { PublishStatus } from "@physifun/domain";
+import { getPrefectureName, type PublishStatus } from "@physifun/domain";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { getCategoryLabel } from "@/lib/category";
 import { getProjectQueryService } from "@/lib/di/queryServices";
-import { getPrefectureName } from "@/lib/prefecture";
 
 // NOTE: 運営アプリでは Server Component から infrastructure を直接利用する規約（UseCase/Port 不要）
 // ADMIN 認証必須 + 常に最新状態を表示するため force-dynamic を明示（ビルド時の静的生成を無効化）

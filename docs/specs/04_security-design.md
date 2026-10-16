@@ -159,7 +159,7 @@ if (project.ownerAccountId !== input.accountId) {
 | `NEXTAUTH_SECRET` (web) | JWT 署名 / Cookie 暗号化 | admin と**必ず別値** |
 | `NEXTAUTH_SECRET` (admin) | DB セッション暗号化 / Cookie | web と**必ず別値**、`ADMIN_MAGIC_LINK_HMAC_SECRET` とも別値 |
 | `ADMIN_MAGIC_LINK_HMAC_SECRET` | Magic Link URL 署名 | 未設定で起動拒否（fail-closed） |
-| `CRON_SECRET` (web / admin) | Cron エンドポイント認可 | timingSafeEqual で比較 |
+| `CRON_SECRET` (web / admin) | Cron エンドポイント認可 | constant-time で比較（`verifyCronRequest`） |
 | `DATABASE_URL` | Supabase PostgreSQL 接続 | TLS 必須 |
 | `SUPABASE_SERVICE_ROLE_KEY` | Storage 書き込み | サーバ側のみ。NEXT_PUBLIC で漏洩させない |
 | `RESEND_API_KEY` | メール送信 | サーバ側のみ |
@@ -173,8 +173,7 @@ if (project.ownerAccountId !== input.accountId) {
 |---|---|---|
 | パスワード ↔ bcrypt ハッシュ | `BcryptPasswordHasher.ts:33` | `bcrypt.compare` |
 | Magic Link `sig` | `magicLinkHmac.ts:161` | `crypto.timingSafeEqual` |
-| `CRON_SECRET` | `apps/admin/src/app/api/cron/gc-admin-auth/route.ts` | `crypto.timingSafeEqual`（Issue #159 L-2） |
-| `CRON_SECRET` (web) | `apps/web/src/app/api/cron/process-outbox/route.ts:22-34` | `crypto.timingSafeEqual` |
+| `CRON_SECRET` (web / admin の全 cron ルート) | `packages/server-shared/src/cronAuth.ts`（`verifyCronRequest`） | 内容を constant-time で比較（Edge 互換のため自前実装。Issue #159 L-2 / #252）。未設定なら 500 |
 
 > ⚠️ `timingSafeEqual` は **同一長**の Buffer のみで呼べる。長さ不一致は別 reason で先に弾く（`magicLinkHmac.ts:156`）。
 
@@ -215,7 +214,7 @@ flowchart TD
 |---|---|---|
 | **SQL Injection** | Kysely の parameterized query / Zod 入力検証 | なし（標準的） |
 | **XSS** | React の自動エスケープ / CSP `script-src 'self'` + `'unsafe-inline'`（暫定） | `'unsafe-inline'` の暫定許可（Issue #109 follow-up） |
-| **CSRF** | NextAuth の SameSite=lax Cookie / 状態変更は POST/PATCH/DELETE のみ | NextAuth デフォルト依存 |
+| **CSRF** | NextAuth の SameSite=lax Cookie + middleware で状態変更リクエストの `Origin` / `Referer` を検証（`@physifun/server-shared` の `verifyCsrf`、web / admin 共通） | `NEXTAUTH_URL` の設定漏れ時は 403 に倒す（fail-safe） |
 | **Clickjacking** | `X-Frame-Options: DENY` + `frame-ancestors 'none'`（二重化） | なし |
 | **Open Redirect** | NextAuth `callbackUrl` の同一オリジン検証 | NextAuth 依存 |
 | **タイミング攻撃** | `bcrypt.compare` / `timingSafeEqual` / 存在しない email へのダミーハッシュ | URL 長さの差はわずかに残る（許容） |
@@ -229,7 +228,7 @@ flowchart TD
 | **管理者削除による監査喪失** | `onDelete: Restrict` で AdminAccount 物理削除を禁止 + `disable()` で論理削除 | 監査改ざんは AdminAuditLog の append-only 性で対処 |
 | **Outbox 二重送信** | 5 分の claim タイムアウトで再 claim 許容 | 二重送信が起こり得る → 受信側冪等で対処 |
 | **画像アップロードの濫用** | Supabase Storage の認証ポリシー / MIME / サイズ制限 | バケットレベル（`project-images`）で制御 |
-| **CRON エンドポイント濫用** | `CRON_SECRET` Bearer + `timingSafeEqual` | secret 漏洩のみがリスク |
+| **CRON エンドポイント濫用** | `CRON_SECRET` Bearer + constant-time 比較（未設定なら常に拒否） | secret 漏洩のみがリスク |
 | **Open Relay (Magic Link)** | `signIn` callback で AdminAccount 実在検証 + 5/15min/email レート制限 | なし |
 
 ### 6.2 未対処（既知）

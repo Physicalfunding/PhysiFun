@@ -18,7 +18,7 @@ import {
   unauthorizedResponse,
   forbiddenResponse,
   conflictResponse,
-} from "../response";
+} from "../apiResponse";
 
 describe("ApiResponse", () => {
   describe("successResponse", () => {

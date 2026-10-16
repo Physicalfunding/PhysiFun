@@ -5,7 +5,7 @@ import {
   successResponse,
   unauthorizedResponse,
   validationErrorResponse,
-} from "@/lib/api/response";
+} from "@physifun/server-shared";
 import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { logAdminAction } from "@/lib/api/auditLog";
 import { enforceAdminRateLimit } from "@/lib/rateLimit";

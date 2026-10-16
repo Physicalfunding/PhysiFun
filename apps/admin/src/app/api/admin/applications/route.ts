@@ -4,7 +4,7 @@ import {
   unauthorizedResponse,
   validationErrorResponse,
   internalErrorResponse,
-} from "@/lib/api/response";
+} from "@physifun/server-shared";
 import { getLeaderApplicationQueryService } from "@/lib/di/queryServices";
 import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { enforceAdminRateLimit } from "@/lib/rateLimit";

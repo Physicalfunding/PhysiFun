@@ -10,7 +10,6 @@ import { describe, test, expect, beforeEach } from "bun:test";
 import {
   consumeAdminRateLimit,
   enforceAdminRateLimit,
-  adminRateLimitExceededResponse,
   ADMIN_RATE_LIMIT_CONFIGS,
   __resetAdminRateLimitForTests,
 } from "../rateLimit";
@@ -124,34 +123,6 @@ describe("adminRateLimit", () => {
         const result = await consumeAdminRateLimit("adminRead", subject, now + actionConfig.limit);
         expect(result.ok).toBe(true);
         expect(result.remaining).toBe(ADMIN_RATE_LIMIT_CONFIGS.adminRead.limit - 1);
-      });
-    });
-  });
-
-  describe("adminRateLimitExceededResponse", () => {
-    test("429 + Retry-After / X-RateLimit-* ヘッダーを正確な値で返す", async () => {
-      const response = adminRateLimitExceededResponse({
-        ok: false,
-        limit: 120,
-        remaining: 0,
-        retryAfterSeconds: 42,
-        reset: 1_700_000_042,
-      });
-
-      expect(response.status).toBe(429);
-      expect(response.headers.get("Retry-After")).toBe("42");
-      expect(response.headers.get("X-RateLimit-Limit")).toBe("120");
-      expect(response.headers.get("X-RateLimit-Remaining")).toBe("0");
-      expect(response.headers.get("X-RateLimit-Reset")).toBe("1700000042");
-
-      const body = await response.json();
-      expect(body).toEqual({
-        success: false,
-        error: {
-          code: "TOO_MANY_REQUESTS",
-          message: expect.any(String),
-          retryAfter: 42,
-        },
       });
     });
   });

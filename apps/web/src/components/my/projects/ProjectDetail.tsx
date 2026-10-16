@@ -3,17 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type { PublishStatus, ProjectPhase } from "@physifun/domain";
+import { PREFECTURE_MASTER, type PublishStatus, type ProjectPhase } from "@physifun/domain";
 import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { Button, Card, CardContent, LoadingSpinner, ConfirmModal } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
-import { PREFECTURES } from "@/lib/prefectures";
 import { ProjectStatusBadge } from "./ProjectStatusBadge";
 import { PendingReviewBanner } from "./PendingReviewBanner";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
-  PREFECTURES.map((p) => [p.code, p.name])
+  PREFECTURE_MASTER.map((p) => [p.code, p.name])
 );
 
 interface ProjectDetailDTO {

@@ -1,5 +1,6 @@
 import { createRateLimiter, type RateLimitResult } from "@physifun/infrastructure";
-import { NextResponse } from "next/server";
+import { rateLimitExceededResponse } from "@physifun/server-shared";
+import type { NextResponse } from "next/server";
 
 export type { RateLimitResult };
 
@@ -87,42 +88,6 @@ export function consumeRateLimit(
   now: number = Date.now()
 ): Promise<RateLimitResult> {
   return limiter.consume(action, subjectKey, now);
-}
-
-/**
- * 429 レスポンスボディ。
- */
-export interface RateLimitErrorBody {
-  success: false;
-  error: {
-    code: "TOO_MANY_REQUESTS";
-    message: string;
-    retryAfter: number;
-  };
-}
-
-/**
- * レート制限超過時の 429 レスポンスを生成する。
- * `Retry-After` ヘッダーと JSON ボディ両方に秒数を入れる。
- */
-export function rateLimitExceededResponse(result: RateLimitResult): NextResponse {
-  const body: RateLimitErrorBody = {
-    success: false,
-    error: {
-      code: "TOO_MANY_REQUESTS",
-      message: "リクエストが多すぎます。しばらく時間をおいて再度お試しください。",
-      retryAfter: result.retryAfterSeconds,
-    },
-  };
-  return NextResponse.json(body, {
-    status: 429,
-    headers: {
-      "Retry-After": String(result.retryAfterSeconds),
-      "X-RateLimit-Limit": String(result.limit),
-      "X-RateLimit-Remaining": String(result.remaining),
-      "X-RateLimit-Reset": String(result.reset),
-    },
-  });
 }
 
 /**

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "@jest/globals";
-import { ProjectLocation } from "../../shared/value-objects/ProjectLocation";
+import {
+  PREFECTURE_MASTER,
+  ProjectLocation,
+  getPrefectureName,
+} from "../../shared/value-objects/ProjectLocation";
 
 describe("ProjectLocation", () => {
   describe("create", () => {
@@ -140,5 +144,22 @@ describe("ProjectLocation", () => {
       });
       expect(a.ok && b.ok && a.value.equals(b.value)).toBe(true);
     });
+  });
+});
+
+describe("PREFECTURE_MASTER", () => {
+  it("47 都道府県が 01〜47 の順に並び、すべて ProjectLocation として有効", () => {
+    expect(PREFECTURE_MASTER).toHaveLength(47);
+    PREFECTURE_MASTER.forEach((p, i) => {
+      expect(p.code).toBe(String(i + 1).padStart(2, "0"));
+      expect(ProjectLocation.create({ prefectureCode: p.code }).ok).toBe(true);
+    });
+  });
+
+  it("getPrefectureName はコードから名称を返し、未知のコードはそのまま返す", () => {
+    expect(getPrefectureName("01")).toBe("北海道");
+    expect(getPrefectureName("13")).toBe("東京都");
+    expect(getPrefectureName("47")).toBe("沖縄県");
+    expect(getPrefectureName("99")).toBe("99");
   });
 });

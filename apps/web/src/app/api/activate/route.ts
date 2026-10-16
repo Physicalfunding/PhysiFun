@@ -6,7 +6,7 @@ import {
   conflictResponse,
   unprocessableEntityResponse,
   internalErrorResponse,
-} from "@/lib/api/response";
+} from "@physifun/server-shared";
 import { getActivateAccountPort, getPasswordHasher } from "@/lib/di/account";
 
 /**
