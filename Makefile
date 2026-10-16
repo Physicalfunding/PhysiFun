@@ -1,7 +1,7 @@
 # PhysiFun - 開発用Makefile
 # 使用方法: make [コマンド名]
 
-.PHONY: help start stop status db-migrate db-push db-studio db-reset dev build test test-watch test-coverage lint format format-check setup clean env-setup
+.PHONY: help start stop status db-migrate db-status db-reset dev build test test-watch test-coverage lint format format-check setup clean env-setup
 
 # ヘルプ表示
 help:
@@ -13,10 +13,10 @@ help:
 	@echo "  make status      : Supabaseの状態を確認"
 	@echo ""
 	@echo "=== データベース ==="
-	@echo "  make db-migrate  : Prismaマイグレーションを実行"
-	@echo "  make db-push     : スキーマをDBに反映（開発用）"
-	@echo "  make db-studio   : Prisma Studioを起動"
+	@echo "  make db-migrate  : マイグレーションを適用（Atlas）"
+	@echo "  make db-status   : マイグレーションの適用状況を確認"
 	@echo "  make db-reset    : DBをリセット（データ全削除）"
+	@echo "  ※ DB の中身を見るときは Supabase Studio（http://127.0.0.1:54323）を使う"
 	@echo ""
 	@echo "=== 開発 ==="
 	@echo "  make dev         : 開発サーバーを起動"
@@ -57,23 +57,14 @@ status:
 
 # ==================== データベース ====================
 
-# Prismaマイグレーションを実行
+# マイグレーションを適用（Atlas。schema.sql を変えたときの作成は bun run db:migrate:diff <名前>）
 db-migrate:
-	@echo "Prismaマイグレーションを実行中..."
-	bun run db:generate
-	bun run db:migrate
+	@echo "マイグレーションを適用中..."
+	bun run db:migrate:deploy
 
-# スキーマをDBに反映（開発用、マイグレーション履歴なし）
-db-push:
-	@echo "スキーマをDBに反映中..."
-	bun run db:generate
-	bun run db:push
-
-# Prisma Studioを起動
-db-studio:
-	@echo "Prisma Studioを起動中..."
-	@echo "http://localhost:5555 でアクセスできます"
-	bun run db:studio
+# マイグレーションの適用状況を確認
+db-status:
+	bun run db:migrate:status
 
 # DBをリセット（データ全削除）
 db-reset:
@@ -141,20 +132,17 @@ setup:
 	@echo "  PhysiFun 初期セットアップ"
 	@echo "========================================="
 	@echo ""
-	@echo "[1/5] 依存パッケージをインストール中..."
+	@echo "[1/4] 依存パッケージをインストール中..."
 	bun install
 	@echo ""
-	@echo "[2/5] Supabaseを起動中..."
+	@echo "[2/4] Supabaseを起動中..."
 	supabase start
 	@echo ""
-	@echo "[3/5] .envファイルを生成中..."
+	@echo "[3/4] .envファイルを生成中..."
 	@$(MAKE) env-setup
 	@echo ""
-	@echo "[4/5] Prismaクライアントを生成中..."
-	bun run db:generate
-	@echo ""
-	@echo "[5/5] マイグレーションを実行中..."
-	bun run db:migrate
+	@echo "[4/4] マイグレーションを適用中..."
+	bun run db:migrate:deploy
 	@echo ""
 	@echo "========================================="
 	@echo "  ✅ セットアップが完了しました！"

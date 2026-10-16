@@ -115,6 +115,11 @@ jobs:
         env:
           DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
 
+      # スキーマ適用（atlas migrate apply）に Atlas CLI を使う（#229）。
+      # テーブル / enum / インデックスの適用はログイン不要の機能で足りるため cloud-token は渡さない。
+      - name: Setup Atlas
+        uses: ariga/setup-atlas@v0
+
       - name: Run infrastructure integration tests
         run: bun --filter @physifun/infrastructure test
         env:

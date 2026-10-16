@@ -1,3 +1,6 @@
+// ⚠️ このファイルは正本ではない（#229 で Atlas に移行済み。正本は ../atlas/schema.sql）。
+//    postinstall の `prisma generate` のためだけに残置しており、#230 で削除する。編集しないこと。
+//
 // Phase 1 Prisma schema
 // Issue #55 [SP1] 0-3 Prisma schema Phase 1 移行
 //

@@ -1,2 +1,0 @@
-# Atlas が生成する versioned migration を格納するディレクトリ。
-# ブートストラップ手順は docs/guides/db-migration.md を参照。
