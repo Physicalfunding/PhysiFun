@@ -5,12 +5,11 @@ PhysiFun のインフラ層。外部サービス（PostgreSQL / Resend 等）と
 ## スコープ
 
 - `src/<context>/` — Port / リポジトリ IF の実装（`KyselyXxxAdapter` / `KyselyXxxQueryService` など）
-- `src/database/` — Kysely クライアント・DB 型（`kysely/`）
+- `src/database/` — Kysely クライアント・DB 型（`kysely/types.ts` は kysely-codegen の生成物。`bun run db:kysely:codegen` で再生成）
 - `src/outbox/` — Outbox ワーカーとメッセージ種別ごとのプロセッサ
 - `src/mail/` — `MailSender` インターフェースと実装（Resend など）
 - `src/security/` — パスワードハッシュ（bcrypt）
 - `atlas/` — スキーマの正本（`schema.sql`）と versioned migration（`migrations/`）。設定は `atlas.hcl`
-- `prisma/` — `schema.prisma`（`prisma generate` のためだけに残置。正本ではない。#230 で削除予定）
 - `scripts/seed.ts` — 初期 AdminAccount の投入（`bun run db:seed`）
 - `scripts/atlas.ts` — Atlas CLI のラッパー（`apps/web/.env.local` を読み込んで実行。`bun run db:migrate:*` から使う）
 

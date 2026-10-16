@@ -9,7 +9,7 @@ PhysiFun のドメイン層（`packages/domain/`）の構造を、アグリゲ�
 - **揮発度**: 中（機能追加時に同 PR で更新）
 - **関連**:
   - `00_terminology.md` — コード視点の用語集
-  - `03_data-model.md` — Prisma schema → ER 図（DB レベルの詳細）
+  - `03_data-model.md` — `atlas/schema.sql` → ER 図（DB レベルの詳細）
   - `04_security-design.md` — Account / AdminAccount の認証・認可
   - `05_key-flows/` — 状態遷移を起こすユースケースのシーケンス図
 
@@ -87,7 +87,7 @@ classDiagram
 **関係性の特徴:**
 
 - `LeaderApplication` と `Project` の間に **直接の参照は無い**（応募時の `ProjectDraft` は値オブジェクトのスナップショット）。
-- `AdminAccount` から他アグリゲートへの参照は **すべて監査用**。物理削除を防ぐため Prisma 側で `onDelete: Restrict` を設定。
+- `AdminAccount` から他アグリゲートへの参照は **すべて監査用**。物理削除を防ぐため外部キーを `ON DELETE RESTRICT` にしている。
 - すべての即時的な所有関係を除き、参照は **nullable または audit 専用**。
 
 ---
@@ -430,7 +430,7 @@ stateDiagram-v2
 | `LeaderApplication` | `reviewedBy` | 応募審査を行った運営 |
 | `ProjectReviewFeedback` | `reviewerId` | 監査ログの主体（必須） |
 
-> 📌 すべての FK は Prisma 側で `onDelete: Restrict`。AdminAccount を物理削除すると監査履歴が失われるため、運営退職時は `disable()` で論理無効化する。
+> 📌 すべての FK は `ON DELETE RESTRICT`。AdminAccount を物理削除すると監査履歴が失われるため、運営退職時は `disable()` で論理無効化する。
 
 ### 6.8 認証方式
 
@@ -525,7 +525,7 @@ type Result<T, E> =
 
 - 運営の審査履歴は **改ざん不能な監査証跡**として必要
 - Project 本体に最新ステータスのみ持つと、過去の却下理由・強制非公開理由が失われる
-- AdminAccount を `disable()` した後も誰が審査したかを残す必要がある（`onDelete: Restrict`）
+- AdminAccount を `disable()` した後も誰が審査したかを残す必要がある（`ON DELETE RESTRICT`）
 
 ### 9.5 なぜ `Result` 型を使うか
 

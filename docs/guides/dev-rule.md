@@ -145,7 +145,7 @@ const { error } = await supabase.storage.from(bucket).upload(path, file);
 | プロダクト方針・リリース計画の変更 | `docs/product.md` |
 | 技術スタック・インフラ・ディレクトリ構成の変更 | `docs/specs/01_system-architecture.md` |
 | ドメインモデル・状態遷移の変更 | `docs/specs/02_domain-model.md` |
-| DB スキーマの変更 | `atlas/schema.sql` + 生成したマイグレーション、`docs/specs/03_data-model.md` |
+| DB スキーマの変更 | `atlas/schema.sql` + 生成したマイグレーション + 再生成した `types.ts`、`docs/specs/03_data-model.md` |
 | 認証・認可・セキュリティ対策の変更 | `docs/specs/04_security-design.md` |
 | 主要フロー（応募・公開審査・Magic Link・Outbox）の変更 | `docs/specs/05_key-flows/` |
 | 開発フロー・PR ルール・コーディング規約の変更 | `docs/guides/dev-rule.md` |
