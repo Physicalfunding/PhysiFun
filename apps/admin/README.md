@@ -57,9 +57,9 @@ src/app/
 
 設計の詳細は以下を参照:
 
-- [`docs-repository/docs/202604_初回リリースに向けた計画/運営アプリ.md`](../../../docs-repository/docs/202604_初回リリースに向けた計画/運営アプリ.md)
-- [`docs-repository/docs/202604_初回リリースに向けた計画/アカウント.md`](../../../docs-repository/docs/202604_初回リリースに向けた計画/アカウント.md) の「運営アカウント (AdminAccount)」セクション
-- [`.docs/admin-role-setup.md`](../../.docs/admin-role-setup.md)（運用手順）
+- [`docs-repository/docs/mvp/202604_初回リリースに向けた計画/運営アプリ.md`](../../../docs-repository/docs/mvp/202604_初回リリースに向けた計画/運営アプリ.md)
+- [`docs-repository/docs/mvp/202604_初回リリースに向けた計画/アカウント.md`](../../../docs-repository/docs/mvp/202604_初回リリースに向けた計画/アカウント.md) の「運営アカウント (AdminAccount)」セクション
+- [`docs/guides/admin-setup.md`](../../docs/guides/admin-setup.md)（運用手順）
 
 ---
 
@@ -108,7 +108,7 @@ INSERT INTO admin_accounts (id, email, status, "createdAt", "updatedAt")
 VALUES (gen_random_uuid(), 'you@example.com', 'ACTIVE', NOW(), NOW());
 ```
 
-詳細・運用中のメンバー追加 / 無効化 / 緊急 revoke 手順は [`.docs/admin-role-setup.md`](../../.docs/admin-role-setup.md) を参照。
+詳細・運用中のメンバー追加 / 無効化 / 緊急 revoke 手順は [`docs/guides/admin-setup.md`](../../docs/guides/admin-setup.md) を参照。
 
 ### ログイン
 
@@ -248,5 +248,5 @@ curl -H "authorization: Bearer ${CRON_SECRET}" \
 
 - リポジトリルート: [`README.md`](../../README.md)
 - 一般ユーザアプリ: [`apps/web/README.md`](../web/README.md)
-- 運営アカウント運用手順: [`.docs/admin-role-setup.md`](../../.docs/admin-role-setup.md)
-- 設計・要件: [`.docs/`](../../.docs/)
+- 運営アカウント運用手順: [`docs/guides/admin-setup.md`](../../docs/guides/admin-setup.md)
+- ドキュメント全体: [`docs/README.md`](../../docs/README.md)（設計は `docs/specs/`）

@@ -7,6 +7,7 @@
 - **目的**: AI / 人間が「DB 構造とテーブル間の関係」を素早く把握する地図
 - **正本**: `packages/infrastructure/prisma/schema.prisma`。本書はその視覚化。
 - **揮発度**: 中〜高（Prisma スキーマ変更で都度更新）
+- **移行中の注意**: クエリ実装はすでに Kysely に移行済み（型は `packages/infrastructure/src/database/kysely/types.ts`）。スキーマ定義とマイグレーションは Atlas への移行が終わるまで `schema.prisma` が正本（`docs/guides/db-migration.md`、Epic #221）
 - **関連**:
   - `02_domain-model.md` — ドメインアグリゲートとの対応
   - `04_security-design.md` — Restrict 制約の意図、AdminAuditLog の役割
@@ -17,12 +18,12 @@
 
 ## 1. 全体俯瞰
 
-| カテゴリ | モデル | Phase 1 | Phase 2 |
+| カテゴリ | モデル | 初回リリース | 一般公開 |
 |---|---|---|---|
 | ユーザー | `Account` | ✅ | ✅ |
 | 応募 | `LeaderApplication` | ✅ | ✅ |
 | プロジェクト | `Project` / `ProjectReviewFeedback` | ✅ | ✅ |
-| 募集 | `SupportRecruitment` / `RecruitmentSchedule` / `SupportTicket` | ⚠️ schema のみ | 🚧 起動予定 |
+| 募集 | `SupportRecruitment` / `RecruitmentSchedule` / `SupportTicket` | 🚧 リーダー側を実装予定（#212、現状 schema のみ） | 🚧 サポーター申請を追加 |
 | 運営 | `AdminAccount` / `AdminSession` / `AdminAuditLog` / `AdminVerificationToken` | ✅ | ✅ |
 | イベント | `LeaderApplicationOutboxMessage` / `ProjectOutboxMessage` | ✅ | ✅ |
 
@@ -126,7 +127,7 @@ erDiagram
 
 ---
 
-## 3. ER 図（Phase 2 候補：Recruitment）
+## 3. ER 図（未実装：Recruitment）
 
 ```mermaid
 erDiagram
@@ -168,7 +169,7 @@ erDiagram
     Account ||--o{ SupportTicket : "supporter (Restrict)"
 ```
 
-> ⚠️ Phase 1 ではこれらのテーブルは **schema 定義のみ存在**し、ドメイン層・application 層の実装は無い。Phase 2 で起動予定。詳細は `02_domain-model.md` §8 参照。
+> ⚠️ 現時点ではこれらのテーブルは **schema 定義のみ存在**し、ドメイン層・application 層の実装は無い。リーダー側の募集作成は初回リリース（#212）、サポーター申請は一般公開で実装予定。詳細は `02_domain-model.md` §8 参照。
 
 **Recruitment まわりの注意:**
 
@@ -288,7 +289,7 @@ stateDiagram-v2
 | `Role` | `SUPPORTER` / `LEADER` | Account 権限（複数保持可） |
 | `LeaderApplicationStatus` | `PENDING` / `APPROVED` / `REJECTED` | 応募ステータス |
 | `LeaderApplicationRecruitmentType` ⚡ | `TIME` / `SKILL_ITEM` | 応募時の希望募集タイプ（PR3 で新設） |
-| `RecruitmentType` | `ACTIVITY` | SupportRecruitment 種別（Phase 1 は ACTIVITY のみ） |
+| `RecruitmentType` | `ACTIVITY` | SupportRecruitment 種別（初回リリースは ACTIVITY のみ） |
 | `PublishStatus` | `DRAFT` / `PENDING_REVIEW` / `PUBLISHED` | プロジェクト公開状態 |
 | `ProjectPhase` | `VISION` / `PLANNING` / `READY` / `EXECUTION` / `ONGOING` | プロジェクトフェーズ（ラベル） |
 | `ReviewAction` | `APPROVED` / `REJECTED` / `FORCE_UNPUBLISHED` | 公開審査の監査記録 |
@@ -369,7 +370,7 @@ stateDiagram-v2
 
 ### 8.3 Project の検索系
 
-- `(category)` / `(prefectureCode)` — 公開後のフィルタ用（Phase 2 で本格利用）
+- `(category)` / `(prefectureCode)` — 公開後のフィルタ用（一般公開で本格利用）
 - `(publishedAt)` — 新着並び替え用
 - `(ownerAccountId)` / `(status)` — マイページ・運営ダッシュボード用
 
@@ -387,9 +388,9 @@ stateDiagram-v2
 | `AdminSession` | （ドメイン層なし） | NextAuth 管理 |
 | `AdminVerificationToken` | （ドメイン層なし） | NextAuth 管理 |
 | `AdminAuditLog` | （ドメイン層なし） | 運営アプリで直接書き込み |
-| `SupportRecruitment` | （ドメイン層なし） | ⚠️ Phase 2 候補 |
-| `RecruitmentSchedule` | （ドメイン層なし） | ⚠️ Phase 2 候補 |
-| `SupportTicket` | （ドメイン層なし） | ⚠️ Phase 2 候補 |
+| `SupportRecruitment` | （ドメイン層なし） | ⚠️ 未実装（#212） |
+| `RecruitmentSchedule` | （ドメイン層なし） | ⚠️ 未実装（#212） |
+| `SupportTicket` | （ドメイン層なし） | ⚠️ 未実装（#212） |
 | `LeaderApplicationOutboxMessage` | （infra 層） | Outbox パターン |
 | `ProjectOutboxMessage` | （infra 層） | Outbox パターン |
 
@@ -419,3 +420,4 @@ stateDiagram-v2
 | 日付 | 改訂内容 | 担当 |
 |---|---|---|
 | 2026-05-09 | 初稿作成（PR #201 後の状態を反映、14 モデル / 10 enum を整理） | 設計チーム |
+| 2026-10-16 | ドキュメント棚卸し：Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一、サポート募集の位置づけ（初回リリースでリーダー側を実装予定）を修正 | 設計チーム |

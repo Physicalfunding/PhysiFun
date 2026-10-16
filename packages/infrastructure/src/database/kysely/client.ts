@@ -9,7 +9,7 @@ import type { DB } from "./types";
  * 接続プールが多重生成されないよう globalThis にキャッシュする。
  *
  * ## Supabase Transaction Pooler（pgBouncer）互換について
- * - `DATABASE_URL` は Transaction Pooler URL を想定（`.docs/tech.md`）。
+ * - `DATABASE_URL` は Transaction Pooler URL を想定（`docs/specs/01_system-architecture.md`）。
  * - node-postgres は既定で **名前付き prepared statement を使わない**（unnamed
  *   extended protocol）。pgBouncer の transaction pooling と互換のため、Prisma の
  *   ような特別な設定（`pgbouncer=true`）は不要。

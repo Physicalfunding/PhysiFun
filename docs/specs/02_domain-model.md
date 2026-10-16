@@ -20,10 +20,10 @@ PhysiFun のドメイン層（`packages/domain/`）の構造を、アグリゲ�
 | Bounded Context | 役割 | 実装状況 |
 |---|---|---|
 | `account` | 一般ユーザのアカウント（Supporter / Leader） | ⚠️ 最小実装（後述） |
-| `admin-account` | 運営アカウント（独立アグリゲート、Magic Link 認証） | ✅ Phase 1 実装済み |
-| `leader-application` | リーダー応募と運営審査 | ✅ Phase 1 実装済み |
-| `project` | プロジェクト本体（CRUD・公開審査・運営強制非公開） | ✅ Phase 1 実装済み |
-| `recruitment` | サポート募集（時間/スキル）+ サポーター申請 | ⚠️ Phase 2（Prisma schema のみ、ドメイン層未実装） |
+| `admin-account` | 運営アカウント（独立アグリゲート、Magic Link 認証） | ✅ 実装済み |
+| `leader-application` | リーダー応募と運営審査 | ✅ 実装済み |
+| `project` | プロジェクト本体（CRUD・公開審査・運営強制非公開） | ✅ 実装済み |
+| `recruitment` | サポート募集（時間/スキル）+ サポーター申請 | ⚠️ 未実装（schema のみ。リーダー側の募集作成は初回リリース #212、サポーター申請は一般公開） |
 
 > 💡 `account` と `admin-account` は **完全に独立したアグリゲート**。Cookie・セッション・Vercel プロジェクトも分離（`apps/web` ↔ `apps/admin`）。詳細は `04_security-design.md` 参照。
 
@@ -335,7 +335,7 @@ stateDiagram-v2
 
 **ライフサイクルとロール管理は application 層**（`packages/application/src/account/`）と **NextAuth.js** に委譲している。理由:
 
-- Phase 1 では「応募 → アクティベート → ログイン」しか必要なく、ドメインロジックが薄い
+- 初回リリースでは「応募 → アクティベート → ログイン」しか必要なく、ドメインロジックが薄い
 - パスワードハッシュ・セッション管理は NextAuth.js が抽象化済み
 - 過剰な抽象化を避ける（`CLAUDE.md` の原則）
 
@@ -351,7 +351,7 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING_EMAIL_CONFIRMATION : 応募フォーム送信 / signup（Phase 2）
+    [*] --> PENDING_EMAIL_CONFIRMATION : 応募フォーム送信 / signup（一般公開）
     PENDING_EMAIL_CONFIRMATION --> ACTIVE : ActivateAccountUseCase（パスワード設定）
     PENDING_EMAIL_CONFIRMATION --> [*] : CleanupExpiredPendingAccounts（72h 経過で自動削除）
     ACTIVE --> ACTIVE : ログイン / プロフィール更新
@@ -366,7 +366,7 @@ stateDiagram-v2
 
 ### 5.5 ロール拡張：LEADER 付与
 
-`LeaderApplication.approve()` の成功後、`ApproveLeaderApplicationUseCase` で対象 Account に `LEADER` ロールを追加する。具体的な書き込みは Prisma リポジトリ実装側で行う（ドメインに Account ルートエンティティが無いため）。
+`LeaderApplication.approve()` の成功後、`ApproveLeaderApplicationUseCase` で対象 Account に `LEADER` ロールを追加する。具体的な書き込みは infrastructure の `KyselyApproveLeaderApplicationAdapter` 側で行う（ドメインに Account ルートエンティティが無いため）。
 
 > 📌 将来的に Account ライフサイクルが複雑化したら、ドメインアグリゲート化を検討する余地あり（現状は不要）。
 
@@ -473,7 +473,7 @@ type Result<T, E> =
 
 ---
 
-## 8. Phase 2 候補：Recruitment
+## 8. 未実装：Recruitment（初回リリースで着手予定）
 
 ### 8.1 現状
 
@@ -482,9 +482,9 @@ type Result<T, E> =
   - `RecruitmentSchedule`
   - `SupportTicket`
 - **ドメイン層・application 層の実装は無い**
-- schema コメント: 「Phase 1 はリーダー側の作成 UI まで実装、サポーター側の申請は Phase 2」
+- schema コメント: 「初回リリースはリーダー側の作成 UI まで実装、サポーター側の申請は一般公開」
 
-### 8.2 Phase 2 移行時の留意点
+### 8.2 実装着手時の留意点
 
 - **新規バウンデッドコンテキスト** `recruitment` を `packages/domain/src/recruitment/` に作成
 - アグリゲート境界の候補:
@@ -539,5 +539,6 @@ type Result<T, E> =
 
 | 日付 | 改訂内容 | 担当 |
 |---|---|---|
-| 2026-05-09 | 初稿作成（Phase 1 実装時点のドメイン層を整理） | 設計チーム |
+| 2026-05-09 | 初稿作成（初回リリース実装時点のドメイン層を整理） | 設計チーム |
 | 2026-05-09 | PR #199-#201 のドリフト反映：ProjectDraft 拡張 / 承認時の初期 Project 自動生成 / captcha・rate limit ports | 設計チーム |
+| 2026-10-16 | ドキュメント棚卸し：Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一、サポート募集の位置づけ（初回リリースでリーダー側を実装予定）を修正 | 設計チーム |

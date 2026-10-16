@@ -2,10 +2,10 @@
 // Issue #55 [SP1] 0-3 Prisma schema Phase 1 移行
 //
 // 参照:
-//   - docs-repository/docs/202604_初回リリースに向けた計画/アカウント.md
-//   - docs-repository/docs/202604_初回リリースに向けた計画/プロジェクト.md
-//   - docs-repository/docs/202604_初回リリースに向けた計画/サポート募集.md
-//   - docs-repository/docs/202604_初回リリースに向けた計画/Phase1_ドメイン移行マップ.md
+//   - docs-repository/docs/mvp/202604_初回リリースに向けた計画/アカウント.md
+//   - docs-repository/docs/mvp/202604_初回リリースに向けた計画/プロジェクト.md
+//   - docs-repository/docs/mvp/202604_初回リリースに向けた計画/サポート募集.md
+//   - docs-repository/docs/_archive/Phase1_ドメイン移行マップ.md
 
 generator client {
   provider = "prisma-client-js"

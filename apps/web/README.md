@@ -9,7 +9,7 @@ PhysiFun の一般ユーザ（リーダー / サポーター）向けの Next.js
 
 ## 役割
 
-- LP（リーダー募集 / Phase 2 でサポーター向けにも拡張）
+- LP（リーダー募集 / 一般公開時にサポーター向けにも拡張）
 - リーダー応募フォーム（`/apply`）
 - アクティベーション（`/activate`）
 - マイページ（`/my`）
@@ -77,9 +77,13 @@ cp apps/web/.env.example apps/web/.env.local
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Publishable キー | `supabase status` の "Publishable key" |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Secret キー（サーバ専用） | `supabase status` の "Secret key" |
 | `SUPABASE_STORAGE_BUCKET` | プロジェクト画像用バケット名 | `project-images`（既定） |
-| `ADMIN_EMAIL_LIST` | 運営宛通知（Phase 1 用） | カンマ区切り email |
+| `ADMIN_EMAIL_LIST` | 運営宛通知メールの宛先（公開申請の通知など、先頭 1 件を使用） | カンマ区切り email |
 | `RESEND_API_KEY` | アクティベーションメール等の送信 | Resend で発行した API キー |
-| `NEXT_PUBLIC_RELEASE_PHASE` | フェーズ管理（`1` / `2`） | `1` |
+| `APP_URL` | メール本文のリンクに使う web の origin（末尾スラッシュなし） | `http://localhost:3000` |
+| `MAIL_FROM` | 送信元アドレス | `noreply@physifun.com`（既定） |
+| `CRON_SECRET` | Vercel Cron の `Authorization: Bearer` 検証 | `openssl rand -base64 32` |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile のサーバー側シークレット | development では未設定でも通る（本番は必須、`.env.example` 参照） |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile のサイトキー | 同上 |
 
 `NEXTAUTH_URL` の表記ルール（末尾スラッシュ禁止 / デフォルトポート明示禁止 など）は `.env.example` のコメントを参照。
 
@@ -109,7 +113,7 @@ bun run test:coverage      # カバレッジ取得
 - 一般ユーザのログインは NextAuth.js v4 の Credentials Provider（email + password）
 - アカウント発行はリーダー応募フォーム送信時に自動（`PENDING_EMAIL_CONFIRMATION` 状態）
 - メール内リンクから `/activate?token=...` でパスワード設定 → `ACTIVE` 遷移
-- 詳細な状態遷移・ユースケースは `docs-repository/docs/202604_初回リリースに向けた計画/アカウント.md` を参照
+- 詳細な状態遷移・ユースケースは `docs-repository/docs/mvp/202604_初回リリースに向けた計画/アカウント.md` を参照
 
 > 運営権限は本アプリには存在しない（`Account.roles` は `SUPPORTER` / `LEADER` のみ）。運営機能は `apps/admin` を利用すること。
 
@@ -124,6 +128,6 @@ Vercel プロジェクト（`apps/web`）。詳細は別途インフラドキュ
 ## 関連ドキュメント
 
 - リポジトリルート: [`README.md`](../../README.md)
-- 設計・要件: [`.docs/`](../../.docs/)
+- ドキュメント全体: [`docs/README.md`](../../docs/README.md)（設計は `docs/specs/`）
 - 運営アプリ: [`apps/admin/README.md`](../admin/README.md)
-- アカウント設計: `docs-repository/docs/202604_初回リリースに向けた計画/アカウント.md`
+- アカウント設計: `docs-repository/docs/mvp/202604_初回リリースに向けた計画/アカウント.md`

@@ -1,11 +1,11 @@
-# Campfire Experience - 開発用Makefile
+# PhysiFun - 開発用Makefile
 # 使用方法: make [コマンド名]
 
 .PHONY: help start stop status db-migrate db-push db-studio db-reset dev build test test-watch test-coverage lint format format-check setup clean env-setup
 
 # ヘルプ表示
 help:
-	@echo "Campfire Experience - 開発コマンド一覧"
+	@echo "PhysiFun - 開発コマンド一覧"
 	@echo ""
 	@echo "=== Supabase（ローカル環境） ==="
 	@echo "  make start       : Supabaseローカル環境を起動"
@@ -138,7 +138,7 @@ env-setup:
 # 初期セットアップ（全手順）
 setup:
 	@echo "========================================="
-	@echo "  Campfire Experience 初期セットアップ"
+	@echo "  PhysiFun 初期セットアップ"
 	@echo "========================================="
 	@echo ""
 	@echo "[1/5] 依存パッケージをインストール中..."

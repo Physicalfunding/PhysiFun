@@ -12,21 +12,19 @@
 | フレームワーク | Next.js 16 (App Router) / React 19 / TypeScript 5 |
 | スタイリング | Tailwind CSS 4 |
 | 認証 | NextAuth.js v4 |
-| DB | PostgreSQL (Supabase) + Prisma ORM |
+| DB | PostgreSQL (Supabase) + Kysely（スキーマ・マイグレーションは当面 Prisma、Atlas へ移行予定） |
 | ストレージ | Supabase Storage |
 | ホスティング | Vercel |
 | パッケージマネージャ | Bun |
 
-## フェーズ別リリース計画
+## リリース計画
 
-当初は 3 フェーズ構成だったが、リーダー募集とリーダー機能を統合して 2 フェーズに再編した。
-
-| Phase | 内容 | 状態 |
+| 段階 | 内容 | 状態 |
 |---|---|---|
-| Phase 1 | リーダー募集 + リーダー機能（LP + 応募フォーム / 運営によるアカウント発行 / プロジェクト作成・編集 / サポート募集準備） | 開発中 |
-| Phase 2 | 一般公開（サポーター自由登録 / プロジェクト閲覧 / サポート申請） | 未着手 |
+| 初回リリース | リーダー向け（募集 LP + 応募フォーム / 運営審査 / プロジェクト作成・編集・公開審査 / サポート募集の準備） | 開発中 |
+| 一般公開 | サポーター向け（自由登録 / プロジェクト閲覧 / サポート申請） | 未着手 |
 
-Phase 移行はランタイムのフィーチャーフラグではなく、**コード変更リリース**で行います（Phase 2 リリース PR の中で Phase 1 専用コードを削除する方針）。詳細は `.docs/product.md` を参照。
+段階の移行はランタイムのフィーチャーフラグではなく、**コード変更リリース**で行います。詳細と実装状況は [`docs/product.md`](./docs/product.md) を参照。
 
 ---
 
@@ -40,7 +38,7 @@ monorepo（bun workspaces）構成で、以下の 2 つの Next.js アプリと�
 | `apps/admin` | 運営管理アプリ（応募審査 / プロジェクト審査 / 運営メンバー管理） | **3001** | [`apps/admin/README.md`](./apps/admin/README.md) |
 | `packages/domain` | ドメイン層（エンティティ / 値オブジェクト / リポジトリ IF） | ー | ー |
 | `packages/application` | アプリケーション層（ユースケース） | ー | ー |
-| `packages/infrastructure` | インフラ層（Prisma / Supabase Storage / メール送信 / Outbox） | ー | ー |
+| `packages/infrastructure` | インフラ層（Kysely / Prisma スキーマ / Supabase Storage / メール送信 / Outbox） | ー | ー |
 | `packages/ui-shared` | 両アプリで共有する UI コンポーネント | ー | ー |
 
 DB（Supabase PostgreSQL）は web / admin で **同一インスタンスを共有**するが、Cookie / セッション / 環境変数は完全に分離されている（`AdminAccount` は `Account` と独立アグリゲート）。
@@ -100,7 +98,7 @@ cp apps/admin/.env.example apps/admin/.env.local
 
 ### 4. データベースのマイグレーション
 
-Prisma スキーマは `packages/infrastructure` に集約されており、ルートからエイリアス経由で実行する:
+DB スキーマは `packages/infrastructure/prisma/schema.prisma` に集約されており、ルートからエイリアス経由で実行する（クエリは Kysely だが、マイグレーションは Atlas 移行完了まで Prisma で行う。[`docs/guides/db-migration.md`](./docs/guides/db-migration.md) 参照）:
 
 ```bash
 bun run db:generate          # Prisma Client 生成
@@ -116,7 +114,7 @@ SEED_ADMIN_EMAIL="you@example.com" \
   bun --cwd packages/infrastructure run db:seed
 ```
 
-冪等な upsert なので何度実行しても安全。詳細・運用は [`.docs/admin-role-setup.md`](./.docs/admin-role-setup.md) を参照。
+冪等な upsert なので何度実行しても安全。詳細・運用は [`docs/guides/admin-setup.md`](./docs/guides/admin-setup.md) を参照。
 
 ### 6. 開発サーバーの起動
 
@@ -213,14 +211,12 @@ SEED_ADMIN_EMAIL="you@example.com" \
 
 ### 設計・運用ドキュメント
 
-`.docs/` ディレクトリ参照。
+[`docs/README.md`](./docs/README.md) にドキュメントの地図がある。主なもの:
 
 | ファイル | 内容 |
 |---|---|
-| [`.docs/product.md`](.docs/product.md) | プロダクト方針・フェーズ計画 |
-| [`.docs/tech.md`](.docs/tech.md) | 技術スタック・インフラ |
-| [`.docs/structure.md`](.docs/structure.md) | ディレクトリ構成・命名規則 |
-| [`.docs/dev-rule.md`](.docs/dev-rule.md) | 開発フロー・PR ルール |
-| [`.docs/requirements.md`](.docs/requirements.md) | 要件定義 |
-| [`.docs/design.md`](.docs/design.md) | 設計書 |
-| [`.docs/admin-role-setup.md`](.docs/admin-role-setup.md) | 運営アカウント（AdminAccount）のセットアップ・運用手順 |
+| [`docs/product.md`](./docs/product.md) | プロダクト方針・リリース計画・実装状況 |
+| [`docs/specs/`](./docs/specs/README.md) | 設計仕様（システム構成・ドメイン・データ・セキュリティ・主要フロー） |
+| [`docs/guides/dev-rule.md`](./docs/guides/dev-rule.md) | 開発フロー・PR ルール・コーディング規約 |
+| [`docs/guides/admin-setup.md`](./docs/guides/admin-setup.md) | 運営アカウント（AdminAccount）のセットアップ・運用手順 |
+| [`docs/guides/db-migration.md`](./docs/guides/db-migration.md) | DB 層移行ガイド（Prisma → Kysely + Atlas） |

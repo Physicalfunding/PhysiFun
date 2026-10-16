@@ -64,13 +64,13 @@ feat: プロジェクト下書き作成ユースケースを追加
 test: SubmitLeaderApplication のレート制限ケースを追加
 ```
 
-## 承認 → push → PR フロー（.docs/dev-rule.md 準拠）
+## 承認 → push → PR フロー（docs/guides/dev-rule.md 準拠）
 
 ```
 実装
   ↓ 上記ローカル検証（lint・format・typecheck・test・build）→ 失敗時は修正
   ↓ ★ユーザー（エンジニア）に承認を求める★   ← push 前に必須
-  ↓ コミット → push（develop ブランチへ）
+  ↓ コミット → push（作業ブランチへ）
   ↓ PR 作成（下記テンプレ、関連 Issue を Closes で紐づけ）
   ↓ CodeRabbit 自動レビュー → 指摘を修正（コミット → push で再レビュー）
   ↓ 人間レビュー・承認

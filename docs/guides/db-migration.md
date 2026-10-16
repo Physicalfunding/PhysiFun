@@ -3,7 +3,9 @@
 クエリ層を **Kysely**（SQL ライクな型安全クエリビルダ）へ、スキーマ/マイグレーション管理を
 **Atlas**（宣言的＋ versioned）へ段階移行するための方針と手順。型生成は **kysely-codegen** を併用する。
 
-> ステータス: **PoC（`project` ドメインのみ移行済み）**。他ドメインは Prisma のまま共存。
+> ステータス: **クエリ層の移行はほぼ完了**（全ドメインの Kysely 実装が DI で稼働中。残りは Outbox の `PrismaAccountEmailLookup` のみ）。
+> スキーマ / マイグレーションは引き続き Prisma（Atlas baseline 未確立）。旧 `Prisma*` 実装はコード上に並存している。
+> 残作業は Epic #221（#228 → #229 → #230）で管理。
 
 ---
 
@@ -21,7 +23,7 @@ Kysely に置き換え、最終的に全ドメイン移行完了後に Prisma �
 
 ---
 
-## 2. PoC で実装済みの内容（`project` ドメイン）
+## 2. 実装済みの内容（最初に PoC として移行した `project` ドメインの例）
 
 - `src/database/kysely/client.ts` — Kysely シングルトン（`pg` Pool、pgBouncer 互換）。
 - `src/database/kysely/types.ts` — DB 型（**kysely-codegen 出力の手書きスタンドイン**）。
@@ -130,12 +132,12 @@ bun run db:kysely:codegen
 
 ## 6. 残作業（今後のドメイン移行）
 
-- [ ] `leader-application` / `account` / `admin-account` / `outbox` の Kysely 実装。
-  - Outbox の claim は `FOR UPDATE SKIP LOCKED` ベースへ置換すると、現状の緩い型付け
-    （`Record<string, unknown>`）と擬似ロックを同時に改善できる。
-  - 一意制約判定は pg の `error.code === '23505'`（`isUniqueConstraintError` の Kysely 版）。
-  - NextAuth カスタム Adapter（`AdminPrismaAdapter`）の Kysely 再実装。
-- [ ] `atlas/schema.sql` の baseline 確立 → `prisma migrate` 撤去 → `test/globalSetup.ts` 差し替え。
-- [ ] 全ドメイン移行後に `@prisma/client` / `prisma` を依存から削除し、`types.ts` を
-      kysely-codegen 生成物へ一本化。
-- [ ] `.docs/tech.md` / `.docs/structure.md` の「Prisma」記述を更新。
+- [x] `leader-application` / `account` / `admin-account` / `outbox` の Kysely 実装（#222〜#226）。
+  - Outbox の claim は `FOR UPDATE SKIP LOCKED` ベースへ置換済み。
+  - 一意制約判定は pg の `error.code === '23505'`（`isUniqueConstraintError` の Kysely 版、#227）。
+  - NextAuth カスタム Adapter を `AdminKyselyAdapter` として再実装（#225）。
+- [x] admin QueryService を application 層の Port 化（#231）。
+- [ ] Outbox composition の `PrismaAccountEmailLookup` を Kysely 実装に置き換え、DI から `prisma` を外す。
+- [ ] `atlas/schema.sql` の baseline 確立（#228）→ `prisma migrate` 撤去 → `test/globalSetup.ts` 差し替え（#229）。
+- [ ] `@prisma/client` / `prisma` と旧 `Prisma*` 実装を削除し、`types.ts` を kysely-codegen 生成物へ一本化（#230）。
+- [ ] 完了後、`docs/specs/`（特に `03_data-model.md` の正本表記）とルート `README.md` の DB コマンドを更新。

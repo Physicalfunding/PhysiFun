@@ -52,7 +52,7 @@ sequenceDiagram
     participant API as POST /api/my/projects/:id/request-publish
     participant UC as RequestPublishUseCase
     participant Project as Project (entity)
-    participant Adapter as PrismaAdapter
+    participant Adapter as KyselyAdapter
     participant DB as PostgreSQL
     participant Outbox as ProjectOutboxMessage
 
@@ -91,7 +91,7 @@ sequenceDiagram
     participant API as POST /api/admin/projects/:id/approve
     participant UC as ApproveProjectPublicationUseCase
     participant Project as Project (entity)
-    participant Adapter as PrismaAdapter
+    participant Adapter as KyselyAdapter
     participant DB as PostgreSQL
 
     Admin->>API: 承認ボタン (note 任意)
@@ -129,7 +129,7 @@ sequenceDiagram
     actor Admin as 運営
     participant API as POST /api/admin/projects/:id/reject
     participant UC as RejectProjectPublicationUseCase
-    participant Adapter as PrismaAdapter
+    participant Adapter as KyselyAdapter
     participant DB as PostgreSQL
 
     Admin->>API: 差戻ボタン + reviewerNote (必須)
@@ -156,7 +156,7 @@ sequenceDiagram
     actor Admin as 運営
     participant API as POST /api/admin/projects/:id/force-unpublish
     participant UC as ForceUnpublishProjectUseCase
-    participant Adapter as PrismaAdapter
+    participant Adapter as KyselyAdapter
     participant DB as PostgreSQL
 
     Admin->>API: 強制非公開 + reviewerNote (必須)
@@ -184,7 +184,7 @@ sequenceDiagram
     participant API as POST /api/my/projects/:id/{withdraw|unpublish}
     participant UC as Withdraw/Unpublish UseCase
     participant Project as Project (entity)
-    participant Adapter as PrismaAdapter
+    participant Adapter as KyselyAdapter
     participant DB as PostgreSQL
 
     Leader->>API: 取下げ / 自主非公開
@@ -212,7 +212,7 @@ sequenceDiagram
     participant API as PATCH /api/my/projects/:id
     participant UC as UpdateProjectDraftUseCase
     participant Project as Project (entity)
-    participant Adapter as PrismaAdapter
+    participant Adapter as KyselyAdapter
 
     Leader->>API: フォーム保存
     API->>UC: execute(updateInput)
@@ -288,4 +288,4 @@ sequenceDiagram
 
 ### 9.5 SEO 設定
 
-Phase 1 では `/projects/[slug]` ページに `robots: { index: false, follow: false }` を付与している。Phase 2 で外す予定（一般公開時）。
+初回リリースでは `/projects/[slug]` ページに `robots: { index: false, follow: false }` を付与している。一般公開時に外す予定。

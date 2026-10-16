@@ -22,7 +22,7 @@ PhysiFun の実装に関わるエンジニアが、コード・schema・ドキ�
 | **運営アカウント** | `AdminAccount` モデル / `AdminAccountId` | `Account` と独立した運営専用アグリゲート。`apps/admin` でのみ使用 |
 | **ロール** | `Role` enum | `SUPPORTER` / `LEADER` を `Account.roles[]` に保持（複数可） |
 | **リーダー** | `Account` + `Role.LEADER` | プロジェクトを作成・運営する立場 |
-| **サポーター** | `Account` + `Role.SUPPORTER` | プロジェクトに時間・スキルで参加する立場（Phase 2 で本格的に活性化） |
+| **サポーター** | `Account` + `Role.SUPPORTER` | プロジェクトに時間・スキルで参加する立場（一般公開で本格的に活性化） |
 | **運営** | `AdminAccount` | リーダー応募・プロジェクト公開の審査を行う |
 
 > ⚠️ `ADMIN` は `Role` enum に**含まれない**（`AdminAccount` 独立アグリゲートで分離）。
@@ -33,7 +33,7 @@ PhysiFun の実装に関わるエンジニアが、コード・schema・ドキ�
 
 | 用語 | コード上の表現 | 説明 |
 |---|---|---|
-| **リーダー応募** | `LeaderApplication` モデル | リーダーになるための申請。Phase 1 / Phase 2 共通の経路 |
+| **リーダー応募** | `LeaderApplication` モデル | リーダーになるための申請。初回リリース / 一般公開 共通の経路 |
 | **応募ステータス** | `LeaderApplicationStatus` | `PENDING` / `APPROVED` / `REJECTED` |
 | **プロジェクト案** | `ProjectDraft` 値オブジェクト | 応募時のプロジェクト情報スナップショット（承認後の Project と直接リンクしない） |
 | **アクティベーション** | `Account.activationToken` / `ActivateAccountUseCase` | 応募者がメール経由でパスワード設定し `ACTIVE` 化する流れ |
@@ -85,7 +85,7 @@ PhysiFun の実装に関わるエンジニアが、コード・schema・ドキ�
 
 ## 5. 募集（Recruitment）
 
-Phase 1 では schema のみ存在し、ドメイン層・UI 実装は無い（Phase 2 で起動予定）。
+現時点では schema のみ存在し、ドメイン層・UI 実装は無い。リーダー側の募集作成は初回リリースで実装予定（#212）、サポーターの申請は一般公開で実装予定。
 
 | 用語 | コード上の表現 | 説明 |
 |---|---|---|
@@ -99,7 +99,7 @@ Phase 1 では schema のみ存在し、ドメイン層・UI 実装は無い（P
 | Enum | 値 | 用途 |
 |---|---|---|
 | `LeaderApplicationRecruitmentType` | `TIME` / `SKILL_ITEM` | **応募フォーム上**で「どんな募集を出すか」をリーダーが選ぶ |
-| `RecruitmentType` | `ACTIVITY` | 実際の `SupportRecruitment` 投稿の種別。Phase 1 は `ACTIVITY` のみ |
+| `RecruitmentType` | `ACTIVITY` | 実際の `SupportRecruitment` 投稿の種別。初回リリースは `ACTIVITY` のみ |
 
 > 💡 名前が似ているが**別物**。応募時の希望表明と、実際の募集投稿の種別は概念的に異なるため意図的に分けている。
 
@@ -153,7 +153,7 @@ Phase 1 では schema のみ存在し、ドメイン層・UI 実装は無い（P
 | **Credentials Provider** | `apps/web` の `next-auth` 設定 | メール + パスワードでログイン |
 | **JWT セッション** | `next-auth` 戦略 | 30 日 |
 | **パスワードハッシュ** | `passwordHash` カラム / `BcryptPasswordHasher` | bcrypt（saltRounds=10） |
-| **タイミング攻撃回避** | `PrismaAuthenticateAdapter` 内 | 存在しないアカウントでもダミーハッシュ比較する |
+| **タイミング攻撃回避** | `apps/web/src/lib/auth.ts`（`DUMMY_BCRYPT_HASH`） | 存在しないアカウントでもダミーハッシュ比較する |
 
 ### 運営（apps/admin）
 
@@ -189,7 +189,7 @@ Phase 1 では schema のみ存在し、ドメイン層・UI 実装は無い（P
 | **バウンデッドコンテキスト** | DDD の境界。`packages/domain/src/{account, admin-account, leader-application, project}/` がそれぞれ対応 |
 | **値オブジェクト** | 同値性で識別される不変オブジェクト（`ProjectId` / `Email` など） |
 | **リポジトリ** | アグリゲートの永続化を抽象化するインターフェース（実装は `infrastructure/`） |
-| **アダプタ** | リポジトリインターフェースの Prisma 実装（`PrismaXxxRepository` / `PrismaXxxAdapter`） |
+| **アダプタ** | リポジトリ / Port インターフェースの Kysely 実装（`KyselyXxxAdapter` / `KyselyXxxRepository` / `KyselyXxxQueryService`）。旧 `PrismaXxx` 実装は Prisma 撤去（#221）まで並存するが、DI からは使われていない |
 | **ユースケース** | アプリケーション層のビジネスロジック単位（`packages/application/src/`） |
 | **`Result<T, E>` 型** | 成功/失敗を判別共用体で返す（例外を使わない）。`packages/domain/src/shared/result.ts` |
 | **Outbox パターン** | DB 書き込みと非同期メッセージ発行を同一トランザクションで行う設計パターン |
@@ -225,8 +225,8 @@ Phase 1 では schema のみ存在し、ドメイン層・UI 実装は無い（P
 | `Account` ↔ `AdminAccount` | §1 参照。**完全に独立したアグリゲート**（Cookie・セッション・Vercel プロジェクトも分離） |
 | `LeaderApplication` の `accountId` ↔ `Project` の `ownerAccountId` | 同じ Account への参照だが命名規則が違う（前者は応募者、後者は所有者の意味づけ） |
 | `reviewedBy` ↔ `forcedUnpublishedBy` | どちらも `AdminAccount` への参照だが、それぞれ「審査者」と「強制非公開実行者」の異なる責任 |
-| `body`（ドメイン）↔ `story`（Prisma） | Project 本文。命名揺れあり（`03_data-model.md` §9 参照） |
-| `leaderIntroduction`（ドメイン）↔ `leaderIntro`（Prisma） | リーダー紹介。同上 |
+| `body`（ドメイン）↔ `story`（DB カラム） | Project 本文。命名揺れあり（`03_data-model.md` §9 参照） |
+| `leaderIntroduction`（ドメイン）↔ `leaderIntro`（DB カラム） | リーダー紹介。同上 |
 
 ---
 
@@ -235,3 +235,4 @@ Phase 1 では schema のみ存在し、ドメイン層・UI 実装は無い（P
 | 日付 | 改訂内容 | 担当 |
 |---|---|---|
 | 2026-05-09 | 初稿作成（コード視点の最小用語集として整備） | 設計チーム |
+| 2026-10-16 | ドキュメント棚卸し：Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一、サポート募集の位置づけ（初回リリースでリーダー側を実装予定）を修正 | 設計チーム |

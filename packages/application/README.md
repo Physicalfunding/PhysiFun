@@ -4,18 +4,23 @@ PhysiFun のアプリケーション層（UseCase）。トランザクション�
 
 ## スコープ
 
-- `use-cases/auth/`
-- `use-cases/leader-application/` — 応募送信・承認・却下
-- `use-cases/project/` — 作成・編集・公開申請・審査
-- `use-cases/recruitment/` — サポート募集（Phase 1: リーダー側 UI のみ）
+`src/<context>/` に `XxxUseCase.ts` と、UseCase が依存する Port IF（`ports/`）を置く。
+
+- `account/` — アクティベート・期限切れ PENDING アカウントの削除
+- `leader-application/` — 応募送信・承認・却下
+- `project/` — 作成・編集・公開申請・取り下げ・非公開化・運営審査
+- `outbox/` — 運営アプリ向けの Outbox 参照 Port
+- `shared/` — 層をまたいで使う型
+
+> `recruitment/`（サポート募集）は未作成。#212 で追加予定。UseCase の追加手順は `.claude/skills/add-usecase/SKILL.md` を参照。
 
 ## 依存方針
 
-- `@physifun/domain` の Entity / Repository インターフェースに依存する
+- `@physifun/domain` の Entity / Repository インターフェースと、自身の `ports/` に依存する
 - `@physifun/infrastructure` の実装クラスには依存しない（DI で受け取る）
-- Next.js / Prisma / Supabase SDK を直接参照しない
+- Next.js / Kysely / Supabase SDK を直接参照しない
 
-詳細は `PhysiFun/.docs/structure.md` と各ドメインドキュメントを参照。
+レイヤー責務は `docs/specs/01_system-architecture.md` §4 を参照。
 
 ## 利用上の注意
 

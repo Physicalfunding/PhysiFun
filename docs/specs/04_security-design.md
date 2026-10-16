@@ -52,7 +52,7 @@ PhysiFun のセキュリティ全体像を、認証・認可・データ保護�
 ```mermaid
 flowchart LR
     Login[email + password] --> NA[NextAuth CredentialsProvider]
-    NA --> Auth[PrismaAuthenticateAdapter]
+    NA --> Auth[KyselyAuthenticateAdapter]
     Auth --> DB[(Account)]
     Auth -->|存在しない場合| Dummy[ダミーハッシュで bcrypt.compare]
     Auth -->|存在する場合| Real[bcrypt.compare with passwordHash]
@@ -76,7 +76,7 @@ flowchart LR
 - **NextAuth EmailProvider** が `AdminVerificationToken`（24h TTL）を発行
 - 加えて **HMAC-SHA256 で URL 自体に署名**（`sig` + `sig_exp` パラメータ、`ADMIN_MAGIC_LINK_HMAC_SECRET`）
 - callback route で **NextAuth に渡す前に HMAC 検証**（署名 NG なら NextAuth ハンドラに到達させない）
-- **`AdminPrismaAdapter` 内で `status: ACTIVE` のみログイン許可**
+- **`AdminKyselyAdapter`（`createAdminKyselyAdapter`）内で `status: ACTIVE` のみログイン許可**
 - **NextAuth `signIn` callback で AdminAccount 実在チェック**（未登録 email への送信を遮断 = open relay 対策）
 - **Magic Link 送信のレート制限**: 5 回 / 15 分 / email
 - **AdminSession 行を DELETE** すれば即座に強制 revoke（`apps/admin/src/lib/auth.ts:32-44`）
@@ -99,7 +99,7 @@ flowchart LR
 
 | ロール | 付与契機 | 権限 |
 |---|---|---|
-| `SUPPORTER` | アカウント発行時に自動付与 | Phase 1 では未活性。Phase 2 でサポート申請権限 |
+| `SUPPORTER` | アカウント発行時に自動付与 | 初回リリースでは未活性。一般公開でサポート申請権限 |
 | `LEADER` | 運営がリーダー応募を承認時に追加 | プロジェクト作成・編集・公開申請・自主取下げ・自主非公開 |
 
 > ⚠️ `ADMIN` は `Role` enum に含まれない（`AdminAccount` 独立アグリゲート）。
@@ -120,7 +120,7 @@ if (project.ownerAccountId !== input.accountId) {
 
 - `AdminAccount.status === "ACTIVE"` であることを **NextAuth Adapter / `signIn` callback / 各 UseCase でリピート検証**
 - `AdminAccount.disable()` で **論理無効化**したアカウントは次回リクエスト時に弾かれる（DB セッションのため revoke が即座に効く）
-- 認可レベルは現状フラット（`AdminAccount` は単一ロール）。複数権限レベルは Phase 2 で検討
+- 認可レベルは現状フラット（`AdminAccount` は単一ロール）。複数権限レベルは 一般公開時に検討
 
 ### 3.4 件数上限の TOCTOU 対策
 
@@ -189,7 +189,7 @@ flowchart TD
     Front --> API[API Route Handler<br/>認証チェック / IP rate limit / CAPTCHA]
     API --> UC[UseCase<br/>入力 Zod / ports 経由バリデーション / ownership]
     UC --> Domain[ドメイン層<br/>値オブジェクト不変条件 / 状態遷移ガード]
-    Domain --> Infra[Infrastructure<br/>Prisma + パラメタライズドクエリ / TLS]
+    Domain --> Infra[Infrastructure<br/>Kysely + パラメタライズドクエリ / TLS]
     Infra --> DB[(PostgreSQL<br/>FK / unique / onDelete: Restrict)]
 ```
 
@@ -200,7 +200,7 @@ flowchart TD
 | **API Route** | 認証 / IP rate limit / CAPTCHA / Zod 再検証 | `getServerSession` / `consume()` / Turnstile siteverify |
 | **UseCase** | ビジネスルール / オーナーシップ / トランザクション境界 | `ownerAccountId !== accountId` の早期 return |
 | **Domain** | 不変条件 / 状態遷移 / 値オブジェクトの正規化 | `Project.requestPublish()` の必須項目チェック |
-| **Infrastructure** | Prisma による SQL injection 回避、TLS、env 読み込み | パラメタライズドクエリ（Prisma 標準） |
+| **Infrastructure** | Kysely による SQL injection 回避、TLS、env 読み込み | パラメタライズドクエリ（Kysely 標準） |
 | **Database** | 整合性制約 | unique / FK / `onDelete: Restrict`（監査保護） |
 
 各層が独立に検証することで、**1 層の脆弱性が認証バイパスに直結しない**設計を維持する。
@@ -213,18 +213,18 @@ flowchart TD
 
 | 脅威 | 対策 | 残存リスク |
 |---|---|---|
-| **SQL Injection** | Prisma の parameterized query / Zod 入力検証 | なし（標準的） |
+| **SQL Injection** | Kysely の parameterized query / Zod 入力検証 | なし（標準的） |
 | **XSS** | React の自動エスケープ / CSP `script-src 'self'` + `'unsafe-inline'`（暫定） | `'unsafe-inline'` の暫定許可（Issue #109 follow-up） |
 | **CSRF** | NextAuth の SameSite=lax Cookie / 状態変更は POST/PATCH/DELETE のみ | NextAuth デフォルト依存 |
 | **Clickjacking** | `X-Frame-Options: DENY` + `frame-ancestors 'none'`（二重化） | なし |
 | **Open Redirect** | NextAuth `callbackUrl` の同一オリジン検証 | NextAuth 依存 |
 | **タイミング攻撃** | `bcrypt.compare` / `timingSafeEqual` / 存在しない email へのダミーハッシュ | URL 長さの差はわずかに残る（許容） |
-| **Bot / スパム応募** | Cloudflare Turnstile + IP rate limit (3/h/IP) + duplicate email check | IP rate limit がインスタンス内 LRU（Phase 2 で Redis 化必須） |
+| **Bot / スパム応募** | Cloudflare Turnstile + IP rate limit (3/h/IP) + duplicate email check | IP rate limit がインスタンス内 LRU（一般公開までに Redis 化必須） |
 | **メールボム** | 同上 + Outbox の冪等性（重複送信は許容、二重送信前提の文面） | `RATE_LIMIT_EXCEEDED` 経由で軽減 |
 | **認証バイパス** | アグリゲート分離 / オーナーシップ検証 / `ACTIVE` チェックの多重化 | なし |
 | **セッション盗難** | HttpOnly + Secure + SameSite Cookie / admin は 1h TTL / DB session で即時 revoke 可 | JWT (web) は 30 日。盗難時 NEXTAUTH_SECRET rotation のみ |
 | **Magic Link 横取り** | URL 自体の HMAC 署名 / `sig_exp` 期限 / fail-closed | メール盗聴で 24h 以内クリック可（不可避） |
-| **運営アカウント乗っ取り** | Magic Link のみ（パスワード盗難なし） / DB session 即時 revoke / 監査ログ | TOTP / 2FA は未実装（Phase 1 では運営数名前提） |
+| **運営アカウント乗っ取り** | Magic Link のみ（パスワード盗難なし） / DB session 即時 revoke / 監査ログ | TOTP / 2FA は未実装（初回リリースでは運営数名前提） |
 | **Activation token 再利用** | 使用時 `NULL` クリア / 24h TTL | 24h 以内なら盗聴で再現可（許容） |
 | **管理者削除による監査喪失** | `onDelete: Restrict` で AdminAccount 物理削除を禁止 + `disable()` で論理削除 | 監査改ざんは AdminAuditLog の append-only 性で対処 |
 | **Outbox 二重送信** | 5 分の claim タイムアウトで再 claim 許容 | 二重送信が起こり得る → 受信側冪等で対処 |
@@ -237,8 +237,8 @@ flowchart TD
 | 項目 | 状況 | 対応予定 |
 |---|---|---|
 | CSP `'unsafe-inline'` | Next.js App Router の暫定 | Issue #109 follow-up（nonce ベース移行） |
-| IP rate limit のインスタンス分散 | LRU on memory（per instance） | Phase 2 で Redis / Vercel KV に置き換え（Issue #202） |
-| 運営の TOTP / 2FA | 未実装 | 運営数増加時に検討（Phase 2+） |
+| IP rate limit のインスタンス分散 | LRU on memory（per instance） | 一般公開までに Redis / Vercel KV に置き換え（Issue #202） |
+| 運営の TOTP / 2FA | 未実装 | 運営数増加時に検討（一般公開以降） |
 | メール送信先の検証強化（DKIM / SPF） | Resend 側設定依存 | 本番ドメイン取得後に DNS 設定 |
 
 ---
@@ -261,7 +261,7 @@ flowchart TD
 | `POST /api/my/projects/:id/{request-publish, withdraw, unpublish}` | 合算 10 回 / 1 分 / user |
 | Admin Magic Link 送信 | 5 回 / 15 分 / email |
 
-> ⚠️ 現実装は **インスタンス内 LRU**（`apps/web/src/lib/rateLimit.ts`）。Vercel の関数インスタンスをまたぐと共有されない。Phase 2 では Redis / KV ベースへの移行が必須（Issue #202）。
+> ⚠️ 現実装は **インスタンス内 LRU**（`apps/web/src/lib/rateLimit.ts`）。Vercel の関数インスタンスをまたぐと共有されない。一般公開までに Redis / KV ベースへの移行が必須（Issue #202）。
 
 ### 7.3 重複応募ブロック
 
@@ -381,7 +381,7 @@ flowchart TD
 
 ## 11. データ削除・GDPR 系の検討（メモ）
 
-| 項目 | Phase 1 状況 | Phase 2 で検討 |
+| 項目 | 初回リリース時点 | 一般公開時に検討 |
 |---|---|---|
 | ユーザのアカウント削除リクエスト | 未実装 | UI 提供と Cascade 連鎖の影響範囲を評価 |
 | `Account` 物理削除時の関連削除 | Cascade 設定済み（`LeaderApplication` / `Project`） | サポートチケット (`SupportTicket.supporterAccountId`) は Restrict のため別運用が必要 |
@@ -391,14 +391,14 @@ flowchart TD
 
 ---
 
-## 12. 既知の Phase 1 残課題（セキュリティ関連）
+## 12. 既知の初回リリース残課題（セキュリティ関連）
 
 | 項目 | 概要 | 対応 |
 |---|---|---|
 | CSP `'unsafe-inline'` 暫定許可 | Next.js App Router のインラインスクリプト対応 | Issue #109 follow-up（nonce middleware） |
 | IP rate limit インスタンス分散 | LRU on memory | Issue #202（Redis / KV 移行） |
-| 運営 TOTP / 2FA | 未実装 | 運営増加時 / Phase 2 |
-| 監査ログのアラート | dashboard のみ | Phase 2 で異常検知 |
+| 運営 TOTP / 2FA | 未実装 | 運営増加時 / 一般公開時 |
+| 監査ログのアラート | dashboard のみ | 一般公開時に異常検知 |
 | メール DKIM/SPF | Resend デフォルト依存 | 本番ドメイン取得後 |
 
 ---
@@ -408,3 +408,4 @@ flowchart TD
 | 日付 | 改訂内容 | 担当 |
 |---|---|---|
 | 2026-05-09 | 初稿作成（認証・認可・データ保護・脅威モデル・セキュリティヘッダー・運用） | 設計チーム |
+| 2026-10-16 | ドキュメント棚卸し：Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一、サポート募集の位置づけ（初回リリースでリーダー側を実装予定）を修正 | 設計チーム |
