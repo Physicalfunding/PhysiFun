@@ -5,11 +5,11 @@ PhysiFun のシステム全体構成を、インフラ・monorepo・レイヤー
 ## このドキュメントの位置づけ
 
 - **目的**: AI / 人間が「PhysiFun の全体像」を最初に把握するエントリポイント
-- **正本**: `package.json` 群 / `vercel.json` 群 / `.docs/tech.md` / `.docs/structure.md`。本書はその視覚化・統合
+- **正本**: `package.json` 群 / `vercel.json` 群。本書はその視覚化・統合（旧 `.docs/tech.md` / `.docs/structure.md` の内容を吸収済み）
 - **揮発度**: 低（インフラ構成・パッケージ構造の変更時のみ更新）
 - **関連**:
-  - `.docs/tech.md` — 技術スタック詳細・環境変数・将来の AWS 移行方針
-  - `.docs/structure.md` — ディレクトリ構成・レイヤー責務・命名規則
+  - `apps/web/README.md` / `apps/admin/README.md` — 環境変数の一覧・ローカル起動
+  - `docs/guides/dev-rule.md` — 命名規則・コーディング規約・テスト方針
   - `02_domain-model.md` — ドメイン層の詳細
   - `03_data-model.md` — データモデルの詳細
   - `04_security-design.md` — 認証・認可・データ保護
@@ -23,7 +23,7 @@ PhysiFun のシステム全体構成を、インフラ・monorepo・レイヤー
 
 ```mermaid
 flowchart TB
-    User[一般ユーザ<br/>リーダー・サポーター] -.-> WebDomain["&lt;domain&gt;<br/>Phase 1: web 中心"]
+    User[一般ユーザ<br/>リーダー・サポーター] -.-> WebDomain["&lt;domain&gt;<br/>初回リリース: web 中心"]
     Admin[運営] -.-> AdminDomain["admin.&lt;domain&gt;<br/>Magic Link 認証のみ"]
 
     subgraph Vercel["Vercel"]
@@ -66,12 +66,33 @@ flowchart TB
 |---|---|
 | **apps/web (Vercel)** | 一般ユーザ向け Next.js アプリ（LP / 応募 / マイページ / 公開プロジェクトページ） |
 | **apps/admin (Vercel)** | 運営管理 Next.js アプリ（応募審査 / プロジェクト審査 / 監査ログ） |
-| **Supabase PostgreSQL** | メイン DB。**両アプリで同一インスタンスを共有**（テーブルは Phase 別分離なし） |
+| **Supabase PostgreSQL** | メイン DB。**両アプリで同一インスタンスを共有**（テーブルは リリース段階別の分離なし） |
 | **Supabase Storage** | プロジェクトカバー画像など（`project-images` バケット） |
 | **Resend** | 全メール送信（アクティベーション・通知・Magic Link） |
 | **Cloudflare Turnstile** | リーダー応募フォームの CAPTCHA |
 
 > 💡 **Supabase は同一インスタンスを共有**するが、**Cookie・セッション・環境変数は完全分離**。詳細は §3 / `04_security-design.md` 参照。
+
+### 1.2 技術スタック
+
+| カテゴリ | 技術 | 補足 |
+|---|---|---|
+| フレームワーク | Next.js 16（App Router）/ React 19 / TypeScript 5 | — |
+| スタイリング | Tailwind CSS 4 | — |
+| フォーム・バリデーション | React Hook Form + Zod | Zod スキーマはサーバー側でも再検証 |
+| 認証（web） | NextAuth.js v4 Credentials Provider | JWT セッション、email + password |
+| 認証（admin） | NextAuth.js v4 EmailProvider（Magic Link） | Database セッション（TTL 1h）、`AdminAccount` 独立アグリゲート |
+| DB | PostgreSQL（Supabase） | web / admin で同一インスタンスを共有。`DATABASE_URL` は Transaction Pooler（pgBouncer）の URL |
+| クエリ | Kysely（`pg` ドライバ） | 全リポジトリ・QueryService を Prisma から移行済み |
+| スキーマ・マイグレーション | Prisma（`schema.prisma` / `prisma migrate`） | Atlas へ移行予定（Epic #221、`docs/guides/db-migration.md`） |
+| ストレージ | Supabase Storage（`project-images`） | 画像アップロードは実装途中（UI 未接続） |
+| メール | Resend | Outbox 経由で送信 |
+| CAPTCHA | Cloudflare Turnstile | リーダー応募フォーム |
+| ホスティング | Vercel（web / admin は別プロジェクト） | — |
+| パッケージ管理 | Bun（workspaces） | — |
+| テスト | `bun test`（ユニット）/ Vitest + Testcontainers（infra 統合）/ Playwright（E2E） | web はローカルで Jest も利用可 |
+
+> ⚠️ Supabase Auth は使わない（認証は NextAuth.js に統一）。Supabase SDK は `infrastructure` 層に閉じ込める。
 
 ---
 
@@ -160,10 +181,44 @@ flowchart TB
 |---|---|---|
 | `domain` | エンティティ / 値オブジェクト / リポジトリ IF / `Result` 型 | `02_domain-model.md` |
 | `application` | ユースケース（ビジネスロジック）+ ports | — |
-| `infrastructure` | Prisma 実装 / Outbox / メール / Storage / Bcrypt / HMAC 等 | `03_data-model.md` |
+| `infrastructure` | Kysely 実装 / Outbox / メール / Bcrypt / HMAC / Prisma スキーマ・マイグレーション 等 | `03_data-model.md` |
 | `ui-shared` | 両アプリ共通の UI コンポーネント・設定 | — |
 
-詳細なディレクトリ構造とレイヤー責務は `.docs/structure.md` 参照。
+### 3.3 ディレクトリ構成
+
+```
+PhysiFun/
+├── apps/
+│   ├── web/src/
+│   │   ├── app/                 # App Router（(auth) / (legal) / activate / apply / my / projects / api）
+│   │   ├── components/          # UI（common/ は汎用のみ、それ以外は画面単位）
+│   │   ├── lib/
+│   │   │   ├── di/              # UseCase と infrastructure 実装を組み立てる DI ヘルパー
+│   │   │   ├── api/             # API レスポンスの共通ヘルパー
+│   │   │   └── validations/     # Zod スキーマ
+│   │   └── infrastructure/      # ⚠️ 例外: 画像アップロード（未接続）。packages/infrastructure へ移す予定
+│   └── admin/src/
+│       ├── app/                 # applications / projects / members / outbox / audit-logs / login / api
+│       ├── components/
+│       └── lib/di/              # QueryService / UseCase の DI（リクエストスコープで生成）
+├── packages/
+│   ├── domain/src/<context>/          # entities / value-objects / repositories / errors
+│   ├── application/src/<context>/     # XxxUseCase.ts + ports/（UseCase が依存する Port IF）
+│   ├── infrastructure/
+│   │   ├── src/<context>/             # KyselyXxxAdapter / KyselyXxxQueryService など
+│   │   ├── src/database/kysely/       # Kysely クライアント・DB 型
+│   │   ├── src/{outbox,mail,security}/
+│   │   ├── prisma/                    # schema.prisma / migrations / seed（Atlas 移行まで）
+│   │   ├── atlas/                     # Atlas 設定・マイグレーション（baseline 未確立）
+│   │   └── test/                      # Vitest + Testcontainers の統合テスト
+│   └── ui-shared/src/
+├── tests/e2e/                   # Playwright
+└── docs/                        # ドキュメント（docs/README.md が地図）
+```
+
+`<context>` は `account` / `admin-account` / `leader-application` / `project` / `outbox`（application・infrastructure のみ）。`recruitment` は未作成（#212 で追加予定）。
+
+> 💡 Kysely は ESM 専用のため、Kysely 実装はメイン barrel（`@physifun/infrastructure`）ではなくサブバレル `@physifun/infrastructure/src/kysely` から import する（Jest 隔離のため）。
 
 ---
 
@@ -174,7 +229,7 @@ flowchart TB
     UI["UI / API Route Handler<br/>(apps/{web,admin})"]
     UC["UseCase + ports<br/>(packages/application)"]
     Domain["Domain (Entity / VO / Repo IF / Result)<br/>(packages/domain)"]
-    Infra["Infrastructure (Prisma / Mail / Storage / HMAC)<br/>(packages/infrastructure)"]
+    Infra["Infrastructure (Kysely / Mail / Storage / HMAC)<br/>(packages/infrastructure)"]
     External[(External Services)]
 
     UI --> UC
@@ -191,10 +246,17 @@ flowchart TB
 - **`infrastructure` は `domain` のみに依存**（実装詳細）
 - **`apps/*` は全層に依存可**（DI で組み合わせる）
 - API Route Handler は **薄く**保ち、UseCase に処理を委ねる
-- ビジネスロジックは **`application/use-cases/` に集約**
+- ビジネスロジックは **`packages/application/src/<context>/` の UseCase に集約**
 - DB / Storage / 外部 API は **`infrastructure/` 内のみ**
 
-詳細は `.docs/structure.md` §レイヤー別責務参照。
+**レイヤー別の責務:**
+
+| レイヤー | やること | やらないこと |
+|---|---|---|
+| API Route Handler / Server Component | リクエスト受け取り・Zod 検証・認証チェック・DI ヘルパー経由で UseCase 呼び出し・レスポンス返却 | ビジネスロジック、DB 直接アクセス |
+| UseCase（application） | ドメインエンティティの操作、Port 経由の永続化、トランザクション境界・Outbox 書き込みの調停。結果は `Result<T, E>` で返す | Supabase SDK / Kysely / Next.js への依存 |
+| Domain | エンティティ・値オブジェクト・リポジトリ IF・不変条件・状態遷移 | 外部ライブラリへの依存 |
+| Infrastructure | Port / リポジトリ IF の実装、Supabase・Resend などの外部接続、環境変数の読み込み | ビジネスルールの判断 |
 
 ### 4.1 リクエスト → DB / メールの流れ（CRUD パターン）
 
@@ -205,7 +267,7 @@ sequenceDiagram
     participant DI as DI Container
     participant UC as UseCase
     participant Repo as Repository IF
-    participant Adapter as Prisma Adapter
+    participant Adapter as Kysely Adapter
     participant DB as PostgreSQL
     participant Outbox as Outbox Worker
     participant Mail as Resend
@@ -217,7 +279,7 @@ sequenceDiagram
     UC->>UC: Zod / 値オブジェクト検証
     UC->>Repo: findById / save (IF)
     Repo->>Adapter: 実装呼び出し
-    Adapter->>DB: SQL (Prisma)
+    Adapter->>DB: SQL (Kysely)
     DB-->>Adapter: rows
     Adapter-->>Repo: Domain Entity
     Repo-->>UC: Entity
@@ -241,7 +303,7 @@ sequenceDiagram
 | **API Route Handler** | クライアント・運営からの状態変更（`/api/...`） |
 | **Cron** | 定期処理（後述） |
 
-> 💡 admin の Server Component は `export const dynamic = "force-dynamic"` を必須とする規約あり（`.docs/structure.md` 参照）。
+> 💡 admin の Server Component は `export const dynamic = "force-dynamic"` を必須とする規約あり（`docs/guides/dev-rule.md` §コーディング規約 参照）。
 
 ### 5.2 Cron スケジュール
 
@@ -291,7 +353,7 @@ flowchart LR
 - `DATABASE_URL` は同じインスタンスを指すので同値で OK
 - 各 Vercel プロジェクトの環境変数 UI で独立に管理
 
-詳細は `04_security-design.md` §10 参照。
+変数の全一覧は `apps/web/README.md` / `apps/admin/README.md`（および各 `.env.example`）、セキュリティ上の扱いは `04_security-design.md` §10 参照。
 
 ---
 
@@ -324,7 +386,7 @@ flowchart LR
 | Supabase CLI | ローカル PostgreSQL + Storage + Studio の起動 |
 | Docker Desktop | Supabase のコンテナ実行基盤 |
 
-セットアップ手順は `README.md` および `.docs/tech.md` 参照。
+セットアップ手順はルートの `README.md` 参照。
 
 ---
 
@@ -333,45 +395,46 @@ flowchart LR
 | ページ種別 | レンダリング | 理由 |
 |---|---|---|
 | LP（トップページ） | SSG | SEO 対象はここのみ |
-| 公開プロジェクト詳細 | SSR or ISR | Phase 2 で本格活用 |
+| 公開プロジェクト詳細 | SSR or ISR | 一般公開で本格活用 |
 | マイページ系 | CSR | 認証後のため SEO 不要 |
 | admin 全画面 | Server Component (`force-dynamic`) | 常に最新表示。SEO 対象外（noindex） |
 
-> 💡 Phase 1 では `/projects/[slug]` に `robots: { index: false, follow: false }` を付与中。Phase 2 で外す予定。
+> 💡 初回リリースでは `/projects/[slug]` に `robots: { index: false, follow: false }` を付与中。一般公開時に外す予定。
 
 ---
 
-## 9. Phase 別のスコープ俯瞰
+## 9. リリース段階別のスコープ俯瞰
 
 ```mermaid
 flowchart TB
-    subgraph Phase1["Phase 1（実装中）"]
-        P1A[リーダー募集 LP]
-        P1B[応募フォーム + アクティベート]
-        P1C[プロジェクト作成・編集・公開申請]
-        P1D[公開プロジェクトページ<br/>4タブ中ホームのみ]
-        P1E[運営審査 admin]
+    subgraph Initial["初回リリース（開発中）"]
+        I1[リーダー募集 LP]
+        I2[応募フォーム + アクティベート]
+        I3[プロジェクト作成・編集・公開申請]
+        I4[公開プロジェクトページ<br/>4タブ中ホームのみ]
+        I5[運営審査 admin]
+        I6[サポート募集の作成<br/>リーダー側・未実装 #212]
     end
 
-    subgraph Phase2["Phase 2（未着手）"]
-        P2A[サポーター自由登録]
-        P2B[プロジェクト一覧・検索]
-        P2C[サポート申請<br/>SupportRecruitment 起動]
-        P2D[サポート募集の公開ページ統合]
+    subgraph Public["一般公開（未着手）"]
+        G1[サポーター自由登録]
+        G2[プロジェクト一覧・検索]
+        G3[サポート申請]
+        G4[サポート募集の公開ページ統合]
     end
 
-    Phase1 -->|コード変更リリース| Phase2
+    Initial -->|コード変更リリース| Public
 ```
 
-**Phase 1 → Phase 2 の移行**は**ランタイムフィーチャーフラグではなくコード変更リリース**で行う方針（`.docs/product.md` 参照）。
+**初回リリース → 一般公開の移行**は**ランタイムフィーチャーフラグではなくコード変更リリース**で行う方針（`docs/product.md` 参照）。
 
-> 💡 `SupportRecruitment` / `RecruitmentSchedule` / `SupportTicket` は **Prisma schema のみ存在**し、ドメイン層・UI 実装は無い（Phase 2 候補）。詳細は `02_domain-model.md` §8、`03_data-model.md` §3 参照。
+> 💡 `SupportRecruitment` / `RecruitmentSchedule` / `SupportTicket` は **schema（`schema.prisma`）のみ存在**し、ドメイン層・UI 実装は無い。詳細は `02_domain-model.md` §8、`03_data-model.md` §3 参照。
 
 ---
 
 ## 10. 将来の AWS 移行方針
 
-`.docs/tech.md` に詳細な移行候補が記載されている。要点だけ：
+移行候補の要点：
 
 | 現在 | 将来（AWS） |
 |---|---|
@@ -396,4 +459,5 @@ flowchart TB
 
 | 日付 | 改訂内容 | 担当 |
 |---|---|---|
-| 2026-05-09 | 初稿作成（Phase 1 実装時点のシステム俯瞰、インフラ図・monorepo・レイヤー・Cron・環境変数分離・将来展望） | 設計チーム |
+| 2026-05-09 | 初稿作成（初回リリース実装時点のシステム俯瞰、インフラ図・monorepo・レイヤー・Cron・環境変数分離・将来展望） | 設計チーム |
+| 2026-10-16 | ドキュメント棚卸し：旧 `.docs/tech.md` / `structure.md` を吸収（技術スタック・ディレクトリ構成・レイヤー責務）、Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一 | 設計チーム |

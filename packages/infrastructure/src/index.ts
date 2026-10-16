@@ -109,7 +109,7 @@ export { PrismaProjectCommandAdapter } from "./project/PrismaProjectCommandAdapt
 // Kysely 実装は ESM 専用パッケージ (kysely) を読み込むため、Jest (CommonJS) を使う
 // apps/web の barrel import から切り離す目的で、メインの index には載せず
 // サブバレル `@physifun/infrastructure/src/kysely` に分離している。
-// 詳細は `.docs/db-migration-kysely-atlas.md` を参照。
+// 詳細は `docs/guides/db-migration.md` を参照。
 
 export {
   PrismaOutboxQueryService,

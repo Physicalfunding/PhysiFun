@@ -1,13 +1,18 @@
 # @physifun/infrastructure
 
-PhysiFun のインフラ層。外部サービス（Prisma / Supabase Storage / Resend 等）との接続実装をここに集約する。
+PhysiFun のインフラ層。外部サービス（PostgreSQL / Resend 等）との接続実装をここに集約する。
 
 ## スコープ
 
-- `database/` — Prisma Client シングルトン、リポジトリ実装
-- `outbox/` — Outbox ワーカー（`LeaderApplicationOutboxMessage` / `ProjectOutboxMessage`）
-- `mail/` — `MailSender` インターフェースと実装（Resend など）
-- `storage/` — Supabase Storage アダプタ
+- `src/<context>/` — Port / リポジトリ IF の実装（`KyselyXxxAdapter` / `KyselyXxxQueryService` など）。旧 `PrismaXxx` 実装は Prisma 撤去（#230）まで並存
+- `src/database/` — Kysely クライアント・DB 型（`kysely/`）、Prisma Client（移行完了まで）
+- `src/outbox/` — Outbox ワーカーとメッセージ種別ごとのプロセッサ
+- `src/mail/` — `MailSender` インターフェースと実装（Resend など）
+- `src/security/` — パスワードハッシュ（bcrypt）
+- `prisma/` — `schema.prisma` / マイグレーション / seed（Atlas 移行完了まで）
+- `atlas/` — Atlas の設定・マイグレーション（baseline 未確立）
+
+Kysely 実装は ESM 専用のため、メイン barrel ではなくサブバレル `@physifun/infrastructure/src/kysely` から公開している。移行の詳細は `docs/guides/db-migration.md`。
 
 ## 原則
 
@@ -15,7 +20,7 @@ PhysiFun のインフラ層。外部サービス（Prisma / Supabase Storage / R
 - 環境変数の読み込みはこの層で完結させる
 - `apps/web` / `apps/admin` からは DI を通してのみ利用する
 
-詳細は `PhysiFun/.docs/structure.md` を参照。
+レイヤー責務は `docs/specs/01_system-architecture.md` §4 を参照。
 
 ## 利用上の注意
 
@@ -28,12 +33,12 @@ PhysiFun のインフラ層。外部サービス（Prisma / Supabase Storage / R
 
 ### 1. `src/**/__tests__/*.test.ts` (bun test / Jest 互換)
 
-Prisma を直接触らないユニットテスト（モック済み Prisma / Outbox Worker / Mail / Bcrypt 等）。
+DB に接続しないユニットテスト（Outbox Worker / Mail / Bcrypt / HMAC 等）。
 リポジトリルートの `bun test apps packages` からまとめて実行される。Docker 不要。
 
 ### 2. `test/**/*.vitest.ts` (vitest + Testcontainers)
 
-実 PostgreSQL に対して Prisma 経由でクエリする integration test。
+実 PostgreSQL に対してクエリする integration test（Kysely 実装の検証が中心）。
 
 - **Docker 必須**。ローカルで実行する場合は Docker Desktop を起動しておくこと。
 - CI では `docker` サービスが使える runner (GitHub Actions の `ubuntu-latest` なら OK) を使う。

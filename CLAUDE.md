@@ -3,7 +3,7 @@
 ## プロジェクト概要
 
 お金ではなくスキルと時間でプロジェクトを支援するフィジカルファンディングプラットフォーム。
-**現在のフェーズ: Phase 1 準備中**（リーダー募集 LP + 応募フォーム + リーダー機能。旧 Phase 1 + 旧 Phase 2 を統合した新 2 フェーズ構成。詳細は `.docs/product.md`）
+**現在地: 初回リリースに向けて開発中**（リーダー向け: 募集 LP・応募・審査・プロジェクト / サポート募集の準備）。次の段階は「一般公開」（サポーター向け）。詳細と実装状況は `docs/product.md`
 
 ---
 
@@ -57,7 +57,7 @@ bun run typecheck    # 型チェック
 ## 推奨事項
 
 - 既存コードのパターンに合わせる（一貫性を保つ）
-- エラーハンドリングは `Result` 型（`src/domain/shared/result.ts`）を活用
+- エラーハンドリングは `Result` 型（`packages/domain/src/shared/result.ts`）を活用
 - フォームバリデーションは Zod スキーマで定義
 - セキュリティ: SQL インジェクション・XSS・認証バイパスに注意
 
@@ -77,18 +77,20 @@ bun run typecheck    # 型チェック
 
 ## 開発フロー・PR ルールの詳細
 
-詳細は `.docs/dev-rule.md` を参照。
+詳細は `docs/guides/dev-rule.md` を参照。
 
 ---
 
 ## ドキュメント一覧
 
+ドキュメントの地図は **`docs/README.md`**。実装前に読むべきものは以下。
+
 | ファイル | 内容 |
 |---|---|
-| `.docs/product.md` | プロダクト方針・フェーズ計画 |
-| `.docs/tech.md` | 技術スタック・インフラ |
-| `.docs/structure.md` | ディレクトリ構成・命名規則 |
-| `.docs/dev-rule.md` | 開発フロー・PR ルール |
-| `.docs/requirements.md` | 要件定義 |
-| `.docs/design.md` | 設計書 |
-| `.docs/db-migration-kysely-atlas.md` | DB 層移行ガイド（Prisma → Kysely + Atlas、PoC: project ドメイン移行済み） |
+| `docs/product.md` | プロダクト方針・リリース計画・実装状況 |
+| `docs/specs/01_system-architecture.md` | 技術スタック・ディレクトリ構成・レイヤー責務（設計の入口） |
+| `docs/specs/` | ドメイン・データ・セキュリティ・主要フローの設計仕様 |
+| `docs/guides/dev-rule.md` | 開発フロー・PR ルール・コーディング規約 |
+| `docs/guides/db-migration.md` | DB 層移行ガイド（Prisma → Kysely + Atlas、クエリ層は移行済み） |
+
+> 用語: リリース段階は「初回リリース」「一般公開」と呼ぶ。古い Issue やコメントにある「Phase 1 / 2 / 3」の読み替えは `docs/product.md` を参照。

@@ -228,7 +228,7 @@ classDiagram
 
 ### 9.2 dead-letter の監視
 
-`deadLetteredAt IS NOT NULL` のメッセージは**手動対応が必要**。Phase 1 では運営アプリのダッシュボードに表示する画面が整備されている（`apps/admin/src/app/outbox/`）。
+`deadLetteredAt IS NOT NULL` のメッセージは**手動対応が必要**。初回リリースでは運営アプリのダッシュボードに表示する画面が整備されている（`apps/admin/src/app/outbox/`）。
 
 ### 9.3 `after()` の実行タイミング
 
@@ -240,8 +240,8 @@ Cron Route は `LeaderApplicationOutboxWorker` と `ProjectOutboxWorker` を **`
 
 ### 9.5 メッセージの dedup は無し
 
-同じ payload で 2 回 INSERT すれば 2 メッセージ独立に処理される。重複防止は呼び出し側責任（UseCase が「既に Outbox に同じものが無いか」をチェックする等）。Phase 1 ではアグリゲートの状態遷移と Outbox INSERT が同一 transaction なので、業務的にはほぼ問題ない。
+同じ payload で 2 回 INSERT すれば 2 メッセージ独立に処理される。重複防止は呼び出し側責任（UseCase が「既に Outbox に同じものが無いか」をチェックする等）。初回リリースではアグリゲートの状態遷移と Outbox INSERT が同一 transaction なので、業務的にはほぼ問題ない。
 
 ### 9.6 リトライ間隔・最大回数の調整
 
-`OutboxWorkerBase` のデフォルトは「30 秒 × 2^n」「最大 10 回」。プロセッサ実装で上書き可能。Phase 2 で SLA に応じて調整する。
+`OutboxWorkerBase` のデフォルトは「30 秒 × 2^n」「最大 10 回」。プロセッサ実装で上書き可能。一般公開時に SLA に応じて調整する。

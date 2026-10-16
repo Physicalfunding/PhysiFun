@@ -4,18 +4,20 @@ PhysiFun のドメイン層。エンティティ・値オブジェクト・リ�
 
 ## スコープ
 
-- `account/` — `Account`, `Role`
-- `leader-application/` — `LeaderApplication`, `ApplicationMode`
+- `account/` — `AccountId`, `PhoneNumber`（値オブジェクトのみの最小実装）
+- `admin-account/` — `AdminAccount`（運営アカウント、独立アグリゲート）
+- `leader-application/` — `LeaderApplication`, `LeaderApplicationStatus`, `ProjectDraft`
 - `project/` — `Project`, `ProjectPhase`, `PublishStatus`, `ProjectReviewFeedback`
-- `recruitment/` — `Recruitment`, `RecruitmentSchedule`, `SupportTicket`
-- `shared/` — `Result` 型、共通値オブジェクト
+- `shared/` — `Result` 型、共通値オブジェクト（`ProjectCategory` / `ProjectLocation` / `SnsLinks`）
+
+> `recruitment/`（サポート募集）は未作成。#212 で追加予定。
 
 ## 禁止事項
 
-- 外部ライブラリ（Prisma, Supabase SDK, Next.js など）への依存を持ち込まない
+- 外部ライブラリ（Kysely, Supabase SDK, Next.js など）への依存を持ち込まない
 - 具体的なインフラ実装を参照しない（リポジトリはインターフェースのみ）
 
-詳細は `docs-repository/docs/202604_初回リリースに向けた計画/` 配下のドメインドキュメントを参照。
+設計は `docs/specs/02_domain-model.md` を参照。
 
 ## 利用上の注意
 

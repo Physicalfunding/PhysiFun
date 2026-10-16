@@ -2,7 +2,7 @@
 
 ## 概要
 
-`apps/admin` の認証は **`AdminAccount` ベース + Magic Link (NextAuth EmailProvider) + Database セッション戦略**。Phase 2 準備（Issue #140 系）で `Account.roles = ADMIN` 方式は廃止済み。
+`apps/admin` の認証は **`AdminAccount` ベース + Magic Link (NextAuth EmailProvider) + Database セッション戦略**。Issue #140 系の対応で `Account.roles = ADMIN` 方式は廃止済み。
 
 本ドキュメントは:
 
@@ -11,7 +11,7 @@
 - 必要な環境変数 / Cron / 監査ログ
 - 緊急時の強制 revoke 手順
 
-を扱う。設計の詳細は `docs-repository/docs/202604_初回リリースに向けた計画/運営アプリ.md` および `アカウント.md` の「運営アカウント (AdminAccount)」セクション参照。
+を扱う。認証設計は `docs/specs/04_security-design.md` と `docs/specs/05_key-flows/admin-magic-link.md`、業務側の詳細は `docs-repository/docs/mvp/202604_初回リリースに向けた計画/運営アプリ.md` および `アカウント.md` の「運営アカウント (AdminAccount)」セクション参照。
 
 ---
 

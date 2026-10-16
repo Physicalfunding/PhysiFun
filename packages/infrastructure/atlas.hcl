@@ -1,6 +1,6 @@
 // Atlas 設定（PoC: Prisma migrate からの段階移行）
 //
-// 運用手順の全体像は `.docs/db-migration-kysely-atlas.md` を参照。
+// 運用手順の全体像は `docs/guides/db-migration.md` を参照。
 // 使い方の要点:
 //   - 望ましいスキーマは `atlas/schema.sql`（宣言的ソース）。
 //   - `bun run db:atlas:diff <name>` で現マイグレーションとの差分から versioned migration を生成。

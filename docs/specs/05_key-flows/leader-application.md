@@ -8,7 +8,7 @@
 - API Route: `apps/web/src/app/api/activate/route.ts`
 - UseCase: `packages/application/src/leader-application/SubmitLeaderApplicationUseCase.ts`
 - UseCase: `packages/application/src/account/ActivateAccountUseCase.ts`
-- Adapter: `packages/infrastructure/src/leader-application/PrismaSubmitLeaderApplicationAdapter.ts`
+- Adapter: `packages/infrastructure/src/leader-application/KyselySubmitLeaderApplicationAdapter.ts`
 - 補助: `apps/web/src/lib/captcha.ts` (Cloudflare Turnstile) / `apps/web/src/lib/rateLimit.ts` (LRU)
 - Outbox: `packages/infrastructure/src/outbox/processors/ActivationEmailProcessor.ts`
 
@@ -25,7 +25,7 @@ sequenceDiagram
     participant RL as IpRateLimitPort
     participant CV as CaptchaVerifierPort
     participant UC as SubmitLeaderApplicationUseCase
-    participant Adapter as PrismaSubmitAdapter
+    participant Adapter as KyselySubmitAdapter
     participant DB as PostgreSQL
     participant Outbox as OutboxWorker
     participant Mail as ResendMailSender
@@ -74,7 +74,7 @@ sequenceDiagram
     participant Form as ActivateForm
     participant API as POST /api/activate
     participant UC as ActivateAccountUseCase
-    participant Adapter as PrismaActivateAccountAdapter
+    participant Adapter as KyselyActivateAccountAdapter
     participant DB as PostgreSQL
 
     User->>Form: メール内リンクをクリック
@@ -162,7 +162,7 @@ flowchart TD
 
 ### 5.1 IP rate limit の限界
 
-`apps/web/src/lib/rateLimit.ts` の `LRU` バケットは **インスタンス内メモリ**。Vercel の関数インスタンスをまたぐと共有されない。Phase 1 はトラフィックが少ないため許容しているが、**Phase 2 では Redis / Vercel KV ベースに置き換える必要あり**（Issue #202）。
+`apps/web/src/lib/rateLimit.ts` の `LRU` バケットは **インスタンス内メモリ**。Vercel の関数インスタンスをまたぐと共有されない。初回リリースはトラフィックが少ないため許容しているが、**一般公開までに Redis / Vercel KV ベースに置き換える必要あり**（Issue #202）。
 
 ### 5.2 アクティベーショントークンの再利用攻撃
 

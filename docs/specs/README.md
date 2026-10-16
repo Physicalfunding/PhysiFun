@@ -25,18 +25,19 @@ PhysiFun の設計レイヤー（実装の構造意図）をまとめたディ�
 | `00_terminology.md` | 低 | ✅ 公開済み | エンジニア視点の最小用語集（コード上の用語と意図の対訳） |
 | `01_system-architecture.md` | 低 | ✅ 公開済み | システム構成図（インフラ＋monorepo 全体俯瞰） |
 | `02_domain-model.md` | 中 | ✅ 公開済み | アグリゲート・状態遷移・不変条件 |
-| `03_data-model.md` | 中〜高 | ✅ 公開済み | ER 図（Prisma schema 視覚化）+ 主要 FK・インデックス |
+| `03_data-model.md` | 中〜高 | ✅ 公開済み | ER 図（`schema.prisma` の視覚化）+ 主要 FK・インデックス |
 | `04_security-design.md` | 中 | ✅ 公開済み | 認証アーキ / 認可 / データ保護 / 脅威モデル |
 | `05_key-flows/` | 中 | ✅ 公開済み | 主要フローのシーケンス図（応募・公開審査・Magic Link・Outbox） |
 
 ## 関連ドキュメント（同リポジトリ内のみ）
 
-- 既存技術ドキュメント: `.docs/tech.md` / `.docs/structure.md` / `.docs/dev-rule.md`
-- 開発ルール: `CLAUDE.md`
+- ドキュメント全体の地図: `docs/README.md`
+- プロダクト方針・リリース計画: `docs/product.md`
+- 開発ルール・コーディング規約: `docs/guides/dev-rule.md` / `CLAUDE.md`
 - 用語集（コード視点）: `docs/specs/00_terminology.md`
 
 > **方針**: 本ディレクトリは PhysiFun リポジトリ内で**自己完結**する。実装作業に必要な情報はこのリポジトリだけで揃うようにする。
-> ビジネス側（ペルソナ・戦略・Phase 計画など）は別リポジトリ（docs-repository）で管理されているが、本書からは**参照しない**。
+> ビジネス側（ペルソナ・戦略・リリース計画など）は別リポジトリ（docs-repository）で管理されているが、本書からは**参照しない**。
 > 用語のうち**業務領域の完全版**は別リポジトリ側に存在する想定。本書の `00_terminology.md` はそのコード関連サブセット。
 
 ## 規約

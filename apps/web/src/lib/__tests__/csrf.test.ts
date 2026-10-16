@@ -194,6 +194,8 @@ describe("verifyCsrf", () => {
     Object.defineProperty(process.env, "NODE_ENV", {
       value: origNodeEnv,
       configurable: true,
+      writable: true,
+      enumerable: true,
     });
   });
 
@@ -230,6 +232,8 @@ describe("verifyCsrf", () => {
     Object.defineProperty(process.env, "NODE_ENV", {
       value: "development",
       configurable: true,
+      writable: true,
+      enumerable: true,
     });
     const req = buildMockRequest({
       method: "POST",
@@ -254,6 +258,8 @@ describe("verifyCsrf", () => {
     Object.defineProperty(process.env, "NODE_ENV", {
       value: "production",
       configurable: true,
+      writable: true,
+      enumerable: true,
     });
     const req = buildMockRequest({
       method: "POST",
@@ -285,6 +291,8 @@ describe("verifyCsrf", () => {
     Object.defineProperty(process.env, "NODE_ENV", {
       value: "development",
       configurable: true,
+      writable: true,
+      enumerable: true,
     });
     const req = buildMockRequest({
       method: "POST",
@@ -337,6 +345,8 @@ describe("verifyCsrf", () => {
     Object.defineProperty(process.env, "NODE_ENV", {
       value: "development",
       configurable: true,
+      writable: true,
+      enumerable: true,
     });
     process.env.NEXTAUTH_URL = "::invalid::";
     const req = buildMockRequest({
@@ -355,6 +365,8 @@ describe("verifyCsrf", () => {
     Object.defineProperty(process.env, "NODE_ENV", {
       value: "development",
       configurable: true,
+      writable: true,
+      enumerable: true,
     });
     delete process.env.NEXTAUTH_URL;
     const req = buildMockRequest({
@@ -372,6 +384,8 @@ describe("verifyCsrf", () => {
     Object.defineProperty(process.env, "NODE_ENV", {
       value: "development",
       configurable: true,
+      writable: true,
+      enumerable: true,
     });
     delete process.env.NEXTAUTH_URL;
     const req = buildMockRequest({
