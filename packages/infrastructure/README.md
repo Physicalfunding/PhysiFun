@@ -4,12 +4,13 @@ PhysiFun のインフラ層。外部サービス（PostgreSQL / Resend 等）と
 
 ## スコープ
 
-- `src/<context>/` — Port / リポジトリ IF の実装（`KyselyXxxAdapter` / `KyselyXxxQueryService` など）。旧 `PrismaXxx` 実装は Prisma 撤去（#230）まで並存
-- `src/database/` — Kysely クライアント・DB 型（`kysely/`）、Prisma Client（移行完了まで）
+- `src/<context>/` — Port / リポジトリ IF の実装（`KyselyXxxAdapter` / `KyselyXxxQueryService` など）
+- `src/database/` — Kysely クライアント・DB 型（`kysely/`）
 - `src/outbox/` — Outbox ワーカーとメッセージ種別ごとのプロセッサ
 - `src/mail/` — `MailSender` インターフェースと実装（Resend など）
 - `src/security/` — パスワードハッシュ（bcrypt）
-- `prisma/` — `schema.prisma` / マイグレーション / seed（Atlas 移行完了まで）
+- `prisma/` — `schema.prisma` / マイグレーション（Atlas 移行完了まで）
+- `scripts/seed.ts` — 初期 AdminAccount の投入（`bun run db:seed`）
 - `atlas/` — Atlas の設定・マイグレーション（baseline 未確立）
 
 Kysely 実装は ESM 専用のため、メイン barrel ではなくサブバレル `@physifun/infrastructure/src/kysely` から公開している。移行の詳細は `docs/guides/db-migration.md`。
@@ -54,7 +55,7 @@ DB に接続しないユニットテスト（Outbox Worker / Mail / Bcrypt / HMA
 - 仕組み:
   - `vitest.config.ts` の `globalSetup` で `@testcontainers/postgresql` の `PostgreSqlContainer` を起動
   - 起動直後に `bun prisma migrate deploy` でスキーマを適用
-  - 各テストは `test/helpers/prisma.ts` の `getTestPrisma()` で接続し、`resetDatabase()` で毎回クリーンアップ
+  - 各テストは `test/helpers/db.ts` の Kysely 接続を使い、`resetDatabase()` で毎回クリーンアップ。データ投入は `insertRow` / `insertRows`（`id` / `updatedAt` を自動補完）
 - 既存 DB を使う場合（Docker を使いたくない、または docker-compose 管理の DB を流用する）:
   ```bash
   INFRA_TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/physifun_test" \
