@@ -22,8 +22,8 @@ import type { AdminProjectQueryPort, AdminOutboxQueryPort } from "@physifun/appl
  * - QueryService はモジュールレベルで `new` せず、ここで提供するファクトリを
  *   Server Component / Route Handler 内で都度呼び出す形でリクエストスコープに揃える。
  * - モジュールレベル生成は、テスト時のモック差し替えや将来のリクエスト単位
- *   Prisma Client 切替 (例: テナント別 RLS) を阻害するため避ける。
- * - infrastructure 層以外で Prisma を直接 `new` しない規約とも整合する。
+ *   DB クライアント切替 (例: テナント別 RLS) を阻害するため避ける。
+ * - infrastructure 層以外で DB クライアントを直接 `new` しない規約とも整合する。
  * - 戻り型は可能な限りインターフェースに揃え、呼び出し側を実装に依存させない。
  *   admin 専用メソッド (findManyForAdmin / findDetailForAdmin / countByStatus 等) は
  *   現状 Port インターフェース化されていないため、Project / Outbox のファクトリは
@@ -135,8 +135,8 @@ const cachedListDistinctTargetTypes = unstable_cache(
  *
  * NOTE: unstable_cache は引数を JSON.stringify でキー化するため、
  * delegate（クラスインスタンス）は {} に潰れる。現状はリクエストごとに
- * new PrismaAdminAuditLogQueryService() を生成するシングルテナント前提で
- * 問題ないが、将来テナント別 Prisma Client や接続先切替を導入する場合は
+ * new KyselyAdminAuditLogQueryService() を生成するシングルテナント前提で
+ * 問題ないが、将来テナント別の DB クライアントや接続先切替を導入する場合は
  * テナント識別子を keyParts/tags に含めて誤キャッシュヒットを防ぐ拡張が必要。
  */
 export class CachedAdminAuditLogQueryService implements AdminAuditLogQueryService {

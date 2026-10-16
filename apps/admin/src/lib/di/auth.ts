@@ -27,11 +27,9 @@ import { EMAIL_MAGIC_LINK_MAX_AGE_MIN } from "../auth-constants";
 /**
  * NextAuth v4 Database 戦略のカスタム Adapter を返す。
  *
- * #225 で Prisma 実装（createAdminPrismaAdapter）から Kysely 実装（createAdminKyselyAdapter）へ
- * 差し替え済み。関数名 `getAdminPrismaAdapter` は auth.ts と既存ユニットテスト（auth-cookies）の
- * モックが参照しているため互換維持で据え置く（最終的な改名は Prisma 撤去 #230 で実施）。
+ * 実体は Kysely 実装（createAdminKyselyAdapter / #225）。
  */
-export function getAdminPrismaAdapter() {
+export function getAdminAuthAdapter() {
   return createAdminKyselyAdapter();
 }
 

@@ -3,10 +3,9 @@ import { Pool } from "pg";
 import type { DB } from "./types";
 
 /**
- * Kysely クライアント シングルトン（PoC: project ドメイン移行）
+ * Kysely クライアント シングルトン
  *
- * Prisma Client（`database/client.ts`）と同様に、Next.js の dev hot reload で
- * 接続プールが多重生成されないよう globalThis にキャッシュする。
+ * Next.js の dev hot reload で接続プールが多重生成されないよう globalThis にキャッシュする。
  *
  * ## Supabase Transaction Pooler（pgBouncer）互換について
  * - `DATABASE_URL` は Transaction Pooler URL を想定（`docs/specs/01_system-architecture.md`）。

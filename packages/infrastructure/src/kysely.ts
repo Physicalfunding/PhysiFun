@@ -1,5 +1,5 @@
 /**
- * Kysely 実装のサブバレル（PoC: project ドメイン移行）
+ * Kysely 実装のサブバレル
  *
  * ## なぜメインの `index.ts` と分けるのか
  * `kysely` は ESM 専用パッケージ（`type: module`、CJS ビルド無し）。一方 apps/web の
@@ -8,8 +8,8 @@
  * `transpilePackages` 方式も効かない）。
  *
  * そこで Kysely を読み込む実装は、全所から import されるメイン barrel には載せず、
- * このサブバレルに隔離する。Kysely を使う DI（project / leader-application / account ドメイン）
- * だけがここを import し、Prisma ベースの DI / それを読む Jest テストは Kysely を一切ロードしない。
+ * このサブバレルに隔離する。DB にアクセスする DI だけがここを import し、
+ * Jest テストから読まれるモジュールは Kysely を一切ロードしない。
  *
  * 利用側:
  *   import { KyselyProjectQueryService } from "@physifun/infrastructure/src/kysely";

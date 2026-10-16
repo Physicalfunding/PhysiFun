@@ -3,8 +3,8 @@
 クエリ層を **Kysely**（SQL ライクな型安全クエリビルダ）へ、スキーマ/マイグレーション管理を
 **Atlas**（宣言的＋ versioned）へ段階移行するための方針と手順。型生成は **kysely-codegen** を併用する。
 
-> ステータス: **クエリ層の移行はほぼ完了**（全ドメインの Kysely 実装が DI で稼働中。残りは Outbox の `PrismaAccountEmailLookup` のみ）。
-> スキーマ / マイグレーションは引き続き Prisma（Atlas baseline 未確立）。旧 `Prisma*` 実装はコード上に並存している。
+> ステータス: **クエリ層の移行は完了**（アプリ・テスト・E2E・seed の DB アクセスはすべて Kysely。旧 `Prisma*` 実装は #230 で削除済み）。
+> スキーマ / マイグレーションは引き続き Prisma（`schema.prisma` / `prisma migrate`。Atlas baseline 未確立）。
 > 残作業は Epic #221（#228 → #229 → #230）で管理。
 
 ---
@@ -55,8 +55,10 @@ Kysely に置き換え、最終的に全ドメイン移行完了後に Prisma �
 `kysely` は **ESM 専用**（CJS ビルド無し）。`next/jest` は node_modules を変換対象から外し、
 `transpilePackages` 方式も bun の `.bun/<pkg>@<ver>/` レイアウトでは効かない。そのため
 **Kysely を読み込む実装はメイン barrel（`@physifun/infrastructure`）に載せず、サブバレル
-`@physifun/infrastructure/src/kysely` に隔離**している。Prisma ベースの DI とそれを読む Jest
-テストは Kysely を一切ロードしない。`apps/admin` は `bun:test`（ESM 対応）なので制約なし。
+`@physifun/infrastructure/src/kysely` に隔離**している。メイン barrel には DB に依存しない実装と
+型・純粋関数だけを置き、Jest テストから読まれるモジュールは Kysely を一切ロードしない
+（DI を読むテストはモジュールをモックする）。`apps/admin` は `bun:test`（ESM 対応）なので制約なし。
+E2E（Playwright）は Node の `require(esm)` で Kysely を読み込むため、Node 22 以上で実行する。
 
 ---
 
@@ -137,7 +139,7 @@ bun run db:kysely:codegen
   - 一意制約判定は pg の `error.code === '23505'`（`isUniqueConstraintError` の Kysely 版、#227）。
   - NextAuth カスタム Adapter を `AdminKyselyAdapter` として再実装（#225）。
 - [x] admin QueryService を application 層の Port 化（#231）。
-- [ ] Outbox composition の `PrismaAccountEmailLookup` を Kysely 実装に置き換え、DI から `prisma` を外す。
+- [x] Outbox の email ルックアップを Kysely 化し、旧 `Prisma*` 実装・Prisma 版テストヘルパーを削除。統合テスト・E2E・seed も Kysely 化（#230 前半）。
 - [ ] `atlas/schema.sql` の baseline 確立（#228）→ `prisma migrate` 撤去 → `test/globalSetup.ts` 差し替え（#229）。
-- [ ] `@prisma/client` / `prisma` と旧 `Prisma*` 実装を削除し、`types.ts` を kysely-codegen 生成物へ一本化（#230）。
+- [ ] `@prisma/client` / `prisma` / `schema.prisma` を削除し、`types.ts` を kysely-codegen 生成物へ一本化（#230 後半）。
 - [ ] 完了後、`docs/specs/`（特に `03_data-model.md` の正本表記）とルート `README.md` の DB コマンドを更新。

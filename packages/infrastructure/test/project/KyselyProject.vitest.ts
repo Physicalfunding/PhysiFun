@@ -5,66 +5,56 @@ import { KyselyProjectQueryService } from "../../src/project/KyselyProjectQueryS
 import { KyselyProjectCommandAdapter } from "../../src/project/KyselyProjectCommandAdapter";
 import { reconstructProject } from "../../src/project/reconstructProject";
 import { db } from "../../src/database/kysely/client";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { insertRow, resetDatabase } from "../helpers/db";
 
 /**
  * Kysely 版 Project 実装の integration test（PoC 検証）
  *
- * - シードは Prisma（既存ヘルパー）で行い、検証対象は Kysely 実装。
+ * - シードはテスト用ヘルパー（`helpers/db.ts`）で行い、検証対象は Kysely 実装。
  * - 実 PostgreSQL（Testcontainers）に対して、カラム名・jsonb 直列化・JOIN・
  *   トランザクション / TOCTOU が Prisma 版と同じ結果になることを確認する。
  */
 describe("Kysely Project 実装 integration", () => {
-  const prisma = getTestPrisma();
   const queryService = new KyselyProjectQueryService();
   const commandAdapter = new KyselyProjectCommandAdapter();
 
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
     await db.destroy();
-    await disconnectTestPrisma();
   });
 
   describe("findManyForAdmin", () => {
     it("PENDING_REVIEW を publishRequestedAt DESC で返し owner を join する", async () => {
-      const leader = await prisma.account.create({
-        data: {
-          email: "leader@example.com",
-          displayName: "リーダー太郎",
-          status: "ACTIVE",
-          roles: ["LEADER"],
-          passwordHash: "dummy",
-        },
+      const leader = await insertRow("accounts", {
+        email: "leader@example.com",
+        displayName: "リーダー太郎",
+        status: "ACTIVE",
+        roles: ["LEADER"],
+        passwordHash: "dummy",
       });
 
-      await prisma.project.create({
-        data: {
-          ownerAccountId: leader.id,
-          title: "古い申請",
-          status: "PENDING_REVIEW",
-          phase: "VISION",
-          publishRequestedAt: new Date("2026-01-01T00:00:00Z"),
-        },
+      await insertRow("projects", {
+        ownerAccountId: leader.id,
+        title: "古い申請",
+        status: "PENDING_REVIEW",
+        phase: "VISION",
+        publishRequestedAt: new Date("2026-01-01T00:00:00Z"),
       });
-      await prisma.project.create({
-        data: {
-          ownerAccountId: leader.id,
-          title: "新しい申請",
-          status: "PENDING_REVIEW",
-          phase: "VISION",
-          publishRequestedAt: new Date("2026-02-01T00:00:00Z"),
-        },
+      await insertRow("projects", {
+        ownerAccountId: leader.id,
+        title: "新しい申請",
+        status: "PENDING_REVIEW",
+        phase: "VISION",
+        publishRequestedAt: new Date("2026-02-01T00:00:00Z"),
       });
-      await prisma.project.create({
-        data: {
-          ownerAccountId: leader.id,
-          title: "DRAFT のプロジェクト",
-          status: "DRAFT",
-          phase: "VISION",
-        },
+      await insertRow("projects", {
+        ownerAccountId: leader.id,
+        title: "DRAFT のプロジェクト",
+        status: "DRAFT",
+        phase: "VISION",
       });
 
       const result = await queryService.findManyForAdmin({
@@ -82,38 +72,33 @@ describe("Kysely Project 実装 integration", () => {
 
   describe("findDetailForAdmin", () => {
     it("審査履歴を admin_accounts と join して reviewedAt DESC 最大 5 件返す", async () => {
-      const leader = await prisma.account.create({
-        data: {
-          email: "leader3@example.com",
-          displayName: "レビュー対象リーダー",
-          status: "ACTIVE",
-          roles: ["LEADER"],
-          passwordHash: "dummy",
-          bio: "bio テキスト",
-        },
+      const leader = await insertRow("accounts", {
+        email: "leader3@example.com",
+        displayName: "レビュー対象リーダー",
+        status: "ACTIVE",
+        roles: ["LEADER"],
+        passwordHash: "dummy",
+        bio: "bio テキスト",
       });
-      const reviewer = await prisma.adminAccount.create({
-        data: { email: "admin@example.com", status: "ACTIVE" },
+      const reviewer = await insertRow("admin_accounts", {
+        email: "admin@example.com",
+        status: "ACTIVE",
       });
-      const project = await prisma.project.create({
-        data: {
-          ownerAccountId: leader.id,
-          title: "詳細対象",
-          status: "PENDING_REVIEW",
-          phase: "VISION",
-          publishRequestedAt: new Date("2026-02-01T00:00:00Z"),
-        },
+      const project = await insertRow("projects", {
+        ownerAccountId: leader.id,
+        title: "詳細対象",
+        status: "PENDING_REVIEW",
+        phase: "VISION",
+        publishRequestedAt: new Date("2026-02-01T00:00:00Z"),
       });
 
       for (let i = 0; i < 6; i++) {
-        await prisma.projectReviewFeedback.create({
-          data: {
-            projectId: project.id,
-            reviewerId: reviewer.id,
-            action: "REJECTED",
-            note: `フィードバック ${i}`,
-            reviewedAt: new Date(`2026-02-0${i + 1}T00:00:00Z`),
-          },
+        await insertRow("project_review_feedbacks", {
+          projectId: project.id,
+          reviewerId: reviewer.id,
+          action: "REJECTED",
+          note: `フィードバック ${i}`,
+          reviewedAt: new Date(`2026-02-0${i + 1}T00:00:00Z`),
         });
       }
 
@@ -140,33 +125,27 @@ describe("Kysely Project 実装 integration", () => {
 
   describe("countByStatus", () => {
     it("status ごとの件数を返す", async () => {
-      const leader = await prisma.account.create({
-        data: {
-          email: "leader4@example.com",
-          displayName: "カウント対象",
-          status: "ACTIVE",
-          roles: ["LEADER"],
-          passwordHash: "dummy",
-        },
+      const leader = await insertRow("accounts", {
+        email: "leader4@example.com",
+        displayName: "カウント対象",
+        status: "ACTIVE",
+        roles: ["LEADER"],
+        passwordHash: "dummy",
       });
       for (let i = 0; i < 3; i++) {
-        await prisma.project.create({
-          data: {
-            ownerAccountId: leader.id,
-            title: `DRAFT ${i}`,
-            status: "DRAFT",
-            phase: "VISION",
-          },
+        await insertRow("projects", {
+          ownerAccountId: leader.id,
+          title: `DRAFT ${i}`,
+          status: "DRAFT",
+          phase: "VISION",
         });
       }
-      await prisma.project.create({
-        data: {
-          ownerAccountId: leader.id,
-          title: "PENDING",
-          status: "PENDING_REVIEW",
-          phase: "VISION",
-          publishRequestedAt: new Date(),
-        },
+      await insertRow("projects", {
+        ownerAccountId: leader.id,
+        title: "PENDING",
+        status: "PENDING_REVIEW",
+        phase: "VISION",
+        publishRequestedAt: new Date(),
       });
 
       expect(await queryService.countByStatus("DRAFT")).toBe(3);
@@ -177,23 +156,19 @@ describe("Kysely Project 実装 integration", () => {
 
   describe("findProjectDetailForOwner（jsonb 読み取り + owner-check）", () => {
     it("owner 本人には snsLinks(jsonb) を含めて返し、別 owner には null", async () => {
-      const owner = await prisma.account.create({
-        data: {
-          email: "owner@example.com",
-          displayName: "オーナー",
-          status: "ACTIVE",
-          roles: ["LEADER"],
-          passwordHash: "dummy",
-        },
+      const owner = await insertRow("accounts", {
+        email: "owner@example.com",
+        displayName: "オーナー",
+        status: "ACTIVE",
+        roles: ["LEADER"],
+        passwordHash: "dummy",
       });
-      const project = await prisma.project.create({
-        data: {
-          ownerAccountId: owner.id,
-          title: "snsLinks 確認",
-          status: "DRAFT",
-          phase: "VISION",
-          snsLinks: { x: "https://x.com/foo", instagram: null, facebook: null, website: null },
-        },
+      const project = await insertRow("projects", {
+        ownerAccountId: owner.id,
+        title: "snsLinks 確認",
+        status: "DRAFT",
+        phase: "VISION",
+        snsLinks: { x: "https://x.com/foo", instagram: null, facebook: null, website: null },
       });
 
       const detail = await queryService.findProjectDetailForOwner(project.id, owner.id);
@@ -209,14 +184,12 @@ describe("Kysely Project 実装 integration", () => {
 
   describe("countAndSaveProject（INSERT + jsonb 書き込み + TOCTOU）", () => {
     it("Project を保存でき、findProjectById で復元できる", async () => {
-      const owner = await prisma.account.create({
-        data: {
-          email: "writer@example.com",
-          displayName: "ライター",
-          status: "ACTIVE",
-          roles: ["LEADER"],
-          passwordHash: "dummy",
-        },
+      const owner = await insertRow("accounts", {
+        email: "writer@example.com",
+        displayName: "ライター",
+        status: "ACTIVE",
+        roles: ["LEADER"],
+        passwordHash: "dummy",
       });
 
       const project = reconstructProject({
@@ -254,17 +227,18 @@ describe("Kysely Project 実装 integration", () => {
     });
 
     it("maxCount 到達時は同一 tx 内の count チェックで ProjectLimitExceededError", async () => {
-      const owner = await prisma.account.create({
-        data: {
-          email: "limit@example.com",
-          displayName: "上限テスト",
-          status: "ACTIVE",
-          roles: ["LEADER"],
-          passwordHash: "dummy",
-        },
+      const owner = await insertRow("accounts", {
+        email: "limit@example.com",
+        displayName: "上限テスト",
+        status: "ACTIVE",
+        roles: ["LEADER"],
+        passwordHash: "dummy",
       });
-      await prisma.project.create({
-        data: { ownerAccountId: owner.id, title: "既存1", status: "DRAFT", phase: "VISION" },
+      await insertRow("projects", {
+        ownerAccountId: owner.id,
+        title: "既存1",
+        status: "DRAFT",
+        phase: "VISION",
       });
 
       const project = reconstructProject({

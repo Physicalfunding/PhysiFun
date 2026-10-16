@@ -24,7 +24,7 @@ import { authOptions } from "@/lib/auth";
  *   2. AdminAuditLog に `magic_link.signature_invalid` を記録
  *
  * ## なぜ middleware ではなく route で
- * middleware は Edge ランタイムで動くため @physifun/infrastructure (Prisma 依存)
+ * middleware は Edge ランタイムで動くため @physifun/infrastructure (DB 依存)
  * を読み込めない。したがって route handler の入口で verify を差し込む。
  *
  * ## 検証対象

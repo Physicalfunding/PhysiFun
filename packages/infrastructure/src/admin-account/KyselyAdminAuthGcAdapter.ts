@@ -3,7 +3,7 @@ import { db } from "../database/kysely/client";
 /**
  * AdminSession / AdminVerificationToken の GC アダプタ（Prisma 版からの移行 / #224）
  *
- * `PrismaAdminAuthGcAdapter` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * 期限切れ行を両テーブルから単一トランザクションで削除して件数を返す。
  * - AdminAuditLog.adminSessionId は SetNull のため履歴は保持される（schema.prisma 参照）。
  * - `now` の default は call time で `new Date()` を評価する（テストでは固定 Date を渡せる）。

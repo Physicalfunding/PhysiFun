@@ -11,7 +11,7 @@ import { loginAsLeader } from "../helpers/auth";
  * 事前状態: 02-activate により Account(ACTIVE) が存在、LeaderApplication.status は PENDING のまま
  */
 // TODO(#84-followup): `/api/my/application` が現状スタブ実装（常に null 返却）のため原理的に通らない。
-// apps/web/src/app/api/my/application/route.ts に PrismaFindLeaderApplicationAdapter を実装後、skip を外す。
+// apps/web/src/app/api/my/application/route.ts に応募取得アダプター（Kysely 実装）を接続後、skip を外す。
 test.skip("有効化済みリーダーが /my/application で PENDING ステータスを確認できる", async ({
   page,
 }) => {

@@ -16,7 +16,7 @@
  * (`import("../auth?t=...")`) を使っていた。現在は `buildCookieOptions(isHttps)` という
  * 純粋関数に切り出されているので、env 変数を触らずに両ケースを直接検証できる。
  *
- * ただし `auth.ts` の module top-level では `getAdminPrismaAdapter()` と
+ * ただし `auth.ts` の module top-level では `getAdminAuthAdapter()` と
  * EmailProvider の初期化が走るため、依存モジュールは事前にモックしてから import する。
  *
  * 実行: `bun test apps/admin` (CI 本体と同じ). `bun:test` の jest 互換 API を使う。
@@ -25,10 +25,10 @@
 // `bun:test` の ambient 型宣言は apps/admin/src/types/bun-test.d.ts を参照。
 import { describe, test, expect, mock } from "bun:test";
 
-// DI コンテナの副作用 (Prisma Client 初期化等) を避けるため、
+// DI コンテナの副作用 (DB クライアント初期化等) を避けるため、
 // `auth.ts` を import する前に依存モジュールをモックする。
 mock.module("../di/auth", () => ({
-  getAdminPrismaAdapter: () => ({}),
+  getAdminAuthAdapter: () => ({}),
   getIsActiveAdminByEmail: () => async () => false,
   getSendAdminMagicLink: () => async () => {},
 }));

@@ -1,5 +1,10 @@
 import { test, expect, ADMIN_BASE_URL } from "../fixtures";
-import { prisma } from "../helpers/db";
+import {
+  db,
+  deleteVerificationTokens,
+  findAdminSessionsByEmail,
+  upsertAdminAccount,
+} from "../helpers/db";
 import { buildMagicLinkUrl, seedMagicLinkToken } from "../helpers/admin-auth";
 
 /**
@@ -19,21 +24,19 @@ test("ACTIVE な AdminAccount は Magic Link でログインでき、AdminSessio
   const email = "happy-path@e2e-test.local";
 
   // 既存 token / session の影響を排除する (前 spec のリトライ等で残っていた場合)
-  await prisma.adminVerificationToken.deleteMany({ where: { identifier: email } });
-  await prisma.adminAccount.upsert({
-    where: { email },
-    update: { status: "ACTIVE" },
-    create: { email, status: "ACTIVE" },
-  });
+  await deleteVerificationTokens(email);
+  await upsertAdminAccount(email, "ACTIVE");
 
   // 1. AdminVerificationToken を直接 INSERT し、URL 用の生 token を取得する
   const { rawToken, expires } = await seedMagicLinkToken({ email });
 
   // 2. ハッシュ済 token は後段 (consume 確認) で参照する
-  const tokenRow = await prisma.adminVerificationToken.findFirst({
-    where: { identifier: email },
-    orderBy: { expires: "desc" },
-  });
+  const tokenRow = await db
+    .selectFrom("admin_verification_tokens")
+    .select("token")
+    .where("identifier", "=", email)
+    .orderBy("expires", "desc")
+    .executeTakeFirst();
   expect(tokenRow).not.toBeNull();
 
   // 3. 本番と同じ署名付き URL を組み立てる (URL 上は生 token を載せる)
@@ -54,9 +57,7 @@ test("ACTIVE な AdminAccount は Magic Link でログインでき、AdminSessio
   expect(page.url()).not.toContain("error=");
 
   // 5. AdminSession が DB に作成されたことを確認
-  const sessions = await prisma.adminSession.findMany({
-    where: { adminAccount: { email } },
-  });
+  const sessions = await findAdminSessionsByEmail(email);
   expect(sessions.length).toBeGreaterThanOrEqual(1);
 
   // 6. 同じ Cookie で保護ページに再アクセスしても通る (= 認証維持)
@@ -65,10 +66,13 @@ test("ACTIVE な AdminAccount は Magic Link でログインでき、AdminSessio
   expect(page.url()).not.toContain("/login");
 
   // 7. AdminVerificationToken は consume されて削除されている
-  const remainingToken = await prisma.adminVerificationToken.findFirst({
-    where: { identifier: email, token: tokenRow!.token },
-  });
-  expect(remainingToken).toBeNull();
+  const remainingToken = await db
+    .selectFrom("admin_verification_tokens")
+    .select("token")
+    .where("identifier", "=", email)
+    .where("token", "=", tokenRow!.token)
+    .executeTakeFirst();
+  expect(remainingToken).toBeUndefined();
 
   await context.close();
 });

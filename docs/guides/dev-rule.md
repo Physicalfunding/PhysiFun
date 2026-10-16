@@ -48,7 +48,7 @@ docs: specs/01 に AWS 移行方針を追記
 | API Route | `route.ts` | `app/api/my/projects/route.ts` |
 | 型定義ファイル | kebab-case / camelCase | `next-auth.d.ts` |
 
-> 旧 `Prisma*` 実装は Prisma 撤去（Epic #221）まで並存しているが、新規実装は Kysely で書く。
+> DB アクセスはすべて Kysely で書く（旧 `Prisma*` 実装は #230 で削除済み。スキーマ定義は Atlas 移行まで `schema.prisma`）。
 
 ### レイヤーの使い分け
 

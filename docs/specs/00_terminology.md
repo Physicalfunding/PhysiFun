@@ -189,7 +189,7 @@ PhysiFun の実装に関わるエンジニアが、コード・schema・ドキ�
 | **バウンデッドコンテキスト** | DDD の境界。`packages/domain/src/{account, admin-account, leader-application, project}/` がそれぞれ対応 |
 | **値オブジェクト** | 同値性で識別される不変オブジェクト（`ProjectId` / `Email` など） |
 | **リポジトリ** | アグリゲートの永続化を抽象化するインターフェース（実装は `infrastructure/`） |
-| **アダプタ** | リポジトリ / Port インターフェースの Kysely 実装（`KyselyXxxAdapter` / `KyselyXxxRepository` / `KyselyXxxQueryService`）。旧 `PrismaXxx` 実装は Prisma 撤去（#221）まで並存するが、DI からは使われていない |
+| **アダプタ** | リポジトリ / Port インターフェースの Kysely 実装（`KyselyXxxAdapter` / `KyselyXxxRepository` / `KyselyXxxQueryService`） |
 | **ユースケース** | アプリケーション層のビジネスロジック単位（`packages/application/src/`） |
 | **`Result<T, E>` 型** | 成功/失敗を判別共用体で返す（例外を使わない）。`packages/domain/src/shared/result.ts` |
 | **Outbox パターン** | DB 書き込みと非同期メッセージ発行を同一トランザクションで行う設計パターン |

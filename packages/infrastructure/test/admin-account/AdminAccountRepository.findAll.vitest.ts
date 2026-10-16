@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { PrismaAdminAccountRepository } from "../../src/admin-account/PrismaAdminAccountRepository";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { KyselyAdminAccountRepository } from "../../src/admin-account/KyselyAdminAccountRepository";
+import { db, insertRows, resetDatabase } from "../helpers/db";
 
 /**
- * PrismaAdminAccountRepository.findAll の integration test (#167 review)
+ * KyselyAdminAccountRepository.findAll の integration test (#167 review。#230 で Prisma 版から対象を移行)
  *
  * members API のページネーション (#167) 実装で追加した `findAll` の挙動を、
  * 実 Postgres を使って検証する。具体的には以下を担保する:
@@ -16,20 +16,19 @@ import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/p
  * テストファイル配置は audit-logs の integration test と同じ
  * `test/admin-account/*.vitest.ts` に揃える (testcontainers + 実 Postgres)。
  */
-describe("PrismaAdminAccountRepository.findAll integration", () => {
-  const prisma = getTestPrisma();
-  const repo = new PrismaAdminAccountRepository();
+describe("KyselyAdminAccountRepository.findAll integration", () => {
+  const repo = new KyselyAdminAccountRepository();
 
   beforeAll(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
-    await disconnectTestPrisma();
+    await db.destroy();
   });
 
   /**
@@ -40,7 +39,7 @@ describe("PrismaAdminAccountRepository.findAll integration", () => {
    */
   async function seedAccounts(count: number): Promise<void> {
     const baseNow = new Date("2026-01-01T00:00:00.000Z").getTime();
-    // Prisma の createMany は default(now()) を上書きしつつまとめて INSERT できる。
+    // createdAt は DB DEFAULT now() を上書きしてまとめて INSERT する。
     const data = Array.from({ length: count }, (_, i) => ({
       email: `admin-${String(i).padStart(3, "0")}@example.com`,
       status: "ACTIVE" as const,
@@ -48,7 +47,7 @@ describe("PrismaAdminAccountRepository.findAll integration", () => {
       createdAt: new Date(baseNow - i * 1000),
       updatedAt: new Date(baseNow - i * 1000),
     }));
-    await prisma.adminAccount.createMany({ data });
+    await insertRows("admin_accounts", data);
   }
 
   it("page=1 / perPage=10 で skip=0 / take=10 相当の結果を返す", async () => {
@@ -123,16 +122,17 @@ describe("PrismaAdminAccountRepository.findAll integration", () => {
 
   it("createdAt が同値の行で id desc の tie-breaker が効き、ページ境界で重複・脱落しない", async () => {
     // createdAt を完全に同値にした 6 件を投入する。
-    // tie-breaker が無いと findMany の skip/take で重複・脱落の可能性がある。
+    // tie-breaker が無いと OFFSET/LIMIT で重複・脱落の可能性がある。
     const sameInstant = new Date("2026-02-01T00:00:00.000Z");
-    await prisma.adminAccount.createMany({
-      data: Array.from({ length: 6 }, (_, i) => ({
+    await insertRows(
+      "admin_accounts",
+      Array.from({ length: 6 }, (_, i) => ({
         email: `tie-${i}@example.com`,
         status: "ACTIVE" as const,
         createdAt: sameInstant,
         updatedAt: sameInstant,
-      })),
-    });
+      }))
+    );
 
     const page1 = await repo.findAll({ page: 1, perPage: 3 });
     const page2 = await repo.findAll({ page: 2, perPage: 3 });

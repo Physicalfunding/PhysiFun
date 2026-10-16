@@ -4,7 +4,7 @@ import type { PublishStatus, ProjectPhase, ReviewAction } from "@physifun/domain
  * 運営（admin）向けプロジェクトクエリポート
  *
  * CQRS の Q 側。owner-check なしでプロジェクトを横断取得する運営審査用の読み取り専用ポート。
- * アプリケーション層がインターフェースを定義し、インフラ層（Kysely / Prisma）が実装を提供する。
+ * アプリケーション層がインターフェースを定義し、インフラ層（Kysely）が実装を提供する。
  *
  * リーダー向け / 公開ページ向けは `ProjectQueryPort` / `PublicProjectQueryPort` を参照。
  */

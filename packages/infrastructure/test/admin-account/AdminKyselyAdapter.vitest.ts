@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createAdminKyselyAdapter } from "../../src/admin-account/AdminKyselyAdapter";
 import { db } from "../../src/database/kysely/client";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { insertRow, resetDatabase } from "../helpers/db";
 
 /**
  * Kysely 版 NextAuth カスタム Adapter の integration test（#225）
  *
  * 実 PostgreSQL（Testcontainers）に対して、NextAuth v4 Database 戦略の各メソッドが
- * Prisma 版（AdminPrismaAdapter）と同一の入出力・セキュリティ不変条件を満たすことを確認する。
+ * 旧 Prisma 版（AdminPrismaAdapter、#230 で削除）と同一の入出力・セキュリティ不変条件を満たすことを確認する。
  * - createUser / linkAccount は throw（自動サインアップ・OAuth 禁止）、getUserByAccount は null
  * - getUser / getUserByEmail は ACTIVE のみ、email は trim + lowercase 正規化
  * - createSession → getSessionAndUser は ACTIVE + 未失効のみ JOIN して返す
@@ -16,16 +16,14 @@ import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/p
  * - verification token は 1 回消費で削除
  */
 describe("Kysely AdminKyselyAdapter integration（#225）", () => {
-  const prisma = getTestPrisma();
   const adapter = createAdminKyselyAdapter();
 
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
     await db.destroy();
-    await disconnectTestPrisma();
   });
 
   async function seedAdmin(params: {
@@ -33,12 +31,10 @@ describe("Kysely AdminKyselyAdapter integration（#225）", () => {
     status?: "ACTIVE" | "DISABLED";
     lastLoginAt?: Date | null;
   }): Promise<{ id: string; email: string }> {
-    const row = await prisma.adminAccount.create({
-      data: {
-        email: params.email,
-        status: params.status ?? "ACTIVE",
-        lastLoginAt: params.lastLoginAt ?? null,
-      },
+    const row = await insertRow("admin_accounts", {
+      email: params.email,
+      status: params.status ?? "ACTIVE",
+      lastLoginAt: params.lastLoginAt ?? null,
     });
     return { id: row.id, email: row.email };
   }

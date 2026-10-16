@@ -4,44 +4,40 @@ import { KyselyActivateAccountAdapter } from "../../src/account/KyselyActivateAc
 import { KyselyAuthenticateAdapter } from "../../src/account/KyselyAuthenticateAdapter";
 import { KyselyCleanupExpiredAccountsAdapter } from "../../src/account/KyselyCleanupExpiredAccountsAdapter";
 import { db } from "../../src/database/kysely/client";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { insertRow, resetDatabase } from "../helpers/db";
 
 /**
  * Kysely 版 account 実装の integration test（#223）
  *
- * - シードは Prisma（既存ヘルパー）、検証対象は Kysely 実装。
+ * - シードはテスト用ヘルパー（`helpers/db.ts`）、検証対象は Kysely 実装。
  * - 実 PostgreSQL（Testcontainers）に対して、roles（ネイティブ enum 配列）の読み取り・
  *   status enum・トークンクリア・期限切れ一括削除（FK cascade 含む）が Prisma 版と同じ
  *   結果になることを確認する。
  */
 describe("Kysely account 実装 integration", () => {
-  const prisma = getTestPrisma();
   const activateAdapter = new KyselyActivateAccountAdapter();
   const authenticateAdapter = new KyselyAuthenticateAdapter();
   const cleanupAdapter = new KyselyCleanupExpiredAccountsAdapter();
 
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
     await db.destroy();
-    await disconnectTestPrisma();
   });
 
   describe("ActivateAccount", () => {
     it("activationToken で検索し、activate で ACTIVE 化 + トークンをクリアする", async () => {
       const token = randomUUID().replace(/-/g, "");
       const exp = new Date(Date.now() + 60 * 60 * 1000);
-      const account = await prisma.account.create({
-        data: {
-          email: "activate@example.com",
-          displayName: "有効化対象",
-          status: "PENDING_EMAIL_CONFIRMATION",
-          roles: ["SUPPORTER"],
-          activationToken: token,
-          activationTokenExp: exp,
-        },
+      const account = await insertRow("accounts", {
+        email: "activate@example.com",
+        displayName: "有効化対象",
+        status: "PENDING_EMAIL_CONFIRMATION",
+        roles: ["SUPPORTER"],
+        activationToken: token,
+        activationTokenExp: exp,
       });
 
       const found = await activateAdapter.findByActivationToken(token);
@@ -70,14 +66,12 @@ describe("Kysely account 実装 integration", () => {
 
   describe("Authenticate（roles ネイティブ enum 配列の読み取り）", () => {
     it("ACTIVE + passwordHash ありのアカウントを roles 配列付きで返す", async () => {
-      await prisma.account.create({
-        data: {
-          email: "leader@example.com",
-          displayName: "ログイン太郎",
-          status: "ACTIVE",
-          roles: ["SUPPORTER", "LEADER"],
-          passwordHash: "stored-hash",
-        },
+      await insertRow("accounts", {
+        email: "leader@example.com",
+        displayName: "ログイン太郎",
+        status: "ACTIVE",
+        roles: ["SUPPORTER", "LEADER"],
+        passwordHash: "stored-hash",
       });
 
       const account = await authenticateAdapter.findActiveAccountByEmail("leader@example.com");
@@ -89,23 +83,19 @@ describe("Kysely account 実装 integration", () => {
     });
 
     it("PENDING / passwordHash=null / 未存在 はいずれも null", async () => {
-      await prisma.account.create({
-        data: {
-          email: "pending@example.com",
-          displayName: "未確認",
-          status: "PENDING_EMAIL_CONFIRMATION",
-          roles: ["SUPPORTER"],
-          activationToken: randomUUID().replace(/-/g, ""),
-        },
+      await insertRow("accounts", {
+        email: "pending@example.com",
+        displayName: "未確認",
+        status: "PENDING_EMAIL_CONFIRMATION",
+        roles: ["SUPPORTER"],
+        activationToken: randomUUID().replace(/-/g, ""),
       });
-      await prisma.account.create({
-        data: {
-          email: "nopw@example.com",
-          displayName: "パスワード未設定",
-          status: "ACTIVE",
-          roles: ["SUPPORTER"],
-          passwordHash: null,
-        },
+      await insertRow("accounts", {
+        email: "nopw@example.com",
+        displayName: "パスワード未設定",
+        status: "ACTIVE",
+        roles: ["SUPPORTER"],
+        passwordHash: null,
       });
 
       expect(await authenticateAdapter.findActiveAccountByEmail("pending@example.com")).toBeNull();
@@ -118,33 +108,27 @@ describe("Kysely account 実装 integration", () => {
     it("期限切れ PENDING を削除し、新しい PENDING / ACTIVE は残し、件数を返す", async () => {
       const cutoff = new Date("2026-01-01T00:00:00Z");
 
-      await prisma.account.create({
-        data: {
-          email: "old-pending@example.com",
-          displayName: "古い未確認",
-          status: "PENDING_EMAIL_CONFIRMATION",
-          roles: ["SUPPORTER"],
-          createdAt: new Date("2025-12-01T00:00:00Z"),
-        },
+      await insertRow("accounts", {
+        email: "old-pending@example.com",
+        displayName: "古い未確認",
+        status: "PENDING_EMAIL_CONFIRMATION",
+        roles: ["SUPPORTER"],
+        createdAt: new Date("2025-12-01T00:00:00Z"),
       });
-      await prisma.account.create({
-        data: {
-          email: "new-pending@example.com",
-          displayName: "新しい未確認",
-          status: "PENDING_EMAIL_CONFIRMATION",
-          roles: ["SUPPORTER"],
-          createdAt: new Date("2026-02-01T00:00:00Z"),
-        },
+      await insertRow("accounts", {
+        email: "new-pending@example.com",
+        displayName: "新しい未確認",
+        status: "PENDING_EMAIL_CONFIRMATION",
+        roles: ["SUPPORTER"],
+        createdAt: new Date("2026-02-01T00:00:00Z"),
       });
-      await prisma.account.create({
-        data: {
-          email: "old-active@example.com",
-          displayName: "古い有効",
-          status: "ACTIVE",
-          roles: ["SUPPORTER"],
-          passwordHash: "h",
-          createdAt: new Date("2025-12-01T00:00:00Z"),
-        },
+      await insertRow("accounts", {
+        email: "old-active@example.com",
+        displayName: "古い有効",
+        status: "ACTIVE",
+        roles: ["SUPPORTER"],
+        passwordHash: "h",
+        createdAt: new Date("2025-12-01T00:00:00Z"),
       });
 
       const deleted = await cleanupAdapter.deleteExpiredPendingAccounts(cutoff);
@@ -158,28 +142,24 @@ describe("Kysely account 実装 integration", () => {
     });
 
     it("削除時に leader_applications を FK cascade で巻き込む", async () => {
-      const account = await prisma.account.create({
-        data: {
-          email: "cascade@example.com",
-          displayName: "カスケード対象",
-          status: "PENDING_EMAIL_CONFIRMATION",
-          roles: ["SUPPORTER"],
-          createdAt: new Date("2025-01-01T00:00:00Z"),
-        },
+      const account = await insertRow("accounts", {
+        email: "cascade@example.com",
+        displayName: "カスケード対象",
+        status: "PENDING_EMAIL_CONFIRMATION",
+        roles: ["SUPPORTER"],
+        createdAt: new Date("2025-01-01T00:00:00Z"),
       });
-      await prisma.leaderApplication.create({
-        data: {
-          accountId: account.id,
-          status: "PENDING",
-          projectTitle: "タイトル",
-          projectSummary: "概要",
-          projectStory: "ストーリー",
-          projectCategory: "EVENT",
-          prefectureCode: "13",
-          progress: "PLANNING",
-          recruitmentTypes: ["TIME"],
-          experienceOffered: "体験できること",
-        },
+      await insertRow("leader_applications", {
+        accountId: account.id,
+        status: "PENDING",
+        projectTitle: "タイトル",
+        projectSummary: "概要",
+        projectStory: "ストーリー",
+        projectCategory: "EVENT",
+        prefectureCode: "13",
+        progress: "PLANNING",
+        recruitmentTypes: ["TIME"],
+        experienceOffered: "体験できること",
       });
 
       const deleted = await cleanupAdapter.deleteExpiredPendingAccounts(

@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
-import { prisma, signMagicLinkUrl } from "@physifun/infrastructure";
+import { signMagicLinkUrl } from "@physifun/infrastructure";
 import { ADMIN_BASE_URL } from "../fixtures";
+import { db } from "./db";
 
 /**
  * apps/admin の Magic Link 認証フローを E2E から駆動するヘルパー (#150)
@@ -58,9 +59,10 @@ export async function seedMagicLinkToken(params: {
   const expires = params.expiresAt ?? new Date(Date.now() + 5 * 60 * 1000);
   const secret = params.nextAuthSecret ?? E2E_NEXTAUTH_SECRET;
   const hashed = hashTokenForNextAuth(rawToken, secret);
-  await prisma.adminVerificationToken.create({
-    data: { identifier, token: hashed, expires },
-  });
+  await db
+    .insertInto("admin_verification_tokens")
+    .values({ identifier, token: hashed, expires })
+    .execute();
   return { rawToken, expires };
 }
 
@@ -102,7 +104,7 @@ export async function requestAdminMagicLink(
 /**
  * DB から特定 email の AdminVerificationToken を最新の 1 件読み出す。
  *
- * NextAuth の AdminPrismaAdapter は `identifier=email` で row を作る (createVerificationToken)。
+ * NextAuth の AdminKyselyAdapter は `identifier=email` で row を作る (createVerificationToken)。
  * Magic Link クリック時に同じ identifier+token で findOne され、その後 deleteVerificationToken
  * で消費される。E2E では DB を直接読んで token / expires を取得する。
  */
@@ -111,11 +113,13 @@ export async function readLatestVerificationToken(email: string): Promise<{
   token: string;
   expires: Date;
 } | null> {
-  const row = await prisma.adminVerificationToken.findFirst({
-    where: { identifier: email.trim().toLowerCase() },
-    orderBy: { expires: "desc" },
-  });
-  return row;
+  const row = await db
+    .selectFrom("admin_verification_tokens")
+    .select(["identifier", "token", "expires"])
+    .where("identifier", "=", email.trim().toLowerCase())
+    .orderBy("expires", "desc")
+    .executeTakeFirst();
+  return row ?? null;
 }
 
 /**

@@ -2,7 +2,7 @@ import type { AdminAccount } from "@physifun/domain";
 import { db } from "../database/kysely/client";
 
 /**
- * 指定 AdminAccount の AdminSession を全て削除する (#148 強制 revoke)。Prisma 版の drop-in。
+ * 指定 AdminAccount の AdminSession を全て削除する (#148 強制 revoke)。旧 Prisma 版と同一 API。
  *
  * @returns 削除された AdminSession の件数（監査ログ metadata.revokedSessionCount 用）。
  */

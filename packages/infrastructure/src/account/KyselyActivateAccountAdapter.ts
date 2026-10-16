@@ -15,7 +15,7 @@ export interface AccountForActivation {
 /**
  * Kysely ベースの ActivateAccountPort 実装（Prisma 版からの移行 / #223）
  *
- * `PrismaActivateAccountAdapter` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * - findByActivationToken: activationToken でアカウントを検索
  * - activate: status=ACTIVE, passwordHash セット, activationToken/Exp をクリア
  *

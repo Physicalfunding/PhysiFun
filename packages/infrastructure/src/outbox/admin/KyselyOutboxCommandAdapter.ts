@@ -1,5 +1,5 @@
 import { db } from "../../database/kysely/client";
-import type { OutboxSource } from "./PrismaOutboxQueryService";
+import type { OutboxSource } from "@physifun/application";
 
 type OutboxTableName = "leader_application_outbox_messages" | "project_outbox_messages";
 
@@ -12,7 +12,7 @@ function tableFor(source: OutboxSource): OutboxTableName {
 /**
  * Outbox メッセージの手動操作アダプタ（運営管理用。Prisma 版からの移行 / #226）。
  *
- * `PrismaOutboxCommandAdapter` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  */
 export class KyselyOutboxCommandAdapter {
   /**

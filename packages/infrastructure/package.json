@@ -14,7 +14,7 @@
     "db:migrate:reset": "prisma migrate reset",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "bun run prisma/seed.ts",
+    "db:seed": "bun run scripts/seed.ts",
     "postinstall": "prisma generate",
     "db:kysely:codegen": "kysely-codegen --dialect postgres --out-file src/database/kysely/types.generated.ts",
     "db:atlas:diff": "atlas migrate diff --env local",

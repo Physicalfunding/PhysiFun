@@ -1,5 +1,11 @@
 import { test, expect } from "../fixtures";
-import { prisma } from "../helpers/db";
+import {
+  countVerificationTokens,
+  db,
+  deleteVerificationTokens,
+  findAdminSessionsByEmail,
+  upsertAdminAccount,
+} from "../helpers/db";
 import {
   buildMagicLinkUrl,
   readLatestVerificationToken,
@@ -23,8 +29,8 @@ test("未登録 email への Magic Link 送信は AdminVerificationToken を作�
 }) => {
   const email = "unregistered@e2e-test.local";
   // 念のため掃除
-  await prisma.adminVerificationToken.deleteMany({ where: { identifier: email } });
-  await prisma.adminAccount.deleteMany({ where: { email } });
+  await deleteVerificationTokens(email);
+  await db.deleteFrom("admin_accounts").where("email", "=", email).execute();
 
   await requestAdminMagicLink(request, email);
 
@@ -36,12 +42,8 @@ test("DISABLED な AdminAccount への Magic Link 送信は AdminVerificationTok
   request,
 }) => {
   const email = "disabled@e2e-test.local";
-  await prisma.adminVerificationToken.deleteMany({ where: { identifier: email } });
-  await prisma.adminAccount.upsert({
-    where: { email },
-    update: { status: "DISABLED" },
-    create: { email, status: "DISABLED" },
-  });
+  await deleteVerificationTokens(email);
+  await upsertAdminAccount(email, "DISABLED");
 
   await requestAdminMagicLink(request, email);
 
@@ -53,27 +55,19 @@ test("Magic Link 送信のレート制限 (5 回 / 15 分) を超えると 6 回
   request,
 }) => {
   const email = "rate-limit@e2e-test.local";
-  await prisma.adminVerificationToken.deleteMany({ where: { identifier: email } });
-  await prisma.adminAccount.upsert({
-    where: { email },
-    update: { status: "ACTIVE" },
-    create: { email, status: "ACTIVE" },
-  });
+  await deleteVerificationTokens(email);
+  await upsertAdminAccount(email, "ACTIVE");
 
   // 5 回までは作成される
   for (let i = 0; i < 5; i++) {
     await requestAdminMagicLink(request, email);
   }
-  const beforeOver = await prisma.adminVerificationToken.count({
-    where: { identifier: email },
-  });
+  const beforeOver = await countVerificationTokens(email);
   expect(beforeOver).toBe(5);
 
   // 6 回目はレート制限で signIn callback が false → 新しいトークンは作られない
   await requestAdminMagicLink(request, email);
-  const afterOver = await prisma.adminVerificationToken.count({
-    where: { identifier: email },
-  });
+  const afterOver = await countVerificationTokens(email);
   expect(afterOver).toBe(5);
 });
 
@@ -82,12 +76,8 @@ test("不正な HMAC 署名の Magic Link は AccessDenied で弾かれ、トー
   request,
 }) => {
   const email = "bad-hmac@e2e-test.local";
-  await prisma.adminVerificationToken.deleteMany({ where: { identifier: email } });
-  await prisma.adminAccount.upsert({
-    where: { email },
-    update: { status: "ACTIVE" },
-    create: { email, status: "ACTIVE" },
-  });
+  await deleteVerificationTokens(email);
+  await upsertAdminAccount(email, "ACTIVE");
 
   await requestAdminMagicLink(request, email);
   const tokenRow = await readLatestVerificationToken(email);
@@ -110,15 +100,16 @@ test("不正な HMAC 署名の Magic Link は AccessDenied で弾かれ、トー
 
   // AdminVerificationToken は HMAC 検証段階で弾かれているため consume されていない。
   // (= 正規ユーザは secret さえ知らなければ後から正しい URL を踏み直せる)
-  const stillThere = await prisma.adminVerificationToken.findFirst({
-    where: { identifier: email, token: tokenRow!.token },
-  });
-  expect(stillThere).not.toBeNull();
+  const stillThere = await db
+    .selectFrom("admin_verification_tokens")
+    .select("token")
+    .where("identifier", "=", email)
+    .where("token", "=", tokenRow!.token)
+    .executeTakeFirst();
+  expect(stillThere).toBeDefined();
 
   // AdminSession は作成されていない
-  const sessions = await prisma.adminSession.findMany({
-    where: { adminAccount: { email } },
-  });
+  const sessions = await findAdminSessionsByEmail(email);
   expect(sessions.length).toBe(0);
 
   await context.close();

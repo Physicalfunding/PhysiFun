@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { findAdminAccountIdByEmail } from "../../src/admin-account/findAdminAccountIdByEmail";
-import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/prisma";
+import { findAdminAccountIdByEmail } from "../../src/admin-account/kyselyAdminAccountLookup";
+import { db, insertRow, resetDatabase } from "../helpers/db";
 
 /**
  * findAdminAccountIdByEmail の integration test (#146 B-1)
@@ -16,26 +16,22 @@ import { disconnectTestPrisma, getTestPrisma, resetDatabase } from "../helpers/p
  * 5. 空文字 / 空白のみの email は null を返す (早期リターン)
  */
 describe("findAdminAccountIdByEmail integration", () => {
-  const prisma = getTestPrisma();
-
   beforeAll(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   beforeEach(async () => {
-    await resetDatabase(prisma);
+    await resetDatabase();
   });
 
   afterAll(async () => {
-    await disconnectTestPrisma();
+    await db.destroy();
   });
 
   it("ACTIVE な AdminAccount の id を返す", async () => {
-    const admin = await prisma.adminAccount.create({
-      data: {
-        email: "active-admin@example.com",
-        status: "ACTIVE",
-      },
+    const admin = await insertRow("admin_accounts", {
+      email: "active-admin@example.com",
+      status: "ACTIVE",
     });
 
     const result = await findAdminAccountIdByEmail("active-admin@example.com");
@@ -44,11 +40,9 @@ describe("findAdminAccountIdByEmail integration", () => {
   });
 
   it("DISABLED な AdminAccount も id を返す (status 無視 / 攻撃試行の監査目的)", async () => {
-    const admin = await prisma.adminAccount.create({
-      data: {
-        email: "disabled-admin@example.com",
-        status: "DISABLED",
-      },
+    const admin = await insertRow("admin_accounts", {
+      email: "disabled-admin@example.com",
+      status: "DISABLED",
     });
 
     const result = await findAdminAccountIdByEmail("disabled-admin@example.com");
@@ -63,11 +57,9 @@ describe("findAdminAccountIdByEmail integration", () => {
   });
 
   it("email は trim + lowercase に正規化される", async () => {
-    const admin = await prisma.adminAccount.create({
-      data: {
-        email: "normalize-me@example.com",
-        status: "ACTIVE",
-      },
+    const admin = await insertRow("admin_accounts", {
+      email: "normalize-me@example.com",
+      status: "ACTIVE",
     });
 
     const result = await findAdminAccountIdByEmail("  Normalize-ME@Example.COM  ");

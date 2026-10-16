@@ -33,7 +33,7 @@ const ADMIN_REVIEW_FEEDBACK_HISTORY_LIMIT = 5;
 /**
  * Kysely ベースの Project Query Service（PoC: Prisma 版からの移行）
  *
- * `PrismaProjectQueryService` と同一の公開メソッド・戻り値を提供する drop-in 実装。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * CQRS の Q 側として、ドメインエンティティを経由せず DB 行から直接 DTO へマップする。
  */
 export class KyselyProjectQueryService

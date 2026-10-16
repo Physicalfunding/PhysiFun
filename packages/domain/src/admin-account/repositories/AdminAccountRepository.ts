@@ -5,7 +5,7 @@ import type { AdminAccountId } from "../value-objects/AdminAccountId";
 /**
  * AdminAccount 集約のリポジトリ IF (#140 / #144 / #148)
  *
- * 実装は `packages/infrastructure/src/admin-account/` 配下に Prisma で用意する。
+ * 実装は `packages/infrastructure/src/admin-account/KyselyAdminAccountRepository.ts`。
  * 本 IF には CRUD 操作 + 運営追加 UI 向けの一覧取得を置く。
  */
 export interface AdminAccountRepository {
