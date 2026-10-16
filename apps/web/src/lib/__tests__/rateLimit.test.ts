@@ -19,12 +19,12 @@ describe("rateLimit", () => {
       const action = "createProject" as const;
       const config = RATE_LIMIT_CONFIGS[action];
 
-      it("上限ちょうど (10回目) までは ok=true を返す", () => {
+      it("上限ちょうど (10回目) までは ok=true を返す", async () => {
         const userId = "user-1";
         const now = 1_000_000;
 
         for (let i = 0; i < config.limit; i++) {
-          const result = consumeRateLimit(action, userId, now + i);
+          const result = await consumeRateLimit(action, userId, now + i);
           expect(result.ok).toBe(true);
           expect(result.limit).toBe(config.limit);
           expect(result.remaining).toBe(config.limit - (i + 1));
@@ -33,15 +33,15 @@ describe("rateLimit", () => {
         }
       });
 
-      it("上限 +1 回目 (11回目) で ok=false を返す", () => {
+      it("上限 +1 回目 (11回目) で ok=false を返す", async () => {
         const userId = "user-1";
         const now = 1_000_000;
 
         for (let i = 0; i < config.limit; i++) {
-          consumeRateLimit(action, userId, now + i);
+          await consumeRateLimit(action, userId, now + i);
         }
 
-        const result = consumeRateLimit(action, userId, now + config.limit);
+        const result = await consumeRateLimit(action, userId, now + config.limit);
         expect(result.ok).toBe(false);
         expect(result.remaining).toBe(0);
         expect(result.retryAfterSeconds).toBeGreaterThanOrEqual(1);
@@ -49,50 +49,50 @@ describe("rateLimit", () => {
         expect(result.reset).toBe(Math.ceil((now + config.windowMs) / 1000));
       });
 
-      it("ウィンドウ経過後はカウンタがリセットされる", () => {
+      it("ウィンドウ経過後はカウンタがリセットされる", async () => {
         const userId = "user-1";
         const now = 1_000_000;
 
         for (let i = 0; i < config.limit; i++) {
-          consumeRateLimit(action, userId, now + i);
+          await consumeRateLimit(action, userId, now + i);
         }
 
         // 超過状態
-        expect(consumeRateLimit(action, userId, now + config.limit).ok).toBe(false);
+        expect((await consumeRateLimit(action, userId, now + config.limit)).ok).toBe(false);
 
         // 最古のタイムスタンプ (now) からウィンドウ長 + 一定マージンが経過した後は
         // 全タイムスタンプがウィンドウ外になり、カウンタがリセットされる。
         const later = now + config.windowMs + config.limit + 1;
-        const result = consumeRateLimit(action, userId, later);
+        const result = await consumeRateLimit(action, userId, later);
         expect(result.ok).toBe(true);
         expect(result.remaining).toBe(config.limit - 1);
       });
 
-      it("ユーザーごとに独立してカウントされる", () => {
+      it("ユーザーごとに独立してカウントされる", async () => {
         const now = 1_000_000;
 
         // user-A を上限まで使い切る
         for (let i = 0; i < config.limit; i++) {
-          consumeRateLimit(action, "user-A", now + i);
+          await consumeRateLimit(action, "user-A", now + i);
         }
-        expect(consumeRateLimit(action, "user-A", now + config.limit).ok).toBe(false);
+        expect((await consumeRateLimit(action, "user-A", now + config.limit)).ok).toBe(false);
 
         // user-B は影響を受けない
-        const result = consumeRateLimit(action, "user-B", now + config.limit);
+        const result = await consumeRateLimit(action, "user-B", now + config.limit);
         expect(result.ok).toBe(true);
         expect(result.remaining).toBe(config.limit - 1);
       });
 
-      it("超過中はカウンタを増やさない (retryAfter が安定する)", () => {
+      it("超過中はカウンタを増やさない (retryAfter が安定する)", async () => {
         const userId = "user-1";
         const now = 1_000_000;
 
         for (let i = 0; i < config.limit; i++) {
-          consumeRateLimit(action, userId, now + i);
+          await consumeRateLimit(action, userId, now + i);
         }
 
-        const first = consumeRateLimit(action, userId, now + config.limit);
-        const second = consumeRateLimit(action, userId, now + config.limit);
+        const first = await consumeRateLimit(action, userId, now + config.limit);
+        const second = await consumeRateLimit(action, userId, now + config.limit);
 
         expect(first.ok).toBe(false);
         expect(second.ok).toBe(false);
@@ -102,44 +102,46 @@ describe("rateLimit", () => {
     });
 
     describe("updateProject (30 req / min)", () => {
-      it("30 回は通り、31 回目で弾く", () => {
+      it("30 回は通り、31 回目で弾く", async () => {
         const action = "updateProject" as const;
         const userId = "user-1";
         const now = 1_000_000;
         const config = RATE_LIMIT_CONFIGS[action];
 
         for (let i = 0; i < config.limit; i++) {
-          expect(consumeRateLimit(action, userId, now + i).ok).toBe(true);
+          expect((await consumeRateLimit(action, userId, now + i)).ok).toBe(true);
         }
-        expect(consumeRateLimit(action, userId, now + config.limit).ok).toBe(false);
+        expect((await consumeRateLimit(action, userId, now + config.limit)).ok).toBe(false);
       });
     });
 
     describe("projectStatusTransition (10 req / min)", () => {
-      it("10 回は通り、11 回目で弾く", () => {
+      it("10 回は通り、11 回目で弾く", async () => {
         const action = "projectStatusTransition" as const;
         const userId = "user-1";
         const now = 1_000_000;
         const config = RATE_LIMIT_CONFIGS[action];
 
         for (let i = 0; i < config.limit; i++) {
-          expect(consumeRateLimit(action, userId, now + i).ok).toBe(true);
+          expect((await consumeRateLimit(action, userId, now + i)).ok).toBe(true);
         }
-        expect(consumeRateLimit(action, userId, now + config.limit).ok).toBe(false);
+        expect((await consumeRateLimit(action, userId, now + config.limit)).ok).toBe(false);
       });
 
-      it("アクション間で名前空間が分離されている", () => {
+      it("アクション間で名前空間が分離されている", async () => {
         const userId = "user-1";
         const now = 1_000_000;
 
         // projectStatusTransition を上限まで使う
         for (let i = 0; i < 10; i++) {
-          consumeRateLimit("projectStatusTransition", userId, now + i);
+          await consumeRateLimit("projectStatusTransition", userId, now + i);
         }
-        expect(consumeRateLimit("projectStatusTransition", userId, now + 10).ok).toBe(false);
+        expect((await consumeRateLimit("projectStatusTransition", userId, now + 10)).ok).toBe(
+          false
+        );
 
         // updateProject は影響を受けない
-        expect(consumeRateLimit("updateProject", userId, now + 10).ok).toBe(true);
+        expect((await consumeRateLimit("updateProject", userId, now + 10)).ok).toBe(true);
       });
     });
   });
@@ -173,8 +175,8 @@ describe("rateLimit", () => {
   });
 
   describe("enforceRateLimit", () => {
-    it("制限内なら null を返す", () => {
-      const result = enforceRateLimit("createProject", "user-ok");
+    it("制限内なら null を返す", async () => {
+      const result = await enforceRateLimit("createProject", "user-ok");
       expect(result).toBeNull();
     });
 
@@ -183,10 +185,10 @@ describe("rateLimit", () => {
       const config = RATE_LIMIT_CONFIGS.createProject;
 
       for (let i = 0; i < config.limit; i++) {
-        expect(enforceRateLimit("createProject", userId)).toBeNull();
+        expect(await enforceRateLimit("createProject", userId)).toBeNull();
       }
 
-      const response = enforceRateLimit("createProject", userId);
+      const response = await enforceRateLimit("createProject", userId);
       expect(response).not.toBeNull();
       expect(response?.status).toBe(429);
     });
@@ -198,10 +200,10 @@ describe("rateLimit", () => {
       const now = 1_700_000_000_000;
 
       for (let i = 0; i < config.limit; i++) {
-        expect(enforceRateLimit(action, userId, now + i)).toBeNull();
+        expect(await enforceRateLimit(action, userId, now + i)).toBeNull();
       }
 
-      const response = enforceRateLimit(action, userId, now + config.limit);
+      const response = await enforceRateLimit(action, userId, now + config.limit);
       expect(response).not.toBeNull();
       expect(response?.status).toBe(429);
       // X-RateLimit-Reset は最古のタイムスタンプがウィンドウから外れる時刻 (秒)
@@ -210,7 +212,7 @@ describe("rateLimit", () => {
       );
     });
 
-    it("projectStatusTransition は request-publish/withdraw/unpublish 合算で 10 req/min", () => {
+    it("projectStatusTransition は request-publish/withdraw/unpublish 合算で 10 req/min", async () => {
       // アプリ側が 3 ルートとも同じ "projectStatusTransition" キーで enforceRateLimit を呼ぶ。
       // ここでは同一ユーザー・同一キーで 10 回消費すれば 11 回目で弾かれることを保証する。
       const userId = "user-status-shared";
@@ -219,9 +221,9 @@ describe("rateLimit", () => {
       const now = 1_700_000_000_000;
 
       for (let i = 0; i < config.limit; i++) {
-        expect(enforceRateLimit(action, userId, now + i)).toBeNull();
+        expect(await enforceRateLimit(action, userId, now + i)).toBeNull();
       }
-      const response = enforceRateLimit(action, userId, now + config.limit);
+      const response = await enforceRateLimit(action, userId, now + config.limit);
       expect(response?.status).toBe(429);
     });
   });

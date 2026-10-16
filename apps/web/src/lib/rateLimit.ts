@@ -1,5 +1,7 @@
-import { LRUCache } from "lru-cache";
+import { createRateLimiter, type RateLimitResult } from "@physifun/infrastructure";
 import { NextResponse } from "next/server";
+
+export type { RateLimitResult };
 
 /**
  * レート制限のアクション種別。
@@ -58,124 +60,33 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitAction, RateLimitConfig> = {
   },
 };
 
-interface Bucket {
-  /** 現在のウィンドウ内に記録されたリクエストのタイムスタンプ (ms) */
-  timestamps: number[];
-}
-
 /**
- * LRU ベースのインメモリバケット。
+ * レート制限の本体（#202）。
  *
- * NOTE: これは単一プロセス内のメモリに載るキャッシュなので、
- * **水平スケール環境 (複数 Vercel インスタンスなど) では各インスタンスごとに
- * 独立したカウンタを持つ**。完全な集中管理には Vercel KV / Upstash Redis 等の
- * 外部ストレージが必要。Phase 1 の暫定対策として十分なので、スケール時に
- * 置き換える前提で使う。
- *
- * `LEADER_APPLICATION_ENABLED=true` で本番トラフィックを受ける前に
- * Vercel KV へ移行することがブロッカー。トラッキング Issue:
- * https://github.com/Physicalfunding/PhysiFun/issues/202
- *
- * key は `<action>:<userId>` 形式。
- * max 件数に到達すると LRU で古いユーザーから捨てる。
- * ttl は最長ウィンドウに揃えて、放置された bucket が自動で消えるようにしている
- * (`RATE_LIMIT_CONFIGS` から導出してマジックナンバーを避ける)。
+ * Upstash Redis の接続情報があれば Upstash で全インスタンス共通のカウンタを使い、
+ * 無ければプロセス内メモリで数える（ローカル / テスト / CI 向け）。
+ * Vercel 本番で接続情報が無い場合はエラー、Upstash 障害時はリクエストを通す（fail-open）。
+ * 詳細は `packages/infrastructure/src/rate-limit/createRateLimiter.ts`。
  */
-const MAX_WINDOW_MS = Math.max(...Object.values(RATE_LIMIT_CONFIGS).map((c) => c.windowMs));
-
-const buckets = new LRUCache<string, Bucket>({
-  max: 10_000,
-  ttl: MAX_WINDOW_MS,
-  // 期限切れデータは返さない (古いカウンタでリクエストを弾かないため)。
-  allowStale: false,
-});
-
-function bucketKey(action: RateLimitAction, subjectKey: string): string {
-  return `${action}:${subjectKey}`;
-}
-
-/**
- * レート制限チェック結果。
- */
-export interface RateLimitResult {
-  /** リクエストを通してよいかどうか */
-  ok: boolean;
-  /** ウィンドウ内で許可される最大リクエスト数 */
-  limit: number;
-  /** 現在のウィンドウ内での残り可能回数 (ok=false の場合は 0) */
-  remaining: number;
-  /**
-   * クライアントが再試行可能になるまでの秒数 (整数, 最低 1)。
-   * ok=true の場合は 0 が入る。
-   */
-  retryAfterSeconds: number;
-  /**
-   * 現在のウィンドウがリセットされる UNIX エポック秒 (整数)。
-   *
-   * - `ok=false` の場合: 最古のタイムスタンプがウィンドウから外れる時刻。
-   * - `ok=true` の場合: 今回記録したタイムスタンプがウィンドウから外れる時刻。
-   *
-   * `X-RateLimit-Reset` ヘッダーに使う。
-   */
-  reset: number;
-}
+const limiter = createRateLimiter({ prefix: "physifun:web", rules: RATE_LIMIT_CONFIGS });
 
 /**
  * 指定アクション・主体キーでリクエストを 1 回消費し、制限に収まっているか判定する。
  *
- * 破壊的な操作: `ok=true` の場合、内部のカウンタにタイムスタンプが追加される。
- * `ok=false` の場合はカウンタを増やさない (超過中のバーストで TTL が延びないように)。
+ * 破壊的な操作: `ok=true` の場合、カウンタが 1 増える。
+ * `ok=false` の場合はカウンタを増やさない (超過中のバーストでウィンドウが延びないように)。
  *
  * @param action アクション種別
  * @param subjectKey 制限の主体を識別するキー。認証済みアクションでは `session.user.id`、
  *   未認証アクション (`leaderApplicationSubmit` など) では IP アドレスを渡す。
- * @param now 現在時刻 (ms)。テスト用に差し替え可能。省略時は `Date.now()`。
+ * @param now 現在時刻 (ms)。テスト用 (インメモリ版のみ有効)。省略時は `Date.now()`。
  */
 export function consumeRateLimit(
   action: RateLimitAction,
   subjectKey: string,
   now: number = Date.now()
-): RateLimitResult {
-  const config = RATE_LIMIT_CONFIGS[action];
-  const key = bucketKey(action, subjectKey);
-  const bucket = buckets.get(key) ?? { timestamps: [] };
-
-  // ウィンドウ外の古いタイムスタンプは除去
-  const windowStart = now - config.windowMs;
-  const recent = bucket.timestamps.filter((ts) => ts > windowStart);
-
-  if (recent.length >= config.limit) {
-    // 超過: 最古のタイムスタンプが期限切れになるまでの秒数を返す
-    const oldest = recent[0] ?? now;
-    const resetMs = oldest + config.windowMs;
-    const retryMs = resetMs - now;
-    const retryAfterSeconds = Math.max(1, Math.ceil(retryMs / 1000));
-
-    // bucket 側も掃除済みの配列で上書きしておく
-    buckets.set(key, { timestamps: recent });
-
-    return {
-      ok: false,
-      limit: config.limit,
-      remaining: 0,
-      retryAfterSeconds,
-      reset: Math.ceil(resetMs / 1000),
-    };
-  }
-
-  recent.push(now);
-  buckets.set(key, { timestamps: recent });
-
-  // 今回記録したタイムスタンプがウィンドウから外れる時刻 = reset
-  const resetMs = now + config.windowMs;
-
-  return {
-    ok: true,
-    limit: config.limit,
-    remaining: config.limit - recent.length,
-    retryAfterSeconds: 0,
-    reset: Math.ceil(resetMs / 1000),
-  };
+): Promise<RateLimitResult> {
+  return limiter.consume(action, subjectKey, now);
 }
 
 /**
@@ -223,15 +134,15 @@ export function rateLimitExceededResponse(result: RateLimitResult): NextResponse
  * @param now 現在時刻 (ms)。テスト用に差し替え可能。省略時は `Date.now()`。
  *
  * @example
- * const limited = enforceRateLimit("createProject", userId);
+ * const limited = await enforceRateLimit("createProject", userId);
  * if (limited) return limited;
  */
-export function enforceRateLimit(
+export async function enforceRateLimit(
   action: RateLimitAction,
   subjectKey: string,
   now: number = Date.now()
-): NextResponse | null {
-  const result = consumeRateLimit(action, subjectKey, now);
+): Promise<NextResponse | null> {
+  const result = await consumeRateLimit(action, subjectKey, now);
   if (!result.ok) {
     return rateLimitExceededResponse(result);
   }
@@ -244,5 +155,5 @@ export function enforceRateLimit(
  * @internal Jest テスト専用。プロダクションコードから呼ばないこと。
  */
 export function __resetRateLimitForTests(): void {
-  buckets.clear();
+  limiter.resetForTests();
 }

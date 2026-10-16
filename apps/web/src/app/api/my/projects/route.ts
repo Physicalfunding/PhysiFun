@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // レート制限: 10 req / 10 min / user
-    const limited = enforceRateLimit("createProject", userId);
+    const limited = await enforceRateLimit("createProject", userId);
     if (limited) return limited;
 
     const body = await request.json();

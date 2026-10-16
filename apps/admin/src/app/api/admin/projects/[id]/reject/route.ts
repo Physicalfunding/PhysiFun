@@ -35,7 +35,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const reviewerId = await getAuthenticatedAdminId();
     if (!reviewerId) return unauthorizedResponse();
 
-    const limited = enforceAdminRateLimit("adminAction", reviewerId);
+    const limited = await enforceAdminRateLimit("adminAction", reviewerId);
     if (limited) return limited;
 
     const { id } = await params;

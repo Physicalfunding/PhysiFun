@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     if (!operatorId) return unauthorizedResponse();
 
     // #166: 認証済みでの大量スクレイピング抑止のため、GET にもレート制限を適用
-    const limited = enforceAdminRateLimit("adminRead", operatorId);
+    const limited = await enforceAdminRateLimit("adminRead", operatorId);
     if (limited) return limited;
 
     const { searchParams } = request.nextUrl;
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const operatorId = await getAuthenticatedAdminId();
     if (!operatorId) return unauthorizedResponse();
 
-    const limited = enforceAdminRateLimit("adminAction", operatorId);
+    const limited = await enforceAdminRateLimit("adminAction", operatorId);
     if (limited) return limited;
 
     // body パース

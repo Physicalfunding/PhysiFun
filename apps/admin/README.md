@@ -138,6 +138,7 @@ cp apps/admin/.env.example apps/admin/.env.local
 | `CRON_SECRET` | `/api/cron/gc-admin-auth` の Authorization 検証 | 任意の文字列 | ✅ |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase API URL（審査画像表示用 / #120） | `http://127.0.0.1:54321` | ◯ |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Publishable キー | `supabase status` の値 | ◯ |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | レート制限のカウンタを置く Upstash Redis（`KV_REST_API_URL` / `KV_REST_API_TOKEN` でも可。web と同じ DB でよい） | ローカルでは未設定でよい（メモリで数える） | 本番 ✅ |
 
 > ⚠️ `NEXTAUTH_SECRET` と `ADMIN_MAGIC_LINK_HMAC_SECRET` は **必ず別値**にすること。同一値で運用すると HMAC 検証層を回避された場合に署名と Cookie の独立性が崩れる。
 

@@ -28,7 +28,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const operatorId = await getAuthenticatedAdminId();
     if (!operatorId) return unauthorizedResponse();
 
-    const limited = enforceAdminRateLimit("adminAction", operatorId);
+    const limited = await enforceAdminRateLimit("adminAction", operatorId);
     if (limited) return limited;
 
     const { id } = await params;

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!reviewerId) return unauthorizedResponse();
 
     // #166: 認証済みでの大量スクレイピング抑止のため、GET にもレート制限を適用
-    const limited = enforceAdminRateLimit("adminRead", reviewerId);
+    const limited = await enforceAdminRateLimit("adminRead", reviewerId);
     if (limited) return limited;
 
     const { id } = await params;

@@ -23,8 +23,8 @@ export function getCaptchaVerifierPort(): CaptchaVerifierPort {
  */
 export function getLeaderApplicationIpRateLimitPort(): IpRateLimitPort {
   return {
-    consume(ipAddress) {
-      const result = consumeRateLimit("leaderApplicationSubmit", ipAddress);
+    async consume(ipAddress) {
+      const result = await consumeRateLimit("leaderApplicationSubmit", ipAddress);
       if (!result.ok) {
         return err({
           type: "RATE_LIMIT_EXCEEDED",

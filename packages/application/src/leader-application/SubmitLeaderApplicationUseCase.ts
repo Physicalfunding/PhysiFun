@@ -427,7 +427,7 @@ export class SubmitLeaderApplicationUseCase {
     const validated = parseResult.data;
 
     // 2. IP レートリミットチェック
-    const rateLimitResult = this.rateLimit.consume(validated.ipAddress);
+    const rateLimitResult = await this.rateLimit.consume(validated.ipAddress);
     if (!rateLimitResult.ok) {
       return err(rateLimitResult.error);
     }

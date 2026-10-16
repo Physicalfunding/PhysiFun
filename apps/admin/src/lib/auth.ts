@@ -237,7 +237,7 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
-      const rate = checkAdminMagicLinkRateLimit(address);
+      const rate = await checkAdminMagicLinkRateLimit(address);
       if (!rate.ok) {
         // AccessDenied にフォールバック。クライアントは EmailSignin エラーを受け取る。
         return false;

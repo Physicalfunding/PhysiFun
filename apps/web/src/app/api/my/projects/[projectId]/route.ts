@@ -91,7 +91,7 @@ export async function PATCH(
     }
 
     // レート制限: 30 req / min / user
-    const limited = enforceRateLimit("updateProject", userId);
+    const limited = await enforceRateLimit("updateProject", userId);
     if (limited) return limited;
 
     const { projectId } = await params;

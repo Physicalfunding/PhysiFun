@@ -25,12 +25,12 @@ describe("adminRateLimit", () => {
       const action = "adminRead" as const;
       const config = ADMIN_RATE_LIMIT_CONFIGS[action];
 
-      test("上限ちょうど (120回目) までは ok=true を返す", () => {
+      test("上限ちょうど (120回目) までは ok=true を返す", async () => {
         const subject = "admin-1";
         const now = 1_000_000;
 
         for (let i = 0; i < config.limit; i++) {
-          const result = consumeAdminRateLimit(action, subject, now + i);
+          const result = await consumeAdminRateLimit(action, subject, now + i);
           expect(result.ok).toBe(true);
           expect(result.limit).toBe(config.limit);
           expect(result.remaining).toBe(config.limit - (i + 1));
@@ -39,15 +39,15 @@ describe("adminRateLimit", () => {
         }
       });
 
-      test("上限 +1 回目 (121回目) で ok=false を返す", () => {
+      test("上限 +1 回目 (121回目) で ok=false を返す", async () => {
         const subject = "admin-1";
         const now = 1_000_000;
 
         for (let i = 0; i < config.limit; i++) {
-          consumeAdminRateLimit(action, subject, now + i);
+          await consumeAdminRateLimit(action, subject, now + i);
         }
 
-        const result = consumeAdminRateLimit(action, subject, now + config.limit);
+        const result = await consumeAdminRateLimit(action, subject, now + config.limit);
         expect(result.ok).toBe(false);
         expect(result.remaining).toBe(0);
         expect(result.retryAfterSeconds).toBeGreaterThanOrEqual(1);
@@ -55,35 +55,35 @@ describe("adminRateLimit", () => {
         expect(result.reset).toBe(Math.ceil((now + config.windowMs) / 1000));
       });
 
-      test("ウィンドウ経過後はカウンタがリセットされる", () => {
+      test("ウィンドウ経過後はカウンタがリセットされる", async () => {
         const subject = "admin-1";
         const now = 1_000_000;
 
         for (let i = 0; i < config.limit; i++) {
-          consumeAdminRateLimit(action, subject, now + i);
+          await consumeAdminRateLimit(action, subject, now + i);
         }
 
         // 超過状態
-        expect(consumeAdminRateLimit(action, subject, now + config.limit).ok).toBe(false);
+        expect((await consumeAdminRateLimit(action, subject, now + config.limit)).ok).toBe(false);
 
         // 最古のタイムスタンプ (now) からウィンドウ長 + 一定マージンが経過した後は
         // 全タイムスタンプがウィンドウ外になり、カウンタがリセットされる。
         const later = now + config.windowMs + config.limit + 1;
-        const result = consumeAdminRateLimit(action, subject, later);
+        const result = await consumeAdminRateLimit(action, subject, later);
         expect(result.ok).toBe(true);
         expect(result.remaining).toBe(config.limit - 1);
       });
 
-      test("超過中はカウンタを増やさない (retryAfter が安定する)", () => {
+      test("超過中はカウンタを増やさない (retryAfter が安定する)", async () => {
         const subject = "admin-1";
         const now = 1_000_000;
 
         for (let i = 0; i < config.limit; i++) {
-          consumeAdminRateLimit(action, subject, now + i);
+          await consumeAdminRateLimit(action, subject, now + i);
         }
 
-        const first = consumeAdminRateLimit(action, subject, now + config.limit);
-        const second = consumeAdminRateLimit(action, subject, now + config.limit);
+        const first = await consumeAdminRateLimit(action, subject, now + config.limit);
+        const second = await consumeAdminRateLimit(action, subject, now + config.limit);
 
         expect(first.ok).toBe(false);
         expect(second.ok).toBe(false);
@@ -93,35 +93,35 @@ describe("adminRateLimit", () => {
     });
 
     describe("adminAction (60 req / min)", () => {
-      test("60 回は通り、61 回目で弾く", () => {
+      test("60 回は通り、61 回目で弾く", async () => {
         const action = "adminAction" as const;
         const subject = "admin-1";
         const now = 1_000_000;
         const config = ADMIN_RATE_LIMIT_CONFIGS[action];
 
         for (let i = 0; i < config.limit; i++) {
-          expect(consumeAdminRateLimit(action, subject, now + i).ok).toBe(true);
+          expect((await consumeAdminRateLimit(action, subject, now + i)).ok).toBe(true);
         }
-        expect(consumeAdminRateLimit(action, subject, now + config.limit).ok).toBe(false);
+        expect((await consumeAdminRateLimit(action, subject, now + config.limit)).ok).toBe(false);
       });
     });
 
     describe("adminRead と adminAction の独立性", () => {
-      test("adminAction と adminRead が独立してカウントされる", () => {
+      test("adminAction と adminRead が独立してカウントされる", async () => {
         const subject = "admin-1";
         const now = 1_000_000;
         const actionConfig = ADMIN_RATE_LIMIT_CONFIGS.adminAction;
 
         // adminAction を上限まで使い切る (60回)
         for (let i = 0; i < actionConfig.limit; i++) {
-          consumeAdminRateLimit("adminAction", subject, now + i);
+          await consumeAdminRateLimit("adminAction", subject, now + i);
         }
-        expect(consumeAdminRateLimit("adminAction", subject, now + actionConfig.limit).ok).toBe(
-          false
-        );
+        expect(
+          (await consumeAdminRateLimit("adminAction", subject, now + actionConfig.limit)).ok
+        ).toBe(false);
 
         // adminRead は影響を受けない (別のバケット)
-        const result = consumeAdminRateLimit("adminRead", subject, now + actionConfig.limit);
+        const result = await consumeAdminRateLimit("adminRead", subject, now + actionConfig.limit);
         expect(result.ok).toBe(true);
         expect(result.remaining).toBe(ADMIN_RATE_LIMIT_CONFIGS.adminRead.limit - 1);
       });
@@ -157,8 +157,8 @@ describe("adminRateLimit", () => {
   });
 
   describe("enforceAdminRateLimit", () => {
-    test("制限内なら null を返す", () => {
-      const result = enforceAdminRateLimit("adminRead", "admin-ok");
+    test("制限内なら null を返す", async () => {
+      const result = await enforceAdminRateLimit("adminRead", "admin-ok");
       expect(result).toBeNull();
     });
 
@@ -167,10 +167,10 @@ describe("adminRateLimit", () => {
       const config = ADMIN_RATE_LIMIT_CONFIGS.adminRead;
 
       for (let i = 0; i < config.limit; i++) {
-        expect(enforceAdminRateLimit("adminRead", subject)).toBeNull();
+        expect(await enforceAdminRateLimit("adminRead", subject)).toBeNull();
       }
 
-      const response = enforceAdminRateLimit("adminRead", subject);
+      const response = await enforceAdminRateLimit("adminRead", subject);
       expect(response).not.toBeNull();
       expect(response?.status).toBe(429);
     });
@@ -182,10 +182,10 @@ describe("adminRateLimit", () => {
       const now = 1_700_000_000_000;
 
       for (let i = 0; i < config.limit; i++) {
-        expect(enforceAdminRateLimit(action, subject, now + i)).toBeNull();
+        expect(await enforceAdminRateLimit(action, subject, now + i)).toBeNull();
       }
 
-      const response = enforceAdminRateLimit(action, subject, now + config.limit);
+      const response = await enforceAdminRateLimit(action, subject, now + config.limit);
       expect(response).not.toBeNull();
       expect(response?.status).toBe(429);
       // X-RateLimit-Reset は最古のタイムスタンプがウィンドウから外れる時刻 (秒)
@@ -194,14 +194,14 @@ describe("adminRateLimit", () => {
       );
     });
 
-    test("成功レスポンス相当: 制限内で Retry-After / X-RateLimit-* ヘッダー値を consumeAdminRateLimit で確認できる", () => {
+    test("成功レスポンス相当: 制限内で Retry-After / X-RateLimit-* ヘッダー値を consumeAdminRateLimit で確認できる", async () => {
       const subject = "admin-header-check";
       const action = "adminRead" as const;
       const config = ADMIN_RATE_LIMIT_CONFIGS[action];
       const now = 1_700_000_000_000;
 
       // 1回消費して remaining と reset を確認
-      const result = consumeAdminRateLimit(action, subject, now);
+      const result = await consumeAdminRateLimit(action, subject, now);
       expect(result.ok).toBe(true);
       expect(result.limit).toBe(config.limit);
       expect(result.remaining).toBe(config.limit - 1);

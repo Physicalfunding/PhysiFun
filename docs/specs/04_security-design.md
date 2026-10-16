@@ -219,7 +219,7 @@ flowchart TD
 | **Clickjacking** | `X-Frame-Options: DENY` + `frame-ancestors 'none'`（二重化） | なし |
 | **Open Redirect** | NextAuth `callbackUrl` の同一オリジン検証 | NextAuth 依存 |
 | **タイミング攻撃** | `bcrypt.compare` / `timingSafeEqual` / 存在しない email へのダミーハッシュ | URL 長さの差はわずかに残る（許容） |
-| **Bot / スパム応募** | Cloudflare Turnstile + IP rate limit (3/h/IP) + duplicate email check | IP rate limit がインスタンス内 LRU（一般公開までに Redis 化必須） |
+| **Bot / スパム応募** | Cloudflare Turnstile + IP rate limit (3/h/IP) + duplicate email check | Upstash 障害時はレート制限が効かない（fail-open。Turnstile は効く） |
 | **メールボム** | 同上 + Outbox の冪等性（重複送信は許容、二重送信前提の文面） | `RATE_LIMIT_EXCEEDED` 経由で軽減 |
 | **認証バイパス** | アグリゲート分離 / オーナーシップ検証 / `ACTIVE` チェックの多重化 | なし |
 | **セッション盗難** | HttpOnly + Secure + SameSite Cookie / admin は 1h TTL / DB session で即時 revoke 可 | JWT (web) は 30 日。盗難時 NEXTAUTH_SECRET rotation のみ |
@@ -237,7 +237,6 @@ flowchart TD
 | 項目 | 状況 | 対応予定 |
 |---|---|---|
 | CSP `'unsafe-inline'` | Next.js App Router の暫定 | Issue #109 follow-up（nonce ベース移行） |
-| IP rate limit のインスタンス分散 | LRU on memory（per instance） | 一般公開までに Redis / Vercel KV に置き換え（Issue #202） |
 | 運営の TOTP / 2FA | 未実装 | 運営数増加時に検討（一般公開以降） |
 | メール送信先の検証強化（DKIM / SPF） | Resend 側設定依存 | 本番ドメイン取得後に DNS 設定 |
 
@@ -251,7 +250,7 @@ flowchart TD
 - **siteverify** はサーバ側のみで実行（`apps/web/src/lib/captcha.ts`）
 - 開発環境では `NODE_ENV !== "production"` でバイパス
 
-### 7.2 IP レートリミット
+### 7.2 レート制限
 
 | エンドポイント | リミット |
 |---|---|
@@ -261,7 +260,15 @@ flowchart TD
 | `POST /api/my/projects/:id/{request-publish, withdraw, unpublish}` | 合算 10 回 / 1 分 / user |
 | Admin Magic Link 送信 | 5 回 / 15 分 / email |
 
-> ⚠️ 現実装は **インスタンス内 LRU**（`apps/web/src/lib/rateLimit.ts`）。Vercel の関数インスタンスをまたぐと共有されない。一般公開までに Redis / KV ベースへの移行が必須（Issue #202）。
+| `/api/admin/*`（更新系） | 60 回 / 1 分 / adminAccountId |
+| `/api/admin/*`（GET 一覧 / 詳細） | 120 回 / 1 分 / adminAccountId |
+
+実装は `packages/infrastructure/src/rate-limit/createRateLimiter.ts`（呼び出し側は `apps/web/src/lib/rateLimit.ts` / `apps/admin/src/lib/rateLimit.ts`）。#202 で Upstash Redis に移行した。
+
+- **カウンタの置き場所**: Upstash Redis（全インスタンスで共有）。キーはアプリごとに `physifun:web:<action>:<subject>` / `physifun:admin:<action>:<subject>`
+- **アルゴリズム**: `@upstash/ratelimit` の sliding window（直前ウィンドウの件数を経過割合で重み付けする近似）
+- **接続情報が無いとき**: ローカル / テスト / CI はプロセス内メモリで数える。**Vercel 本番（`VERCEL_ENV=production`）で未設定ならエラー**にして設定漏れを検知する
+- **Upstash 障害時**: **fail-open**（1 秒で打ち切ってリクエストを通し、エラーをログに残す）。可用性を優先し、応募フォームは Turnstile も併用する
 
 ### 7.3 重複応募ブロック
 
@@ -396,7 +403,6 @@ flowchart TD
 | 項目 | 概要 | 対応 |
 |---|---|---|
 | CSP `'unsafe-inline'` 暫定許可 | Next.js App Router のインラインスクリプト対応 | Issue #109 follow-up（nonce middleware） |
-| IP rate limit インスタンス分散 | LRU on memory | Issue #202（Redis / KV 移行） |
 | 運営 TOTP / 2FA | 未実装 | 運営増加時 / 一般公開時 |
 | 監査ログのアラート | dashboard のみ | 一般公開時に異常検知 |
 | メール DKIM/SPF | Resend デフォルト依存 | 本番ドメイン取得後 |

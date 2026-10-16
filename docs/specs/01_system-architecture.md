@@ -70,6 +70,7 @@ flowchart TB
 | **Supabase Storage** | プロジェクトカバー画像など（`project-images` バケット） |
 | **Resend** | 全メール送信（アクティベーション・通知・Magic Link） |
 | **Cloudflare Turnstile** | リーダー応募フォームの CAPTCHA |
+| **Upstash Redis** | レート制限のカウンタ（全インスタンスで共有） |
 
 > 💡 **Supabase は同一インスタンスを共有**するが、**Cookie・セッション・環境変数は完全分離**。詳細は §3 / `04_security-design.md` 参照。
 
@@ -88,6 +89,7 @@ flowchart TB
 | ストレージ | Supabase Storage（`project-images`） | 画像アップロードは実装途中（UI 未接続） |
 | メール | Resend | Outbox 経由で送信 |
 | CAPTCHA | Cloudflare Turnstile | リーダー応募フォーム |
+| レート制限 | Upstash Redis（`@upstash/ratelimit`） | web / admin で共有。未設定時（ローカル / テスト）はメモリで数える（#202） |
 | ホスティング | Vercel（web / admin は別プロジェクト） | — |
 | ランタイム | Node.js 22 以上 | kysely 0.29 の要件。ルート `package.json` の `engines` と `.nvmrc` で固定。Vercel の web / admin も 22 以上に設定する |
 | パッケージ管理 | Bun（workspaces） | — |
