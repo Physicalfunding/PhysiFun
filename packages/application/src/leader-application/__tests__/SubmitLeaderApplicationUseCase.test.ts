@@ -73,7 +73,7 @@ class FakeIpRateLimit implements IpRateLimitPort {
   shouldExceed = false;
   calls: string[] = [];
 
-  consume(ipAddress: string) {
+  async consume(ipAddress: string) {
     this.calls.push(ipAddress);
     if (this.shouldExceed) {
       const retryAfter = 1800;

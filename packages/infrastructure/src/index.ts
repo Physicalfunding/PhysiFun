@@ -43,6 +43,13 @@ export type { MailMessage, MailSender, MailSendError } from "./mail";
 export { ResendMailSender } from "./mail";
 export { NoopMailSender } from "./mail";
 
+export {
+  createRateLimiter,
+  type RateLimiter,
+  type RateLimitResult,
+  type RateLimitRule,
+} from "./rate-limit/createRateLimiter";
+
 export { createSendAdminMagicLink } from "./admin-account/sendAdminMagicLink";
 export {
   buildMagicLinkHmacPayload,

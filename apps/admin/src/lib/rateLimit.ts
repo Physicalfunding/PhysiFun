@@ -1,10 +1,10 @@
-import { LRUCache } from "lru-cache";
+import { createRateLimiter, type RateLimitResult } from "@physifun/infrastructure";
 import { NextResponse } from "next/server";
 
 /**
  * apps/admin 用レート制限 (#145 / #157 H1)
  *
- * apps/web/src/lib/rateLimit.ts と同構造のインメモリ LRU バケットで、
+ * apps/web/src/lib/rateLimit.ts と同じく `@physifun/infrastructure` の `createRateLimiter` を使い、
  * 運営アプリ特有のアクション種別に限定している。
  *
  * - `adminMagicLink`: `/api/auth/signin/email` 用。email を key にして
@@ -15,7 +15,9 @@ import { NextResponse } from "next/server";
  *   1 分間に 120 回まで。認証済みでの大量スクレイピング抑止 (#166 / PR #165 M-1)。
  *   読み取り用途のため adminAction より少し緩めに設定している。
  *
- * 水平スケール時は apps/web と同様、Redis 等の中央ストレージに置換する前提。
+ * Upstash Redis の接続情報があれば Upstash で全インスタンス共通のカウンタを使い、
+ * 無ければプロセス内メモリで数える（ローカル / テスト / CI 向け）。
+ * Vercel 本番で接続情報が無い場合はエラー、Upstash 障害時はリクエストを通す（fail-open）（#202）。
  */
 export type AdminRateLimitAction = "adminMagicLink" | "adminAction" | "adminRead";
 
@@ -39,74 +41,22 @@ export const ADMIN_RATE_LIMIT_CONFIGS: Record<AdminRateLimitAction, AdminRateLim
   },
 };
 
-interface Bucket {
-  timestamps: number[];
-}
+const limiter = createRateLimiter({ prefix: "physifun:admin", rules: ADMIN_RATE_LIMIT_CONFIGS });
 
-const MAX_WINDOW_MS = Math.max(...Object.values(ADMIN_RATE_LIMIT_CONFIGS).map((c) => c.windowMs));
-
-const buckets = new LRUCache<string, Bucket>({
-  max: 10_000,
-  ttl: MAX_WINDOW_MS,
-  allowStale: false,
-});
-
-function bucketKey(action: AdminRateLimitAction, subject: string): string {
-  return `${action}:${subject}`;
-}
-
-export interface AdminRateLimitResult {
-  ok: boolean;
-  limit: number;
-  remaining: number;
-  retryAfterSeconds: number;
-  reset: number;
-}
+export type AdminRateLimitResult = RateLimitResult;
 
 /**
  * 指定アクション・subject (email / adminAccountId) でリクエストを 1 回消費する。
- * 超過中は timestamp を追加しない (バースト時に TTL が延びて永遠にブロックされるのを回避)。
+ * 超過中はカウンタを増やさない (バースト時にウィンドウが延びて永遠にブロックされるのを回避)。
+ *
+ * @param now 現在時刻 (ms)。テスト用 (インメモリ版のみ有効)。
  */
 export function consumeAdminRateLimit(
   action: AdminRateLimitAction,
   subject: string,
   now: number = Date.now()
-): AdminRateLimitResult {
-  const config = ADMIN_RATE_LIMIT_CONFIGS[action];
-  const key = bucketKey(action, subject);
-  const bucket = buckets.get(key) ?? { timestamps: [] };
-
-  const windowStart = now - config.windowMs;
-  const recent = bucket.timestamps.filter((ts) => ts > windowStart);
-
-  if (recent.length >= config.limit) {
-    const oldest = recent[0] ?? now;
-    const resetMs = oldest + config.windowMs;
-    const retryMs = resetMs - now;
-    const retryAfterSeconds = Math.max(1, Math.ceil(retryMs / 1000));
-
-    buckets.set(key, { timestamps: recent });
-
-    return {
-      ok: false,
-      limit: config.limit,
-      remaining: 0,
-      retryAfterSeconds,
-      reset: Math.ceil(resetMs / 1000),
-    };
-  }
-
-  recent.push(now);
-  buckets.set(key, { timestamps: recent });
-
-  const resetMs = now + config.windowMs;
-  return {
-    ok: true,
-    limit: config.limit,
-    remaining: config.limit - recent.length,
-    retryAfterSeconds: 0,
-    reset: Math.ceil(resetMs / 1000),
-  };
+): Promise<AdminRateLimitResult> {
+  return limiter.consume(action, subject, now);
 }
 
 export interface AdminRateLimitErrorBody {
@@ -141,12 +91,12 @@ export function adminRateLimitExceededResponse(result: AdminRateLimitResult): Ne
 /**
  * /api/admin/* 系の Route Handler 用。429 レスポンスを返すか null を返す。
  */
-export function enforceAdminRateLimit(
+export async function enforceAdminRateLimit(
   action: AdminRateLimitAction,
   subject: string,
   now: number = Date.now()
-): NextResponse | null {
-  const result = consumeAdminRateLimit(action, subject, now);
+): Promise<NextResponse | null> {
+  const result = await consumeAdminRateLimit(action, subject, now);
   if (!result.ok) {
     return adminRateLimitExceededResponse(result);
   }
@@ -162,7 +112,7 @@ export function enforceAdminRateLimit(
 export function checkAdminMagicLinkRateLimit(
   email: string,
   now: number = Date.now()
-): AdminRateLimitResult {
+): Promise<AdminRateLimitResult> {
   return consumeAdminRateLimit("adminMagicLink", email, now);
 }
 
@@ -171,5 +121,5 @@ export function checkAdminMagicLinkRateLimit(
  * @internal
  */
 export function __resetAdminRateLimitForTests(): void {
-  buckets.clear();
+  limiter.resetForTests();
 }

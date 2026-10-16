@@ -84,6 +84,7 @@ cp apps/web/.env.example apps/web/.env.local
 | `CRON_SECRET` | Vercel Cron の `Authorization: Bearer` 検証 | `openssl rand -base64 32` |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile のサーバー側シークレット | development では未設定でも通る（本番は必須、`.env.example` 参照） |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile のサイトキー | 同上 |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | レート制限のカウンタを置く Upstash Redis（`KV_REST_API_URL` / `KV_REST_API_TOKEN` でも可） | ローカルでは未設定でよい（メモリで数える）。Vercel 本番は必須 |
 
 `NEXTAUTH_URL` の表記ルール（末尾スラッシュ禁止 / デフォルトポート明示禁止 など）は `.env.example` のコメントを参照。
 

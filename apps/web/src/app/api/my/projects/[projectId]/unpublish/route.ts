@@ -46,7 +46,7 @@ export async function POST(
 
     // レート制限: ステータス遷移系は request-publish / withdraw / unpublish の 3 ルート
     // 合算で 10 req/min/user を消費する (Issue #108 原文「Status transitions: 10 req / min / user」に従う)。
-    const limited = enforceRateLimit("projectStatusTransition", userId);
+    const limited = await enforceRateLimit("projectStatusTransition", userId);
     if (limited) return limited;
 
     const { projectId } = await params;

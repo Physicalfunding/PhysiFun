@@ -9,7 +9,7 @@
 - UseCase: `packages/application/src/leader-application/SubmitLeaderApplicationUseCase.ts`
 - UseCase: `packages/application/src/account/ActivateAccountUseCase.ts`
 - Adapter: `packages/infrastructure/src/leader-application/KyselySubmitLeaderApplicationAdapter.ts`
-- 補助: `apps/web/src/lib/captcha.ts` (Cloudflare Turnstile) / `apps/web/src/lib/rateLimit.ts` (LRU)
+- 補助: `apps/web/src/lib/captcha.ts` (Cloudflare Turnstile) / `apps/web/src/lib/rateLimit.ts`（本番は Upstash Redis、ローカル / テストはメモリ）
 - Outbox: `packages/infrastructure/src/outbox/processors/ActivationEmailProcessor.ts`
 
 ---
@@ -162,7 +162,7 @@ flowchart TD
 
 ### 5.1 IP rate limit の限界
 
-`apps/web/src/lib/rateLimit.ts` の `LRU` バケットは **インスタンス内メモリ**。Vercel の関数インスタンスをまたぐと共有されない。初回リリースはトラフィックが少ないため許容しているが、**一般公開までに Redis / Vercel KV ベースに置き換える必要あり**（Issue #202）。
+カウンタは Upstash Redis に置き、Vercel の関数インスタンスをまたいで共有する（#202）。Upstash に問い合わせられないとき（障害・1 秒超のタイムアウト）は **fail-open** でリクエストを通すため、その間は IP rate limit が効かない（Turnstile と重複応募チェックは効く）。詳細は `04_security-design.md` §7.2。
 
 ### 5.2 アクティベーショントークンの再利用攻撃
 
