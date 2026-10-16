@@ -339,9 +339,9 @@ stateDiagram-v2
 - パスワードハッシュ・セッション管理は NextAuth.js が抽象化済み
 - 過剰な抽象化を避ける（`CLAUDE.md` の原則）
 
-### 5.2 状態（Prisma レベル）
+### 5.2 状態（DB レベル）
 
-`packages/infrastructure/prisma/schema.prisma` 上の `Account` モデル:
+`packages/infrastructure/atlas/schema.sql` 上の `accounts` テーブル:
 
 - `status`: `PENDING_EMAIL_CONFIRMATION` / `ACTIVE`
 - `roles`: `Role[]`（`SUPPORTER` / `LEADER`、複数保持可）
@@ -477,7 +477,7 @@ type Result<T, E> =
 
 ### 8.1 現状
 
-- **Prisma schema にモデル定義のみ存在**（`packages/infrastructure/prisma/schema.prisma:200-284`）
+- **スキーマにテーブル定義のみ存在**（`packages/infrastructure/atlas/schema.sql` の `support_recruitments` / `recruitment_schedules` / `support_tickets`）
   - `SupportRecruitment`
   - `RecruitmentSchedule`
   - `SupportTicket`

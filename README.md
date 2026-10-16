@@ -12,7 +12,7 @@
 | フレームワーク | Next.js 16 (App Router) / React 19 / TypeScript 5 |
 | スタイリング | Tailwind CSS 4 |
 | 認証 | NextAuth.js v4 |
-| DB | PostgreSQL (Supabase) + Kysely（スキーマ・マイグレーションは当面 Prisma、Atlas へ移行予定） |
+| DB | PostgreSQL (Supabase) + Kysely（クエリ）+ Atlas（スキーマ・マイグレーション） |
 | ストレージ | Supabase Storage |
 | ホスティング | Vercel |
 | パッケージマネージャ | Bun |
@@ -54,6 +54,7 @@ DB（Supabase PostgreSQL）は web / admin で **同一インスタンスを共�
 - [Bun](https://bun.sh/) (v1.x)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started)
+- [Atlas CLI](https://atlasgo.io/getting-started)（DB マイグレーション。`curl -sSf https://atlasgo.sh | sh` または `brew install ariga/tap/atlas`）
 - [Resend](https://resend.com/) の API キー（admin の Magic Link ログインで使用）
 
 ### 1. リポジトリのクローンと依存関係のインストール
@@ -98,12 +99,13 @@ cp apps/admin/.env.example apps/admin/.env.local
 
 ### 4. データベースのマイグレーション
 
-DB スキーマは `packages/infrastructure/prisma/schema.prisma` に集約されており、ルートからエイリアス経由で実行する（クエリは Kysely だが、マイグレーションは Atlas 移行完了まで Prisma で行う。[`docs/guides/db-migration.md`](./docs/guides/db-migration.md) 参照）:
+DB スキーマの正本は `packages/infrastructure/atlas/schema.sql`。マイグレーションは Atlas で管理しており、ルートからエイリアス経由で適用する（`apps/web/.env.local` の `DATABASE_URL` が使われる）:
 
 ```bash
-bun run db:generate          # Prisma Client 生成
 bun run db:migrate:deploy    # マイグレーション適用
 ```
+
+スキーマを変更するときの手順は [`docs/guides/db-migration.md`](./docs/guides/db-migration.md) を参照。
 
 ### 5. 初期 AdminAccount の作成（admin ログインに必須）
 
@@ -180,13 +182,10 @@ bun run test:infra         # infrastructure 層（vitest）
 bun run test:e2e           # Playwright E2E
 bun run test:e2e:ui        # Playwright UI モード
 
-# データベース（packages/infrastructure 経由）
-bun run db:generate        # Prisma Client 生成
-bun run db:migrate         # マイグレーション作成 + 適用（dev）
-bun run db:migrate:deploy  # マイグレーション適用のみ（CI / 本番）
-bun run db:migrate:reset   # DB リセット
-bun run db:push            # スキーマを直接反映（マイグレーション履歴なし）
-bun run db:studio          # Prisma Studio
+# データベース（packages/infrastructure 経由。Atlas CLI が必要）
+bun run db:migrate:diff <名前>  # schema.sql の変更から versioned migration を生成
+bun run db:migrate:deploy       # 未適用のマイグレーションを適用
+bun run db:migrate:status       # 適用状況を確認
 
 # Supabase ローカル（Makefile 経由でも可）
 supabase start             # ローカル環境起動（make start）
@@ -219,4 +218,4 @@ SEED_ADMIN_EMAIL="you@example.com" \
 | [`docs/specs/`](./docs/specs/README.md) | 設計仕様（システム構成・ドメイン・データ・セキュリティ・主要フロー） |
 | [`docs/guides/dev-rule.md`](./docs/guides/dev-rule.md) | 開発フロー・PR ルール・コーディング規約 |
 | [`docs/guides/admin-setup.md`](./docs/guides/admin-setup.md) | 運営アカウント（AdminAccount）のセットアップ・運用手順 |
-| [`docs/guides/db-migration.md`](./docs/guides/db-migration.md) | DB 層移行ガイド（Prisma → Kysely + Atlas） |
+| [`docs/guides/db-migration.md`](./docs/guides/db-migration.md) | DB スキーマ・マイグレーション運用ガイド（Kysely + Atlas） |

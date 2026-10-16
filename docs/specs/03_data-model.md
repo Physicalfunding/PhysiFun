@@ -1,13 +1,13 @@
 # 03. データモデル (ER 図)
 
-`packages/infrastructure/prisma/schema.prisma` のデータモデルを Mermaid ER 図と表で可視化したドキュメント。
+`packages/infrastructure/atlas/schema.sql` のデータモデルを Mermaid ER 図と表で可視化したドキュメント。
 
 ## このドキュメントの位置づけ
 
 - **目的**: AI / 人間が「DB 構造とテーブル間の関係」を素早く把握する地図
-- **正本**: `packages/infrastructure/prisma/schema.prisma`。本書はその視覚化。
-- **揮発度**: 中〜高（Prisma スキーマ変更で都度更新）
-- **移行中の注意**: クエリ実装はすでに Kysely に移行済み（型は `packages/infrastructure/src/database/kysely/types.ts`）。スキーマ定義とマイグレーションは Atlas への移行が終わるまで `schema.prisma` が正本（`docs/guides/db-migration.md`、Epic #221）
+- **正本**: `packages/infrastructure/atlas/schema.sql`（Atlas の宣言的スキーマ）。本書はその視覚化。
+- **揮発度**: 中〜高（スキーマ変更で都度更新）
+- **補足**: クエリは Kysely（型は `packages/infrastructure/src/database/kysely/types.ts`）。モデル名は Prisma 時代の名前（`Account` など）で書いているが、実テーブル名は snake_case（`accounts` など）。運用手順は `docs/guides/db-migration.md`
 - **関連**:
   - `02_domain-model.md` — ドメインアグリゲートとの対応
   - `04_security-design.md` — Restrict 制約の意図、AdminAuditLog の役割
@@ -173,7 +173,7 @@ erDiagram
 
 **Recruitment まわりの注意:**
 
-- `RecruitmentSchedule.date` は `@db.Date`（JST カレンダー日）。app 層が JST として扱う。
+- `RecruitmentSchedule.date` は `date` 型（JST カレンダー日）。app 層が JST として扱う。
 - `RecruitmentSchedule.startTime` / `endTime` は `"HH:MM"` 形式の string（JST）。
 - `(supportRecruitmentId, date)` で **unique 制約**（1 募集 × 1 日 = 1 スケジュール）。
 - `SupportTicket.supporterAccountId` は **Restrict**（履歴保護）。
@@ -378,7 +378,7 @@ stateDiagram-v2
 
 ## 9. ドメインモデルとの対応
 
-| Prisma モデル | ドメインアグリゲート | 状態 |
+| モデル | ドメインアグリゲート | 状態 |
 |---|---|---|
 | `Account` | `Account`（最小実装） | ✅ |
 | `LeaderApplication` | `LeaderApplication` | ✅ ProjectDraft に snapshot fields 拡張 |
@@ -402,16 +402,16 @@ stateDiagram-v2
 
 | 観点 | 方針 |
 |---|---|
-| 主キー | `String @id @default(uuid())` で統一（UUID v4） |
+| 主キー | `id text`（UUID v4）。DB 側に DEFAULT は無く、アプリ側で生成して渡す |
 | 外部キー | `<entityName>Id` という命名（例: `accountId` / `projectId`） |
 | 監査の作者 FK | `<role>By` という命名（例: `reviewedBy` / `forcedUnpublishedBy`） |
-| 長文 string | `@db.Text`（PostgreSQL TEXT 型） |
-| 短文 string | デフォルトの `VARCHAR` |
-| JSON 構造体 | `Json` 型（`snsLinks` / `metadata` / `payload`） |
-| Date のみ | `@db.Date`（`RecruitmentSchedule.date`） |
-| 列挙型 | Prisma `enum` で定義し、ドメイン層と命名・値を一致 |
-| タイムスタンプ | `createdAt` / `updatedAt` をすべてのエンティティに |
-| 配列カラム | `Type[]`（PostgreSQL の配列型）— `roles` / `recruitmentTypes` |
+| 文字列 | 長さに関係なく `text`（長さ制限はアプリ側の Zod / 値オブジェクトで行う） |
+| JSON 構造体 | `jsonb`（`snsLinks` / `metadata` / `payload`） |
+| Date のみ | `date`（`RecruitmentSchedule.date`） |
+| 列挙型 | PostgreSQL のネイティブ enum。ドメイン層と命名・値を一致させる |
+| タイムスタンプ | `timestamp(3)`。`createdAt` は `DEFAULT CURRENT_TIMESTAMP`、`updatedAt`（更新される表のみ）は DEFAULT 無しでアプリ側が設定 |
+| 配列カラム | PostgreSQL の配列型（enum 配列）— `roles` / `recruitmentTypes` |
+| 命名 | テーブルは snake_case、カラムは camelCase（Prisma 時代の名前を引き継ぎ） |
 
 ---
 
@@ -421,3 +421,4 @@ stateDiagram-v2
 |---|---|---|
 | 2026-05-09 | 初稿作成（PR #201 後の状態を反映、14 モデル / 10 enum を整理） | 設計チーム |
 | 2026-10-16 | ドキュメント棚卸し：Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一、サポート募集の位置づけ（初回リリースでリーダー側を実装予定）を修正 | 設計チーム |
+| 2026-10-16 | 正本を `atlas/schema.sql` に変更（#228 / #229）。命名規則・型方針を実際の SQL 型に合わせて修正 | 設計チーム |

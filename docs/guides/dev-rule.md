@@ -48,7 +48,7 @@ docs: specs/01 に AWS 移行方針を追記
 | API Route | `route.ts` | `app/api/my/projects/route.ts` |
 | 型定義ファイル | kebab-case / camelCase | `next-auth.d.ts` |
 
-> DB アクセスはすべて Kysely で書く（旧 `Prisma*` 実装は #230 で削除済み。スキーマ定義は Atlas 移行まで `schema.prisma`）。
+> DB アクセスはすべて Kysely で書く。スキーマ変更は `atlas/schema.sql` を編集してマイグレーションを生成する（`docs/guides/db-migration.md`）。
 
 ### レイヤーの使い分け
 
@@ -145,12 +145,12 @@ const { error } = await supabase.storage.from(bucket).upload(path, file);
 | プロダクト方針・リリース計画の変更 | `docs/product.md` |
 | 技術スタック・インフラ・ディレクトリ構成の変更 | `docs/specs/01_system-architecture.md` |
 | ドメインモデル・状態遷移の変更 | `docs/specs/02_domain-model.md` |
-| DB スキーマの変更 | `docs/specs/03_data-model.md` |
+| DB スキーマの変更 | `atlas/schema.sql` + 生成したマイグレーション、`docs/specs/03_data-model.md` |
 | 認証・認可・セキュリティ対策の変更 | `docs/specs/04_security-design.md` |
 | 主要フロー（応募・公開審査・Magic Link・Outbox）の変更 | `docs/specs/05_key-flows/` |
 | 開発フロー・PR ルール・コーディング規約の変更 | `docs/guides/dev-rule.md` |
 | 運営アカウント（AdminAccount）のセットアップ・運用手順の変更 | `docs/guides/admin-setup.md` |
-| DB 移行（Prisma → Kysely + Atlas）の進捗 | `docs/guides/db-migration.md` |
+| DB の運用手順・移行の進捗 | `docs/guides/db-migration.md` |
 | Claude 向け基本ルールの変更 | `CLAUDE.md` |
 | ローカル開発環境・環境変数の変更 | ルート `README.md` / `apps/web/README.md` / `apps/admin/README.md` |
 

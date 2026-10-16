@@ -273,7 +273,7 @@ flowchart TD
 
 ### 8.1 AdminAuditLog
 
-運営の操作ログを **append-only** で記録（`packages/infrastructure/prisma/schema.prisma:428-457`）。
+運営の操作ログを **append-only** で記録（`packages/infrastructure/atlas/schema.sql` の `admin_audit_logs`）。
 
 | カラム | 役割 |
 |---|---|

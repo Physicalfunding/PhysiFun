@@ -91,6 +91,6 @@ bun run typecheck    # 型チェック
 | `docs/specs/01_system-architecture.md` | 技術スタック・ディレクトリ構成・レイヤー責務（設計の入口） |
 | `docs/specs/` | ドメイン・データ・セキュリティ・主要フローの設計仕様 |
 | `docs/guides/dev-rule.md` | 開発フロー・PR ルール・コーディング規約 |
-| `docs/guides/db-migration.md` | DB 層移行ガイド（Prisma → Kysely + Atlas、クエリ層は移行済み） |
+| `docs/guides/db-migration.md` | DB スキーマ・マイグレーション運用ガイド（Kysely + Atlas。スキーマの正本は `atlas/schema.sql`） |
 
 > 用語: リリース段階は「初回リリース」「一般公開」と呼ぶ。古い Issue やコメントにある「Phase 1 / 2 / 3」の読み替えは `docs/product.md` を参照。
