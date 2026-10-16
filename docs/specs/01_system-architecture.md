@@ -89,6 +89,7 @@ flowchart TB
 | メール | Resend | Outbox 経由で送信 |
 | CAPTCHA | Cloudflare Turnstile | リーダー応募フォーム |
 | ホスティング | Vercel（web / admin は別プロジェクト） | — |
+| ランタイム | Node.js 22 以上 | kysely 0.29 の要件。ルート `package.json` の `engines` と `.nvmrc` で固定。Vercel の web / admin も 22 以上に設定する |
 | パッケージ管理 | Bun（workspaces） | — |
 | テスト | `bun test`（ユニット）/ Vitest + Testcontainers（infra 統合）/ Playwright（E2E） | web はローカルで Jest も利用可 |
 
@@ -383,6 +384,7 @@ flowchart LR
 | ツール | 用途 |
 |---|---|
 | Bun | パッケージマネージャ + ランタイム |
+| Node.js 22 以上 | Next.js / Playwright の実行（バージョンは `.nvmrc`） |
 | Supabase CLI | ローカル PostgreSQL + Storage + Studio の起動 |
 | Docker Desktop | Supabase のコンテナ実行基盤 |
 

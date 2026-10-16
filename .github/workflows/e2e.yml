@@ -53,11 +53,11 @@ jobs:
           bun-version: latest
 
       # Playwright は Node で動き、E2E ヘルパーが ESM 専用の kysely を require(esm) で読み込む。
-      # kysely 0.29 の engines (node >= 22) に合わせて Node のバージョンを固定する。
+      # kysely 0.29 の engines (node >= 22) に合わせ、Node のバージョンは .nvmrc（22）に固定する（#249）。
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

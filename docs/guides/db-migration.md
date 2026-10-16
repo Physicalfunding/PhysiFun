@@ -43,8 +43,8 @@ DB アクセスは **Kysely**（SQL ライクな型安全クエリビルダ）�
   throw でロールバック（TOCTOU の count→insert を同一 tx で実施）。
 - **pgBouncer（Supabase Transaction Pooler）互換**: `pg` は既定で名前付き prepared statement を
   使わないため、Prisma の `pgbouncer=true` のような特別設定は不要。
-- **kysely 0.29 は Node >= 22 を要求**（`engines`）。本番/CI を Node 20 で固定する場合は
-  kysely 0.28 系を検討（bun ローカルでは問題なし）。
+- **kysely 0.29 は Node >= 22 を要求**（`engines`）。リポジトリ側はルート `package.json` の `engines` と
+  `.nvmrc`（22）で固定し、CI も `.nvmrc` を使う。Vercel の web / admin も Node 22 以上に設定する（#249）。
 
 ### Jest（apps/web）と ESM の事情
 `kysely` は **ESM 専用**（CJS ビルド無し）。`next/jest` は node_modules を変換対象から外し、
