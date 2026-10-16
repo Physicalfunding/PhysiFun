@@ -63,6 +63,9 @@ export async function teardown(): Promise<void> {
 function runMigrateApply(databaseUrl: string): void {
   // atlas.hcl（env "local"）は DATABASE_URL を適用先として読む。
   // integration test では container / INFRA_TEST_DATABASE_URL の URL を優先させたいので env を明示して渡す。
+  // Atlas は sslmode 未指定だと SSL 必須で接続するため、テスト用 DB（SSL 無効）向けに sslmode=disable を補う。
+  const atlasUrl = new URL(databaseUrl);
+  if (!atlasUrl.searchParams.has("sslmode")) atlasUrl.searchParams.set("sslmode", "disable");
   // ESM 互換のため __dirname の代わりに import.meta.url 由来のパスを使う。
   const infraDirFromUrl = fileURLToPath(new URL("..", import.meta.url));
   const infraDir = path.resolve(infraDirFromUrl);
@@ -71,7 +74,7 @@ function runMigrateApply(databaseUrl: string): void {
     stdio: "inherit",
     env: {
       ...process.env,
-      DATABASE_URL: databaseUrl,
+      DATABASE_URL: atlasUrl.toString(),
     },
   });
 }

@@ -86,6 +86,8 @@ bun run db:kysely:codegen   # → src/database/kysely/types.generated.ts
 - 正本: `atlas/schema.sql`。生成物: `atlas/migrations/*.sql` と `atlas.sum`（ハッシュ。手で編集しない）
 - コマンドは `scripts/atlas.ts` 経由で実行する。`apps/web/.env.local`（なければ `.env`）の `DATABASE_URL` を読み込むが、
   shell で設定した値があればそちらが優先される
+- Atlas は URL に `sslmode` が無いと SSL 必須で接続する。`scripts/atlas.ts` は localhost 宛てで `sslmode` 未指定の URL に
+  `sslmode=disable` を自動で補う（ローカルの Supabase / PostgreSQL 向け）。Supabase のリモート DB は SSL 対応なのでそのままでよい
 
 ### 5.2 セットアップ
 
