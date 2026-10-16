@@ -4,7 +4,6 @@
 import {
   consumeRateLimit,
   enforceRateLimit,
-  rateLimitExceededResponse,
   RATE_LIMIT_CONFIGS,
   __resetRateLimitForTests,
 } from "../rateLimit";
@@ -142,34 +141,6 @@ describe("rateLimit", () => {
 
         // updateProject は影響を受けない
         expect((await consumeRateLimit("updateProject", userId, now + 10)).ok).toBe(true);
-      });
-    });
-  });
-
-  describe("rateLimitExceededResponse", () => {
-    it("429 + Retry-After / X-RateLimit-* ヘッダーを返す", async () => {
-      const response = rateLimitExceededResponse({
-        ok: false,
-        limit: 10,
-        remaining: 0,
-        retryAfterSeconds: 42,
-        reset: 1_700_000_042,
-      });
-
-      expect(response.status).toBe(429);
-      expect(response.headers.get("Retry-After")).toBe("42");
-      expect(response.headers.get("X-RateLimit-Limit")).toBe("10");
-      expect(response.headers.get("X-RateLimit-Remaining")).toBe("0");
-      expect(response.headers.get("X-RateLimit-Reset")).toBe("1700000042");
-
-      const body = await response.json();
-      expect(body).toEqual({
-        success: false,
-        error: {
-          code: "TOO_MANY_REQUESTS",
-          message: expect.any(String),
-          retryAfter: 42,
-        },
       });
     });
   });

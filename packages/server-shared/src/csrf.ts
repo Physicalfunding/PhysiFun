@@ -13,7 +13,7 @@ import type { NextRequest } from "next/server";
  * - どちらも無い場合は拒否 (same-origin リクエストでもブラウザは通常どちらかを送る)。
  * - 許可オリジンは `NEXTAUTH_URL` を第一に、無ければリクエスト自身のホスト (`X-Forwarded-Host` / `Host`) から導出する。
  *
- * 同期的な純関数として実装し、middleware から呼び出す。
+ * 同期的な純関数として実装し、web / admin の middleware から呼び出す（#252 で共通化）。
  */
 
 /** CSRF チェックをスキップするメソッド (safe methods)。 */

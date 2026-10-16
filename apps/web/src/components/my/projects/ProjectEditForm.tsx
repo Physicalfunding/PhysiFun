@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CATEGORY_MASTER } from "@physifun/domain";
+import { CATEGORY_MASTER, PREFECTURE_MASTER } from "@physifun/domain";
 import {
   Button,
   Card,
@@ -16,9 +16,8 @@ import {
 } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
 import { projectFormSchema, type ProjectFormValues } from "@/lib/validations/projectFormSchema";
-import { PREFECTURES } from "@/lib/prefectures";
 
-const PREFECTURE_OPTIONS = PREFECTURES.map((p) => ({
+const PREFECTURE_OPTIONS = PREFECTURE_MASTER.map((p) => ({
   value: p.code,
   label: p.name,
 }));

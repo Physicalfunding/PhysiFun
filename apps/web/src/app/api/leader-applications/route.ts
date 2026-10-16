@@ -9,14 +9,14 @@ import {
   conflictResponse,
   forbiddenResponse,
   internalErrorResponse,
-} from "@/lib/api/response";
+  rateLimitExceededResponse,
+} from "@physifun/server-shared";
 import {
   getCaptchaVerifierPort,
   getLeaderApplicationIpRateLimitPort,
 } from "@/lib/di/leader-application";
 import { getSubmitLeaderApplicationPort } from "@/lib/di/leader-application-submit";
 import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
-import { rateLimitExceededResponse } from "@/lib/rateLimit";
 
 /**
  * UseCase のエラー型に応じた HTTP レスポンスを返す
@@ -37,7 +37,6 @@ function handleUseCaseError(error: SubmitLeaderApplicationError) {
       // ポートが返した rate limit メタデータを使い、既存ルートと整合する
       // `Retry-After` / `X-RateLimit-*` ヘッダー付きの 429 を返す。
       return rateLimitExceededResponse({
-        ok: false,
         limit: error.limit,
         remaining: error.remaining,
         retryAfterSeconds: error.retryAfterSeconds,

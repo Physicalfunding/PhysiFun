@@ -155,16 +155,19 @@ flowchart TB
 
     subgraph Packages["packages/"]
         UIShared["packages/ui-shared<br/>@physifun/ui-shared"]
+        ServerShared["packages/server-shared<br/>@physifun/server-shared"]
         Application["packages/application<br/>@physifun/application"]
         Infrastructure["packages/infrastructure<br/>@physifun/infrastructure"]
         Domain["packages/domain<br/>@physifun/domain"]
     end
 
     Web -->|workspace:*| UIShared
+    Web -->|workspace:*| ServerShared
     Web -->|workspace:*| Application
     Web -->|workspace:*| Infrastructure
     Web -->|workspace:*| Domain
     Admin -->|workspace:*| UIShared
+    Admin -->|workspace:*| ServerShared
     Admin -->|workspace:*| Application
     Admin -->|workspace:*| Infrastructure
     Admin -->|workspace:*| Domain
@@ -186,6 +189,7 @@ flowchart TB
 | `application` | ユースケース（ビジネスロジック）+ ports | — |
 | `infrastructure` | Kysely 実装 / Outbox / メール / Bcrypt / HMAC / Atlas スキーマ・マイグレーション 等 | `03_data-model.md` |
 | `ui-shared` | 両アプリ共通の UI コンポーネント・設定 | — |
+| `server-shared` | 両アプリ共通のサーバー側コード（CSRF 検証 / API レスポンス / 429 レスポンス / cron 認証）。middleware（Edge）からも読むため Node 専用 API に依存しない | `04_security-design.md` |
 
 ### 3.3 ディレクトリ構成
 
@@ -197,7 +201,6 @@ PhysiFun/
 │   │   ├── components/          # UI（common/ は汎用のみ、それ以外は画面単位）
 │   │   ├── lib/
 │   │   │   ├── di/              # UseCase と infrastructure 実装を組み立てる DI ヘルパー
-│   │   │   ├── api/             # API レスポンスの共通ヘルパー
 │   │   │   └── validations/     # Zod スキーマ
 │   │   └── infrastructure/      # ⚠️ 例外: 画像アップロード（未接続）。packages/infrastructure へ移す予定
 │   └── admin/src/
@@ -214,7 +217,8 @@ PhysiFun/
 │   │   ├── atlas/                     # スキーマの正本（schema.sql）と versioned migration
 │   │   ├── scripts/                   # seed / Atlas CLI ラッパー
 │   │   └── test/                      # Vitest + Testcontainers の統合テスト
-│   └── ui-shared/src/
+│   ├── ui-shared/src/
+│   └── server-shared/src/             # web / admin 共通のサーバー側コード（csrf / apiResponse / rateLimitResponse / cronAuth）
 ├── tests/e2e/                   # Playwright
 └── docs/                        # ドキュメント（docs/README.md が地図）
 ```

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifyCronRequest } from "@physifun/server-shared";
 import { getLeaderApplicationOutboxWorker, getProjectOutboxWorker } from "@/lib/di/outbox";
 
 /**
@@ -20,18 +21,9 @@ import { getLeaderApplicationOutboxWorker, getProjectOutboxWorker } from "@/lib/
  * 500 を返し、Vercel のログから検知できるようにする。
  */
 export async function GET(request: Request) {
-  // CRON_SECRET 未設定だと `Bearer undefined` として比較され、攻撃者がそれを送れば
-  // 通ってしまうため fail-closed にする (#188 review M1)。
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) {
-    console.error("[cron] CRON_SECRET is not set");
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // CRON_SECRET 未設定なら 500、不一致なら 401（#188 review M1 / #252）
+  const unauthorized = verifyCronRequest(request);
+  if (unauthorized) return unauthorized;
 
   // 失敗 worker の "識別子のみ" を返す。エラー詳細メッセージは console.error にだけ出す。
   // Prisma 等の例外メッセージにテーブル名・接続情報が含まれる可能性があるため、

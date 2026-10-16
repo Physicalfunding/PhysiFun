@@ -40,6 +40,7 @@ monorepo（bun workspaces）構成で、以下の 2 つの Next.js アプリと�
 | `packages/application` | アプリケーション層（ユースケース） | ー | ー |
 | `packages/infrastructure` | インフラ層（Kysely / Atlas スキーマ・マイグレーション / メール送信 / Outbox） | ー | ー |
 | `packages/ui-shared` | 両アプリで共有する UI コンポーネント | ー | ー |
+| `packages/server-shared` | 両アプリで共有するサーバー側コード（CSRF 検証 / API レスポンス / cron 認証など） | ー | ー |
 
 DB（Supabase PostgreSQL）は web / admin で **同一インスタンスを共有**するが、Cookie / セッション / 環境変数は完全に分離されている（`AdminAccount` は `Account` と独立アグリゲート）。
 

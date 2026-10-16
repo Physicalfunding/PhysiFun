@@ -6,7 +6,6 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/components/common/Toast";
-import { PREFECTURES } from "@/lib/prefectures";
 import {
   CATEGORY_MASTER,
   LEADER_APPLICATION_LIMITS,
@@ -18,6 +17,7 @@ import {
   PROJECT_PHASE_VALUES,
   ProjectPhase,
   RECRUITMENT_TYPE_VALUES,
+  PREFECTURE_MASTER,
 } from "@physifun/domain";
 
 /**
@@ -942,7 +942,7 @@ export function ApplyForm() {
               aria-invalid={errors.prefectureCode ? "true" : "false"}
             >
               <option value="">選択してください</option>
-              {PREFECTURES.map((pref) => (
+              {PREFECTURE_MASTER.map((pref) => (
                 <option key={pref.code} value={pref.code}>
                   {pref.name}
                 </option>

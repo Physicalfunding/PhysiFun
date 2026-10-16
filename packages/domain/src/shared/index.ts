@@ -7,6 +7,8 @@ export {
 } from "./value-objects/ProjectCategory";
 export {
   ProjectLocation,
+  PREFECTURE_MASTER,
+  getPrefectureName,
   type PrefectureCode,
   type ProjectLocationError,
 } from "./value-objects/ProjectLocation";
