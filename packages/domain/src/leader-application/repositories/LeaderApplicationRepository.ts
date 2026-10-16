@@ -6,10 +6,7 @@ import type { LeaderApplicationId } from "../value-objects/LeaderApplicationId";
  * LeaderApplication Repository インターフェース
  *
  * 永続化層の実装は `@physifun/infrastructure` に配置し、DI で注入する。
- * ドメイン層はこの interface のみに依存し、Prisma / DB への直接依存を持たない。
- *
- * Phase 1 の具体的な実装は #58 `SubmitLeaderApplicationUseCase` の時点で
- * `PrismaLeaderApplicationRepository` として配置される。
+ * ドメイン層はこの interface のみに依存し、DB への直接依存を持たない。
  */
 export interface LeaderApplicationRepository {
   /**

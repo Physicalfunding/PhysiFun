@@ -38,7 +38,7 @@ export interface AdminReviewer {
 /**
  * Kysely ベースの ApproveLeaderApplicationPort 実装（Prisma 版からの移行 / #222）
  *
- * `PrismaApproveLeaderApplicationAdapter` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * 承認処理を単一トランザクション（interactive tx）で実行する。
  *
  * NOTE: 循環依存 (infrastructure → application) を避けるため、

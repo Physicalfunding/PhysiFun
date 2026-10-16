@@ -16,7 +16,7 @@ export interface AuthenticatedAccount {
 /**
  * Kysely ベースの認証用アダプタ（Prisma 版からの移行 / #223）
  *
- * `PrismaAuthenticateAdapter` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * UseCase ではなく NextAuth callback から直接使う想定のため、
  * application 層に Port を置かず infrastructure 層内で完結させる。
  *

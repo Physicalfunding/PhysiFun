@@ -39,7 +39,7 @@ export function getProjectCommandAdapter() {
  * ポートを組み立てる。
  * RequestPublish は Outbox 通知を伴うため、別途 getRequestPublishPort を使用する。
  *
- * NOTE: PrismaProjectCommandAdapter は Prisma クライアント経由で動作する
+ * NOTE: KyselyProjectCommandAdapter は Kysely クライアント経由で動作する
  * stateless なアダプタのため、上位の getProjectCommandAdapter() と共有せず
  * DI 関数ごとに独自インスタンス化している。これは Port ごとの依存関係を
  * 明示的に分離し、将来 Port 単位で実装差し替え（モック化等）をしやすくするための意図的な設計。
@@ -58,7 +58,7 @@ export function getProjectStatusPort() {
  * 公開申請は Project 更新と ProjectOutboxMessage 書き込みを
  * 単一トランザクションで実行する必要があるため、executeInTransaction を提供する。
  *
- * NOTE: getProjectStatusPort と同様に、PrismaProjectCommandAdapter は stateless な
+ * NOTE: getProjectStatusPort と同様に、KyselyProjectCommandAdapter は stateless な
  * アダプタであるため DI 関数ごとに独自インスタンス化している。共通の
  * getProjectCommandAdapter() を意図的に使用せず、Port ごとの依存関係を
  * 明示的に分離している。
@@ -86,7 +86,7 @@ export function getRequestPublishPort(): RequestPublishPort {
  * executeApproveInTransaction を提供する。
  * 運営の二重防御のために findAdminReviewerById も提供する（#145 以降は AdminAccount 参照）。
  *
- * NOTE: 他の DI ヘルパーと同様に PrismaProjectCommandAdapter を独自インスタンス化し、
+ * NOTE: 他の DI ヘルパーと同様に KyselyProjectCommandAdapter を独自インスタンス化し、
  * Port ごとの依存関係を明示的に分離する。
  */
 export function getApproveProjectPublicationPort(): ApproveProjectPublicationPort {
@@ -112,7 +112,7 @@ export function getApproveProjectPublicationPort(): ApproveProjectPublicationPor
  * executeRejectInTransaction を提供する。
  *
  * NOTE: getProjectStatusPort / getRequestPublishPort と同様、
- * PrismaProjectCommandAdapter は stateless なため DI 関数ごとに独自インスタンス化する。
+ * KyselyProjectCommandAdapter は stateless なため DI 関数ごとに独自インスタンス化する。
  */
 export function getRejectProjectPublicationPort(): RejectProjectPublicationPort {
   const adapter = new KyselyProjectCommandAdapter();
@@ -136,7 +136,7 @@ export function getRejectProjectPublicationPort(): RejectProjectPublicationPort 
  *  - ProjectOutboxMessage 書き込み (リーダー通知メール)
  * を同一トランザクションで実行する必要があるため、専用のヘルパーを切り出している。
  *
- * NOTE: 他の DI 関数と同様に、PrismaProjectCommandAdapter は stateless なため
+ * NOTE: 他の DI 関数と同様に、KyselyProjectCommandAdapter は stateless なため
  * DI 関数ごとに独自インスタンス化している。Port ごとの依存関係を明示的に
  * 分離するための意図的な設計。
  */

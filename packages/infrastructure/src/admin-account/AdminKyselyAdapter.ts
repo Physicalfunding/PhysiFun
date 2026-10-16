@@ -5,9 +5,8 @@ import { db } from "../database/kysely/client";
 /**
  * NextAuth v4 カスタム Adapter（AdminAccount 用 / Kysely 実装 / #225）
  *
- * `createAdminPrismaAdapter`（AdminPrismaAdapter.ts）の drop-in 置換。Prisma 依存を
- * infrastructure 層の Adapter 単位で外す Epic #221 の一環で、入出力・セキュリティ不変条件は
- * Prisma 版と同一に保つ（Prisma 撤去は #230）。
+ * Epic #221 で旧 Prisma 版（AdminPrismaAdapter、#230 で削除）を置き換えたもの。
+ * 入出力・セキュリティ不変条件は旧 Prisma 版と同一に保っている。
  *
  * 運営管理アプリ (apps/admin) の NextAuth は Database 戦略 + EmailProvider で
  * admin_accounts / admin_sessions / admin_verification_tokens を読み書きする。

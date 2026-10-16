@@ -13,7 +13,7 @@ import type { AdminAccountsTable } from "../database/kysely/types";
 /**
  * AdminAccount 集約の Kysely リポジトリ実装（Prisma 版からの移行 / #224）
  *
- * `PrismaAdminAccountRepository` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * - status / email は DB 列値とドメイン値オブジェクトの間をこの層でマッピングする。
  * - AdminAccount は物理削除しない運用のため delete メソッドは持たない（`disable()` → `update()`）。
  */

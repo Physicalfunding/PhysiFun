@@ -31,7 +31,7 @@ export interface AdminReviewer {
 /**
  * Kysely ベースの Project コマンドアダプタ（PoC: Prisma 版からの移行）
  *
- * `PrismaProjectCommandAdapter` と同一の公開メソッドを提供する drop-in 実装。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * トランザクションは `db.transaction().execute(cb)` を用い、コールバック内の
  * throw でロールバックされる（TOCTOU 対策の count→insert/update を同一 tx で実施）。
  */

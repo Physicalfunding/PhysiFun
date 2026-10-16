@@ -22,7 +22,7 @@ interface FindLeaderApplicationPort {
   findByAccountId(accountId: string): Promise<LeaderApplicationRow | null>;
 }
 
-// TODO: PrismaFindLeaderApplicationAdapter に差し替える
+// TODO: infrastructure の Kysely 実装アダプターに差し替える
 const stubPort: FindLeaderApplicationPort = {
   async findByAccountId(_accountId: string): Promise<LeaderApplicationRow | null> {
     // スタブ: 常に null を返す

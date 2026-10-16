@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
  * Route Handler / Server Component 用の運営認証ヘルパー (#145)
  *
  * Database 戦略に切り替えた結果、JWT の roles ブリッジは廃止。
- * `getServerSession` は AdminPrismaAdapter.getSessionAndUser を経由するため、
+ * `getServerSession` は AdminKyselyAdapter.getSessionAndUser を経由するため、
  * 呼び出し時点で AdminSession 行削除 / AdminAccount DISABLED 化が反映される
  * (= 強制 revoke がそのまま効く)。
  *

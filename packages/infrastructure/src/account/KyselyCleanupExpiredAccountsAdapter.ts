@@ -13,7 +13,7 @@ export interface CleanupExpiredAccountsPort {
 /**
  * Kysely を使った期限切れ PENDING_EMAIL_CONFIRMATION アカウント削除アダプタ（#223）
  *
- * `PrismaCleanupExpiredAccountsAdapter` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * Account を削除すると、LeaderApplication は FK の onDelete: Cascade（DB 制約）により
  * 自動的に削除される（Prisma 版と同一挙動）。
  *

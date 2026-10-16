@@ -5,20 +5,20 @@ import type {
   AdminAuditLogQueryService,
   AdminAuditLogFilter,
   AdminAuditLogListResult,
-} from "./PrismaAdminAuditLogQueryService";
+} from "./adminAuditLogQueryTypes";
 
-// DTO / IF 型は既存の Prisma 実装と共通のものを再利用する（移行期間中。Prisma 撤去時に中立モジュールへ移動）。
+// DTO / IF 型は `adminAuditLogQueryTypes.ts` に定義。既存 import 互換のため再 export する。
 export type {
   AdminAuditLogQueryService,
   AdminAuditLogListItem,
   AdminAuditLogListResult,
   AdminAuditLogFilter,
-} from "./PrismaAdminAuditLogQueryService";
+} from "./adminAuditLogQueryTypes";
 
 /**
  * Kysely ベースの AdminAuditLog 読み取り Query Service（Prisma 版からの移行 / #224）
  *
- * `PrismaAdminAuditLogQueryService` と同一の公開メソッド・戻り値を提供する drop-in 実装。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * CQRS の Q 側として、ドメインを経由せず DB 行から直接 DTO へマップする。
  */
 export class KyselyAdminAuditLogQueryService implements AdminAuditLogQueryService {

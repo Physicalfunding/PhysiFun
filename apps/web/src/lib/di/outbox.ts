@@ -1,4 +1,4 @@
-import { prisma, type OutboxWorkerBase } from "@physifun/infrastructure";
+import type { OutboxWorkerBase } from "@physifun/infrastructure";
 import {
   buildLeaderApplicationOutboxWorker,
   buildProjectOutboxWorker,
@@ -7,7 +7,7 @@ import {
 /**
  * Outbox 周りの DI ヘルパー (#187 PR2)
  *
- * 実体は `@physifun/infrastructure/outbox/composition` に集約 (#187 PR2 review MEDIUM 1)。
+ * 実体は `@physifun/infrastructure/src/outbox/kyselyComposition` に集約 (#187 PR2 review MEDIUM 1)。
  * apps/web と apps/admin の重複を防ぐためここでは薄い再エクスポートだけ行う。
  *
  * 規約 (#119): モジュールレベルで new せず、都度関数呼び出しで生成する。
@@ -15,10 +15,10 @@ import {
 
 /** LeaderApplicationOutboxMessage 用 Worker (cron + inline trigger 両方から利用) */
 export function getLeaderApplicationOutboxWorker(): OutboxWorkerBase {
-  return buildLeaderApplicationOutboxWorker(prisma);
+  return buildLeaderApplicationOutboxWorker();
 }
 
 /** ProjectOutboxMessage 用 Worker (cron + inline trigger 両方から利用) */
 export function getProjectOutboxWorker(): OutboxWorkerBase {
-  return buildProjectOutboxWorker(prisma);
+  return buildProjectOutboxWorker();
 }

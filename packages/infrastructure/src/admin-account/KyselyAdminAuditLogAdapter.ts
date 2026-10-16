@@ -22,7 +22,7 @@ export interface WriteAdminAuditLogParams {
 /**
  * 運営操作の AdminAuditLog 行を作成する（Prisma 版からの移行 / #224）
  *
- * `PrismaAdminAuditLogAdapter#writeAdminAuditLog` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  *
  * NOTE: `id` は Prisma の `@default(uuid())`（クライアント側生成・DB DEFAULT 無し）相当のため、
  * ここで明示的に UUID を採番する。`createdAt` は DB DEFAULT(now()) があるため省略する。

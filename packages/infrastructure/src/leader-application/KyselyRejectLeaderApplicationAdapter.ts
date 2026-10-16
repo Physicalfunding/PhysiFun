@@ -6,7 +6,7 @@ import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
 /**
  * Kysely ベースの RejectLeaderApplicationPort 実装（Prisma 版からの移行 / #222）
  *
- * `PrismaRejectLeaderApplicationAdapter` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * 却下処理を単一トランザクションで実行する（Prisma の batched `$transaction([...])` 相当）。
  *
  * NOTE: 循環依存 (infrastructure → application) を避けるため、

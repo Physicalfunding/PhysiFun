@@ -1,7 +1,7 @@
 /**
  * Outbox 監視 UI 用のファサード
  *
- * Prisma クエリは @physifun/infrastructure の PrismaOutboxQueryService / PrismaOutboxCommandAdapter に委譲。
+ * DB クエリは @physifun/infrastructure の KyselyOutboxQueryService / KyselyOutboxCommandAdapter に委譲。
  * このファイルは DTO 変換と admin UI 固有のロジックのみを担当する。
  */
 export {

@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 import { getAdminMagicLinkHmacSecret } from "@physifun/infrastructure";
-import { getAdminPrismaAdapter, getIsActiveAdminByEmail, getSendAdminMagicLink } from "./di/auth";
+import { getAdminAuthAdapter, getIsActiveAdminByEmail, getSendAdminMagicLink } from "./di/auth";
 import { checkAdminMagicLinkRateLimit } from "./rateLimit";
 import { EMAIL_MAGIC_LINK_MAX_AGE_SEC } from "./auth-constants";
 
@@ -28,7 +28,7 @@ assertAdminMagicLinkHmacSecretOnBoot();
  *
  * 認証方式: Magic Link (EmailProvider) + Database セッション戦略
  *
- * - AdminAccount テーブルから ACTIVE なアカウントのみをログイン許可 (AdminPrismaAdapter 内で制御)。
+ * - AdminAccount テーブルから ACTIVE なアカウントのみをログイン許可 (AdminKyselyAdapter 内で制御)。
  * - マジックリンク送信は Resend 経由 (sendVerificationRequest で差し込み)。
  * - 既知の email のみログイン可能。createUser は adapter 側で throw する。
  * - セッション TTL = 3600s (1h)。DB 側 (admin_sessions) の expires と一致。
@@ -128,7 +128,7 @@ if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: getAdminPrismaAdapter(),
+  adapter: getAdminAuthAdapter(),
 
   providers: [
     EmailProvider({

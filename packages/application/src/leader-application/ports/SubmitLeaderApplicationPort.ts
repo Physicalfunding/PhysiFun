@@ -1,7 +1,7 @@
 /**
  * SubmitLeaderApplicationUseCase が依存するポートインターフェース
  *
- * アプリケーション層は Prisma に直接依存せず、このポートを介して
+ * アプリケーション層は DB に直接依存せず、このポートを介して
  * インフラストラクチャ層と通信する。インフラ層が実装を提供する。
  */
 
@@ -112,7 +112,7 @@ export interface CreateOutboxMessageParams {
  * SubmitLeaderApplication ユースケースのポート
  *
  * トランザクション境界を含むすべての永続化操作をカプセル化する。
- * インフラ層が Prisma トランザクション等で実装する。
+ * インフラ層が DB トランザクション等で実装する。
  */
 export interface SubmitLeaderApplicationPort {
   /**

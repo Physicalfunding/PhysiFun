@@ -10,21 +10,20 @@ import type {
   LeaderApplicationQueryService,
   LeaderApplicationDetail,
   LeaderApplicationListResult,
-} from "./PrismaLeaderApplicationQueryService";
+} from "./leaderApplicationQueryTypes";
 
-// DTO / IF 型は既存の Prisma 実装と共通のものを再利用する（移行期間中）。
-// Prisma 実装を撤去する際にこれらの型を中立なモジュールへ移動する。
+// DTO / IF 型は `leaderApplicationQueryTypes.ts` に定義。既存 import 互換のため再 export する。
 export type {
   LeaderApplicationQueryService,
   LeaderApplicationListItem,
   LeaderApplicationListResult,
   LeaderApplicationDetail,
-} from "./PrismaLeaderApplicationQueryService";
+} from "./leaderApplicationQueryTypes";
 
 /**
  * Kysely ベースの LeaderApplication Query Service（Prisma 版からの移行 / #222）
  *
- * `PrismaLeaderApplicationQueryService` と同一の公開メソッド・戻り値を提供する drop-in 実装。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * CQRS の Q 側として、ドメインエンティティを経由せず DB 行から直接 DTO へマップする。
  */
 export class KyselyLeaderApplicationQueryService implements LeaderApplicationQueryService {

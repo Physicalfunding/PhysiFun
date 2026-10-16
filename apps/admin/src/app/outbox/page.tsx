@@ -55,7 +55,7 @@ export default async function OutboxListPage({
   const page = Math.max(1, Number(params.page) || 1);
   const perPage = 20;
 
-  // ステータスを Prisma クエリ用に変換
+  // ステータスを DB クエリ用に変換
   // "incomplete" = デフォルト（sentAt IS NULL）、それ以外はそのまま
   const queryStatus: OutboxStatus | undefined =
     currentStatusFilter === "incomplete" ? undefined : currentStatusFilter;

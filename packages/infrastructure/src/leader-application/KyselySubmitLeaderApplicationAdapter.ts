@@ -74,7 +74,7 @@ interface CreateOutboxMessageParams {
 /**
  * Kysely ベースの SubmitLeaderApplicationPort 実装（Prisma 版からの移行 / #222）
  *
- * `PrismaSubmitLeaderApplicationAdapter` と同一 API の drop-in。
+ * 旧 Prisma 版（#230 で削除）と同一 API。
  * application 層の SubmitLeaderApplicationPort に構造的部分型で適合する。
  *
  * executeInTransaction は Account + LeaderApplication + LeaderApplicationOutboxMessage を
