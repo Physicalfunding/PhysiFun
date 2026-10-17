@@ -15,6 +15,7 @@ DB アクセスは **Kysely**（SQL ライクな型安全クエリビルダ）�
 | スキーマの正本 | **`atlas/schema.sql`**（宣言的ソース） | `packages/infrastructure/atlas/schema.sql` |
 | マイグレーション | **Atlas**（`atlas migrate diff / apply`、versioned） | `packages/infrastructure/atlas/migrations/` |
 | DB 型 | **kysely-codegen** の生成物（手で編集しない） | `packages/infrastructure/src/database/kysely/types.ts` |
+| テーブル定義書・ER 図 | **tbls** の生成物（手で編集しない。§6） | `docs/db/`（設定は `packages/infrastructure/.tbls.yml`） |
 
 ---
 
@@ -132,6 +133,8 @@ bun run db:kysely:codegen
 - `schema.sql` / 生成したマイグレーション / `atlas.sum` / `types.ts` は**同じコミットに含める**
 - コミット済みのマイグレーションは書き換えない（直すときは新しいマイグレーションを追加する）
 - `id` と `updatedAt` には DB 側の DEFAULT が無い（アプリ側で値を渡す）。新しいテーブルも同じ方針にそろえる
+- テーブル・列を足したら、`schema.sql` に `COMMENT ON` で説明を書く。新しいテーブルは `.tbls.yml` の `viewpoints` のどこかに入れる（§6）
+- `docs/db/` は PR で CI が再生成するので、手元で再生成しなくてよい（手元で確認したいときは `bun run db:docs`）
 
 ### 5.5 Prisma で作った既存 DB を Atlas 管理に切り替える（DB ごとに 1 回だけ）
 
@@ -164,7 +167,53 @@ bun run db:migrate:status
 
 ---
 
-## 6. 残作業
+## 6. DB ドキュメント（テーブル定義書・ER 図。tbls）
+
+`docs/db/` のテーブル定義書と領域別の ER 図は、**tbls** で `atlas/schema.sql` から自動生成している（#261）。**手で編集しない。**
+
+### 6.1 構成
+
+| 役割 | 場所 |
+|---|---|
+| テーブル・列の説明（正本） | `atlas/schema.sql` の `COMMENT ON TABLE` / `COMMENT ON COLUMN` |
+| 領域の分け方・日本語見出し・lint ルール | `packages/infrastructure/.tbls.yml` |
+| 生成スクリプト | `packages/infrastructure/scripts/db-docs.ts`（`bun run db:docs`） |
+| 生成物 | `docs/db/`（索引 `README.md`、テーブルごとのページ、領域別ビュー `viewpoint-*.md`、`schema.json`） |
+| CI | `.github/workflows/db-docs.yml` |
+
+- 説明を `COMMENT ON` に書くのは、DB 自体に意味を持たせるため。同じ説明が `docs/db/`・Supabase Studio・`types.ts` の JSDoc（kysely-codegen が出力する）の 3 か所に出る
+- ER 図は Mermaid で出力する。GitHub 上でそのまま図として表示される。図には主キー・外部キーとその説明だけを載せ、全カラムは各テーブルのページで見る
+
+### 6.2 生成のしくみ
+
+`bun run db:docs` は次の順に動く:
+
+1. 使い捨ての PostgreSQL を Docker で起動する（`DB_DOCS_DATABASE_URL` を指定した場合はその DB を使う。CI はこちら）
+2. `atlas migrate apply` でマイグレーションを適用する
+3. Atlas の適用履歴スキーマ（`atlas_schema_revisions`）を削除する（ドキュメントに混ざらないように）
+4. `tbls doc` で `docs/db/` を作り直す。tbls が PATH に無ければ Docker イメージ（`ghcr.io/k1low/tbls`）で動かす
+5. `schema.json` から、生成した環境で変わる値（PostgreSQL のバージョン文字列など）を取り除く。ローカルと CI で同じ結果になる
+6. `tbls lint` を実行する（説明の付け忘れ・どの領域にも入っていないテーブルを検出）。今は警告だけで、`--strict` を付けると失敗扱いになる
+
+手元で動かすには **Docker と Atlas CLI** が必要。
+
+### 6.3 CI（自動再生成）
+
+`.github/workflows/db-docs.yml` は、`atlas/`・`.tbls.yml`・生成スクリプト・`docs/db/` を変えた PR で `bun run db:docs` を実行する。
+`docs/db/` に差分が出たら、`github-actions[bot]` が同じ PR に「docs: DB ドキュメント（docs/db）を再生成」をコミットする。
+
+- 自動コミットのあとに手元から push するときは、先に `git pull` する
+- 自動コミットは GITHUB_TOKEN で push するため、その push では CI / E2E は再実行されない（main にはブランチ保護を設定していないので、マージは妨げられない）
+- tbls のバージョンは、ワークフローの `setup-tbls`（`version`）と `scripts/db-docs.ts` の `TBLS_IMAGE` で揃える
+
+### 6.4 既知の制約
+
+- テーブル名に `public.` が付く（tbls の仕様。消す設定は無い）
+- `.tbls.yml` の値に `#` を含めるときは引用符で囲む（YAML では `#` 以降がコメント扱いになる）
+
+---
+
+## 7. 残作業
 
 - [x] `leader-application` / `account` / `admin-account` / `outbox` の Kysely 実装（#222〜#226）。
   - Outbox の claim は `FOR UPDATE SKIP LOCKED` ベースへ置換済み。

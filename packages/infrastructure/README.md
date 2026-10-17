@@ -12,6 +12,7 @@ PhysiFun のインフラ層。外部サービス（PostgreSQL / Resend 等）と
 - `atlas/` — スキーマの正本（`schema.sql`）と versioned migration（`migrations/`）。設定は `atlas.hcl`
 - `scripts/seed.ts` — 初期 AdminAccount の投入（`bun run db:seed`）
 - `scripts/atlas.ts` — Atlas CLI のラッパー（`apps/web/.env.local` を読み込んで実行。`bun run db:migrate:*` から使う）
+- `scripts/db-docs.ts` / `.tbls.yml` — テーブル定義書・ER 図（`docs/db/`）を tbls で生成する（`bun run db:docs`。手順は `docs/guides/db-migration.md` §6）
 
 公開 API はすべて `src/index.ts`（`@physifun/infrastructure`）から export する（Kysely 実装も含む。#256 でサブバレルを統合）。クライアントコンポーネントからは型だけを import すること。移行の詳細は `docs/guides/db-migration.md`。
 

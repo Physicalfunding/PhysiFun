@@ -1,0 +1,62 @@
+# public.recruitment_schedules
+
+## カラム
+
+| 名前                 | 型                             | 既定値                 | NULL 可 | 参照元                                              | 参照先                                                        | 説明 |
+| -------------------- | ------------------------------ | ---------------------- | ------- | --------------------------------------------------- | ------------------------------------------------------------- | ---- |
+| id                   | text                           |                        | false   | [public.support_tickets](public.support_tickets.md) |                                                               |      |
+| supportRecruitmentId | text                           |                        | false   |                                                     | [public.support_recruitments](public.support_recruitments.md) |      |
+| date                 | date                           |                        | false   |                                                     |                                                               |      |
+| startTime            | text                           |                        | false   |                                                     |                                                               |      |
+| endTime              | text                           |                        | false   |                                                     |                                                               |      |
+| capacityPerHour      | integer                        |                        | false   |                                                     |                                                               |      |
+| approvalMode         | "ApprovalMode"                 | 'AUTO'::"ApprovalMode" | false   |                                                     |                                                               |      |
+| createdAt            | timestamp(3) without time zone | CURRENT_TIMESTAMP      | false   |                                                     |                                                               |      |
+| updatedAt            | timestamp(3) without time zone |                        | false   |                                                     |                                                               |      |
+
+## 領域別のビュー
+
+| 名前                                                    | 定義                                             |
+| ------------------------------------------------------- | ------------------------------------------------ |
+| [サポート募集（未実装 #212）](viewpoint-recruitment.md) | スキーマだけ存在し、コードはまだ実装されていない |
+
+## 制約
+
+| 名前                                            | 型          | 定義                                                                                                         |
+| ----------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ |
+| recruitment_schedules_supportRecruitmentId_fkey | FOREIGN KEY | FOREIGN KEY ("supportRecruitmentId") REFERENCES support_recruitments(id) ON UPDATE CASCADE ON DELETE CASCADE |
+| recruitment_schedules_pkey                      | PRIMARY KEY | PRIMARY KEY (id)                                                                                             |
+
+## インデックス
+
+| 名前                                                | 定義                                                                                                                                                 |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| recruitment_schedules_pkey                          | CREATE UNIQUE INDEX recruitment_schedules_pkey ON public.recruitment_schedules USING btree (id)                                                      |
+| recruitment_schedules_date_idx                      | CREATE INDEX recruitment_schedules_date_idx ON public.recruitment_schedules USING btree (date)                                                       |
+| recruitment_schedules_supportRecruitmentId_date_key | CREATE UNIQUE INDEX "recruitment_schedules_supportRecruitmentId_date_key" ON public.recruitment_schedules USING btree ("supportRecruitmentId", date) |
+
+## ER 図
+
+```mermaid
+erDiagram
+
+"public.support_tickets" }o--|| "public.recruitment_schedules" : ""
+"public.recruitment_schedules" }o--|| "public.support_recruitments" : ""
+
+"public.recruitment_schedules" {
+  text id ""
+  text supportRecruitmentId FK ""
+}
+"public.support_tickets" {
+  text recruitmentScheduleId FK ""
+  text supporterAccountId FK ""
+}
+"public.support_recruitments" {
+  text id ""
+  text projectId FK ""
+}
+```
+
+---
+
+> Generated by [tbls](https://github.com/k1LoW/tbls)

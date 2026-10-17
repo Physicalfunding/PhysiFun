@@ -9,7 +9,7 @@ PhysiFun は **Outbox パターン**で非同期メール送信を実装して�
 - プロセッサ: `packages/infrastructure/src/outbox/processors/`
 - メール送信: `packages/infrastructure/src/mail/{ResendMailSender, NoopMailSender}.ts`
 - Cron Route: `apps/web/src/app/api/cron/process-outbox/route.ts`
-- データモデル: `LeaderApplicationOutboxMessage` / `ProjectOutboxMessage`（`03_data-model.md` §5 参照）
+- データモデル: `LeaderApplicationOutboxMessage` / `ProjectOutboxMessage`（`03_data-model.md` §6 参照）
 
 ---
 
@@ -36,7 +36,7 @@ PhysiFun は **Outbox パターン**で非同期メール送信を実装して�
 | `project_publish_rejected.notify` | `ProjectOutboxMessage` | `ProjectPublishRejectedNotifyProcessor` | リーダー（理由付き） |
 | `project_force_unpublished.notify` | `ProjectOutboxMessage` | `ProjectForceUnpublishedNotifyProcessor` | リーダー（理由付き） |
 
-> 💡 **Outbox テーブルが 2 種類に分かれている**理由: `LeaderApplication` と `Project` のアグリゲートが異なるため、それぞれ独自の Outbox を持つ（共通基底テーブルの過剰抽象化を避けた）。詳細は `03_data-model.md` §5 参照。
+> 💡 **Outbox テーブルが 2 種類に分かれている**理由: `LeaderApplication` と `Project` のアグリゲートが異なるため、それぞれ独自の Outbox を持つ（共通基底テーブルの過剰抽象化を避けた）。詳細は `03_data-model.md` §6 参照。
 
 ---
 
