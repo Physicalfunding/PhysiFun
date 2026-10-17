@@ -77,6 +77,15 @@ git switch -q -c green2
 mkdir -p docs && echo v >docs/stale.md && git add -A && git commit -qm docs4
 try stale_origin_main_push_allowed 0 git push -q -u origin green2
 
+# PR ブランチ（緑）に、main で進んだ赤の変更をマージして push する（main への追従）
+(cd "$T/other" && git pull -q origin main && echo n >packages/domain/src/n.ts && git add -A &&
+  git commit -qm "main でさらに進んだ変更" && git push -q origin main)
+git fetch -q origin
+git merge -q --no-edit origin/main
+try merge_main_into_green_branch_allowed 0 git push -q origin green2
+echo r2 >packages/domain/src/r2.ts && git add -A && git commit -qm red2 --no-verify
+try red_after_merge_still_blocked 1 git push -q origin green2
+
 # ローカル（CLAUDE_CODE_REMOTE なし）では何もしない
 git switch -q main
 echo l >packages/domain/src/l.ts && git add -A

@@ -20,17 +20,26 @@ FILES=""
 git fetch -q "$REMOTE" "+refs/heads/main:refs/remotes/$REMOTE/main" 2>/dev/null || true
 
 # stdin: <local ref> <local sha> <remote ref> <remote sha>
+names() { git -c core.quotePath=false diff --name-only --no-renames "$1" "$2" | sort -u; }
+
 while read -r _lref lsha _rref rsha; do
   [[ "$lsha" == "$ZERO" ]] && continue # ブランチの削除
+  # main との共通の祖先からの差分 = このブランチ自身の変更（main をマージして取り込んだ変更は含まない）
+  mb=$(git merge-base "$REMOTE/main" "$lsha" 2>/dev/null)
   if [[ "$rsha" != "$ZERO" ]] && git cat-file -e "$rsha^{commit}" 2>/dev/null; then
-    base="$rsha" # 既存のリモートブランチ: 新しく送るコミットだけ
+    # 既存のリモートブランチ: 新しく送るコミットの変更のうち、このブランチ自身の変更だけを判定する
+    if [[ -n "$mb" ]]; then
+      FILES+=$(comm -12 <(names "$rsha" "$lsha") <(names "$mb" "$lsha"))$'\n'
+    else
+      FILES+=$(names "$rsha" "$lsha")$'\n'
+    fi
   else
-    base=$(git merge-base "$REMOTE/main" "$lsha" 2>/dev/null) || {
+    [[ -n "$mb" ]] || {
       echo "$REMOTE/main との共通の祖先が分からないため push を止めました。git fetch $REMOTE main を実行してから再試行してください。" >&2
       exit 1
     }
+    FILES+=$(names "$mb" "$lsha")$'\n'
   fi
-  FILES+=$(git -c core.quotePath=false diff --name-only "$base" "$lsha")$'\n'
 done
 
 BLOCKED=$(printf '%s' "$FILES" | sort -u | blocked_files)
