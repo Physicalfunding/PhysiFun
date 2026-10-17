@@ -187,6 +187,8 @@ export class ApproveProjectPublicationUseCase {
       payload: {
         projectId: project.id.toString(),
         projectTitle: project.title,
+        // approveByAdmin() で発行済みの slug。メールの CTA を公開ページ /projects/[slug] にする（#265）
+        slug: project.slug,
         leaderAccountId: project.ownerAccountId.toString(),
         reviewerId: reviewerIdResult.value.toString(),
         approvedAt: approvedAt.toISOString(),

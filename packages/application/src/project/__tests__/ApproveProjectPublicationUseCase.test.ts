@@ -226,12 +226,14 @@ describe("ApproveProjectPublicationUseCase", () => {
     const payload = outbox.payload as {
       projectId: string;
       projectTitle: string;
+      slug: string | null;
       leaderAccountId: string;
       reviewerId: string;
       approvedAt: string;
     };
     expect(payload.projectId).toBe(PROJECT_ID_STR);
     expect(payload.projectTitle).toBe("テストプロジェクト");
+    expect(payload.slug).toBe(PROJECT_ID_STR);
     expect(payload.leaderAccountId).toBe(OWNER_ACCOUNT_ID_STR);
     expect(payload.reviewerId).toBe(REVIEWER_ACCOUNT_ID_STR);
     expect(typeof payload.approvedAt).toBe("string");

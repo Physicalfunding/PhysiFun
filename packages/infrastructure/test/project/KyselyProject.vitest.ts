@@ -181,6 +181,38 @@ describe("Kysely Project 実装 integration", () => {
       const other = await queryService.findProjectDetailForOwner(project.id, randomUUID());
       expect(other).toBeNull();
     });
+
+    it("slug を返す（未発行なら null）— マイページの公開ページリンク用（#265）", async () => {
+      const owner = await insertRow("accounts", {
+        email: "slug-owner@example.com",
+        displayName: "オーナー",
+        status: "ACTIVE",
+        roles: ["LEADER"],
+        passwordHash: "dummy",
+      });
+      const draft = await insertRow("projects", {
+        ownerAccountId: owner.id,
+        title: "未公開",
+        status: "DRAFT",
+        phase: "VISION",
+      });
+      const publishedId = randomUUID();
+      await insertRow("projects", {
+        id: publishedId,
+        ownerAccountId: owner.id,
+        title: "公開中",
+        status: "PUBLISHED",
+        phase: "VISION",
+        slug: publishedId,
+        publishedAt: new Date("2026-10-01T00:00:00Z"),
+      });
+
+      const draftDetail = await queryService.findProjectDetailForOwner(draft.id, owner.id);
+      expect(draftDetail!.slug).toBeNull();
+
+      const publishedDetail = await queryService.findProjectDetailForOwner(publishedId, owner.id);
+      expect(publishedDetail!.slug).toBe(publishedId);
+    });
   });
 
   describe("countAndSaveProject（INSERT + jsonb 書き込み + TOCTOU）", () => {
