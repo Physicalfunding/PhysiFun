@@ -1,5 +1,5 @@
 ---
-name: plan
+name: cloud-plan
 description: >-
   クラウドセッションで、コード変更を伴う依頼（緑以外）を受けたときに使う。
   調査して docs-repository の plans/ に実装計画を書き、docs-repository に PR を出す。
@@ -7,7 +7,7 @@ description: >-
   または cloud-scope-guard hook に書き込みを拒否されたときに参照すること。
 ---
 
-# /plan — クラウドで実装計画を PR にする
+# /cloud-plan — クラウドで実装計画を PR にする
 
 クラウドセッション（`CLAUDE_CODE_REMOTE=true`）では、緑以外のパスを変更できない（`docs/guides/ai-harness.md` 4 章）。
 その代わりに実装計画を書いて docs-repository に PR し、帰宅後にローカルの `/dev` で実装する。
@@ -15,8 +15,8 @@ description: >-
 ## 引数
 
 ```
-/plan {Issue番号}
-/plan              ← 番号なし
+/cloud-plan {Issue番号}
+/cloud-plan        ← 番号なし
 ```
 
 ## 手順

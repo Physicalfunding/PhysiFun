@@ -16,6 +16,6 @@ BLOCKED=$(git -c core.quotePath=false diff --cached --name-only | blocked_files)
 {
   echo "クラウドセッションでは次のファイルを commit できません（docs/guides/ai-harness.md 4 章）:"
   sed 's/^/  /' <<<"$BLOCKED"
-  echo "変更を取り消し、plan skill で計画書を docs-repository の plans/ に書いて PR にしてください。"
+  echo "変更を取り消し、cloud-plan skill で計画書を docs-repository の plans/ に書いて PR にしてください。"
 } >&2
 exit 1

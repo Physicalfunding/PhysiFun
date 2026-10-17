@@ -20,6 +20,36 @@ deny() {
   exit 0
 }
 
+# bypasses_git_hooks <1 つのコマンドの単語列>: git hook を飛ばす git コマンドなら 0
+bypasses_git_hooks() {
+  while [[ "${1:-}" == *=* && "$1" != -* ]]; do shift; done # 先頭の環境変数の代入
+  [[ "${1:-}" == "git" ]] || return 1
+  shift
+  local sub="" tok prev="" lower
+  while (($# > 0)); do
+    lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+    if [[ -z "$sub" ]]; then
+      case "$1" in
+        -c) [[ "$(printf '%s' "${2:-}" | tr '[:upper:]' '[:lower:]')" == core.hookspath=* ]] && return 0
+          shift 2 && continue ;;
+        -C) shift 2 && continue ;;
+        -*) shift && continue ;;
+        *) sub="$1" && shift && continue ;;
+      esac
+    fi
+    [[ "$1" == "--no-verify" ]] && return 0
+    [[ "$sub" == "commit" && "$1" =~ ^-[a-zA-Z]*n[a-zA-Z]*$ ]] && return 0
+    if [[ "$sub" == "config" ]]; then
+      [[ "$lower" == --unset* || "$lower" == --replace-all || "$lower" == --add ]] && tok="mod"
+      if [[ "$prev" == "core.hookspath" && "$1" != -* ]]; then return 0; fi
+      [[ "$lower" == "core.hookspath" && "$tok" == "mod" ]] && return 0
+    fi
+    prev="$lower"
+    shift
+  done
+  return 1
+}
+
 TOOL=$(jq -r '.tool_name // empty' <<<"$INPUT")
 
 case "$TOOL" in
@@ -36,16 +66,20 @@ case "$TOOL" in
       REL="$FILE"
     fi
     is_allowed "$REL" ||
-      deny "クラウドセッションでは $REL を編集できません（docs/guides/ai-harness.md 4 章）。plan skill で計画書を docs-repository の plans/ に書き、PR にしてください。"
+      deny "クラウドセッションでは $REL を編集できません（docs/guides/ai-harness.md 4 章）。cloud-plan skill で計画書を docs-repository の plans/ に書き、PR にしてください。"
     ;;
   Bash)
     # commit・push の中身は .claude/git-hooks（pre-commit / pre-push）が判定する。
-    # ここでは git hook を飛ばす操作だけを止める。
+    # ここでは git hook を飛ばす操作だけを止める。引用符の中（コミットメッセージや PR 本文）は見ない。
     CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
-    if [[ "$CMD" == *"--no-verify"* || "$CMD" == *"hooksPath"* ]] ||
-      [[ "$CMD" =~ git[[:space:]]+commit([[:space:]]+[^[:space:]]+)*[[:space:]]+-[a-zA-Z]*n[a-zA-Z]*([[:space:]]|$) ]]; then
-      deny "クラウドセッションでは git hook を飛ばす操作（--no-verify、commit -n、core.hooksPath の変更）はできません（docs/guides/ai-harness.md 4 章）。"
-    fi
+    STRIPPED=$(printf '%s' "$CMD" | sed -E "s/'[^']*'/Q/g; s/\"([^\"\\\\]|\\\\.)*\"/Q/g" | tr '\n' ';' |
+      sed -E 's/(&&|\|\||\|)/;/g')
+    IFS=';' read -r -a SEGMENTS <<<"$STRIPPED"
+    set -f # 単語に分けるときにワイルドカードを展開しない
+    for seg in "${SEGMENTS[@]}"; do
+      bypasses_git_hooks $seg &&
+        deny "クラウドセッションでは git hook を飛ばす操作（--no-verify、commit -n、core.hooksPath の変更）はできません（docs/guides/ai-harness.md 4 章）。"
+    done
     ;;
 esac
 

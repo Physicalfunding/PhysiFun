@@ -25,7 +25,7 @@ fi
 if [[ -d "$PROJECT_DIR/../docs-repository/.git" ]]; then
   echo "docs-repository: ../docs-repository にある"
 else
-  echo "docs-repository: このセッションには付いていない。最新仕様や plan skill が必要なら、Physicalfunding/docs-repository をセッションに追加すること"
+  echo "docs-repository: このセッションには付いていない。最新仕様や cloud-plan skill が必要なら、Physicalfunding/docs-repository をセッションに追加すること"
 fi
 
 exit 0

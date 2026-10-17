@@ -63,7 +63,7 @@ apps/*/public/*
 | 層 | 仕組み | ローカル | クラウド | 役割 |
 |---|---|---|---|---|
 | 文脈 | `CLAUDE.md` | ✅ | ✅ | 前提・禁止事項・自律範囲の案内 |
-| 手順 | skills（`dev` / `issue` / `add-usecase` / `plan`） | ✅ | ✅ | 定型作業の手順 |
+| 手順 | skills（`dev` / `issue` / `add-usecase` / `cloud-plan`） | ✅ | ✅ | 定型作業の手順 |
 | 専門レビュー | agents ＋ `full-review` workflow | ✅ | ✅ | 機械で判定できない観点（ビジネスロジックの置き場など） |
 | 書き込み直後 | PostToolUse hook `lint-on-edit` | ✅ | ✅ | 書いたファイルに ESLint・Prettier |
 | 書き込み直前 | PreToolUse hook `cloud-scope-guard` | 何もしない | ✅ | 緑以外への書き込み・commit・push を拒否 |
@@ -107,7 +107,7 @@ apps/*/public/*
 **変更内容**
 
 1. **`cloud-scope-guard.sh`（PreToolUse）** — `CLAUDE_CODE_REMOTE=true` のときだけ動く。それ以外は即 exit 0。
-   - `Edit` / `Write` / `NotebookEdit`：対象パスが緑でなければ `permissionDecision: "deny"` を返し、理由に「クラウドでは編集できません。`plan` skill で計画書を PR にしてください」と書く。`..` を含むパスは拒否、repo 外は許可。
+   - `Edit` / `Write` / `NotebookEdit`：対象パスが緑でなければ `permissionDecision: "deny"` を返し、理由に「クラウドでは編集できません。`cloud-plan` skill で計画書を PR にしてください」と書く。`..` を含むパスは拒否、repo 外は許可。
    - `Bash`：git hook を飛ばす操作（`--no-verify`、`git commit -n`、`core.hooksPath` の変更）を拒否する。commit・push の中身は判定しない（下の git hook が判定する）。
    - 許可リストは `.claude/cloud-allowlist`（1 行 1 パターン、`!` で始まる行は常に拒否、`#` はコメント）。判定は `.claude/hooks/lib/allowlist.sh` に置き、git hook と共有する。`.claude/` はクラウドから書けないので、AI が自分で範囲を広げることはできない。
    - 位置づけ：**うっかりを防ぐガードであり、悪意ある回避を防ぐセキュリティ境界ではない**。最終防衛線はマージ前のユーザー確認。
@@ -118,7 +118,7 @@ apps/*/public/*
 3. **`.claude/hooks/__tests__/cloud-scope-guard.test.sh`・`git-hooks.test.sh`** — 許可・拒否の代表パターンを JSON 入力で流して判定を確かめる。
 4. **SessionStart hook（クラウドのみ）** — PhysiFun に `core.hooksPath=.claude/git-hooks` を設定し、依存パッケージをインストールし、docs-repository がセッションに付いているかを知らせる。docs-repository の clone はしない（下記「スパイクの結果」）。
 5. **CLAUDE.md に「実行環境ごとの自律範囲」節を追加** — 本書 4 章の要約。hook に止められる前に Claude が判断できるようにする。
-6. **`plan` skill** — 黄・赤の依頼をクラウドで受けたとき、Claude が docs-repository をセッションに追加し、調査して `plans/YYYY-MM-DD-{Issue番号}-{slug}.md` を書いて docs-repository に PR を出す（構成：依存グラフ＋Step ごとのコンテキスト）。PR とコメントは `gh api`（REST）で作る。PhysiFun の Issue に計画 PR の URL をコメントする。帰宅後に `/dev` で実装する。
+6. **`cloud-plan` skill**（組み込みの `/plan` コマンドとぶつからない名前にした） — 黄・赤の依頼をクラウドで受けたとき、Claude が docs-repository をセッションに追加し、調査して `plans/YYYY-MM-DD-{Issue番号}-{slug}.md` を書いて docs-repository に PR を出す（構成：依存グラフ＋Step ごとのコンテキスト）。PR とコメントは `gh api`（REST）で作る。PhysiFun の Issue に計画 PR の URL をコメントする。帰宅後に `/dev` で実装する。
 7. クラウドセッションは **PhysiFun 単独で起動する**（複数 repo を選ぶと hooks が読まれないため）。docs-repository は必要になったときに Claude がセッションに追加する。
 
 **スパイクの結果（2026-10-17）**
@@ -131,7 +131,7 @@ apps/*/public/*
 **要検証（P1 の PR 後、クラウドでの確認で確かめる）**
 
 - 途中で docs-repository を追加したあとも、PhysiFun の hooks（`cloud-scope-guard`）が効き続けるか
-- 途中で追加した repo がどのパスに置かれるか（`plan` skill はパスを探してから使う）
+- 途中で追加した repo がどのパスに置かれるか（`cloud-plan` skill はパスを探してから使う）
 - クラウドで `bun install` が通るか
 
 hooks が効かなくなる場合は、ガードを GitHub 側（クラウド由来 PR の判定＋必須チェック＋ブランチ保護）に移す案に切り替え、本書を更新する。
@@ -196,7 +196,7 @@ hooks が効かなくなる場合は、ガードを GitHub 側（クラウド由
    - 連続した差し戻しは 3 回まで。超えたら終了を許可し、検証が通っていないことを明示して報告させる。`stop_hook_active` も参照する。
    - infrastructure の結合テスト（Docker）と build は対象外にし、CI に任せる。
 2. `pre-pr-check` workflow を削除する（lint・テストは Stop hook と CI で自動実行されるため）。
-3. `dev` skill を更新する：手順 7 を `bun run check` に置き換え、Stop hook でも自動で走ると明記する。実行環境で分岐させる（ローカル：push 前に承認／クラウド：緑は PR まで自動、黄・赤は `plan` skill へ）。
+3. `dev` skill を更新する：手順 7 を `bun run check` に置き換え、Stop hook でも自動で走ると明記する。実行環境で分岐させる（ローカル：push 前に承認／クラウド：緑は PR まで自動、黄・赤は `cloud-plan` skill へ）。
 
 **実測（2026-10-17、Vitest 移行前）**：typecheck 約 4 秒、テスト約 1 秒、lint 数秒。Vitest 移行後の所要時間は P2 で測り直し、30 秒程度に収まれば Stop hook で `bun run check` をそのまま実行する。
 
