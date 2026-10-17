@@ -167,7 +167,7 @@ function toProjectInsert(p: Project): Insertable<Projects> {
   return {
     id: p.id.toString(),
     ownerAccountId: p.ownerAccountId.toString(),
-    slug: null,
+    slug: p.slug,
     title: p.title,
     summary: p.summary,
     story: p.body,
@@ -180,6 +180,8 @@ function toProjectInsert(p: Project): Insertable<Projects> {
     activityPlan: p.activityPlan,
     status: p.publishStatus,
     phase: p.phase,
+    publishRequestedAt: p.publishRequestedAt,
+    publishedAt: p.publishedAt,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };

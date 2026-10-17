@@ -68,6 +68,10 @@ function createProjectWithStatus(publishStatus: PublishStatus): Project {
     leaderIntroduction: "リーダー紹介",
     snsLinks: createEmptySnsLinks(),
     activityPlan: null,
+    slug: null,
+    publishRequestedAt:
+      publishStatus === PublishStatus.PENDING_REVIEW ? new Date("2025-01-01T00:00:00Z") : null,
+    publishedAt: null,
     createdAt: new Date("2025-01-01T00:00:00Z"),
     updatedAt: new Date("2025-01-01T00:00:00Z"),
   });
@@ -100,9 +104,6 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
   /** executeApproveInTransaction で保存された Project */
   savedProjects: Project[] = [];
 
-  /** executeApproveInTransaction で受け取った publishedAt */
-  savedPublishedAt: Date[] = [];
-
   /** executeApproveInTransaction で保存された ReviewFeedback */
   savedFeedbacks: ProjectReviewFeedback[] = [];
 
@@ -128,7 +129,6 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
     project: Project;
     reviewFeedback: ProjectReviewFeedback;
     outboxMessage: CreateProjectOutboxMessageParams;
-    publishedAt: Date;
     maxPublishedPerOwner: number;
   }): Promise<void> {
     // 同一 tx 内 count → 上限チェックをシミュレート
@@ -139,7 +139,6 @@ class InMemoryApproveProjectPublicationPort implements ApproveProjectPublication
 
     this.executeApproveCallCount += 1;
     this.savedProjects.push(params.project);
-    this.savedPublishedAt.push(params.publishedAt);
     this.savedFeedbacks.push(params.reviewFeedback);
     this.createdOutboxMessages.push(params.outboxMessage);
   }
@@ -194,7 +193,7 @@ describe("ApproveProjectPublicationUseCase", () => {
     expect(port.createdOutboxMessages).toHaveLength(1);
   });
 
-  it("publishedAt と updatedAt は同一の timestamp (project.updatedAt) が渡される", async () => {
+  it("保存される Project は publishedAt = updatedAt で、slug にプロジェクトの id が発行されている", async () => {
     port.projects.push(createPendingReviewProject());
 
     const result = await useCase.execute({
@@ -203,8 +202,9 @@ describe("ApproveProjectPublicationUseCase", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(port.savedPublishedAt).toHaveLength(1);
-    expect(port.savedProjects[0].updatedAt.getTime()).toBe(port.savedPublishedAt[0].getTime());
+    const saved = port.savedProjects[0];
+    expect(saved.publishedAt?.getTime()).toBe(saved.updatedAt.getTime());
+    expect(saved.slug).toBe(PROJECT_ID_STR);
   });
 
   it("Outbox メッセージの type と payload が正しい", async () => {

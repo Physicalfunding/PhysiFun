@@ -31,7 +31,7 @@ export interface ApproveProjectPublicationPort {
    * 承認処理をトランザクションで実行する。
    *
    * - Case A 上限チェック（同一 tx 内で count → 超過時 OwnerPublishedLimitExceededError throw）
-   * - Project 集約の更新 (status=PUBLISHED, publishedAt / updatedAt は UseCase から渡される同一 Date)
+   * - Project 集約の更新 (status=PUBLISHED, slug / publishedAt / updatedAt は Project が持つ値)
    * - ProjectReviewFeedback (action=APPROVED) の作成
    * - ProjectOutboxMessage (公開承認通知メール) の作成
    * をアトミックに永続化する。
@@ -40,11 +40,6 @@ export interface ApproveProjectPublicationPort {
     project: Project;
     reviewFeedback: ProjectReviewFeedback;
     outboxMessage: CreateProjectOutboxMessageParams;
-    /**
-     * Project の publishedAt に設定する日時。
-     * updatedAt との時刻ズレを防ぐため、UseCase は project.updatedAt と同じ値を渡す。
-     */
-    publishedAt: Date;
     /** 同一オーナーが同時に保持できる PUBLISHED プロジェクトの上限 */
     maxPublishedPerOwner: number;
   }): Promise<void>;

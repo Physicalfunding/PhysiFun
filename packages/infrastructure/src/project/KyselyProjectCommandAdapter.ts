@@ -169,7 +169,7 @@ export class KyselyProjectCommandAdapter
    *
    * interactive transaction 内で
    *  - 同一オーナーの PUBLISHED 件数を count し上限チェック（Case A、TOCTOU 解消）
-   *  - Project.status / publishedAt / updatedAt を最小更新
+   *  - Project.status / slug / publishedAt / updatedAt を最小更新
    *  - ProjectReviewFeedback (APPROVED) を作成
    *  - ProjectOutboxMessage (承認通知メール) を作成
    * をまとめて永続化する。
@@ -178,7 +178,6 @@ export class KyselyProjectCommandAdapter
     project: Project;
     reviewFeedback: ProjectReviewFeedback;
     outboxMessage: CreateProjectOutboxMessageParams;
-    publishedAt: Date;
     maxPublishedPerOwner: number;
   }): Promise<void> {
     const p = params.project;
@@ -196,12 +195,13 @@ export class KyselyProjectCommandAdapter
         throw new OwnerPublishedLimitExceededError();
       }
 
-      // Project の最小更新: status / publishedAt / updatedAt のみ
+      // Project の最小更新: 承認で変わる status / slug / publishedAt / updatedAt のみ
       await trx
         .updateTable("projects")
         .set({
           status: p.publishStatus,
-          publishedAt: params.publishedAt,
+          slug: p.slug,
+          publishedAt: p.publishedAt,
           updatedAt: p.updatedAt,
         })
         .where("id", "=", p.id.toString())
@@ -232,6 +232,9 @@ function toProjectInsert(p: Project, accountId: string): Insertable<Projects> {
     leaderIntro: p.leaderIntroduction,
     snsLinks: serializeSnsLinks(p),
     activityPlan: p.activityPlan,
+    slug: p.slug,
+    publishRequestedAt: p.publishRequestedAt,
+    publishedAt: p.publishedAt,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
   };
@@ -252,6 +255,9 @@ function toProjectUpdate(p: Project): Updateable<Projects> {
     leaderIntro: p.leaderIntroduction,
     snsLinks: serializeSnsLinks(p),
     activityPlan: p.activityPlan,
+    slug: p.slug,
+    publishRequestedAt: p.publishRequestedAt,
+    publishedAt: p.publishedAt,
     updatedAt: p.updatedAt,
   };
 }

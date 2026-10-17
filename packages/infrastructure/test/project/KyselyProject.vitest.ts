@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { ProjectLimitExceededError } from "@physifun/application";
+import { AccountId, ProjectReviewFeedback, ReviewAction, type Result } from "@physifun/domain";
 import { KyselyProjectQueryService } from "../../src/project/KyselyProjectQueryService";
 import { KyselyProjectCommandAdapter } from "../../src/project/KyselyProjectCommandAdapter";
 import { reconstructProject } from "../../src/project/reconstructProject";
@@ -207,6 +208,9 @@ describe("Kysely Project 実装 integration", () => {
         leaderIntro: null,
         snsLinks: {},
         activityPlan: null,
+        slug: null,
+        publishRequestedAt: null,
+        publishedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -256,6 +260,9 @@ describe("Kysely Project 実装 integration", () => {
         leaderIntro: null,
         snsLinks: {},
         activityPlan: null,
+        slug: null,
+        publishRequestedAt: null,
+        publishedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -273,4 +280,103 @@ describe("Kysely Project 実装 integration", () => {
       expect(Number(count.count)).toBe(1);
     });
   });
+
+  describe("公開フロー（申請 → 承認 → 公開ページ → 非公開化）の永続化（#262）", () => {
+    /** projects 行の slug / 日時を直接読む */
+    function loadPublicationColumns(projectId: string) {
+      return db
+        .selectFrom("projects")
+        .select(["status", "slug", "publishRequestedAt", "publishedAt"])
+        .where("id", "=", projectId)
+        .executeTakeFirstOrThrow();
+    }
+
+    /** findProjectById で読み直す（UseCase と同じく、操作ごとに DB から復元する） */
+    async function reload(projectId: string) {
+      const project = await commandAdapter.findProjectById(projectId);
+      if (!project) throw new Error("project not found");
+      return project;
+    }
+
+    it("承認で slug が発行されて公開ページで取得でき、非公開化すると日時は消えて slug は残る", async () => {
+      const leader = await insertRow("accounts", {
+        email: "publish-flow@example.com",
+        displayName: "公開フロー",
+        status: "ACTIVE",
+        roles: ["LEADER"],
+        passwordHash: "dummy",
+      });
+      const reviewer = await insertRow("admin_accounts", {
+        email: "publish-reviewer@example.com",
+        status: "ACTIVE",
+      });
+      // 公開申請に必要な項目をすべて埋めた DRAFT
+      const row = await insertRow("projects", {
+        ownerAccountId: leader.id,
+        title: "公開フロー確認",
+        status: "DRAFT",
+        phase: "VISION",
+        coverImageUrl: "https://example.com/cover.jpg",
+        category: "FOOD",
+        prefectureCode: "13",
+        summary: "概要",
+        story: "本文",
+        leaderIntro: "自己紹介",
+      });
+
+      // 1. 公開申請: publishRequestedAt が保存される
+      const requesting = await reload(row.id);
+      expect(requesting.requestPublish().ok).toBe(true);
+      await commandAdapter.executeInTransaction({
+        project: requesting,
+        outboxMessage: { id: randomUUID(), type: "admin_publish_request.notify", payload: {} },
+      });
+      const afterRequest = await loadPublicationColumns(row.id);
+      expect(afterRequest.status).toBe("PENDING_REVIEW");
+      expect(afterRequest.publishRequestedAt).not.toBeNull();
+      expect(afterRequest.slug).toBeNull();
+
+      // 2. 承認: slug（= id）と publishedAt が保存される
+      const approving = await reload(row.id);
+      expect(approving.approveByAdmin().ok).toBe(true);
+      const feedback = ProjectReviewFeedback.create({
+        projectId: approving.id,
+        reviewerId: unwrap(AccountId.from(reviewer.id)),
+        action: ReviewAction.APPROVED,
+      });
+      await commandAdapter.executeApproveInTransaction({
+        project: approving,
+        reviewFeedback: unwrap(feedback),
+        outboxMessage: { id: randomUUID(), type: "project_publish_approved.notify", payload: {} },
+        maxPublishedPerOwner: 3,
+      });
+      const afterApprove = await loadPublicationColumns(row.id);
+      expect(afterApprove.status).toBe("PUBLISHED");
+      expect(afterApprove.slug).toBe(row.id);
+      expect(afterApprove.publishedAt).not.toBeNull();
+
+      // 3. 公開ページ用のクエリで slug から取得できる
+      const publicDetail = await queryService.findPublishedBySlug(row.id);
+      expect(publicDetail).not.toBeNull();
+      expect(publicDetail!.slug).toBe(row.id);
+      expect(publicDetail!.title).toBe("公開フロー確認");
+
+      // 4. 自主非公開: 日時はクリア、slug は残る。公開ページからは見えなくなる
+      const unpublishing = await reload(row.id);
+      expect(unpublishing.unpublishSelf().ok).toBe(true);
+      await commandAdapter.saveProjectWithOptionalFeedback({ project: unpublishing });
+      const afterUnpublish = await loadPublicationColumns(row.id);
+      expect(afterUnpublish.status).toBe("DRAFT");
+      expect(afterUnpublish.slug).toBe(row.id);
+      expect(afterUnpublish.publishRequestedAt).toBeNull();
+      expect(afterUnpublish.publishedAt).toBeNull();
+      expect(await queryService.findPublishedBySlug(row.id)).toBeNull();
+    });
+  });
 });
+
+/** Result を取り出す（テストの前提が崩れていたら即失敗させる） */
+function unwrap<T, E>(result: Result<T, E>): T {
+  if (!result.ok) throw new Error(`fixture broken: ${JSON.stringify(result.error)}`);
+  return result.value;
+}

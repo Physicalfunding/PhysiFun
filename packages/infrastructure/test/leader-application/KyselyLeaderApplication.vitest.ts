@@ -445,6 +445,9 @@ describe("Kysely LeaderApplication 実装 integration", () => {
       leaderIntro: null,
       snsLinks: {},
       activityPlan: "活動内容の説明",
+      slug: null,
+      publishRequestedAt: null,
+      publishedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

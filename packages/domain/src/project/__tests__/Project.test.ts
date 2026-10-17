@@ -65,6 +65,9 @@ describe("Project", () => {
       expect(project.body).toBeNull();
       expect(project.leaderIntroduction).toBeNull();
       expect(project.activityPlan).toBeNull();
+      expect(project.slug).toBeNull();
+      expect(project.publishRequestedAt).toBeNull();
+      expect(project.publishedAt).toBeNull();
     });
 
     it("title の前後空白はトリムされる", () => {
@@ -393,6 +396,9 @@ describe("Project", () => {
         leaderIntroduction: "紹介",
         snsLinks: emptySns(),
         activityPlan: "計画",
+        slug: id.toString(),
+        publishRequestedAt: now,
+        publishedAt: now,
         createdAt: now,
         updatedAt: now,
       });
@@ -401,6 +407,95 @@ describe("Project", () => {
       expect(project.title).toBe("復元テスト");
       expect(project.publishStatus).toBe(PublishStatus.PUBLISHED);
       expect(project.phase).toBe(ProjectPhase.EXECUTION);
+      expect(project.slug).toBe(id.toString());
+      expect(project.publishRequestedAt).toBe(now);
+      expect(project.publishedAt).toBe(now);
+    });
+  });
+
+  describe("公開 URL（slug）と公開日時", () => {
+    it("公開申請で publishRequestedAt に申請時刻（updatedAt と同じ値）が入る", () => {
+      const project = createFullDraft();
+      project.requestPublish();
+      expect(project.publishRequestedAt).not.toBeNull();
+      expect(project.publishRequestedAt).toBe(project.updatedAt);
+      // 申請の段階では slug も公開日時もまだ無い
+      expect(project.slug).toBeNull();
+      expect(project.publishedAt).toBeNull();
+    });
+
+    it("承認で publishedAt が入り、slug としてプロジェクトの id が発行される", () => {
+      const project = createFullDraft();
+      project.requestPublish();
+      const requestedAt = project.publishRequestedAt;
+      project.approveByAdmin();
+      expect(project.publishedAt).toBe(project.updatedAt);
+      expect(project.slug).toBe(project.id.toString());
+      // 申請日時は承認後も記録として残す
+      expect(project.publishRequestedAt).toBe(requestedAt);
+    });
+
+    it("slug が発行済みなら、承認しても slug は変わらない（再公開で同じ URL を使う）", () => {
+      const now = new Date();
+      const project = Project.reconstruct({
+        id: ProjectId.generate(),
+        ownerAccountId: AccountId.generate(),
+        title: "再公開テスト",
+        coverImageUrl: "https://example.com/img.jpg",
+        category: "FOOD",
+        location: validLocation(),
+        phase: ProjectPhase.ONGOING,
+        publishStatus: PublishStatus.PENDING_REVIEW,
+        summary: "概要",
+        body: "本文",
+        leaderIntroduction: "紹介",
+        snsLinks: emptySns(),
+        activityPlan: null,
+        slug: "already-issued-slug",
+        publishRequestedAt: now,
+        publishedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+      project.approveByAdmin();
+      expect(project.slug).toBe("already-issued-slug");
+    });
+
+    it("PUBLISHED のまま編集しても slug と公開日時は変わらない", () => {
+      const project = createFullDraft();
+      project.requestPublish();
+      project.approveByAdmin();
+      const publishedAt = project.publishedAt;
+      project.update({ title: "公開中に編集" });
+      expect(project.slug).toBe(project.id.toString());
+      expect(project.publishedAt).toBe(publishedAt);
+    });
+
+    it.each([
+      ["withdraw（自主取下げ）", (p: Project) => p.withdraw()],
+      ["rejectByAdmin（差戻）", (p: Project) => p.rejectByAdmin()],
+      ["update（編集による自動降格）", (p: Project) => p.update({ title: "編集" })],
+    ])("PENDING_REVIEW から %s で DRAFT に戻ると publishRequestedAt がクリアされる", (_, act) => {
+      const project = createFullDraft();
+      project.requestPublish();
+      act(project);
+      expect(project.publishStatus).toBe(PublishStatus.DRAFT);
+      expect(project.publishRequestedAt).toBeNull();
+      expect(project.publishedAt).toBeNull();
+    });
+
+    it.each([
+      ["unpublishSelf（自主非公開）", (p: Project) => p.unpublishSelf()],
+      ["forceUnpublish（強制非公開）", (p: Project) => p.forceUnpublish()],
+    ])("PUBLISHED から %s で DRAFT に戻ると日時はクリアされ、slug は残る", (_, act) => {
+      const project = createFullDraft();
+      project.requestPublish();
+      project.approveByAdmin();
+      act(project);
+      expect(project.publishStatus).toBe(PublishStatus.DRAFT);
+      expect(project.publishRequestedAt).toBeNull();
+      expect(project.publishedAt).toBeNull();
+      expect(project.slug).toBe(project.id.toString());
     });
   });
 
