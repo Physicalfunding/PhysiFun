@@ -1,0 +1,20 @@
+{
+  "name": "@physifun/docs-site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare-content": "bun run scripts/prepare-content.ts",
+    "dev": "bun run prepare-content && vitepress dev",
+    "build": "bun run prepare-content && vitepress build",
+    "preview": "vitepress preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "mermaid": "11.17.2",
+    "typescript": "^5",
+    "vitepress": "1.6.4",
+    "vitepress-plugin-mermaid": "2.0.17"
+  }
+}
