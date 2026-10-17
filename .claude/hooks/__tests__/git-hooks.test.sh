@@ -66,6 +66,17 @@ try existing_branch_checks_only_new_commits 0 git push -q origin redb
 
 try delete_branch_push_allowed 0 git push -q origin --delete green
 
+# ローカルの origin/main が古いまま、新しい main から切ったブランチを push する（クラウドの clone で起きた）
+OLD_MAIN=$(git rev-parse origin/main)
+git clone -q -b main "$T/origin.git" "$T/other" &&
+  (cd "$T/other" && git config user.email t@example.com && git config user.name t &&
+    echo m >packages/domain/src/m.ts && git add -A && git commit -qm "main で進んだ変更" && git push -q origin main)
+git fetch -q origin && git switch -q -C main origin/main
+git update-ref refs/remotes/origin/main "$OLD_MAIN"
+git switch -q -c green2
+echo v >docs/stale.md && git add -A && git commit -qm docs4
+try stale_origin_main_push_allowed 0 git push -q -u origin green2
+
 # ローカル（CLAUDE_CODE_REMOTE なし）では何もしない
 git switch -q main
 echo l >packages/domain/src/l.ts && git add -A

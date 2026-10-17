@@ -15,6 +15,10 @@ REMOTE="${1:-origin}"
 ZERO=0000000000000000000000000000000000000000
 FILES=""
 
+# 新しいブランチは「リモートの main との共通の祖先」から判定する。ローカルの $REMOTE/main が古いと
+# main で進んだ変更まで今回の push に数えてしまうため、判定の前に最新にする（失敗しても手元の ref で続ける）
+git fetch -q "$REMOTE" "+refs/heads/main:refs/remotes/$REMOTE/main" 2>/dev/null || true
+
 # stdin: <local ref> <local sha> <remote ref> <remote sha>
 while read -r _lref lsha _rref rsha; do
   [[ "$lsha" == "$ZERO" ]] && continue # ブランチの削除
