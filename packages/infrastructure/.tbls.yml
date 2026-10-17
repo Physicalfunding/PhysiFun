@@ -1,0 +1,112 @@
+# tbls 設定（DB テーブル定義書・ER 図の自動生成。#261）
+#
+# 生成物は docs/db/（手で編集しない）。`bun run db:docs` で再生成する。
+# PR でスキーマ・マイグレーション・この設定を変えると、CI（.github/workflows/db-docs.yml）が
+# docs/db/ を再生成して同じ PR に自動コミットする。運用手順は docs/guides/db-migration.md。
+#
+# - テーブル・列の説明は、ここではなく atlas/schema.sql の `COMMENT ON` に書く
+#   （Supabase Studio とエディタのホバー表示にも出るようにするため）。
+# - DSN は scripts/db-docs.ts が使い捨ての DB を用意して渡すので、ここには書かない。
+
+name: PhysiFun
+desc: |
+  このディレクトリは `atlas/schema.sql` から tbls で自動生成している。**手で編集しない。**
+  テーブル・列の説明は `schema.sql` の `COMMENT ON` に書き、`bun run db:docs` で再生成する（PR では CI が自動で再生成する）。
+  まずは下の「領域別のビュー」から読むと全体を掴みやすい。設計の意図は docs/specs/03_data-model.md を参照。
+
+docPath: ../../docs/db
+
+format:
+  adjust: true
+  # 参照元 / 参照先が 1 件もない列は表から省く
+  hideColumnsWithoutValues:
+    - Parents
+    - Children
+
+er:
+  format: mermaid
+  # 線に FOREIGN KEY の定義文を出さない（長くて読めなくなるため）
+  hideDef: true
+  # 図には主キー・外部キーと、その説明だけを載せる（全カラムは各テーブルのページで見る）
+  comment: true
+  showColumnTypes:
+    related: true
+    primary: true
+  distance: 1
+
+# 見出しの日本語化
+dict:
+  Tables: テーブル一覧
+  Description: 説明
+  Columns: カラム
+  Name: 名前
+  Type: 型
+  Default: 既定値
+  Nullable: NULL 可
+  Children: 参照元
+  Parents: 参照先
+  Comment: 説明
+  Constraints: 制約
+  Definition: 定義
+  Indexes: インデックス
+  Relations: ER 図
+  Enums: 列挙型
+  Values: 値
+  Viewpoints: 領域別のビュー
+  Labels: ラベル
+  Triggers: トリガー
+  Referenced Tables: 関連テーブル
+
+# 領域ごとの ER 図。新しいテーブルを足したら、どこかの領域に入れる（lint の requireViewpoints で検出する）
+viewpoints:
+  - id: account
+    name: アカウントと応募
+    desc: 一般ユーザーのアカウントと、リーダー応募・運営による審査
+    tables:
+      - accounts
+      - leader_applications
+      - admin_accounts
+  - id: project
+    name: プロジェクトと公開審査
+    desc: プロジェクト本体と、運営による公開審査の履歴
+    tables:
+      - projects
+      - project_review_feedbacks
+      - accounts
+      - admin_accounts
+  - id: recruitment
+    name: "サポート募集（未実装 #212）"
+    desc: スキーマだけ存在し、コードはまだ実装されていない
+    tables:
+      - support_recruitments
+      - recruitment_schedules
+      - support_tickets
+      - projects
+      - accounts
+  - id: admin
+    name: 運営の認証と監査
+    desc: 運営アカウントの Magic Link 認証・セッション・操作ログ
+    tables:
+      - admin_accounts
+      - admin_sessions
+      - admin_audit_logs
+      - admin_verification_tokens
+  - id: outbox
+    name: Outbox（非同期メール送信）
+    desc: DB の更新と同じトランザクションで積む、送信待ちメッセージ
+    tables:
+      - leader_application_outbox_messages
+      - project_outbox_messages
+
+lint:
+  # テーブル・列の説明（COMMENT ON）を必須にする。#261 では警告のみ、説明文を書く PR で CI を必須チェックにする
+  requireTableComment:
+    enabled: true
+  requireColumnComment:
+    enabled: true
+    exclude:
+      - createdAt
+      - updatedAt
+  # どの領域別ビューにも入っていないテーブルを検出する
+  requireViewpoints:
+    enabled: true

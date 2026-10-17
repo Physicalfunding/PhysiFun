@@ -1,0 +1,93 @@
+name: DB Docs
+
+# DB テーブル定義書・ER 図（docs/db/）を tbls で再生成し、差分があれば同じ PR に自動コミットする（#261）。
+# 手順の詳細は docs/guides/db-migration.md の「DB ドキュメント」を参照。
+#
+# - 自動コミットは GITHUB_TOKEN で push するため、その push では他のワークフロー（CI / E2E）は再実行されない。
+#   main にはブランチ保護（必須チェック）を設定していないので、マージは妨げられない。
+# - fork からの PR には書き込み権限が無いので実行しない。
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - packages/infrastructure/atlas/**
+      - packages/infrastructure/.tbls.yml
+      - packages/infrastructure/scripts/db-docs.ts
+      - docs/db/**
+      - .github/workflows/db-docs.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    name: Generate DB docs (tbls)
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: physifun_docs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      # PR のブランチそのものを checkout する（既定のマージコミットでは push できないため）
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # マイグレーションの適用に Atlas CLI を使う（ログイン不要の機能だけを使う。ci.yml と同じ）
+      - name: Setup Atlas
+        uses: ariga/setup-atlas@v0
+
+      # バージョンは scripts/db-docs.ts の TBLS_IMAGE と揃える
+      - name: Setup tbls
+        uses: k1low/setup-tbls@v1
+        with:
+          version: v1.96.1
+
+      # lint（説明文の付け忘れなど）は現状は警告のみ。説明文を書き終えたら --strict を付けて必須チェックにする
+      - name: Generate docs/db
+        working-directory: packages/infrastructure
+        run: bun run db:docs
+        env:
+          DB_DOCS_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/physifun_docs
+
+      - name: Commit regenerated docs
+        run: |
+          if [ -z "$(git status --porcelain -- docs/db)" ]; then
+            echo "docs/db/ に変更はありません"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/db
+          git commit -m "docs: DB ドキュメント（docs/db）を再生成"
+          git push
