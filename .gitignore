@@ -16,6 +16,10 @@ out/
 build
 dist
 
+# DB ドキュメントサイト（VitePress）が集めたコンテンツとキャッシュ
+apps/docs-site/.content
+apps/docs-site/.vitepress/cache
+
 # misc
 .DS_Store
 *.pem

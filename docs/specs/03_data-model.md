@@ -1,6 +1,6 @@
 # 03. データモデル
 
-**テーブル定義と ER 図は自動生成している → [`docs/db/README.md`](../db/README.md)**（全体をズーム・検索できる [動く ER 図](https://physicalfunding.github.io/PhysiFun/) もある）
+**テーブル定義と ER 図は自動生成している → [`docs/db/README.md`](../db/README.md)**（検索つきの [DB ドキュメントサイト](https://physicalfunding.github.io/PhysiFun/) と、全体をズーム・検索できる [動く ER 図](https://physicalfunding.github.io/PhysiFun/er/) もある）
 
 本書には、生成物からは読み取れない「領域の分け方」「整合性ルールの意図」「インデックスの狙い」「命名規則」だけを書く。
 

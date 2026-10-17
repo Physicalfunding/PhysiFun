@@ -186,7 +186,8 @@ bun run db:migrate:status
 | 生成スクリプト | `packages/infrastructure/scripts/db-docs.ts`（`bun run db:docs`） |
 | 生成物 | `docs/db/`（索引 `README.md`、テーブルごとのページ、領域別ビュー `viewpoint-*.md`、`schema.json`） |
 | CI | `.github/workflows/db-docs.yml` |
-| 動く ER 図（Liam ERD） | `scripts/db-erd.ts`（`bun run db:erd`）→ `.github/workflows/db-erd.yml` が GitHub Pages に公開（§6.5） |
+| DB ドキュメントサイト（VitePress） | `apps/docs-site`（`bun run docs:build`）→ `.github/workflows/docs-site.yml` が GitHub Pages に公開（§6.5） |
+| 動く ER 図（Liam ERD） | `scripts/db-erd.ts`（`bun run db:erd`）。サイトの `/er/` に入る（§6.5） |
 
 - 説明を `COMMENT ON` に書くのは、DB 自体に意味を持たせるため。同じ説明が `docs/db/`・Supabase Studio・`types.ts` の JSDoc（kysely-codegen が出力する）の 3 か所に出る
 - ER 図は Mermaid で出力する。GitHub 上でそのまま図として表示される。図には主キー・外部キーとその説明だけを載せ、全カラムは各テーブルのページで見る
@@ -229,19 +230,25 @@ COMMENT ON COLUMN "projects"."story" IS '本文（Markdown。最大 10000 文字
 - 説明文にシングルクォート（`'`）は使わない（使うなら `''` と 2 つ重ねる）
 - 説明を変えるだけでもスキーマの差分になる。`db:migrate:diff` でマイグレーションを作り、`types.ts` も再生成する
 
-### 6.5 動く ER 図（Liam ERD / GitHub Pages）
+### 6.5 DB ドキュメントサイトと動く ER 図（GitHub Pages）
 
-公開先: **https://physicalfunding.github.io/PhysiFun/**（#273）
+- DB ドキュメントサイト: **https://physicalfunding.github.io/PhysiFun/**（#280）
+- 動く ER 図（Liam ERD）: **https://physicalfunding.github.io/PhysiFun/er/**（#273）
 
-DB 全体をズーム・検索でき、テーブルを選ぶと関係するテーブルが光り、列の説明が右側に出る。
-`docs/db/schema.json` から [Liam ERD](https://liambx.com/) で静的サイトを作り、GitHub Pages に公開している。
+DB 関連のドキュメントを、[VitePress](https://vitepress.dev/) でメニュー・サイドバー・全文検索つきのサイトにまとめて公開している。
+リポジトリの README の冒頭からリンクしている。
 
-- `.github/workflows/db-erd.yml` が、`docs/db/schema.json` が main に入るたびに作り直して公開する。PR ではビルドできるかだけを確認する
-- 手元で見るときは `bun run db:erd` で `dist/erd/` に作り、`npx serve dist/erd` で開く（Node.js が必要）
-- Liam ERD の CLI のバージョンは `scripts/db-erd.ts` の `LIAM_CLI` で固定している
-- Liam ERD 0.7.24 は tbls の `viewpoints[].id` を受け付けないので、スクリプトが取り除いてから渡す
-- 公開には、リポジトリの Settings → Pages の Source を「GitHub Actions」にしておく必要がある
-- repo は public なので、公開ページは誰でも見られる（中身は `schema.sql` と同じ情報）
+**サイトに載せる範囲（DB 関連だけ）**: `docs/db/` の Markdown、`docs/specs/02_domain-model.md`、`03_data-model.md`、サイト独自のトップページ（`apps/docs-site/pages/`）。
+範囲は `apps/docs-site/scripts/prepare-content.ts` のコピー対象で決まる。変えるときは、このスクリプトと `.vitepress/config.mts` のメニュー・サイドバーを直す。
+
+- **しくみ**: `prepare-content.ts` が載せるファイルを `apps/docs-site/.content/` に集め、VitePress がそこからビルドする。動く ER 図（`dist/erd/`）は `.content/public/er/` にコピーされ、`/er/` で配信される
+- **サイドバー**: 領域別のビューとテーブルの一覧は、`docs/db/schema.json` から自動で作る（テーブルや領域を足しても設定を直さなくてよい）
+- **図**: tbls の Mermaid の ER 図と、02 / 03 の状態遷移図は、`vitepress-plugin-mermaid` で描画する
+- **日本語の検索**: VitePress 標準の検索は空白で単語を区切るため、日本語が引けない。`Intl.Segmenter` で単語に区切る関数を設定している。この関数は文字列にしてブラウザにも送られるので、外側の変数や import を参照しない形にしておく
+- **動く ER 図**: DB 全体をズーム・検索でき、テーブルを選ぶと関係するテーブルが光り、列の説明が右側に出る。Liam ERD の CLI のバージョンは `scripts/db-erd.ts` の `LIAM_CLI` で固定している。Liam ERD 0.7.24 は tbls の `viewpoints[].id` を受け付けないので、スクリプトが取り除いてから渡す
+- **公開**: `.github/workflows/docs-site.yml` が、対象のファイル（`docs/db/`・02 / 03・`apps/docs-site/`・`db-erd.ts`）が main に入るたびに作り直して公開する。PR ではビルドできるかだけを確認する。リポジトリの Settings → Pages の Source は「GitHub Actions」（設定済み）
+- **手元で見る**: `bun run db:erd` のあと `bun run docs:dev`（開発サーバー）か、`bun run docs:build` → `bun run --cwd apps/docs-site preview`。動く ER 図を含めるには、先に `db:erd` が必要
+- repo は public なので、サイトは誰でも見られる（中身はリポジトリにある文書と同じ）
 
 ### 6.6 既知の制約
 

@@ -1,10 +1,10 @@
-name: DB ERD (Pages)
+name: DB Docs Site (Pages)
 
-# docs/db/schema.json（tbls の生成物）から Liam ERD（動く ER 図）を作り、GitHub Pages に公開する（#273）。
-# 公開先: https://physicalfunding.github.io/PhysiFun/
+# DB ドキュメントサイト（VitePress）と動く ER 図（Liam ERD）を作り、GitHub Pages に公開する（#273 / #280）。
+# 公開先: https://physicalfunding.github.io/PhysiFun/（動く ER 図は /er/）
 #
 # - main への push で作り直して公開する。PR ではビルドできるかだけを確認する（公開しない）
-# - リポジトリの Settings → Pages で Source を「GitHub Actions」にしておく必要がある
+# - リポジトリの Settings → Pages の Source は「GitHub Actions」（設定済み）
 # - 手順の詳細は docs/guides/db-migration.md §6 を参照
 
 on:
@@ -12,16 +12,22 @@ on:
     branches:
       - main
     paths:
-      - docs/db/schema.json
+      - docs/db/**
+      - docs/specs/02_domain-model.md
+      - docs/specs/03_data-model.md
+      - apps/docs-site/**
       - packages/infrastructure/scripts/db-erd.ts
-      - .github/workflows/db-erd.yml
+      - .github/workflows/docs-site.yml
   pull_request:
     branches:
       - main
     paths:
-      - docs/db/schema.json
+      - docs/db/**
+      - docs/specs/02_domain-model.md
+      - docs/specs/03_data-model.md
+      - apps/docs-site/**
       - packages/infrastructure/scripts/db-erd.ts
-      - .github/workflows/db-erd.yml
+      - .github/workflows/docs-site.yml
   workflow_dispatch:
 
 # 公開中のデプロイは途中で止めない（GitHub の推奨）。PR のビルドだけは新しいもので置き換える
@@ -34,7 +40,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Liam ERD
+    name: Build docs site
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -46,22 +52,29 @@ jobs:
         with:
           bun-version: latest
 
-      # Liam ERD の CLI を npx で動かす。バージョンは .nvmrc に合わせる
+      # VitePress と、Liam ERD の CLI（npx）を Node で動かす。バージョンは .nvmrc に合わせる
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
 
-      # スクリプトは Node の標準モジュールしか使わないので、依存のインストールは不要
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # 動く ER 図を dist/erd/ に作る。サイトのビルドが public/er/ にコピーして /er/ で配信する
       - name: Build Liam ERD
         working-directory: packages/infrastructure
         run: bun run db:erd
+
+      - name: Build site
+        working-directory: apps/docs-site
+        run: bun run build
 
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/erd
+          path: apps/docs-site/.vitepress/dist
 
   deploy:
     name: Deploy to GitHub Pages

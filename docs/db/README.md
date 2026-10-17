@@ -5,7 +5,7 @@
 このディレクトリは `atlas/schema.sql` から tbls で自動生成している。**手で編集しない。**  
 テーブル・列の説明は `schema.sql` の `COMMENT ON` に書き、`bun run db:docs` で再生成する（PR では CI が自動で再生成する）。  
 まずは下の「領域別のビュー」から読むと全体を掴みやすい。設計の意図は docs/specs/03_data-model.md を参照。  
-ズーム・検索ができる動く ER 図（Liam ERD）: https://physicalfunding.github.io/PhysiFun/  
+検索つきの DB ドキュメントサイト: https://physicalfunding.github.io/PhysiFun/ （ズーム・検索ができる動く ER 図は https://physicalfunding.github.io/PhysiFun/er/ ）  
 
 
 ## 領域別のビュー

@@ -26,6 +26,8 @@
     "db:migrate:status": "bun --filter @physifun/infrastructure db:migrate:status",
     "db:docs": "bun --filter @physifun/infrastructure db:docs",
     "db:erd": "bun --filter @physifun/infrastructure db:erd",
+    "docs:dev": "bun --filter @physifun/docs-site dev",
+    "docs:build": "bun --filter @physifun/docs-site build",
     "dev:admin": "bun --filter @physifun/admin dev",
     "build:admin": "bun --filter @physifun/admin build",
     "test:e2e": "bun --filter @physifun/e2e test",
