@@ -1,0 +1,20 @@
+# クラウドセッションで書き込み・commit・push を許可するパス（docs/guides/ai-harness.md 4 章）
+# 1 行 1 パターン。bash の [[ path == pattern ]] で評価する（* は / をまたいでマッチする）。
+# path は repo ルートからの相対パス。! で始まる行は常に拒否（緑より優先）。
+
+# 常に拒否
+!.claude/*
+!.github/*
+!CLAUDE.md
+!*/CLAUDE.md
+
+# 緑
+docs/*
+*.md
+*/__tests__/*
+*.test.ts
+*.test.tsx
+*.vitest.ts
+tests/e2e/*
+apps/*/src/components/*
+apps/*/public/*
