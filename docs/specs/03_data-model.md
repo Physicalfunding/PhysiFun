@@ -1,6 +1,6 @@
 # 03. データモデル
 
-**テーブル定義と ER 図は自動生成している → [`docs/db/README.md`](../db/README.md)**
+**テーブル定義と ER 図は自動生成している → [`docs/db/README.md`](../db/README.md)**（全体をズーム・検索できる [動く ER 図](https://physicalfunding.github.io/PhysiFun/) もある）
 
 本書には、生成物からは読み取れない「領域の分け方」「整合性ルールの意図」「インデックスの狙い」「命名規則」だけを書く。
 
@@ -8,7 +8,7 @@
 
 - **目的**: AI / 人間が「DB 設計の意図」を素早く把握するための地図
 - **正本**: `packages/infrastructure/atlas/schema.sql`（Atlas の宣言的スキーマ）。テーブル・列の意味は、同じファイルの `COMMENT ON` に書く
-- **生成物**: `docs/db/`（tbls で生成。PR では CI が再生成する。**手で編集しない**）。手順は `docs/guides/db-migration.md` §6
+- **生成物**: `docs/db/`（tbls で生成。PR では CI が再生成する。**手で編集しない**）と、動く ER 図（Liam ERD。main に入ると GitHub Pages に公開）。手順は `docs/guides/db-migration.md` §6
 - **揮発度**: 中（領域の分け方・整合性ルール・命名の方針が変わったときに更新する。列を足すだけなら本書の更新は不要）
 - **関連**:
   - `02_domain-model.md` — ドメインアグリゲートとの対応
