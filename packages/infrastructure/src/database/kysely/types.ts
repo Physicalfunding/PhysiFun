@@ -126,7 +126,7 @@ export interface AdminAccounts {
    */
   createdAt: Generated<Timestamp>;
   /**
-   * ログインに使うメールアドレス（小文字・前後の空白なしに正規化。最大 255 文字）
+   * ログインに使うメールアドレス（小文字・前後の空白なしに正規化。最大 254 文字）
    */
   email: string;
   /**
