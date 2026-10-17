@@ -25,4 +25,4 @@ PhysiFun のアプリケーション層（UseCase）。トランザクション�
 ## 利用上の注意
 
 - `package.json` の `main` / `types` は `./src/index.ts` を直接指している（Bun ワークスペース前提のソース直参照）
-- Jest や Node.js 直接実行から import する際は `moduleNameMapper` 等の設定が必要
+- Node.js 直接実行から import する際は TypeScript を解決できる実行環境（bun / Vitest / Next.js など）が必要

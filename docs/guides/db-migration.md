@@ -46,13 +46,12 @@ DB アクセスは **Kysely**（SQL ライクな型安全クエリビルダ）�
 - **kysely 0.29 は Node >= 22 を要求**（`engines`）。リポジトリ側はルート `package.json` の `engines` と
   `.nvmrc`（22）で固定し、CI も `.nvmrc` を使う。Vercel の web / admin も Node 22 以上に設定する（#249）。
 
-### Jest（apps/web）と ESM の事情
-`kysely` は **ESM 専用**（CJS ビルド無し）。`next/jest` は node_modules を変換対象から外し、
-`transpilePackages` 方式も bun の `.bun/<pkg>@<ver>/` レイアウトでは効かない。そのため
-**Kysely を読み込む実装はメイン barrel（`@physifun/infrastructure`）に載せず、サブバレル
+### サブバレル `@physifun/infrastructure/src/kysely` について
+`kysely` は **ESM 専用**（CJS ビルド無し）で、以前 apps/web のテストに使っていた Jest からは読み込めなかった。
+そのため **Kysely を読み込む実装はメイン barrel（`@physifun/infrastructure`）に載せず、サブバレル
 `@physifun/infrastructure/src/kysely` に隔離**している。メイン barrel には DB に依存しない実装と
-型・純粋関数だけを置き、Jest テストから読まれるモジュールは Kysely を一切ロードしない
-（DI を読むテストはモジュールをモックする）。`apps/admin` は `bun:test`（ESM 対応）なので制約なし。
+型・純粋関数だけを置いている。テストは #253 で Vitest（ESM 対応）に統一したので隔離はもう不要だが、
+import 先の変更が多いため統合は別途対応する。
 E2E（Playwright）は Node の `require(esm)` で Kysely を読み込むため、Node 22 以上で実行する。
 
 ---

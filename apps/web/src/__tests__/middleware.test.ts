@@ -1,6 +1,4 @@
 /**
- * @jest-environment node
- *
  * middleware 全体の統合テスト (CSRF 層 + `/my/*` 委譲)。
  *
  * `/my/*` 配下のテストは NextAuth の `withAuth` ラッパー (cookie / JWT 検証) に
@@ -9,6 +7,7 @@
  * (Issue #109 の対象: request-publish / withdraw / unpublish) に対して
  * CSRF OK / NG でどのように応答されるかを検証する。
  */
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import middleware from "../middleware";
 import type { NextFetchEvent, NextRequest } from "next/server";
 
@@ -59,14 +58,14 @@ const mockEvent = {
 describe("middleware (CSRF 層)", () => {
   const origUrl = process.env.NEXTAUTH_URL;
   const origSecret = process.env.NEXTAUTH_SECRET;
-  let warnSpy: ReturnType<typeof jest.spyOn>;
-  let errorSpy: ReturnType<typeof jest.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     process.env.NEXTAUTH_URL = "https://app.example.com";
     // withAuth は NEXTAUTH_SECRET を要求するため、テスト用ダミーを設定する。
     process.env.NEXTAUTH_SECRET = "test-secret";
-    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-    errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
   afterEach(() => {
     warnSpy.mockRestore();

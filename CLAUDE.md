@@ -23,6 +23,7 @@ bun dev              # 開発サーバー起動
 bun run build        # ビルド
 bun run lint         # Lint
 bun run typecheck    # 型チェック
+bun run test         # ユニットテスト（Vitest）
 ```
 
 ---

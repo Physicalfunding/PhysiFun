@@ -1,7 +1,4 @@
-/**
- * @jest-environment node
- */
-import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextRequest } from "next/server";
 import { shouldCheckCsrf, getAllowedOrigins, verifyCsrf } from "../csrf";
 
@@ -71,10 +68,10 @@ describe("shouldCheckCsrf", () => {
 
 describe("getAllowedOrigins", () => {
   const origEnv = process.env.NEXTAUTH_URL;
-  let errorSpy: ReturnType<typeof jest.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -173,14 +170,14 @@ describe("getAllowedOrigins", () => {
 describe("verifyCsrf", () => {
   const origEnv = process.env.NEXTAUTH_URL;
   const origNodeEnv = process.env.NODE_ENV;
-  let warnSpy: ReturnType<typeof jest.spyOn>;
-  let errorSpy: ReturnType<typeof jest.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     process.env.NEXTAUTH_URL = "https://app.example.com";
     // 拒否時の監査ログ (console.warn / error) はテストでは抑制する。
-    warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-    errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {

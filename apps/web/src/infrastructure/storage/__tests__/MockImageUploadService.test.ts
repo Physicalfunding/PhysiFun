@@ -5,15 +5,14 @@
  * - 生成する `publicUrl` が `isAllowedImageUrl` allowlist に合致する
  * - fail-safe ガード: allowlist 外の URL を返すサブクラスでは uploadImage が reject
  */
-import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { MockImageUploadService } from "../ImageUploadService";
 
 describe("MockImageUploadService", () => {
   const originalNodeEnv = process.env.NODE_ENV;
 
-  // `NODE_ENV` は型定義上 readonly 相当のため Record キャストで書き換える。
-  // `jest.replaceProperty` は bun test では未実装のため手動 backup/restore 方式を採用。
+  // `NODE_ENV` は型定義上 readonly 相当のため Record キャストで書き換え、手動で backup/restore する。
   const setNodeEnv = (value: string | undefined) => {
     const env = process.env as Record<string, string | undefined>;
     if (value === undefined) {

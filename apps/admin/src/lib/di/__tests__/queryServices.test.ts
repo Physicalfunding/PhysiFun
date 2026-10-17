@@ -9,7 +9,7 @@
  * ## モック方針
  *
  * - `next/cache` の `unstable_cache` は Next.js ランタイム (RSC 文脈) でしか
- *   本来動作しないため、`bun:test` の `mock.module` で同期的な「引数で呼ばれた
+ *   本来動作しないため、`vi.mock` で同期的な「引数で呼ばれた
  *   関数を Map でメモ化するだけ」のスタブに置き換える。
  * - これにより「同じ引数なら inner は 1 回だけ呼ばれる」という本物の挙動を
  *   単体テスト内で再現でき、#179 M-1 で module-level 化した cached 関数が
@@ -18,7 +18,7 @@
  * 実行: `cd apps/admin && bun test`
  */
 
-import { describe, test, expect, mock } from "bun:test";
+import { describe, test, expect, vi } from "vitest";
 import type {
   AdminAuditLogFilter,
   AdminAuditLogListResult,
@@ -30,7 +30,7 @@ import type {
 // ------------------------------------------------------------
 // 呼び出しごとに stringify した引数をキーに Promise を再利用する。
 // これにより「同じ引数で複数回呼んでも delegate は 1 回」の挙動を再現する。
-mock.module("next/cache", () => ({
+vi.mock("next/cache", () => ({
   unstable_cache: <TArgs extends unknown[], TReturn>(
     fn: (...args: TArgs) => Promise<TReturn>,
     _keyParts?: string[],

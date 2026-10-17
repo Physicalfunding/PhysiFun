@@ -79,12 +79,19 @@ jobs:
         with:
           bun-version: latest
 
+      # Vitest は Node で動く。バージョンは .nvmrc に合わせる（#249）。
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
       - name: Run tests
-        # tests/e2e の Playwright spec は bun test が拾わないよう apps/packages のみを対象にする
-        run: bun test apps packages
+        # ルートの vitest.config.ts で全パッケージのユニットテストを実行する（#253）。
+        # infra の統合テスト（*.vitest.ts）と E2E（tests/e2e）は対象外。
+        run: bun run test
 
   test-infrastructure:
     # packages/infrastructure の integration test (Testcontainers + vitest)

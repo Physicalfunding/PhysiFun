@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { verifyCronRequest } from "../cronAuth";
 
 function requestWith(authorization?: string): Request {
@@ -17,7 +17,7 @@ describe("verifyCronRequest", () => {
   afterEach(() => {
     if (original === undefined) delete process.env.CRON_SECRET;
     else process.env.CRON_SECRET = original;
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it("正しい Bearer なら null を返す（処理を続けてよい）", () => {
@@ -36,7 +36,7 @@ describe("verifyCronRequest", () => {
 
   it("CRON_SECRET 未設定なら 500（`Bearer undefined` でも通さない）", () => {
     delete process.env.CRON_SECRET;
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     expect(verifyCronRequest(requestWith("Bearer undefined"))?.status).toBe(500);
     expect(verifyCronRequest(requestWith())?.status).toBe(500);

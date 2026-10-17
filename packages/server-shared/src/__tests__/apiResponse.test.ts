@@ -1,14 +1,11 @@
 /**
- * @jest-environment node
- */
-/**
  * APIレスポンスユーティリティのテスト
  *
  * `NextResponse` は Web Fetch API の `Request` グローバルに依存するため、
  * 既定の jsdom 環境では `ReferenceError: Request is not defined` で落ちる。
  * Node 環境を明示する。
  */
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import {
   ApiResponse,
   successResponse,

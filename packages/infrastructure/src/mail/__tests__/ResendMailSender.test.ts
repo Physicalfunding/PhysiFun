@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, jest } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ResendMailSender } from "../ResendMailSender";
 import type { MailMessage } from "../types";
 
 // Resend SDK をモック
-const mockSend = jest.fn<(...args: unknown[]) => Promise<unknown>>();
-jest.mock("resend", () => ({
+const mockSend = vi.fn<(...args: unknown[]) => Promise<unknown>>();
+vi.mock("resend", () => ({
   Resend: class {
     emails = { send: mockSend };
   },

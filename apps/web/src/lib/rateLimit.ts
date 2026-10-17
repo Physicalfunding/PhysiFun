@@ -117,7 +117,7 @@ export async function enforceRateLimit(
 /**
  * テスト用: 全バケットをクリアする。
  *
- * @internal Jest テスト専用。プロダクションコードから呼ばないこと。
+ * @internal テスト専用。プロダクションコードから呼ばないこと。
  */
 export function __resetRateLimitForTests(): void {
   limiter.resetForTests();

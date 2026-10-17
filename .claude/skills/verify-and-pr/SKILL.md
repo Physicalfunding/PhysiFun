@@ -23,7 +23,7 @@ bun install --frozen-lockfile     # ロックファイル固定でインスト�
 bun run lint                      # ESLint（apps/web）           … ci: lint
 bun run format:check              # Prettier チェック（自動修正はしない）… ci: format
 bun run typecheck                 # 全パッケージ tsc --noEmit     … ci: typecheck
-bun test apps packages            # ユニットテスト（jest/bun, e2e 除外）… ci: test
+bun run test                      # ユニットテスト（Vitest, 全パッケージ）… ci: test
 bun run build                     # web ビルド                    … ci: build
 ```
 
@@ -35,7 +35,7 @@ bun --filter @physifun/infrastructure test   # Testcontainers + vitest … ci: t
 
 ### よく使う絞り込み
 ```bash
-bun test packages/application/src/<context>/__tests__/<Name>.test.ts   # 1 ファイルだけ
+bunx vitest run packages/application/src/<context>/__tests__/<Name>.test.ts   # 1 ファイルだけ
 bun run typecheck                                                      # 型だけ先に確認
 ```
 

@@ -4,9 +4,9 @@
  * 募集タイプ・ProjectPhase の表示ラベルと、Prisma 等の外部由来 string 値を
  * domain enum に絞り込むための型ガード関数の挙動を回帰テストとして残す。
  *
- * 実行: `bun test apps/admin/src/lib/__tests__/leaderApplicationLabels.test.ts`
+ * 実行: `bunx vitest run apps/admin/src/lib/__tests__/leaderApplicationLabels.test.ts`
  */
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect } from "vitest";
 import {
   isLeaderApplicationRecruitmentType,
   isProjectPhase,

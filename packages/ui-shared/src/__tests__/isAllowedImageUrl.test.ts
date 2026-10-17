@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { isAllowedImageUrl } from "../isAllowedImageUrl";
 
 /**
@@ -6,8 +6,6 @@ import { isAllowedImageUrl } from "../isAllowedImageUrl";
  *
  * NODE_ENV / NEXT_PUBLIC_SUPABASE_URL を切り替えるため、
  * テスト開始前の値をバックアップしておき、afterEach で手動復元する。
- * （bun test と jest の両方で動く形にしている。`jest.replaceProperty` は
- *  bun test では未実装のため使わない）
  */
 describe("isAllowedImageUrl", () => {
   const originalNodeEnv = process.env.NODE_ENV;

@@ -92,10 +92,6 @@ test:
 test-watch:
 	bun run test:watch
 
-# カバレッジ付きでテスト実行
-test-coverage:
-	bun run test:coverage
-
 # ESLintを実行
 lint:
 	bun run lint

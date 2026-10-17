@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { AdminAccount } from "../entities/AdminAccount";
 import { AdminAccountEmail } from "../value-objects/AdminAccountEmail";
 import { AdminAccountId } from "../value-objects/AdminAccountId";

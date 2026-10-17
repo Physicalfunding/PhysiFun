@@ -19,15 +19,14 @@
  * ただし `auth.ts` の module top-level では `getAdminAuthAdapter()` と
  * EmailProvider の初期化が走るため、依存モジュールは事前にモックしてから import する。
  *
- * 実行: `bun test apps/admin` (CI 本体と同じ). `bun:test` の jest 互換 API を使う。
+ * 実行: `bun run test`（Vitest）。
  */
 
-// `bun:test` の ambient 型宣言は apps/admin/src/types/bun-test.d.ts を参照。
-import { describe, test, expect, mock } from "bun:test";
+import { describe, test, expect, vi } from "vitest";
 
 // DI コンテナの副作用 (DB クライアント初期化等) を避けるため、
 // `auth.ts` を import する前に依存モジュールをモックする。
-mock.module("../di/auth", () => ({
+vi.mock("../di/auth", () => ({
   getAdminAuthAdapter: () => ({}),
   getIsActiveAdminByEmail: () => async () => false,
   getSendAdminMagicLink: () => async () => {},
@@ -35,7 +34,7 @@ mock.module("../di/auth", () => ({
 
 // NextAuth EmailProvider は内部で `require("nodemailer")` するが、
 // apps/admin は ResendMailSender 経由で送信するため nodemailer を dependency に入れていない。
-mock.module("nodemailer", () => ({
+vi.mock("nodemailer", () => ({
   default: { createTransport: () => ({ sendMail: async () => {} }) },
   createTransport: () => ({ sendMail: async () => {} }),
 }));

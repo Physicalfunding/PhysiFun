@@ -17,9 +17,8 @@
     "start": "bun --filter @physifun/web start",
     "lint": "bun --filter @physifun/web lint",
     "typecheck": "bun --filter '*' typecheck",
-    "test": "bun --filter @physifun/web test",
-    "test:watch": "bun --filter @physifun/web test:watch",
-    "test:coverage": "bun --filter @physifun/web test:coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:infra": "bun --filter @physifun/infrastructure test",
     "db:migrate:diff": "bun --filter @physifun/infrastructure db:migrate:diff",
     "db:migrate:deploy": "bun --filter @physifun/infrastructure db:migrate:deploy",
@@ -33,7 +32,8 @@
   },
   "devDependencies": {
     "prettier": "^3.4.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.4"
   },
   "ignoreScripts": [
     "sharp",

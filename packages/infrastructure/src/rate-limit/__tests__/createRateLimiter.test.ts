@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRateLimiter, toRateLimitResult } from "../createRateLimiter";
 
 const ENV_KEYS = [
@@ -26,7 +26,7 @@ describe("createRateLimiter", () => {
       if (saved[key] === undefined) delete process.env[key];
       else process.env[key] = saved[key];
     }
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it("接続情報が無ければインメモリで数える", async () => {
@@ -61,7 +61,7 @@ describe("createRateLimiter", () => {
     // 接続を拒否されるローカルのポートを指定する（外部ネットワークには出ない）
     process.env.UPSTASH_REDIS_REST_URL = "http://127.0.0.1:9";
     process.env.UPSTASH_REDIS_REST_TOKEN = "dummy-token";
-    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const limiter = createRateLimiter({ prefix: "test", rules });
     const now = Date.now();
 
@@ -77,7 +77,7 @@ describe("createRateLimiter", () => {
     process.env.VERCEL_ENV = "production";
     process.env.KV_REST_API_URL = "http://127.0.0.1:9";
     process.env.KV_REST_API_TOKEN = "dummy-token";
-    jest.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const limiter = createRateLimiter({ prefix: "test", rules });
 
     // 接続情報があるので本番でもエラーにならず、Upstash 経由（ここでは接続失敗で fail-open）になる

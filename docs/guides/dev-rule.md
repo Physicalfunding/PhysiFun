@@ -62,7 +62,7 @@ docs: specs/01 に AWS 移行方針を追記
 ### DI ヘルパー
 
 - `apps/*/src/lib/di/` のファクトリ関数経由でリクエストごとに生成し、モジュールレベルで `new` しない（モック差し替えを阻害しないため）
-- Kysely 実装は ESM 専用のため、サブバレル `@physifun/infrastructure/src/kysely` から import する。Jest テストから読み込まれる DI ファイルには Kysely 実装を持ち込まない
+- Kysely 実装はサブバレル `@physifun/infrastructure/src/kysely` から import する（Jest 時代の隔離の名残。統合は別途対応予定）
 
 ### admin アプリの Server Component 規約（#119 / #131）
 
@@ -79,7 +79,7 @@ docs: specs/01 に AWS 移行方針を追記
 | infrastructure | 実 PostgreSQL に対する統合テスト（Vitest + Testcontainers） | `packages/infrastructure/test/**/*.vitest.ts` |
 | 主要フロー | E2E（Playwright） | `tests/e2e/src/specs/` |
 
-CI ではユニットテストを `bun test apps packages` でまとめて実行する。
+ユニットテストは Vitest で書き（`import { describe, it, expect, vi } from "vitest"`）、ルートの `bun run test` で全パッケージをまとめて実行する（CI も同じ）。infrastructure の統合テストは `bun run test:infra`。
 
 ### コードコメント方針
 

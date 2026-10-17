@@ -101,7 +101,7 @@ export class DoSomethingUseCase {
 ## テストテンプレート（必須）
 
 ```ts
-import { describe, it, expect, beforeEach } from "@jest/globals";
+import { describe, it, expect, beforeEach } from "vitest";
 import { DoSomethingUseCase, type DoSomethingError } from "../DoSomethingUseCase";
 import type { DoSomethingPort } from "../ports/DoSomethingPort";
 
@@ -142,14 +142,14 @@ describe("DoSomethingUseCase", () => {
 ```
 
 ### テストの要点
-- `@jest/globals` を import（CI は `bun test apps packages` で実行されるが jest 互換 API を使う）。
+- `vitest` から import する（モックは `vi.fn` / `vi.spyOn`。CI はルートの `bun run test` で実行）。
 - AAA（Arrange / Act / Assert）。`expect(result.ok).toBe(...)` の直後に `if (!result.ok) return;` で型を絞る。
 - 成功系では Port に正しい値が渡ったか（`port.saved[0]` の中身）まで検証する。
 - 早期 return のエラーケースでは **副作用メソッドが呼ばれていないこと** をアサートする。
 
 ### このテストだけ素早く回す
 ```bash
-bun test packages/application/src/<context>/__tests__/<Name>UseCase.test.ts
+bunx vitest run packages/application/src/<context>/__tests__/<Name>UseCase.test.ts
 ```
 
 ## 完了条件
