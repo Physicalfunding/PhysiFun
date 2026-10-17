@@ -342,7 +342,7 @@ stateDiagram-v2
 |---|---|---|
 | `Account` | `email` | ログイン識別子の一意性 |
 | `Account` | `activationToken` | アクティベーション token の一意性 |
-| `Project` | `slug` | 公開時の URL slug の一意性（nullable: 未公開時は null） |
+| `Project` | `slug` | 公開ページの URL slug の一意性（nullable: 初回承認までは null。値は `id` と同じ UUID で、非公開化しても残す） |
 | `RecruitmentSchedule` | `(supportRecruitmentId, date)` | 1 募集 × 1 日 = 1 スケジュール |
 | `AdminAccount` | `email` | ログイン識別子の一意性 |
 | `AdminSession` | `sessionToken` | セッショントークンの一意性 |
