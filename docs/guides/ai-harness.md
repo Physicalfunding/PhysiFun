@@ -26,20 +26,20 @@ Claude と開発するときの品質・安全を、**Claude の注意力では�
 2. **ルールの正は 1 か所** — アーキテクチャルールは ESLint、検証コマンドは `bun run check`、クラウドの許可範囲は `.claude/cloud-allowlist`。hook・skill・CI はそれを呼ぶだけにする。
 3. **クラウドは許可リスト方式** — 許可したパス以外はすべて拒否。新しいディレクトリは自動的に拒否側に倒れる。
 4. **必須の部分は repo 内で完結させる** — クラウドで効かない場所（`~/.claude` など）に頼らない。
+5. **長く使う文書と一時的な計画を分ける** — PhysiFun には実装を理解・変更するために必要な文書（本書など）だけを置く。実装計画のようにその時点で使う文書は docs-repository の `plans/` に置く。本書の実装計画は `docs-repository/plans/2026-10-17-ai-harness.md`。
 
 ## 4. 実行環境ごとの自律範囲
 
 | 区分 | ローカル | クラウド |
 |---|---|---|
 | 🟢 緑 | 通常フロー（push 前にユーザー承認） | **PR 作成まで自動**。マージはユーザー |
-| 🟡 通常の機能実装 | 通常フロー | 調査・計画まで（計画書を PR にする） |
-| 🔴 DB・認証・ガードレール・実行環境 | 通常フロー | 調査・計画まで（計画書を PR にする） |
+| 🟡 通常の機能実装 | 通常フロー | 調査・計画まで（計画書を docs-repository に PR） |
+| 🔴 DB・認証・ガードレール・実行環境 | 通常フロー | 調査・計画まで（計画書を docs-repository に PR） |
 
 ### 緑（クラウドで書き込みを許可するパス）
 
 ```
 docs/*
-plans/*
 *.md
 */__tests__/*
 *.test.ts
@@ -114,13 +114,14 @@ apps/*/public/*
 2. **`.claude/hooks/__tests__/cloud-scope-guard.test.sh`** — 許可・拒否の代表パターンを JSON 入力で流して判定を確かめる。
 3. **SessionStart hook（クラウドのみ）** — `../docs-repository` が無ければ clone する。あわせて依存パッケージをインストールする。
 4. **CLAUDE.md に「実行環境ごとの自律範囲」節を追加** — 本書 4 章の要約。hook に止められる前に Claude が判断できるようにする。
-5. **`plan` skill** — 黄・赤の依頼をクラウドで受けたとき、調査して `plans/{Issue番号}-{slug}.md` を書き、PR にする。書式は既存の `plans/sp3-66-*.md`（依存グラフ＋Step ごとのコンテキスト）に合わせる。帰宅後に `/dev` で実装する。
+5. **`plan` skill** — 黄・赤の依頼をクラウドで受けたとき、調査して `../docs-repository/plans/YYYY-MM-DD-{Issue番号}-{slug}.md` を書き、docs-repository に PR を出す（構成：依存グラフ＋Step ごとのコンテキスト）。PhysiFun の Issue に計画 PR の URL をコメントする。帰宅後に `/dev` で実装する。
 6. クラウドセッションは **PhysiFun 単独で起動する**（複数 repo を選ぶと hooks が読まれないため）。
 
 **要検証（P1 の最初にスパイクで確かめる）**
 
 - 1 repo のクラウドセッションから private の `docs-repository` を clone できるか（Claude GitHub App を docs-repository にもインストールする）
 - クラウドで `bun install` が通るか（bun はプロキシと相性問題があると公式に記載あり）
+- クラウドセッションから docs-repository に push して PR を出せるか。出せなければ `plan` skill の出力先を PhysiFun の Issue へのコメント（`gh issue comment`）に切り替える
 
 clone できない場合は、ガードを GitHub 側（クラウド由来 PR の判定＋必須チェック＋ブランチ保護）に移す案に切り替え、本書を更新する。
 
