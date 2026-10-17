@@ -98,3 +98,23 @@ export async function insertRows<T extends keyof DB>(
     .values(values.map((v) => withAutoFields(table, v)) as never)
     .execute();
 }
+
+/**
+ * admin_audit_logs の createdAt を、渡した targetId の順に 1 秒ずつ新しくする（すべて現在より前の時刻）。
+ *
+ * createdAt は DB の DEFAULT（ミリ秒精度）で決まるため、続けて書き込むと同じ時刻になることがある。
+ * 同時刻だと「新しい順」の並びは id（ランダムな UUID）で決まってしまうので、
+ * 書き込み順を検証するテストでは、書いた後にこの関数で時刻をずらす。
+ */
+export async function spreadAuditLogCreatedAt(
+  targetIdsInWriteOrder: readonly string[]
+): Promise<void> {
+  const base = Date.now() - targetIdsInWriteOrder.length * 1000;
+  for (const [index, targetId] of targetIdsInWriteOrder.entries()) {
+    await db
+      .updateTable("admin_audit_logs")
+      .set({ createdAt: new Date(base + index * 1000) })
+      .where("targetId", "=", targetId)
+      .execute();
+  }
+}
