@@ -16,6 +16,20 @@ Issue を起点に開発を進める。ブランチ作成から実装・検証�
 /dev              ← 番号なし
 ```
 
+## 実行環境による分岐
+
+クラウドセッションかどうかは環境変数 `CLAUDE_CODE_REMOTE`（クラウドでは `true`）で判断する（`docs/guides/ai-harness.md` 4 章）。
+
+| 環境 | 進め方 |
+|---|---|
+| ローカル | 下のフローどおり。push・PR 作成の前にユーザーの承認を得る（手順 10） |
+| クラウドで、変更が緑（`.claude/cloud-allowlist` の範囲）だけ | ユーザーの返事を待つ手順を省いて PR 作成まで進める（下記）。マージはユーザーが行う |
+| クラウドで、変更が緑以外を含む | コードを書かずに `cloud-plan` skill に切り替える |
+
+- クラウドでは `gh pr create` と `gh issue view` が使えないことがある。Issue は `gh api repos/Physicalfunding/PhysiFun/issues/{番号}`、PR は手順 11 の REST で扱う
+- クラウドのブランチはセッションが用意した `claude/...` をそのまま使う（手順 2 のブランチ作成は省く）
+- クラウドで緑だけのときは、手順 4（質問）・5（計画の合意）・10（承認）・14（指摘の分類の合意）で**ユーザーの返事を待たない**。質問や判断が必要な点は PR body の「確認してほしい点」に書いて進める。指摘は「修正する」だけ直し、「見送る」「要確認」は PR にコメントで残す
+
 ## フロー
 
 ### 1. 何をやるか確定
@@ -71,10 +85,11 @@ Issue の内容に基づいて、関連するドキュメントとコードを�
 ### 7. ローカル検証（CI と同じ順序）
 
 `.github/workflows/ci.yml` のジョブ構成と一致させる。リポジトリのルートで実行する。
+終了時には Stop hook（`verify-on-stop`）も `bun run check` を自動で実行し、失敗していれば終了が差し戻される。それに頼らず、ここで明示的に通しておく。
 
 ```bash
 bun install --frozen-lockfile     # ロックファイル固定でインストール
-bun run check                     # lint（web・admin）→ format:check → typecheck → test（CI と同じ順）
+bun run check                     # lint（web・admin・packages）→ format:check → typecheck → test（CI と同じ順）
 bun run build                     # web ビルド
 ```
 
@@ -149,13 +164,20 @@ PR 作成前に以下を表示して**ユーザーの承認**を得る：
 - **body**（整形済み）
 - **品質チェック結果**（ステップ 8 の結果サマリー）
 
-**push / PR 作成はユーザー承認後に行う。勝手に push しない。**
+**ローカルでは、push / PR 作成はユーザー承認後に行う。勝手に push しない。**（クラウドで緑だけのときは承認を待たない）
 
 ### 11. PR 作成
 
 ```bash
 git push -u origin HEAD
 gh pr create --title "タイトル" --body "body" --base main
+```
+
+クラウドでは `gh pr create` が使えないため、REST で作る：
+
+```bash
+git push -u origin HEAD
+gh api repos/Physicalfunding/PhysiFun/pulls -f title="タイトル" -f head="$(git branch --show-current)" -f base=main -f body="body" --jq .html_url
 ```
 
 PR URL を伝える。
@@ -208,9 +230,9 @@ gh pr view {PR番号} --comments
 ## 注意事項
 
 - main への直接コミットは禁止。必ずブランチを切る
-- 実装計画でユーザーの合意を得るまで実装に着手しない
+- ローカルでは、実装計画でユーザーの合意を得るまで実装に着手しない
 - すべてのローカル検証が green になるまで PR 準備に進まない
-- push / PR 作成はユーザー承認後。勝手に push しない
+- ローカルでは、push / PR 作成はユーザー承認後。勝手に push しない（クラウドで緑だけのときは「実行環境による分岐」に従う）
 - PR タイトルは Issue のタイトルをそのまま使う（二重管理を避ける）
 - `Closes #{番号}` でマージ時に Issue を自動クローズする
 - 変更内容はファイル一覧ではなく**機能単位**で書く

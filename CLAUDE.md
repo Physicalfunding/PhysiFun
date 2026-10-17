@@ -81,7 +81,7 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 ## Agents（専門レビューエージェント）
 
 `.claude/agents/` 配下に、品質レビュー用の専門エージェントを用意している。
-`/dev` フロー内の品質レビューや、手動での `full-review` / `pre-pr-check` ワークフロー実行時に自動で呼ばれる。
+`/dev` フロー内の品質レビューや、手動での `full-review` ワークフロー実行時に呼ばれる。
 
 | Agent | 用途 |
 |---|---|
@@ -97,7 +97,6 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 | Workflow | 用途 |
 |---|---|
 | `full-review` | arch-reviewer + security-reviewer + data-guardian を並列実行し、統合報告 |
-| `pre-pr-check` | lint / format / typecheck / test / build + full-review を一括実行し、Go/No-go 判定 |
 
 ## Hooks（自動検査）
 
@@ -106,6 +105,7 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 | Hook | 種類 | 用途 |
 |---|---|---|
 | `lint-on-edit.sh` | PostToolUse | `.ts` / `.tsx` を書いた直後に Prettier と ESLint（境界ルールを含む）をかけ、違反を Claude に返す |
+| `verify-on-stop.sh` | Stop | 終了しようとした時点で `bun run check` を実行し、失敗していたら差し戻す（コードに未コミットの変更があるときだけ。連続 3 回まで） |
 | `cloud-setup.sh` | SessionStart | クラウドのときだけ、PhysiFun に `core.hooksPath=.claude/git-hooks` を設定し、`bun install` し、docs-repository がセッションに付いているかを知らせる |
 | `cloud-scope-guard.sh` | PreToolUse | クラウドのときだけ、`.claude/cloud-allowlist` 外への Edit/Write と、git hook を飛ばす操作（`--no-verify` など）を拒否する |
 | `.claude/git-hooks/pre-commit`・`pre-push` | git hook | クラウドのときだけ、許可リスト外のファイルを含む commit と、それを含むコミットの push を止める（実際に commit・push される中身で判定） |
