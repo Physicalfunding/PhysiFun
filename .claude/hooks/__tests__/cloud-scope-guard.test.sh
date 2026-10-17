@@ -36,4 +36,53 @@ assert_eq deny_reason_names_path 1 "$(grep -c 'packages/infrastructure/atlas/sch
 CLAUDE_CODE_REMOTE='' run_hook "$G" "$(edit Edit /repo/packages/infrastructure/atlas/schema.sql)"
 assert_eq local_noop "" "$OUT"
 
+# --- commit / push / PR ゲート（一時的な git repo で検証） ---
+T=$(mktemp -d)
+git init -q --bare "$T/origin.git"
+git init -q -b main "$T/work"
+cd "$T/work" || exit 1
+git config user.email t@example.com && git config user.name t
+mkdir -p docs packages/domain/src
+echo a >README.md && echo b >packages/domain/src/b.ts
+git add -A && git commit -qm init
+git remote add origin "$T/origin.git" && git push -q origin main
+export CLAUDE_PROJECT_DIR="$T/work"
+
+echo x >docs/仕様.md && git add -A
+run_hook "$G" "$(bash_cmd 'git commit -m x')"
+assert_eq japanese_path_allowed "" "$OUT"
+git commit -qm docs
+
+echo x >packages/domain/src/a.ts && git add -A
+run_hook "$G" "$(bash_cmd 'git commit -m x')"
+assert_eq red_commit_denied 1 "$(denied)"
+run_hook "$G" "$(bash_cmd 'git add -A && git commit -m x')"
+assert_eq chained_commit_checked 1 "$(denied)"
+git reset -q && rm packages/domain/src/a.ts
+
+echo changed >packages/domain/src/b.ts
+run_hook "$G" "$(bash_cmd 'git commit -am x')"
+assert_eq commit_am_checked 1 "$(denied)"
+git checkout -q -- packages/domain/src/b.ts
+
+echo y >docs/more.md && git add -A && git commit -qm docs2
+run_hook "$G" "$(bash_cmd 'git push -u origin HEAD')"
+assert_eq green_push_allowed "" "$OUT"
+run_hook "$G" "$(bash_cmd 'gh pr create --title t --body b')"
+assert_eq green_pr_allowed "" "$OUT"
+
+echo z >packages/domain/src/c.ts && git add -A && git commit -qm red
+run_hook "$G" "$(bash_cmd 'git push')"
+assert_eq red_push_denied 1 "$(denied)"
+assert_eq red_push_names_file 1 "$(grep -c 'packages/domain/src/c.ts' <<<"$OUT")"
+
+git remote remove origin
+run_hook "$G" "$(bash_cmd 'git push')"
+assert_eq no_origin_denied 1 "$(grep -c 'git fetch origin main' <<<"$OUT")"
+
+run_hook "$G" "$(bash_cmd 'git status')"
+assert_eq other_bash_noop "" "$OUT"
+
+cd / && rm -rf "$T"
+
 finish

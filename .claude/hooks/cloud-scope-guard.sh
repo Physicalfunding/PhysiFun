@@ -50,6 +50,27 @@ case "$TOOL" in
     is_allowed "$REL" ||
       deny "クラウドセッションでは $REL を編集できません（docs/guides/ai-harness.md 4 章）。plan skill で計画書を docs-repository の plans/ に書き、PR にしてください。"
     ;;
+  Bash)
+    CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
+    git_q() { git -C "$PROJECT_DIR" -c core.quotePath=false "$@"; }
+    if [[ "$CMD" == *"git push"* || "$CMD" == *"gh pr create"* ]]; then
+      FILES=$(git_q diff --name-only origin/main...HEAD 2>/dev/null) ||
+        deny "origin/main との差分を計算できないため push を止めました。git fetch origin main を実行してから再試行してください。"
+    elif [[ "$CMD" == *"git commit"* ]]; then
+      FILES=$(git_q diff --name-only HEAD 2>/dev/null) || exit 0
+    else
+      exit 0
+    fi
+    BLOCKED=()
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      is_allowed "$f" || BLOCKED+=("$f")
+    done <<<"$FILES"
+    if ((${#BLOCKED[@]} > 0)); then
+      LIST=$(printf '%s, ' "${BLOCKED[@]}")
+      deny "クラウドセッションでは次のファイルを commit/push できません: ${LIST%, }（docs/guides/ai-harness.md 4 章）。変更を取り消し、plan skill で計画書を PR にしてください。"
+    fi
+    ;;
 esac
 
 exit 0
