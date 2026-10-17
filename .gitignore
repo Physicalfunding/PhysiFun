@@ -49,3 +49,6 @@ next-env.d.ts
 
 # movie
 *.mp4
+
+# Claude hook の状態ファイル（verify-on-stop）
+.claude/.state/
