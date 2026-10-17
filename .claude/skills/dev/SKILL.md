@@ -16,6 +16,19 @@ Issue を起点に開発を進める。ブランチ作成から実装・検証�
 /dev              ← 番号なし
 ```
 
+## 実行環境による分岐
+
+クラウドセッションかどうかは環境変数 `CLAUDE_CODE_REMOTE`（クラウドでは `true`）で判断する（`docs/guides/ai-harness.md` 4 章）。
+
+| 環境 | 進め方 |
+|---|---|
+| ローカル | 下のフローどおり。push・PR 作成の前にユーザーの承認を得る（手順 10） |
+| クラウドで、変更が緑（`.claude/cloud-allowlist` の範囲）だけ | 手順 10 の承認を省いて PR 作成まで進める。マージはユーザーが行う |
+| クラウドで、変更が緑以外を含む | コードを書かずに `cloud-plan` skill に切り替える |
+
+- クラウドでは `gh pr create` と `gh issue view` が使えないことがある。Issue は `gh api repos/Physicalfunding/PhysiFun/issues/{番号}`、PR は手順 11 の REST で扱う
+- クラウドのブランチはセッションが用意した `claude/...` をそのまま使う（手順 2 のブランチ作成は省く）
+
 ## フロー
 
 ### 1. 何をやるか確定
@@ -71,6 +84,7 @@ Issue の内容に基づいて、関連するドキュメントとコードを�
 ### 7. ローカル検証（CI と同じ順序）
 
 `.github/workflows/ci.yml` のジョブ構成と一致させる。リポジトリのルートで実行する。
+終了時には Stop hook（`verify-on-stop`）も `bun run check` を自動で実行し、失敗していれば終了が差し戻される。それに頼らず、ここで明示的に通しておく。
 
 ```bash
 bun install --frozen-lockfile     # ロックファイル固定でインストール
@@ -156,6 +170,13 @@ PR 作成前に以下を表示して**ユーザーの承認**を得る：
 ```bash
 git push -u origin HEAD
 gh pr create --title "タイトル" --body "body" --base main
+```
+
+クラウドでは `gh pr create` が使えないため、REST で作る：
+
+```bash
+git push -u origin HEAD
+gh api repos/Physicalfunding/PhysiFun/pulls -f title="タイトル" -f head="$(git branch --show-current)" -f base=main -f body="body" --jq .html_url
 ```
 
 PR URL を伝える。
