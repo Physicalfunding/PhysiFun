@@ -41,6 +41,8 @@ type PublicationRequiredField =
  * - DRAFT 保存時は title のみ必須、公開申請時に追加の必須項目チェック
  * - 件数上限（合計 10 件 / PUBLISHED 3 件）は UseCase 側で検証
  * - activityPlan は公開時にも任意（公開必須項目に含まない）
+ * - 公開 URL の slug は初回承認時に id（UUID）で発行し、非公開化しても残す（再公開で同じ URL）
+ * - publishRequestedAt / publishedAt は DRAFT に戻るときにクリアする
  */
 export class Project {
   private constructor(
@@ -57,6 +59,9 @@ export class Project {
     private _leaderIntroduction: string | null,
     private _snsLinks: SnsLinks,
     private _activityPlan: string | null,
+    private _slug: string | null,
+    private _publishRequestedAt: Date | null,
+    private _publishedAt: Date | null,
     private readonly _createdAt: Date,
     private _updatedAt: Date
   ) {}
@@ -99,6 +104,9 @@ export class Project {
         null,
         null,
         input.snsLinks ?? createEmptySnsLinks(),
+        null,
+        null,
+        null,
         null,
         now,
         now
@@ -184,6 +192,9 @@ export class Project {
         intro.value,
         input.snsLinks,
         plan.value,
+        null,
+        null,
+        null,
         input.createdAt,
         input.updatedAt
       )
@@ -207,6 +218,9 @@ export class Project {
     leaderIntroduction: string | null;
     snsLinks: SnsLinks;
     activityPlan: string | null;
+    slug: string | null;
+    publishRequestedAt: Date | null;
+    publishedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
   }): Project {
@@ -224,6 +238,9 @@ export class Project {
       input.leaderIntroduction,
       input.snsLinks,
       input.activityPlan,
+      input.slug,
+      input.publishRequestedAt,
+      input.publishedAt,
       input.createdAt,
       input.updatedAt
     );
@@ -269,6 +286,18 @@ export class Project {
   }
   get activityPlan(): string | null {
     return this._activityPlan;
+  }
+  /** 公開ページ `/projects/[slug]` の URL に使う文字列。初回承認までは null */
+  get slug(): string | null {
+    return this._slug;
+  }
+  /** 公開申請した日時。requestPublish() で入り、DRAFT に戻ると null になる */
+  get publishRequestedAt(): Date | null {
+    return this._publishRequestedAt;
+  }
+  /** 公開（承認）された日時。approveByAdmin() で入り、DRAFT に戻ると null になる */
+  get publishedAt(): Date | null {
+    return this._publishedAt;
   }
   get createdAt(): Date {
     return this._createdAt;
@@ -389,7 +418,7 @@ export class Project {
 
     // PENDING_REVIEW 中に編集した場合は自動で DRAFT に戻す
     if (this._publishStatus === PublishStatus.PENDING_REVIEW) {
-      this._publishStatus = PublishStatus.DRAFT;
+      this.backToDraft();
     }
 
     return ok(undefined);
@@ -410,6 +439,7 @@ export class Project {
     }
     this._publishStatus = PublishStatus.PENDING_REVIEW;
     this._updatedAt = new Date();
+    this._publishRequestedAt = this._updatedAt;
     return ok(undefined);
   }
 
@@ -420,13 +450,17 @@ export class Project {
     if (this._publishStatus !== PublishStatus.PENDING_REVIEW) {
       return err({ type: "CANNOT_WITHDRAW_NON_PENDING", currentStatus: this._publishStatus });
     }
-    this._publishStatus = PublishStatus.DRAFT;
+    this.backToDraft();
     this._updatedAt = new Date();
     return ok(undefined);
   }
 
   /**
    * 運営承認: PENDING_REVIEW → PUBLISHED
+   *
+   * 初回の承認なら slug を発行する。slug には id（UUID）をそのまま使う
+   * （一意なので重複チェックが要らない。日本語タイトル由来の slug は採らない）。
+   * 非公開化のあとに再承認した場合は、前回の slug を使い続ける。
    */
   approveByAdmin(): Result<void, ProjectStateError> {
     if (this._publishStatus !== PublishStatus.PENDING_REVIEW) {
@@ -434,6 +468,10 @@ export class Project {
     }
     this._publishStatus = PublishStatus.PUBLISHED;
     this._updatedAt = new Date();
+    this._publishedAt = this._updatedAt;
+    if (this._slug === null) {
+      this._slug = this._id.toString();
+    }
     return ok(undefined);
   }
 
@@ -444,7 +482,7 @@ export class Project {
     if (this._publishStatus !== PublishStatus.PENDING_REVIEW) {
       return err({ type: "CANNOT_REJECT_NON_PENDING", currentStatus: this._publishStatus });
     }
-    this._publishStatus = PublishStatus.DRAFT;
+    this.backToDraft();
     this._updatedAt = new Date();
     return ok(undefined);
   }
@@ -456,7 +494,7 @@ export class Project {
     if (this._publishStatus !== PublishStatus.PUBLISHED) {
       return err({ type: "CANNOT_UNPUBLISH_NON_PUBLISHED", currentStatus: this._publishStatus });
     }
-    this._publishStatus = PublishStatus.DRAFT;
+    this.backToDraft();
     this._updatedAt = new Date();
     return ok(undefined);
   }
@@ -471,12 +509,21 @@ export class Project {
         currentStatus: this._publishStatus,
       });
     }
-    this._publishStatus = PublishStatus.DRAFT;
+    this.backToDraft();
     this._updatedAt = new Date();
     return ok(undefined);
   }
 
   // ---- Private helpers ----
+
+  /**
+   * DRAFT に戻す。公開申請日時・公開日時はクリアし、slug は残す。
+   */
+  private backToDraft(): void {
+    this._publishStatus = PublishStatus.DRAFT;
+    this._publishRequestedAt = null;
+    this._publishedAt = null;
+  }
 
   private getMissingPublicationFields(): PublicationRequiredField[] {
     return getMissingPublicationFieldsFrom({

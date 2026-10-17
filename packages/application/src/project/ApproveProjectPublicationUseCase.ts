@@ -194,14 +194,13 @@ export class ApproveProjectPublicationUseCase {
     };
 
     // 7. トランザクション内で Case A 上限チェック + 永続化
-    // publishedAt と updatedAt は同じ値 (project.updatedAt = approveByAdmin 直後の timestamp) を渡す。
+    // slug と publishedAt は approveByAdmin() が Project に設定済み（publishedAt = updatedAt）。
     // Case A は interactive tx 内で count → 上限チェックを行うため TOCTOU を解消。
     try {
       await this.port.executeApproveInTransaction({
         project,
         reviewFeedback: feedbackResult.value,
         outboxMessage,
-        publishedAt: project.updatedAt,
         maxPublishedPerOwner: MAX_PUBLISHED_PROJECTS_PER_OWNER,
       });
     } catch (e) {

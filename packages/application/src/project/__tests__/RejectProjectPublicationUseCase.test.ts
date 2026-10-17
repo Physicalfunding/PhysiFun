@@ -70,6 +70,9 @@ function createProjectWithStatus(
     leaderIntroduction: "リーダー紹介",
     snsLinks: createEmptySnsLinks(),
     activityPlan: null,
+    slug: null,
+    publishRequestedAt: null,
+    publishedAt: null,
     createdAt: new Date("2025-01-01T00:00:00Z"),
     updatedAt: new Date("2025-01-01T00:00:00Z"),
   });
