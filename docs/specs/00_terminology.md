@@ -177,7 +177,7 @@ PhysiFun の実装に関わるエンジニアが、コード・schema・ドキ�
 | **Dead Letter** | `deadLetteredAt` カラム | 最大リトライ超過で再試行対象から除外 |
 | **Outbox ワーカー** | `LeaderApplicationOutboxWorker` / `ProjectOutboxWorker` | Vercel Cron + リクエスト後の `after()` で起動 |
 
-詳細は `03_data-model.md` §5 / `05_key-flows/outbox-mail.md`（作成予定）参照。
+詳細は `03_data-model.md` §6 / `05_key-flows/outbox-mail.md` 参照。
 
 ---
 
@@ -225,7 +225,7 @@ PhysiFun の実装に関わるエンジニアが、コード・schema・ドキ�
 | `Account` ↔ `AdminAccount` | §1 参照。**完全に独立したアグリゲート**（Cookie・セッション・Vercel プロジェクトも分離） |
 | `LeaderApplication` の `accountId` ↔ `Project` の `ownerAccountId` | 同じ Account への参照だが命名規則が違う（前者は応募者、後者は所有者の意味づけ） |
 | `reviewedBy` ↔ `forcedUnpublishedBy` | どちらも `AdminAccount` への参照だが、それぞれ「審査者」と「強制非公開実行者」の異なる責任 |
-| `body`（ドメイン）↔ `story`（DB カラム） | Project 本文。命名揺れあり（`03_data-model.md` §9 参照） |
+| `body`（ドメイン）↔ `story`（DB カラム） | Project 本文。命名揺れあり（`03_data-model.md` §2 参照） |
 | `leaderIntroduction`（ドメイン）↔ `leaderIntro`（DB カラム） | リーダー紹介。同上 |
 
 ---

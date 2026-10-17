@@ -1,0 +1,1952 @@
+{
+  "name": "PhysiFun",
+  "desc": "このディレクトリは `atlas/schema.sql` から tbls で自動生成している。**手で編集しない。**\nテーブル・列の説明は `schema.sql` の `COMMENT ON` に書き、`bun run db:docs` で再生成する（PR では CI が自動で再生成する）。\nまずは下の「領域別のビュー」から読むと全体を掴みやすい。設計の意図は docs/specs/03_data-model.md を参照。\n",
+  "tables": [
+    {
+      "name": "public.admin_accounts",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "\"AdminAccountStatus\"",
+          "nullable": false,
+          "default": "'ACTIVE'::\"AdminAccountStatus\""
+        },
+        {
+          "name": "lastLoginAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "admin_accounts_pkey",
+          "def": "CREATE UNIQUE INDEX admin_accounts_pkey ON public.admin_accounts USING btree (id)",
+          "table": "public.admin_accounts",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "admin_accounts_email_key",
+          "def": "CREATE UNIQUE INDEX admin_accounts_email_key ON public.admin_accounts USING btree (email)",
+          "table": "public.admin_accounts",
+          "columns": [
+            "email"
+          ]
+        },
+        {
+          "name": "admin_accounts_status_idx",
+          "def": "CREATE INDEX admin_accounts_status_idx ON public.admin_accounts USING btree (status)",
+          "table": "public.admin_accounts",
+          "columns": [
+            "status"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "admin_accounts_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.admin_accounts",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.project_outbox_messages",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "payload",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "sentAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "attempts",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "lastError",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "nextRetryAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "deadLetteredAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "claimedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "claimedBy",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "project_outbox_messages_pkey",
+          "def": "CREATE UNIQUE INDEX project_outbox_messages_pkey ON public.project_outbox_messages USING btree (id)",
+          "table": "public.project_outbox_messages",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "project_outbox_messages_claimedBy_idx",
+          "def": "CREATE INDEX \"project_outbox_messages_claimedBy_idx\" ON public.project_outbox_messages USING btree (\"claimedBy\")",
+          "table": "public.project_outbox_messages",
+          "columns": [
+            "claimedBy"
+          ]
+        },
+        {
+          "name": "project_outbox_messages_sentAt_deadLetteredAt_nextRetryAt_idx",
+          "def": "CREATE INDEX \"project_outbox_messages_sentAt_deadLetteredAt_nextRetryAt_idx\" ON public.project_outbox_messages USING btree (\"sentAt\", \"deadLetteredAt\", \"nextRetryAt\")",
+          "table": "public.project_outbox_messages",
+          "columns": [
+            "sentAt",
+            "deadLetteredAt",
+            "nextRetryAt"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "project_outbox_messages_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.project_outbox_messages",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.leader_application_outbox_messages",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "payload",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "sentAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "attempts",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "lastError",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "nextRetryAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "deadLetteredAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "claimedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "claimedBy",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "leader_application_outbox_messages_pkey",
+          "def": "CREATE UNIQUE INDEX leader_application_outbox_messages_pkey ON public.leader_application_outbox_messages USING btree (id)",
+          "table": "public.leader_application_outbox_messages",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "leader_application_outbox_messages_claimedBy_idx",
+          "def": "CREATE INDEX \"leader_application_outbox_messages_claimedBy_idx\" ON public.leader_application_outbox_messages USING btree (\"claimedBy\")",
+          "table": "public.leader_application_outbox_messages",
+          "columns": [
+            "claimedBy"
+          ]
+        },
+        {
+          "name": "leader_application_outbox_messages_sentAt_deadLetteredAt_ne_idx",
+          "def": "CREATE INDEX \"leader_application_outbox_messages_sentAt_deadLetteredAt_ne_idx\" ON public.leader_application_outbox_messages USING btree (\"sentAt\", \"deadLetteredAt\", \"nextRetryAt\")",
+          "table": "public.leader_application_outbox_messages",
+          "columns": [
+            "sentAt",
+            "deadLetteredAt",
+            "nextRetryAt"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "leader_application_outbox_messages_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.leader_application_outbox_messages",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.admin_verification_tokens",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "identifier",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "token",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "expires",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "admin_verification_tokens_expires_idx",
+          "def": "CREATE INDEX admin_verification_tokens_expires_idx ON public.admin_verification_tokens USING btree (expires)",
+          "table": "public.admin_verification_tokens",
+          "columns": [
+            "expires"
+          ]
+        },
+        {
+          "name": "admin_verification_tokens_identifier_token_key",
+          "def": "CREATE UNIQUE INDEX admin_verification_tokens_identifier_token_key ON public.admin_verification_tokens USING btree (identifier, token)",
+          "table": "public.admin_verification_tokens",
+          "columns": [
+            "identifier",
+            "token"
+          ]
+        },
+        {
+          "name": "admin_verification_tokens_token_key",
+          "def": "CREATE UNIQUE INDEX admin_verification_tokens_token_key ON public.admin_verification_tokens USING btree (token)",
+          "table": "public.admin_verification_tokens",
+          "columns": [
+            "token"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.admin_sessions",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "sessionToken",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "adminAccountId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "expires",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "admin_sessions_pkey",
+          "def": "CREATE UNIQUE INDEX admin_sessions_pkey ON public.admin_sessions USING btree (id)",
+          "table": "public.admin_sessions",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "admin_sessions_adminAccountId_idx",
+          "def": "CREATE INDEX \"admin_sessions_adminAccountId_idx\" ON public.admin_sessions USING btree (\"adminAccountId\")",
+          "table": "public.admin_sessions",
+          "columns": [
+            "adminAccountId"
+          ]
+        },
+        {
+          "name": "admin_sessions_expires_idx",
+          "def": "CREATE INDEX admin_sessions_expires_idx ON public.admin_sessions USING btree (expires)",
+          "table": "public.admin_sessions",
+          "columns": [
+            "expires"
+          ]
+        },
+        {
+          "name": "admin_sessions_sessionToken_key",
+          "def": "CREATE UNIQUE INDEX \"admin_sessions_sessionToken_key\" ON public.admin_sessions USING btree (\"sessionToken\")",
+          "table": "public.admin_sessions",
+          "columns": [
+            "sessionToken"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "admin_sessions_adminAccountId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"adminAccountId\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table": "public.admin_sessions",
+          "referenced_table": "public.admin_accounts",
+          "columns": [
+            "adminAccountId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "admin_sessions_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.admin_sessions",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.admin_audit_logs",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "adminAccountId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "adminSessionId",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "action",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "targetType",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "targetId",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "metadata",
+          "type": "jsonb",
+          "nullable": true
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "admin_audit_logs_pkey",
+          "def": "CREATE UNIQUE INDEX admin_audit_logs_pkey ON public.admin_audit_logs USING btree (id)",
+          "table": "public.admin_audit_logs",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "admin_audit_logs_action_createdAt_idx",
+          "def": "CREATE INDEX \"admin_audit_logs_action_createdAt_idx\" ON public.admin_audit_logs USING btree (action, \"createdAt\")",
+          "table": "public.admin_audit_logs",
+          "columns": [
+            "action",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "admin_audit_logs_adminAccountId_createdAt_idx",
+          "def": "CREATE INDEX \"admin_audit_logs_adminAccountId_createdAt_idx\" ON public.admin_audit_logs USING btree (\"adminAccountId\", \"createdAt\")",
+          "table": "public.admin_audit_logs",
+          "columns": [
+            "adminAccountId",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "admin_audit_logs_adminSessionId_idx",
+          "def": "CREATE INDEX \"admin_audit_logs_adminSessionId_idx\" ON public.admin_audit_logs USING btree (\"adminSessionId\")",
+          "table": "public.admin_audit_logs",
+          "columns": [
+            "adminSessionId"
+          ]
+        },
+        {
+          "name": "admin_audit_logs_createdAt_idx",
+          "def": "CREATE INDEX \"admin_audit_logs_createdAt_idx\" ON public.admin_audit_logs USING btree (\"createdAt\")",
+          "table": "public.admin_audit_logs",
+          "columns": [
+            "createdAt"
+          ]
+        },
+        {
+          "name": "admin_audit_logs_targetType_createdAt_idx",
+          "def": "CREATE INDEX \"admin_audit_logs_targetType_createdAt_idx\" ON public.admin_audit_logs USING btree (\"targetType\", \"createdAt\")",
+          "table": "public.admin_audit_logs",
+          "columns": [
+            "targetType",
+            "createdAt"
+          ]
+        },
+        {
+          "name": "admin_audit_logs_targetType_targetId_idx",
+          "def": "CREATE INDEX \"admin_audit_logs_targetType_targetId_idx\" ON public.admin_audit_logs USING btree (\"targetType\", \"targetId\")",
+          "table": "public.admin_audit_logs",
+          "columns": [
+            "targetType",
+            "targetId"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "admin_audit_logs_adminAccountId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"adminAccountId\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table": "public.admin_audit_logs",
+          "referenced_table": "public.admin_accounts",
+          "columns": [
+            "adminAccountId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "admin_audit_logs_adminSessionId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"adminSessionId\") REFERENCES admin_sessions(id) ON UPDATE CASCADE ON DELETE SET NULL",
+          "table": "public.admin_audit_logs",
+          "referenced_table": "public.admin_sessions",
+          "columns": [
+            "adminSessionId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "admin_audit_logs_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.admin_audit_logs",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.accounts",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "displayName",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "\"AccountStatus\"",
+          "nullable": false
+        },
+        {
+          "name": "passwordHash",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "roles",
+          "type": "\"Role\"[]",
+          "nullable": true
+        },
+        {
+          "name": "activationToken",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "activationTokenExp",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "iconUrl",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "bio",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "snsLinks",
+          "type": "jsonb",
+          "nullable": true
+        },
+        {
+          "name": "contributedHours",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "receivedHours",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        },
+        {
+          "name": "phoneNumber",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "accounts_pkey",
+          "def": "CREATE UNIQUE INDEX accounts_pkey ON public.accounts USING btree (id)",
+          "table": "public.accounts",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "accounts_activationToken_key",
+          "def": "CREATE UNIQUE INDEX \"accounts_activationToken_key\" ON public.accounts USING btree (\"activationToken\")",
+          "table": "public.accounts",
+          "columns": [
+            "activationToken"
+          ]
+        },
+        {
+          "name": "accounts_email_key",
+          "def": "CREATE UNIQUE INDEX accounts_email_key ON public.accounts USING btree (email)",
+          "table": "public.accounts",
+          "columns": [
+            "email"
+          ]
+        },
+        {
+          "name": "accounts_status_idx",
+          "def": "CREATE INDEX accounts_status_idx ON public.accounts USING btree (status)",
+          "table": "public.accounts",
+          "columns": [
+            "status"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "accounts_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.accounts",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.leader_applications",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "accountId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "\"LeaderApplicationStatus\"",
+          "nullable": false
+        },
+        {
+          "name": "reviewerNote",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "projectTitle",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "projectSummary",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "projectStory",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "projectCategory",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "prefectureCode",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "municipality",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "activityContent",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "snsLinks",
+          "type": "jsonb",
+          "nullable": true
+        },
+        {
+          "name": "submittedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "reviewedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        },
+        {
+          "name": "reviewedBy",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "phoneNumber",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "progress",
+          "type": "\"ProjectPhase\"",
+          "nullable": false,
+          "default": "'PLANNING'::\"ProjectPhase\""
+        },
+        {
+          "name": "recruitmentTypes",
+          "type": "\"LeaderApplicationRecruitmentType\"[]",
+          "nullable": false,
+          "default": "'{}'::\"LeaderApplicationRecruitmentType\"[]"
+        },
+        {
+          "name": "eventLocation",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "eventPeriod",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "recruitCount",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "skillItemNeeds",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "skillItemDeadline",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "timeReturn",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "skillItemReturn",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "experienceOffered",
+          "type": "text",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "leader_applications_pkey",
+          "def": "CREATE UNIQUE INDEX leader_applications_pkey ON public.leader_applications USING btree (id)",
+          "table": "public.leader_applications",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "leader_applications_accountId_idx",
+          "def": "CREATE INDEX \"leader_applications_accountId_idx\" ON public.leader_applications USING btree (\"accountId\")",
+          "table": "public.leader_applications",
+          "columns": [
+            "accountId"
+          ]
+        },
+        {
+          "name": "leader_applications_reviewedBy_idx",
+          "def": "CREATE INDEX \"leader_applications_reviewedBy_idx\" ON public.leader_applications USING btree (\"reviewedBy\")",
+          "table": "public.leader_applications",
+          "columns": [
+            "reviewedBy"
+          ]
+        },
+        {
+          "name": "leader_applications_status_idx",
+          "def": "CREATE INDEX leader_applications_status_idx ON public.leader_applications USING btree (status)",
+          "table": "public.leader_applications",
+          "columns": [
+            "status"
+          ]
+        },
+        {
+          "name": "leader_applications_submittedAt_idx",
+          "def": "CREATE INDEX \"leader_applications_submittedAt_idx\" ON public.leader_applications USING btree (\"submittedAt\")",
+          "table": "public.leader_applications",
+          "columns": [
+            "submittedAt"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "leader_applications_reviewedBy_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"reviewedBy\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table": "public.leader_applications",
+          "referenced_table": "public.admin_accounts",
+          "columns": [
+            "reviewedBy"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "leader_applications_accountId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"accountId\") REFERENCES accounts(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table": "public.leader_applications",
+          "referenced_table": "public.accounts",
+          "columns": [
+            "accountId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "leader_applications_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.leader_applications",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.projects",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "ownerAccountId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "slug",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "story",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "leaderIntro",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "coverImageUrl",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "prefectureCode",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "municipality",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "snsLinks",
+          "type": "jsonb",
+          "nullable": true
+        },
+        {
+          "name": "status",
+          "type": "\"PublishStatus\"",
+          "nullable": false,
+          "default": "'DRAFT'::\"PublishStatus\""
+        },
+        {
+          "name": "phase",
+          "type": "\"ProjectPhase\"",
+          "nullable": false,
+          "default": "'VISION'::\"ProjectPhase\""
+        },
+        {
+          "name": "publishRequestedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "publishedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": true
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        },
+        {
+          "name": "activityPlan",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "forcedUnpublishedBy",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "reviewedBy",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "projects_pkey",
+          "def": "CREATE UNIQUE INDEX projects_pkey ON public.projects USING btree (id)",
+          "table": "public.projects",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "projects_category_idx",
+          "def": "CREATE INDEX projects_category_idx ON public.projects USING btree (category)",
+          "table": "public.projects",
+          "columns": [
+            "category"
+          ]
+        },
+        {
+          "name": "projects_forcedUnpublishedBy_idx",
+          "def": "CREATE INDEX \"projects_forcedUnpublishedBy_idx\" ON public.projects USING btree (\"forcedUnpublishedBy\")",
+          "table": "public.projects",
+          "columns": [
+            "forcedUnpublishedBy"
+          ]
+        },
+        {
+          "name": "projects_ownerAccountId_idx",
+          "def": "CREATE INDEX \"projects_ownerAccountId_idx\" ON public.projects USING btree (\"ownerAccountId\")",
+          "table": "public.projects",
+          "columns": [
+            "ownerAccountId"
+          ]
+        },
+        {
+          "name": "projects_prefectureCode_idx",
+          "def": "CREATE INDEX \"projects_prefectureCode_idx\" ON public.projects USING btree (\"prefectureCode\")",
+          "table": "public.projects",
+          "columns": [
+            "prefectureCode"
+          ]
+        },
+        {
+          "name": "projects_publishedAt_idx",
+          "def": "CREATE INDEX \"projects_publishedAt_idx\" ON public.projects USING btree (\"publishedAt\")",
+          "table": "public.projects",
+          "columns": [
+            "publishedAt"
+          ]
+        },
+        {
+          "name": "projects_reviewedBy_idx",
+          "def": "CREATE INDEX \"projects_reviewedBy_idx\" ON public.projects USING btree (\"reviewedBy\")",
+          "table": "public.projects",
+          "columns": [
+            "reviewedBy"
+          ]
+        },
+        {
+          "name": "projects_slug_key",
+          "def": "CREATE UNIQUE INDEX projects_slug_key ON public.projects USING btree (slug)",
+          "table": "public.projects",
+          "columns": [
+            "slug"
+          ]
+        },
+        {
+          "name": "projects_status_idx",
+          "def": "CREATE INDEX projects_status_idx ON public.projects USING btree (status)",
+          "table": "public.projects",
+          "columns": [
+            "status"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "projects_forcedUnpublishedBy_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"forcedUnpublishedBy\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table": "public.projects",
+          "referenced_table": "public.admin_accounts",
+          "columns": [
+            "forcedUnpublishedBy"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "projects_reviewedBy_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"reviewedBy\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table": "public.projects",
+          "referenced_table": "public.admin_accounts",
+          "columns": [
+            "reviewedBy"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "projects_ownerAccountId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"ownerAccountId\") REFERENCES accounts(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table": "public.projects",
+          "referenced_table": "public.accounts",
+          "columns": [
+            "ownerAccountId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "projects_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.projects",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.project_review_feedbacks",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "projectId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "reviewerId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "action",
+          "type": "\"ReviewAction\"",
+          "nullable": false
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "reviewedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "project_review_feedbacks_pkey",
+          "def": "CREATE UNIQUE INDEX project_review_feedbacks_pkey ON public.project_review_feedbacks USING btree (id)",
+          "table": "public.project_review_feedbacks",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "project_review_feedbacks_projectId_idx",
+          "def": "CREATE INDEX \"project_review_feedbacks_projectId_idx\" ON public.project_review_feedbacks USING btree (\"projectId\")",
+          "table": "public.project_review_feedbacks",
+          "columns": [
+            "projectId"
+          ]
+        },
+        {
+          "name": "project_review_feedbacks_reviewedAt_idx",
+          "def": "CREATE INDEX \"project_review_feedbacks_reviewedAt_idx\" ON public.project_review_feedbacks USING btree (\"reviewedAt\")",
+          "table": "public.project_review_feedbacks",
+          "columns": [
+            "reviewedAt"
+          ]
+        },
+        {
+          "name": "project_review_feedbacks_reviewerId_idx",
+          "def": "CREATE INDEX \"project_review_feedbacks_reviewerId_idx\" ON public.project_review_feedbacks USING btree (\"reviewerId\")",
+          "table": "public.project_review_feedbacks",
+          "columns": [
+            "reviewerId"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "project_review_feedbacks_reviewerId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"reviewerId\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table": "public.project_review_feedbacks",
+          "referenced_table": "public.admin_accounts",
+          "columns": [
+            "reviewerId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "project_review_feedbacks_projectId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"projectId\") REFERENCES projects(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table": "public.project_review_feedbacks",
+          "referenced_table": "public.projects",
+          "columns": [
+            "projectId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "project_review_feedbacks_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.project_review_feedbacks",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.support_recruitments",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "projectId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "\"RecruitmentType\"",
+          "nullable": false,
+          "default": "'ACTIVITY'::\"RecruitmentType\""
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "support_recruitments_pkey",
+          "def": "CREATE UNIQUE INDEX support_recruitments_pkey ON public.support_recruitments USING btree (id)",
+          "table": "public.support_recruitments",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "support_recruitments_projectId_idx",
+          "def": "CREATE INDEX \"support_recruitments_projectId_idx\" ON public.support_recruitments USING btree (\"projectId\")",
+          "table": "public.support_recruitments",
+          "columns": [
+            "projectId"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "support_recruitments_projectId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"projectId\") REFERENCES projects(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table": "public.support_recruitments",
+          "referenced_table": "public.projects",
+          "columns": [
+            "projectId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "support_recruitments_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.support_recruitments",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.recruitment_schedules",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "supportRecruitmentId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "startTime",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "endTime",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "capacityPerHour",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "approvalMode",
+          "type": "\"ApprovalMode\"",
+          "nullable": false,
+          "default": "'AUTO'::\"ApprovalMode\""
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "recruitment_schedules_pkey",
+          "def": "CREATE UNIQUE INDEX recruitment_schedules_pkey ON public.recruitment_schedules USING btree (id)",
+          "table": "public.recruitment_schedules",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "recruitment_schedules_date_idx",
+          "def": "CREATE INDEX recruitment_schedules_date_idx ON public.recruitment_schedules USING btree (date)",
+          "table": "public.recruitment_schedules",
+          "columns": [
+            "date"
+          ]
+        },
+        {
+          "name": "recruitment_schedules_supportRecruitmentId_date_key",
+          "def": "CREATE UNIQUE INDEX \"recruitment_schedules_supportRecruitmentId_date_key\" ON public.recruitment_schedules USING btree (\"supportRecruitmentId\", date)",
+          "table": "public.recruitment_schedules",
+          "columns": [
+            "supportRecruitmentId",
+            "date"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "recruitment_schedules_supportRecruitmentId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"supportRecruitmentId\") REFERENCES support_recruitments(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table": "public.recruitment_schedules",
+          "referenced_table": "public.support_recruitments",
+          "columns": [
+            "supportRecruitmentId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "recruitment_schedules_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.recruitment_schedules",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.support_tickets",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "recruitmentScheduleId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "supporterAccountId",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "duration",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "slotStart",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "companionCount",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "status",
+          "type": "\"SupportTicketStatus\"",
+          "nullable": false,
+          "default": "'PENDING'::\"SupportTicketStatus\""
+        },
+        {
+          "name": "createdAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updatedAt",
+          "type": "timestamp(3) without time zone",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "support_tickets_pkey",
+          "def": "CREATE UNIQUE INDEX support_tickets_pkey ON public.support_tickets USING btree (id)",
+          "table": "public.support_tickets",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "support_tickets_recruitmentScheduleId_idx",
+          "def": "CREATE INDEX \"support_tickets_recruitmentScheduleId_idx\" ON public.support_tickets USING btree (\"recruitmentScheduleId\")",
+          "table": "public.support_tickets",
+          "columns": [
+            "recruitmentScheduleId"
+          ]
+        },
+        {
+          "name": "support_tickets_status_idx",
+          "def": "CREATE INDEX support_tickets_status_idx ON public.support_tickets USING btree (status)",
+          "table": "public.support_tickets",
+          "columns": [
+            "status"
+          ]
+        },
+        {
+          "name": "support_tickets_supporterAccountId_idx",
+          "def": "CREATE INDEX \"support_tickets_supporterAccountId_idx\" ON public.support_tickets USING btree (\"supporterAccountId\")",
+          "table": "public.support_tickets",
+          "columns": [
+            "supporterAccountId"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "support_tickets_supporterAccountId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"supporterAccountId\") REFERENCES accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table": "public.support_tickets",
+          "referenced_table": "public.accounts",
+          "columns": [
+            "supporterAccountId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "support_tickets_recruitmentScheduleId_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (\"recruitmentScheduleId\") REFERENCES recruitment_schedules(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table": "public.support_tickets",
+          "referenced_table": "public.recruitment_schedules",
+          "columns": [
+            "recruitmentScheduleId"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "support_tickets_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.support_tickets",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "table": "public.admin_sessions",
+      "columns": [
+        "adminAccountId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.admin_accounts",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"adminAccountId\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table": "public.admin_audit_logs",
+      "columns": [
+        "adminAccountId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.admin_accounts",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"adminAccountId\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table": "public.admin_audit_logs",
+      "columns": [
+        "adminSessionId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.admin_sessions",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (\"adminSessionId\") REFERENCES admin_sessions(id) ON UPDATE CASCADE ON DELETE SET NULL"
+    },
+    {
+      "table": "public.leader_applications",
+      "columns": [
+        "reviewedBy"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.admin_accounts",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (\"reviewedBy\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table": "public.leader_applications",
+      "columns": [
+        "accountId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.accounts",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"accountId\") REFERENCES accounts(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table": "public.projects",
+      "columns": [
+        "forcedUnpublishedBy"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.admin_accounts",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (\"forcedUnpublishedBy\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table": "public.projects",
+      "columns": [
+        "reviewedBy"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.admin_accounts",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (\"reviewedBy\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table": "public.projects",
+      "columns": [
+        "ownerAccountId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.accounts",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"ownerAccountId\") REFERENCES accounts(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table": "public.project_review_feedbacks",
+      "columns": [
+        "reviewerId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.admin_accounts",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"reviewerId\") REFERENCES admin_accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table": "public.project_review_feedbacks",
+      "columns": [
+        "projectId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.projects",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"projectId\") REFERENCES projects(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table": "public.support_recruitments",
+      "columns": [
+        "projectId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.projects",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"projectId\") REFERENCES projects(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table": "public.recruitment_schedules",
+      "columns": [
+        "supportRecruitmentId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.support_recruitments",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"supportRecruitmentId\") REFERENCES support_recruitments(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    },
+    {
+      "table": "public.support_tickets",
+      "columns": [
+        "supporterAccountId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.accounts",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"supporterAccountId\") REFERENCES accounts(id) ON UPDATE CASCADE ON DELETE RESTRICT"
+    },
+    {
+      "table": "public.support_tickets",
+      "columns": [
+        "recruitmentScheduleId"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.recruitment_schedules",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (\"recruitmentScheduleId\") REFERENCES recruitment_schedules(id) ON UPDATE CASCADE ON DELETE CASCADE"
+    }
+  ],
+  "enums": [
+    {
+      "name": "public.AccountStatus",
+      "values": [
+        "ACTIVE",
+        "PENDING_EMAIL_CONFIRMATION"
+      ]
+    },
+    {
+      "name": "public.AdminAccountStatus",
+      "values": [
+        "ACTIVE",
+        "DISABLED"
+      ]
+    },
+    {
+      "name": "public.ApprovalMode",
+      "values": [
+        "AUTO",
+        "MANUAL"
+      ]
+    },
+    {
+      "name": "public.LeaderApplicationRecruitmentType",
+      "values": [
+        "SKILL_ITEM",
+        "TIME"
+      ]
+    },
+    {
+      "name": "public.LeaderApplicationStatus",
+      "values": [
+        "APPROVED",
+        "PENDING",
+        "REJECTED"
+      ]
+    },
+    {
+      "name": "public.ProjectPhase",
+      "values": [
+        "EXECUTION",
+        "ONGOING",
+        "PLANNING",
+        "READY",
+        "VISION"
+      ]
+    },
+    {
+      "name": "public.PublishStatus",
+      "values": [
+        "DRAFT",
+        "PENDING_REVIEW",
+        "PUBLISHED"
+      ]
+    },
+    {
+      "name": "public.RecruitmentType",
+      "values": [
+        "ACTIVITY"
+      ]
+    },
+    {
+      "name": "public.ReviewAction",
+      "values": [
+        "APPROVED",
+        "FORCE_UNPUBLISHED",
+        "REJECTED"
+      ]
+    },
+    {
+      "name": "public.Role",
+      "values": [
+        "LEADER",
+        "SUPPORTER"
+      ]
+    },
+    {
+      "name": "public.SupportTicketStatus",
+      "values": [
+        "CANCELLED",
+        "COMPLETED",
+        "CONFIRMED",
+        "PENDING"
+      ]
+    }
+  ],
+  "driver": {
+    "name": "postgres",
+    "meta": {
+      "current_schema": "public",
+      "search_paths": [
+        "public"
+      ],
+      "dict": {
+        "Functions": "Stored procedures and functions"
+      }
+    }
+  },
+  "viewpoints": [
+    {
+      "id": "account",
+      "name": "アカウントと応募",
+      "desc": "一般ユーザーのアカウントと、リーダー応募・運営による審査",
+      "tables": [
+        "public.accounts",
+        "public.leader_applications",
+        "public.admin_accounts"
+      ]
+    },
+    {
+      "id": "project",
+      "name": "プロジェクトと公開審査",
+      "desc": "プロジェクト本体と、運営による公開審査の履歴",
+      "tables": [
+        "public.projects",
+        "public.project_review_feedbacks",
+        "public.accounts",
+        "public.admin_accounts"
+      ]
+    },
+    {
+      "id": "recruitment",
+      "name": "サポート募集（未実装 #212）",
+      "desc": "スキーマだけ存在し、コードはまだ実装されていない",
+      "tables": [
+        "public.support_recruitments",
+        "public.recruitment_schedules",
+        "public.support_tickets",
+        "public.projects",
+        "public.accounts"
+      ]
+    },
+    {
+      "id": "admin",
+      "name": "運営の認証と監査",
+      "desc": "運営アカウントの Magic Link 認証・セッション・操作ログ",
+      "tables": [
+        "public.admin_accounts",
+        "public.admin_sessions",
+        "public.admin_audit_logs",
+        "public.admin_verification_tokens"
+      ]
+    },
+    {
+      "id": "outbox",
+      "name": "Outbox（非同期メール送信）",
+      "desc": "DB の更新と同じトランザクションで積む、送信待ちメッセージ",
+      "tables": [
+        "public.leader_application_outbox_messages",
+        "public.project_outbox_messages"
+      ]
+    }
+  ]
+}

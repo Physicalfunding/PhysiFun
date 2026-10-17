@@ -20,7 +20,7 @@ import {
 } from "../../src/admin-account/kyselyAdminSession";
 import { db } from "../../src/database/kysely/client";
 import { isUniqueConstraintError } from "../../src/database/isUniqueConstraintError";
-import { insertRow, insertRows, resetDatabase } from "../helpers/db";
+import { insertRow, insertRows, resetDatabase, spreadAuditLogCreatedAt } from "../helpers/db";
 
 /**
  * Kysely 版 admin-account 実装の integration test（#224）
@@ -202,6 +202,8 @@ describe("Kysely admin-account 実装 integration", () => {
         targetId: "p-3",
         metadata: null,
       });
+      // 続けて書くと createdAt が同時刻になり順序が決まらないため、書いた順に時刻をずらす
+      await spreadAuditLogCreatedAt(["la-1", "p-1", "p-2", "p-3"]);
     }
 
     it("createdAt desc で adminEmail を JOIN して返す", async () => {

@@ -289,7 +289,7 @@ flowchart TD
 | `targetType` / `targetId` | 操作対象 |
 | `metadata` | 詳細 JSON |
 
-複合インデックスを多数持ち、複数のクエリパターンに対応（`03_data-model.md` §8.1）:
+複合インデックスを多数持ち、複数のクエリパターンに対応（`03_data-model.md` §5.1）:
 - `(targetType, targetId)`: 特定エンティティの履歴
 - `(action, createdAt)`: アクション × 時系列
 - `(adminAccountId, createdAt)`: 運営別の履歴

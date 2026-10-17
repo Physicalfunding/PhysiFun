@@ -25,7 +25,7 @@ PhysiFun の設計レイヤー（実装の構造意図）をまとめたディ�
 | `00_terminology.md` | 低 | ✅ 公開済み | エンジニア視点の最小用語集（コード上の用語と意図の対訳） |
 | `01_system-architecture.md` | 低 | ✅ 公開済み | システム構成図（インフラ＋monorepo 全体俯瞰） |
 | `02_domain-model.md` | 中 | ✅ 公開済み | アグリゲート・状態遷移・不変条件 |
-| `03_data-model.md` | 中〜高 | ✅ 公開済み | ER 図（`atlas/schema.sql` の視覚化）+ 主要 FK・インデックス |
+| `03_data-model.md` | 中 | ✅ 公開済み | DB 設計の意図（領域・整合性ルール・インデックス・命名）。テーブル定義と ER 図は `docs/db/` に自動生成 |
 | `04_security-design.md` | 中 | ✅ 公開済み | 認証アーキ / 認可 / データ保護 / 脅威モデル |
 | `05_key-flows/` | 中 | ✅ 公開済み | 主要フローのシーケンス図（応募・公開審査・Magic Link・Outbox） |
 

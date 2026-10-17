@@ -120,6 +120,7 @@ bun run test         # ユニットテスト（Vitest）
 | `docs/specs/` | ドメイン・データ・セキュリティ・主要フローの設計仕様 |
 | `docs/guides/dev-rule.md` | 開発フロー・PR ルール・コーディング規約 |
 | `docs/guides/db-migration.md` | DB スキーマ・マイグレーション運用ガイド（Kysely + Atlas。スキーマの正本は `atlas/schema.sql`） |
+| `docs/db/` | テーブル定義書・領域別 ER 図（tbls の**自動生成**。手で編集しない。テーブル・列の説明は `schema.sql` の `COMMENT ON` に書く） |
 | `docs/guides/ai-harness.md` | AI 開発ハーネス設計（実行環境ごとの自律範囲・hooks・段階計画） |
 
 > 用語: リリース段階は「初回リリース」「一般公開」と呼ぶ。古い Issue やコメントにある「Phase 1 / 2 / 3」の読み替えは `docs/product.md` を参照。

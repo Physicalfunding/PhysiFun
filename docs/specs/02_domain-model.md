@@ -9,7 +9,7 @@ PhysiFun のドメイン層（`packages/domain/`）の構造を、アグリゲ�
 - **揮発度**: 中（機能追加時に同 PR で更新）
 - **関連**:
   - `00_terminology.md` — コード視点の用語集
-  - `03_data-model.md` — `atlas/schema.sql` → ER 図（DB レベルの詳細）
+  - `03_data-model.md` — DB 設計の意図（テーブル定義・ER 図は `docs/db/` に自動生成）
   - `04_security-design.md` — Account / AdminAccount の認証・認可
   - `05_key-flows/` — 状態遷移を起こすユースケースのシーケンス図
 

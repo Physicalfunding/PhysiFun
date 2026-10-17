@@ -9,6 +9,9 @@ bun.lock
 # kysely-codegen の生成物（整形すると db:kysely:verify が差分ありと判定するため対象外）
 packages/infrastructure/src/database/kysely/types.ts
 
+# tbls の生成物（bun run db:docs / CI で再生成する。整形すると再生成のたびに差分が出るため対象外）
+docs/db
+
 # Local-only directories (not tracked by git)
 .claude/worktrees
 tests/e2e/.auth

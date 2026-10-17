@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { KyselyAdminAuditLogQueryService } from "../../src/admin-account/KyselyAdminAuditLogQueryService";
 import { writeAdminAuditLog } from "../../src/admin-account/KyselyAdminAuditLogAdapter";
-import { db, insertRow, resetDatabase } from "../helpers/db";
+import { db, insertRow, resetDatabase, spreadAuditLogCreatedAt } from "../helpers/db";
 
 /**
  * KyselyAdminAuditLogQueryService の integration test (#149。#230 で Prisma 版から対象を移行)
@@ -26,8 +26,8 @@ describe("KyselyAdminAuditLogQueryService integration", () => {
 
   /**
    * 2 名の AdminAccount + 3 種類の action を 5 件登録するヘルパー。
-   * createdAt は DB の DEFAULT now() に任せるが、僅差だと順序不定になるため
-   * 明示的に `await` で直列化する (writeAdminAuditLog が順序保証してくれる)。
+   * createdAt は DB の DEFAULT（ミリ秒精度）で決まり、続けて書くと同時刻になって順序が決まらないため、
+   * 書き込み後に `spreadAuditLogCreatedAt` で書いた順に時刻をずらす。
    */
   async function seedFixture(): Promise<{ aliceId: string; bobId: string }> {
     const alice = await insertRow("admin_accounts", {
@@ -70,6 +70,7 @@ describe("KyselyAdminAuditLogQueryService integration", () => {
       targetId: "p-3",
       metadata: null,
     });
+    await spreadAuditLogCreatedAt(["la-1", "p-1", "p-2", "la-2", "p-3"]);
 
     return { aliceId: alice.id, bobId: bob.id };
   }

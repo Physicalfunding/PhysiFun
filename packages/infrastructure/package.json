@@ -14,6 +14,7 @@
     "db:migrate:lint": "bun run scripts/atlas.ts migrate lint --env local --latest 1",
     "db:schema:drift": "bun run scripts/atlas.ts schema diff --env local --from env://url --to env://src",
     "db:seed": "bun run scripts/seed.ts",
+    "db:docs": "bun run scripts/db-docs.ts",
     "db:kysely:codegen": "bun --env-file=../../apps/web/.env.local --env-file=../../apps/web/.env run kysely-codegen --dialect postgres --default-schema public --include-pattern 'public.*' --out-file src/database/kysely/types.ts",
     "db:kysely:verify": "bun --env-file=../../apps/web/.env.local --env-file=../../apps/web/.env run kysely-codegen --dialect postgres --default-schema public --include-pattern 'public.*' --out-file src/database/kysely/types.ts --verify"
   },
