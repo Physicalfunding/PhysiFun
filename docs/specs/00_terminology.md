@@ -63,7 +63,7 @@ PhysiFun の実装に関わるエンジニアが、コード・schema・ドキ�
 | `unpublishSelf()` | `PUBLISHED` → `DRAFT` | リーダー（自主非公開） |
 | `forceUnpublish()` | `PUBLISHED` → `DRAFT` | 運営（強制非公開） |
 
-詳細遷移図は `02_domain-model.md` §3.6。
+詳細遷移図は `02_domain-model.md` §3.2。
 
 ---
 
@@ -164,7 +164,7 @@ PhysiFun の実装に関わるエンジニアが、コード・schema・ドキ�
 | **Magic Link HMAC** | `ADMIN_MAGIC_LINK_HMAC_SECRET` 環境変数 | URL 改ざん防止 |
 | **AdminAccount の論理無効化** | `AdminAccount.disable()` | 物理削除せず `status: DISABLED` にする |
 
-詳細は `04_security-design.md`（作成予定）参照。
+詳細は `04_security-design.md` 参照。
 
 ---
 

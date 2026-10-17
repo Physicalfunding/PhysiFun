@@ -266,10 +266,10 @@ sequenceDiagram
 
 ### 9.2 件数上限（合計 10 / 公開 3）の判定タイミング
 
-- **合計 10 件**: `CreateProjectDraftUseCase` で新規作成時にチェック（`countByOwner`）
+- **合計 10 件**: `CreateProjectDraftUseCase`（新規作成時）と `ApproveLeaderApplicationUseCase`（応募承認で初期 Project を作るとき）で、件数の確認と保存を **同じトランザクション内**で行う
 - **公開 3 件**: `ApproveProjectPublicationUseCase` の **トランザクション内**でチェック（TOCTOU 対策）
 
-詳細は `02_domain-model.md` §3.9。
+詳細は `02_domain-model.md` §3.6。
 
 ### 9.3 公開時の必須フィールド
 

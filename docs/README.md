@@ -27,7 +27,7 @@ PhysiFun リポジトリのドキュメントの地図。**迷ったらここか
 |---|---|
 | [`specs/00_terminology.md`](./specs/00_terminology.md) | 用語集（コード上の用語と意図の対訳） |
 | [`specs/01_system-architecture.md`](./specs/01_system-architecture.md) | **最初に読む**。インフラ・技術スタック・ディレクトリ構成・レイヤー責務 |
-| [`specs/02_domain-model.md`](./specs/02_domain-model.md) | アグリゲート・状態遷移・不変条件 |
+| [`specs/02_domain-model.md`](./specs/02_domain-model.md) | 集約の境界・状態遷移・ルールの置き場所・設計判断・既知のズレ |
 | [`specs/03_data-model.md`](./specs/03_data-model.md) | DB 設計の意図（領域・整合性ルール・インデックス・命名） |
 | [`specs/04_security-design.md`](./specs/04_security-design.md) | 認証・認可・データ保護・脅威モデル |
 | [`specs/05_key-flows/`](./specs/05_key-flows/README.md) | 応募・公開審査・Magic Link・Outbox のシーケンス図 |
