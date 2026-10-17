@@ -33,7 +33,7 @@ CREATE INDEX "admin_accounts_status_idx" ON "admin_accounts" ("status");
 -- 説明（docs/db/・Supabase Studio・types.ts の JSDoc に反映される）
 COMMENT ON TABLE "admin_accounts" IS '運営アカウント（apps/admin にログインする運営メンバー）。一般ユーザーの accounts とは別物。物理削除はせず status で無効化する。ドメインの AdminAccount 集約';
 COMMENT ON COLUMN "admin_accounts"."id" IS '運営アカウント ID（UUID v4。アプリ側で生成）';
-COMMENT ON COLUMN "admin_accounts"."email" IS 'ログインに使うメールアドレス（小文字・前後の空白なしに正規化。最大 255 文字）';
+COMMENT ON COLUMN "admin_accounts"."email" IS 'ログインに使うメールアドレス（小文字・前後の空白なしに正規化。最大 254 文字）';
 COMMENT ON COLUMN "admin_accounts"."status" IS 'ACTIVE=ログインできる / DISABLED=無効化済み（退職時など。自分自身は無効化できない）';
 COMMENT ON COLUMN "admin_accounts"."lastLoginAt" IS '最後にログインした日時。【注意】記録する処理（AdminAccount.recordLogin）が呼ばれておらず、現状は常に NULL';
 COMMENT ON COLUMN "admin_accounts"."createdAt" IS '作成日時';
