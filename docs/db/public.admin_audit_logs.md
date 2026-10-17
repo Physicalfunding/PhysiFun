@@ -1,17 +1,21 @@
 # public.admin_audit_logs
 
+## 説明
+
+運営の操作ログ（誰が・いつ・何に対して・何をしたか）。運営画面の操作ログ一覧で見る
+
 ## カラム
 
-| 名前           | 型                             | 既定値            | NULL 可 | 参照先                                            | 説明 |
-| -------------- | ------------------------------ | ----------------- | ------- | ------------------------------------------------- | ---- |
-| id             | text                           |                   | false   |                                                   |      |
-| adminAccountId | text                           |                   | false   | [public.admin_accounts](public.admin_accounts.md) |      |
-| adminSessionId | text                           |                   | true    | [public.admin_sessions](public.admin_sessions.md) |      |
-| action         | text                           |                   | false   |                                                   |      |
-| targetType     | text                           |                   | false   |                                                   |      |
-| targetId       | text                           |                   | true    |                                                   |      |
-| metadata       | jsonb                          |                   | true    |                                                   |      |
-| createdAt      | timestamp(3) without time zone | CURRENT_TIMESTAMP | false   |                                                   |      |
+| 名前           | 型                             | 既定値            | NULL 可 | 参照先                                            | 説明                                                                                                                 |
+| -------------- | ------------------------------ | ----------------- | ------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| id             | text                           |                   | false   |                                                   | ログ ID（UUID v4。アプリ側で生成）                                                                                   |
+| adminAccountId | text                           |                   | false   | [public.admin_accounts](public.admin_accounts.md) | 操作した運営アカウント                                                                                               |
+| adminSessionId | text                           |                   | true    | [public.admin_sessions](public.admin_sessions.md) | 操作したときのセッション。セッションが削除されると NULL になる                                                       |
+| action         | text                           |                   | false   |                                                   | 操作の種類（対象.操作 の形。例: project.approve / leader_application.reject / admin_account.disable / outbox.retry） |
+| targetType     | text                           |                   | false   |                                                   | 操作した対象の種類（AdminAccount / LeaderApplication / Project / OutboxMessage）                                     |
+| targetId       | text                           |                   | true    |                                                   | 操作した対象の ID。特定のレコードが対象でない操作は NULL                                                             |
+| metadata       | jsonb                          |                   | true    |                                                   | 操作ごとの補足情報（却下理由など。JSON）                                                                             |
+| createdAt      | timestamp(3) without time zone | CURRENT_TIMESTAMP | false   |                                                   | 操作した日時                                                                                                         |
 
 ## 領域別のビュー
 
@@ -48,15 +52,15 @@ erDiagram
 "public.admin_audit_logs" }o--o| "public.admin_sessions" : ""
 
 "public.admin_audit_logs" {
-  text adminAccountId FK ""
-  text adminSessionId FK ""
+  text adminAccountId FK "操作した運営アカウント"
+  text adminSessionId FK "操作したときのセッション。セッションが削除されると NULL になる"
 }
 "public.admin_accounts" {
-  text id ""
+  text id "運営アカウント ID（UUID v4。アプリ側で生成）"
 }
 "public.admin_sessions" {
-  text id ""
-  text adminAccountId FK ""
+  text id "セッション ID"
+  text adminAccountId FK "ログインしている運営アカウント"
 }
 ```
 

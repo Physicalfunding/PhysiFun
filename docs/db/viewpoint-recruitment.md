@@ -6,13 +6,13 @@
 
 ## テーブル一覧
 
-| 名前                                                            | カラム  | 説明    | 型         |
-| --------------------------------------------------------------- | ------- | ------- | ---------- |
-| [public.accounts](public.accounts.md)                           | 16      |         | BASE TABLE |
-| [public.projects](public.projects.md)                           | 21      |         | BASE TABLE |
-| [public.support_recruitments](public.support_recruitments.md)   | 7       |         | BASE TABLE |
-| [public.recruitment_schedules](public.recruitment_schedules.md) | 9       |         | BASE TABLE |
-| [public.support_tickets](public.support_tickets.md)             | 9       |         | BASE TABLE |
+| 名前                                                            | カラム  | 説明                                                                                                                                                                  | 型         |
+| --------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| [public.accounts](public.accounts.md)                           | 16      | 一般ユーザーのアカウント（サポーター・リーダー）。リーダー応募の送信時に作られ、メールのリンクからパスワードを設定すると有効になる                                    | BASE TABLE |
+| [public.projects](public.projects.md)                           | 21      | リーダーが立ち上げるプロジェクト。公開審査（DRAFT → PENDING_REVIEW → PUBLISHED）を持つ。リーダー応募の承認時に、応募内容から下書きが作られる。ドメインの Project 集約 | BASE TABLE |
+| [public.support_recruitments](public.support_recruitments.md)   | 7       | 【未実装 #212】サポート募集。プロジェクトに紐づく募集の単位。スキーマだけ存在し、コードはまだ無い                                                                     | BASE TABLE |
+| [public.recruitment_schedules](public.recruitment_schedules.md) | 9       | 【未実装 #212】サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ                                                             | BASE TABLE |
+| [public.support_tickets](public.support_tickets.md)             | 9       | 【未実装 #212】サポートチケット。サポーターが日程の中の時間帯に参加を申し込んだ記録。チケットは提供する時間の単位を表す言葉で、購入や在庫は無い                       | BASE TABLE |
 
 ## ER 図
 
@@ -26,23 +26,23 @@ erDiagram
 "public.support_tickets" }o--|| "public.recruitment_schedules" : ""
 
 "public.accounts" {
-  text id ""
+  text id "アカウント ID（UUID v4。アプリ側で生成）"
 }
 "public.projects" {
-  text id ""
-  text ownerAccountId ""
+  text id "プロジェクト ID（UUID v4。アプリ側で生成）"
+  text ownerAccountId "所有者（リーダー）のアカウント"
 }
 "public.support_recruitments" {
-  text id ""
-  text projectId ""
+  text id "サポート募集 ID"
+  text projectId "募集を出したプロジェクト"
 }
 "public.recruitment_schedules" {
-  text id ""
-  text supportRecruitmentId ""
+  text id "日程 ID"
+  text supportRecruitmentId "日程が属するサポート募集"
 }
 "public.support_tickets" {
-  text recruitmentScheduleId ""
-  text supporterAccountId ""
+  text recruitmentScheduleId "申し込んだ日程"
+  text supporterAccountId "申し込んだサポーターのアカウント"
 }
 ```
 

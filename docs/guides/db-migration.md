@@ -97,8 +97,10 @@ curl -sSf https://atlasgo.sh | sh
 brew install ariga/tap/atlas
 ```
 
-- `atlas login` は不要。このプロジェクトはテーブル / enum / インデックス / 外部キーだけを使っており、
+- `atlas login` は基本的に不要。このプロジェクトはテーブル / enum / インデックス / 外部キー / コメントだけを使っており、
   ログインなしで使える機能で足りる（ビュー・関数・トリガー・拡張機能を使い始めたら見直す）
+- ただし `db:migrate:lint`（`atlas migrate lint`）は、Atlas v0.38 以降ログインが必要になった。
+  ログインしていないと失敗するので、そのときは生成されたマイグレーションの SQL を目で確認する
 - CI は `ariga/setup-atlas@v0` でインストールしている（`test-infrastructure` / `e2e` ジョブ）
 - `db:migrate:diff` / `db:migrate:lint` / `db:schema:drift` は差分計算用の**空の使い捨て DB（dev DB）**を使う。
   既定は Docker（`docker://postgres/16/dev`）。Docker を使わない場合は空のデータベースを用意して `ATLAS_DEV_URL` に指定する
@@ -122,7 +124,7 @@ cd packages/infrastructure
 # 1. atlas/schema.sql を編集（望ましい状態を SQL で書く。部分 index など Postgres の機能も使える）
 # 2. 差分から versioned migration を生成し、出力された SQL を目で確認する
 bun run db:migrate:diff add_some_column
-# 3. 静的検査
+# 3. 静的検査（atlas login が必要。§5.2）
 bun run db:migrate:lint
 # 4. ローカル DB に適用
 bun run db:migrate:deploy
@@ -136,7 +138,8 @@ bun run db:kysely:codegen
   `atlas migrate hash --dir file://atlas/migrations` で `atlas.sum` を更新する。何度流しても結果が同じになる SQL にする
   （例: `20261017073537_backfill_project_publication.sql`、#262）
 - `id` と `updatedAt` には DB 側の DEFAULT が無い（アプリ側で値を渡す）。新しいテーブルも同じ方針にそろえる
-- テーブル・列を足したら、`schema.sql` に `COMMENT ON` で説明を書く。新しいテーブルは `.tbls.yml` の `viewpoints` のどこかに入れる（§6）
+- テーブル・列を足したら、`schema.sql` に `COMMENT ON` で説明を書く。新しいテーブルは `.tbls.yml` の `viewpoints` のどこかに入れる。
+  どちらも忘れると、CI の DB Docs ワークフローが失敗する（§6）
 - `docs/db/` は PR で CI が再生成するので、手元で再生成しなくてよい（手元で確認したいときは `bun run db:docs`）
 
 ### 5.5 Prisma で作った既存 DB を Atlas 管理に切り替える（DB ごとに 1 回だけ）
@@ -196,20 +199,36 @@ bun run db:migrate:status
 3. Atlas の適用履歴スキーマ（`atlas_schema_revisions`）を削除する（ドキュメントに混ざらないように）
 4. `tbls doc` で `docs/db/` を作り直す。tbls が PATH に無ければ Docker イメージ（`ghcr.io/k1low/tbls`）で動かす
 5. `schema.json` から、生成した環境で変わる値（PostgreSQL のバージョン文字列など）を取り除く。ローカルと CI で同じ結果になる
-6. `tbls lint` を実行する（説明の付け忘れ・どの領域にも入っていないテーブルを検出）。今は警告だけで、`--strict` を付けると失敗扱いになる
+6. `tbls lint` を実行する（説明の付け忘れ・どの領域にも入っていないテーブルを検出）。違反があると、通常は警告を出すだけで、`--strict` を付けると失敗扱いになる（CI は `--strict`）
 
 手元で動かすには **Docker と Atlas CLI** が必要。
 
 ### 6.3 CI（自動再生成）
 
-`.github/workflows/db-docs.yml` は、`atlas/`・`.tbls.yml`・生成スクリプト・`docs/db/` を変えた PR で `bun run db:docs` を実行する。
+`.github/workflows/db-docs.yml` は、`atlas/`・`.tbls.yml`・生成スクリプト・`docs/db/` を変えた PR で `bun run db:docs --strict` を実行する。
 `docs/db/` に差分が出たら、`github-actions[bot]` が同じ PR に「docs: DB ドキュメント（docs/db）を再生成」をコミットする。
 
+- lint の違反（説明の付け忘れ、どの領域にも入っていないテーブル）があると失敗する。`schema.sql` に `COMMENT ON` を足すか、`.tbls.yml` の `viewpoints` にテーブルを足す
 - 自動コミットのあとに手元から push するときは、先に `git pull` する
 - 自動コミットは GITHUB_TOKEN で push するため、その push では CI / E2E は再実行されない（main にはブランチ保護を設定していないので、マージは妨げられない）
 - tbls のバージョンは、ワークフローの `setup-tbls`（`version`）と `scripts/db-docs.ts` の `TBLS_IMAGE` で揃える
 
-### 6.4 既知の制約
+### 6.4 説明（COMMENT ON）の書き方
+
+各テーブル定義の直後に、テーブルと全列の説明を書く（#271）。
+
+```sql
+COMMENT ON TABLE "projects" IS 'リーダーが立ち上げるプロジェクト。公開審査（DRAFT → PENDING_REVIEW → PUBLISHED）を持つ。…';
+COMMENT ON COLUMN "projects"."story" IS '本文（Markdown。最大 10000 文字。公開申請に必須）。ドメインでは body';
+```
+
+- 書く内容: 業務上の意味、値の形式・上限・単位、NULL の意味、enum の各値の意味、ドメインでの呼び名（列名と違う場合）
+- 使っていない列には `【未使用】`、コードが無いテーブルには `【未実装 #番号】` を先頭に付ける
+- 文字数の上限などはコード（Zod・値オブジェクト）が正本。上限を変えたら説明も直す
+- 説明文にシングルクォート（`'`）は使わない（使うなら `''` と 2 つ重ねる）
+- 説明を変えるだけでもスキーマの差分になる。`db:migrate:diff` でマイグレーションを作り、`types.ts` も再生成する
+
+### 6.5 既知の制約
 
 - テーブル名に `public.` が付く（tbls の仕様。消す設定は無い）
 - `.tbls.yml` の値に `#` を含めるときは引用符で囲む（YAML では `#` 以降がコメント扱いになる）

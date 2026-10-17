@@ -1,16 +1,20 @@
 # public.support_recruitments
 
+## 説明
+
+【未実装 #212】サポート募集。プロジェクトに紐づく募集の単位。スキーマだけ存在し、コードはまだ無い
+
 ## カラム
 
-| 名前        | 型                             | 既定値                        | NULL 可 | 参照元                                                          | 参照先                                | 説明 |
-| ----------- | ------------------------------ | ----------------------------- | ------- | --------------------------------------------------------------- | ------------------------------------- | ---- |
-| id          | text                           |                               | false   | [public.recruitment_schedules](public.recruitment_schedules.md) |                                       |      |
-| projectId   | text                           |                               | false   |                                                                 | [public.projects](public.projects.md) |      |
-| type        | "RecruitmentType"              | 'ACTIVITY'::"RecruitmentType" | false   |                                                                 |                                       |      |
-| title       | text                           |                               | false   |                                                                 |                                       |      |
-| description | text                           |                               | false   |                                                                 |                                       |      |
-| createdAt   | timestamp(3) without time zone | CURRENT_TIMESTAMP             | false   |                                                                 |                                       |      |
-| updatedAt   | timestamp(3) without time zone |                               | false   |                                                                 |                                       |      |
+| 名前        | 型                             | 既定値                        | NULL 可 | 参照元                                                          | 参照先                                | 説明                                       |
+| ----------- | ------------------------------ | ----------------------------- | ------- | --------------------------------------------------------------- | ------------------------------------- | ------------------------------------------ |
+| id          | text                           |                               | false   | [public.recruitment_schedules](public.recruitment_schedules.md) |                                       | サポート募集 ID                            |
+| projectId   | text                           |                               | false   |                                                                 | [public.projects](public.projects.md) | 募集を出したプロジェクト                   |
+| type        | "RecruitmentType"              | 'ACTIVITY'::"RecruitmentType" | false   |                                                                 |                                       | 募集の種類（初回リリースは ACTIVITY のみ） |
+| title       | text                           |                               | false   |                                                                 |                                       | 募集のタイトル                             |
+| description | text                           |                               | false   |                                                                 |                                       | 募集の説明                                 |
+| createdAt   | timestamp(3) without time zone | CURRENT_TIMESTAMP             | false   |                                                                 |                                       | 作成日時                                   |
+| updatedAt   | timestamp(3) without time zone |                               | false   |                                                                 |                                       | 更新日時（アプリ側で設定する）             |
 
 ## 領域別のビュー
 
@@ -41,18 +45,18 @@ erDiagram
 "public.support_recruitments" }o--|| "public.projects" : ""
 
 "public.support_recruitments" {
-  text id ""
-  text projectId FK ""
+  text id "サポート募集 ID"
+  text projectId FK "募集を出したプロジェクト"
 }
 "public.recruitment_schedules" {
-  text id ""
-  text supportRecruitmentId FK ""
+  text id "日程 ID"
+  text supportRecruitmentId FK "日程が属するサポート募集"
 }
 "public.projects" {
-  text id ""
-  text ownerAccountId FK ""
-  text forcedUnpublishedBy FK ""
-  text reviewedBy FK ""
+  text id "プロジェクト ID（UUID v4。アプリ側で生成）"
+  text ownerAccountId FK "所有者（リーダー）のアカウント"
+  text forcedUnpublishedBy FK "【未使用】強制非公開にした運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）"
+  text reviewedBy FK "【未使用】審査した運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）"
 }
 ```
 

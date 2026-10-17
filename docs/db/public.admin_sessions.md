@@ -1,15 +1,19 @@
 # public.admin_sessions
 
+## 説明
+
+運営アプリのログインセッション（NextAuth の Database セッション）。有効期間は 1 時間で、使っている間は延長される。期限切れのものは定期的に削除される
+
 ## カラム
 
-| 名前           | 型                             | 既定値            | NULL 可 | 参照元                                                | 参照先                                            | 説明 |
-| -------------- | ------------------------------ | ----------------- | ------- | ----------------------------------------------------- | ------------------------------------------------- | ---- |
-| id             | text                           |                   | false   | [public.admin_audit_logs](public.admin_audit_logs.md) |                                                   |      |
-| sessionToken   | text                           |                   | false   |                                                       |                                                   |      |
-| adminAccountId | text                           |                   | false   |                                                       | [public.admin_accounts](public.admin_accounts.md) |      |
-| expires        | timestamp(3) without time zone |                   | false   |                                                       |                                                   |      |
-| createdAt      | timestamp(3) without time zone | CURRENT_TIMESTAMP | false   |                                                       |                                                   |      |
-| updatedAt      | timestamp(3) without time zone |                   | false   |                                                       |                                                   |      |
+| 名前           | 型                             | 既定値            | NULL 可 | 参照元                                                | 参照先                                            | 説明                              |
+| -------------- | ------------------------------ | ----------------- | ------- | ----------------------------------------------------- | ------------------------------------------------- | --------------------------------- |
+| id             | text                           |                   | false   | [public.admin_audit_logs](public.admin_audit_logs.md) |                                                   | セッション ID                     |
+| sessionToken   | text                           |                   | false   |                                                       |                                                   | Cookie に入れるセッショントークン |
+| adminAccountId | text                           |                   | false   |                                                       | [public.admin_accounts](public.admin_accounts.md) | ログインしている運営アカウント    |
+| expires        | timestamp(3) without time zone |                   | false   |                                                       |                                                   | セッションの有効期限              |
+| createdAt      | timestamp(3) without time zone | CURRENT_TIMESTAMP | false   |                                                       |                                                   | 作成日時                          |
+| updatedAt      | timestamp(3) without time zone |                   | false   |                                                       |                                                   | 更新日時（アプリ側で設定する）    |
 
 ## 領域別のビュー
 
@@ -42,15 +46,15 @@ erDiagram
 "public.admin_sessions" }o--|| "public.admin_accounts" : ""
 
 "public.admin_sessions" {
-  text id ""
-  text adminAccountId FK ""
+  text id "セッション ID"
+  text adminAccountId FK "ログインしている運営アカウント"
 }
 "public.admin_audit_logs" {
-  text adminAccountId FK ""
-  text adminSessionId FK ""
+  text adminAccountId FK "操作した運営アカウント"
+  text adminSessionId FK "操作したときのセッション。セッションが削除されると NULL になる"
 }
 "public.admin_accounts" {
-  text id ""
+  text id "運営アカウント ID（UUID v4。アプリ側で生成）"
 }
 ```
 
