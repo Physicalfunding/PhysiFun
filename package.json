@@ -15,7 +15,7 @@
     "dev:all": "bun --filter '@physifun/{web,admin}' dev",
     "build": "bun --filter @physifun/web build",
     "start": "bun --filter @physifun/web start",
-    "lint": "bun --filter '@physifun/{web,admin}' lint",
+    "lint": "bun --filter '@physifun/{web,admin}' lint && eslint packages",
     "check": "bun run lint && bun run format:check && bun run typecheck && bun run test",
     "typecheck": "bun --filter '*' typecheck",
     "test": "vitest run",
@@ -34,8 +34,10 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "eslint": "^9",
     "prettier": "^3.4.2",
     "typescript": "^5",
+    "typescript-eslint": "^8.71.2",
     "vitest": "^4.1.4"
   },
   "ignoreScripts": [
