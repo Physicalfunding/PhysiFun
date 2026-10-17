@@ -16,7 +16,7 @@ PhysiFun の application 層に新しいユースケースを追加するとき�
 - **UseCase は `Result<Output, Error>` を返す。例外を投げて制御フローに使わない**（`@physifun/domain` の `ok` / `err`）。
 - **外部ライブラリ（Kysely / Supabase など DB クライアント・外部 SDK）に直接依存しない**。インフラはすべて **Port インターフェース**経由で注入する。
 - **エラーは判別共用体**（`type` フィールド付き）。HTTP ステータスへの変換は呼び出し側（Route Handler）の責務。
-- **ユニットテストは必須**。テストが無い／落ちる UseCase は「未完了」。これがループ／PR の終了条件（→ `verify-and-pr` skill）。
+- **ユニットテストは必須**。テストが無い／落ちる UseCase は「未完了」。これがループ／PR の終了条件（→ `bun run check`）。
 - ビジネスロジックを Route Handler や infrastructure に書かない。ロジックの置き場は UseCase とドメイン。
 
 ## ファイル配置・命名
@@ -36,7 +36,7 @@ PhysiFun の application 層に新しいユースケースを追加するとき�
 2. **UseCase を実装** — 下のテンプレに沿う。入力検証 → ドメイン VO 生成（`.from()` / `.create()` の `Result` を必ず分岐）→ ドメイン操作 → Port で永続化 → `ok(output)`。
 3. **テストを書く**（必須） — `__tests__/` にインメモリ Port 実装を置き、ハッピーパス + 全エラーケースを網羅。**早期 return のエラーでは Port が呼ばれていないこと**も検証する。
 4. **index.ts に re-export** — UseCase 本体・Input/Output/Error 型・Port 型を公開する（他パッケージは `@physifun/application` から import する）。
-5. **検証** — `verify-and-pr` skill の手順でローカル検証を通す。
+5. **検証** — `bun run check`（CI と同じ lint / format / typecheck / test）を通す。手順は `dev` skill の手順 7。
 
 ## UseCase テンプレート
 
@@ -156,4 +156,4 @@ bunx vitest run packages/application/src/<context>/__tests__/<Name>UseCase.test.
 - [ ] Port / UseCase / テストの 3 ファイルが揃っている
 - [ ] `index.ts` に re-export 済み
 - [ ] 上記テストが green、全エラー type を網羅
-- [ ] `verify-and-pr` skill のローカル検証（typecheck / lint / test）を通過
+- [ ] `bun run check`（lint / format / typecheck / test）を通過
