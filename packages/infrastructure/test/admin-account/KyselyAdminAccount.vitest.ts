@@ -8,7 +8,6 @@ import {
 } from "@physifun/domain";
 import { KyselyAdminAccountRepository } from "../../src/admin-account/KyselyAdminAccountRepository";
 import { KyselyAdminAuditLogQueryService } from "../../src/admin-account/KyselyAdminAuditLogQueryService";
-import { writeAdminAuditLog } from "../../src/admin-account/KyselyAdminAuditLogAdapter";
 import { KyselyAdminAuthGcAdapter } from "../../src/admin-account/KyselyAdminAuthGcAdapter";
 import {
   findAdminAccountIdByEmail,
@@ -20,6 +19,7 @@ import {
 } from "../../src/admin-account/kyselyAdminSession";
 import { db } from "../../src/database/kysely/client";
 import { isUniqueConstraintError } from "../../src/database/isUniqueConstraintError";
+import { writeAdminAuditLogsInOrder } from "../helpers/auditLog";
 import { insertRow, insertRows, resetDatabase } from "../helpers/db";
 
 /**
@@ -168,6 +168,9 @@ describe("Kysely admin-account 実装 integration", () => {
   });
 
   describe("AuditLog（writeAdminAuditLog + QueryService）", () => {
+    // createdAt は書き込み順に 1 秒刻みで明示する (DEFAULT now() はミリ秒精度で、続けて書くと
+    // 同時刻になって「新しい順」が不定になるため。writeAdminAuditLogsInOrder 参照)。
+    // 書き込み順は targetId の la-1, p-1, p-2, p-3。
     async function seedFixture(): Promise<void> {
       const alice = await insertRow("admin_accounts", {
         email: "alice@example.com",
@@ -175,33 +178,35 @@ describe("Kysely admin-account 実装 integration", () => {
       });
       const bob = await insertRow("admin_accounts", { email: "bob@example.com", status: "ACTIVE" });
 
-      await writeAdminAuditLog({
-        adminAccountId: alice.id,
-        action: "leader_application.approve",
-        targetType: "LeaderApplication",
-        targetId: "la-1",
-        metadata: { reviewerNote: "ok" },
-      });
-      await writeAdminAuditLog({
-        adminAccountId: bob.id,
-        action: "project.reject",
-        targetType: "Project",
-        targetId: "p-1",
-        metadata: { reason: "insufficient" },
-      });
-      await writeAdminAuditLog({
-        adminAccountId: alice.id,
-        action: "project.approve",
-        targetType: "Project",
-        targetId: "p-2",
-      });
-      await writeAdminAuditLog({
-        adminAccountId: alice.id,
-        action: "project.force_unpublish",
-        targetType: "Project",
-        targetId: "p-3",
-        metadata: null,
-      });
+      await writeAdminAuditLogsInOrder([
+        {
+          adminAccountId: alice.id,
+          action: "leader_application.approve",
+          targetType: "LeaderApplication",
+          targetId: "la-1",
+          metadata: { reviewerNote: "ok" },
+        },
+        {
+          adminAccountId: bob.id,
+          action: "project.reject",
+          targetType: "Project",
+          targetId: "p-1",
+          metadata: { reason: "insufficient" },
+        },
+        {
+          adminAccountId: alice.id,
+          action: "project.approve",
+          targetType: "Project",
+          targetId: "p-2",
+        },
+        {
+          adminAccountId: alice.id,
+          action: "project.force_unpublish",
+          targetType: "Project",
+          targetId: "p-3",
+          metadata: null,
+        },
+      ]);
     }
 
     it("createdAt desc で adminEmail を JOIN して返す", async () => {
@@ -209,12 +214,8 @@ describe("Kysely admin-account 実装 integration", () => {
       const result = await auditQs.findMany({}, { page: 1, perPage: 10 });
 
       expect(result.totalCount).toBe(4);
-      expect(result.items[0].action).toBe("project.force_unpublish");
-      for (let i = 1; i < result.items.length; i++) {
-        expect(result.items[i - 1].createdAt.getTime()).toBeGreaterThanOrEqual(
-          result.items[i].createdAt.getTime()
-        );
-      }
+      // seed の書き込み順 (la-1, p-1, p-2, p-3) の逆順 = 新しい順
+      expect(result.items.map((r) => r.targetId)).toEqual(["p-3", "p-2", "p-1", "la-1"]);
       expect(new Set(result.items.map((r) => r.adminEmail))).toEqual(
         new Set(["alice@example.com", "bob@example.com"])
       );
