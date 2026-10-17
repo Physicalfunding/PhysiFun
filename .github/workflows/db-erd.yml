@@ -1,0 +1,81 @@
+name: DB ERD (Pages)
+
+# docs/db/schema.json（tbls の生成物）から Liam ERD（動く ER 図）を作り、GitHub Pages に公開する（#273）。
+# 公開先: https://physicalfunding.github.io/PhysiFun/
+#
+# - main への push で作り直して公開する。PR ではビルドできるかだけを確認する（公開しない）
+# - リポジトリの Settings → Pages で Source を「GitHub Actions」にしておく必要がある
+# - 手順の詳細は docs/guides/db-migration.md §6 を参照
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/db/schema.json
+      - packages/infrastructure/scripts/db-erd.ts
+      - .github/workflows/db-erd.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - docs/db/schema.json
+      - packages/infrastructure/scripts/db-erd.ts
+      - .github/workflows/db-erd.yml
+  workflow_dispatch:
+
+# 公開中のデプロイは途中で止めない（GitHub の推奨）。PR のビルドだけは新しいもので置き換える
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Liam ERD
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Liam ERD の CLI を npx で動かす。バージョンは .nvmrc に合わせる
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # スクリプトは Node の標準モジュールしか使わないので、依存のインストールは不要
+      - name: Build Liam ERD
+        working-directory: packages/infrastructure
+        run: bun run db:erd
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/erd
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

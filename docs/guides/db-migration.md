@@ -186,6 +186,7 @@ bun run db:migrate:status
 | 生成スクリプト | `packages/infrastructure/scripts/db-docs.ts`（`bun run db:docs`） |
 | 生成物 | `docs/db/`（索引 `README.md`、テーブルごとのページ、領域別ビュー `viewpoint-*.md`、`schema.json`） |
 | CI | `.github/workflows/db-docs.yml` |
+| 動く ER 図（Liam ERD） | `scripts/db-erd.ts`（`bun run db:erd`）→ `.github/workflows/db-erd.yml` が GitHub Pages に公開（§6.5） |
 
 - 説明を `COMMENT ON` に書くのは、DB 自体に意味を持たせるため。同じ説明が `docs/db/`・Supabase Studio・`types.ts` の JSDoc（kysely-codegen が出力する）の 3 か所に出る
 - ER 図は Mermaid で出力する。GitHub 上でそのまま図として表示される。図には主キー・外部キーとその説明だけを載せ、全カラムは各テーブルのページで見る
@@ -228,7 +229,21 @@ COMMENT ON COLUMN "projects"."story" IS '本文（Markdown。最大 10000 文字
 - 説明文にシングルクォート（`'`）は使わない（使うなら `''` と 2 つ重ねる）
 - 説明を変えるだけでもスキーマの差分になる。`db:migrate:diff` でマイグレーションを作り、`types.ts` も再生成する
 
-### 6.5 既知の制約
+### 6.5 動く ER 図（Liam ERD / GitHub Pages）
+
+公開先: **https://physicalfunding.github.io/PhysiFun/**（#273）
+
+DB 全体をズーム・検索でき、テーブルを選ぶと関係するテーブルが光り、列の説明が右側に出る。
+`docs/db/schema.json` から [Liam ERD](https://liambx.com/) で静的サイトを作り、GitHub Pages に公開している。
+
+- `.github/workflows/db-erd.yml` が、`docs/db/schema.json` が main に入るたびに作り直して公開する。PR ではビルドできるかだけを確認する
+- 手元で見るときは `bun run db:erd` で `dist/erd/` に作り、`npx serve dist/erd` で開く（Node.js が必要）
+- Liam ERD の CLI のバージョンは `scripts/db-erd.ts` の `LIAM_CLI` で固定している
+- Liam ERD 0.7.24 は tbls の `viewpoints[].id` を受け付けないので、スクリプトが取り除いてから渡す
+- 公開には、リポジトリの Settings → Pages の Source を「GitHub Actions」にしておく必要がある
+- repo は public なので、公開ページは誰でも見られる（中身は `schema.sql` と同じ情報）
+
+### 6.6 既知の制約
 
 - テーブル名に `public.` が付く（tbls の仕様。消す設定は無い）
 - `.tbls.yml` の値に `#` を含めるときは引用符で囲む（YAML では `#` 以降がコメント扱いになる）

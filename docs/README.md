@@ -15,6 +15,7 @@ PhysiFun リポジトリのドキュメントの地図。**迷ったらここか
 | [`product.md`](./product.md) | プロダクト方針・リリース計画（初回リリース / 一般公開）・実装状況 | スコープを確認したいとき |
 | [`specs/`](./specs/README.md) | 設計仕様（システム構成・ドメイン・データ・セキュリティ・主要フロー） | 実装前に構造を把握したいとき |
 | [`db/`](./db/README.md) | テーブル定義書・領域別の ER 図（`atlas/schema.sql` から tbls で**自動生成**。手で編集しない） | テーブルや列の意味・関係を調べたいとき |
+| [動く ER 図（Liam ERD）](https://physicalfunding.github.io/PhysiFun/) | DB 全体をズーム・検索できる ER 図（`docs/db/schema.json` から自動生成し、GitHub Pages で公開） | 全体を見渡したい・列を検索したいとき |
 | [`guides/dev-rule.md`](./guides/dev-rule.md) | 開発フロー・PR ルール・コーディング規約・テスト方針 | 実装・PR を作るとき |
 | [`guides/admin-setup.md`](./guides/admin-setup.md) | 運営アカウント（AdminAccount）のセットアップ・運用手順 | 運営メンバーを追加・無効化するとき |
 | [`guides/db-migration.md`](./guides/db-migration.md) | DB スキーマ・マイグレーション運用ガイド（Kysely + Atlas）、DB ドキュメントの自動生成（tbls）、残作業 | DB スキーマやクエリを触るとき |
