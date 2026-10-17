@@ -31,7 +31,8 @@ bun run test         # ユニットテスト（Vitest）
 ## ブランチ・コミット規約
 
 ```
-ブランチ: claude/<説明>-<セッションID>
+ブランチ（ローカル）: type/{issue番号}-slug        ← /dev skill で自動提案
+ブランチ（クラウド）: claude/<説明>-<セッションID>  ← クラウドセッションが作るブランチをそのまま使う
 コミット: <種別>: <変更内容の要約>
 ```
 
@@ -71,8 +72,34 @@ bun run test         # ユニットテスト（Vitest）
 
 | Skill | 用途 |
 |---|---|
+| `issue` | GitHub Issue 作成（種別・ラベル自動判定、ブランチ名提案） |
+| `dev` | Issue → 実装 → 検証 → PR → レビュー → 修正の一貫開発フロー |
 | `add-usecase` | application 層に UseCase を追加する（`Result` 型・Port DI・併設ユニットテスト必須の規範手順とテンプレート） |
-| `verify-and-pr` | コミット / PR 前のローカル検証（CI と一致）と、承認 → push → PR → CodeRabbit フロー |
+
+## Agents（専門レビューエージェント）
+
+`.claude/agents/` 配下に、品質レビュー用の専門エージェントを用意している。
+`/dev` フロー内の品質レビューや、手動での `full-review` / `pre-pr-check` ワークフロー実行時に自動で呼ばれる。
+
+| Agent | 用途 |
+|---|---|
+| `arch-reviewer` | アーキテクチャ境界検査（レイヤー違反・命名規則・依存方向） |
+| `data-guardian` | DB スキーマ安全チェック（Prisma / Kysely 型整合・マイグレーションリスク） |
+| `security-reviewer` | セキュリティ脆弱性検査（SQLi / XSS / 認証バイパス） |
+| `spec-finder` | 設計資料横断検索（.docs/ / docs-repository/ を引用付きで回答） |
+
+## Workflows（品質チェック自動化）
+
+`.claude/workflows/` 配下に、複数エージェントを並列実行する品質チェックワークフローを用意している。
+
+| Workflow | 用途 |
+|---|---|
+| `full-review` | arch-reviewer + security-reviewer + data-guardian を並列実行し、統合報告 |
+| `pre-pr-check` | lint / format / typecheck / test / build + full-review を一括実行し、Go/No-go 判定 |
+
+## Hooks（自動検査）
+
+現在有効な hook はない。P3 で書き込み時の lint（`lint-on-edit`）を導入予定（`docs/guides/ai-harness.md`）。
 
 ---
 
@@ -93,5 +120,6 @@ bun run test         # ユニットテスト（Vitest）
 | `docs/specs/` | ドメイン・データ・セキュリティ・主要フローの設計仕様 |
 | `docs/guides/dev-rule.md` | 開発フロー・PR ルール・コーディング規約 |
 | `docs/guides/db-migration.md` | DB スキーマ・マイグレーション運用ガイド（Kysely + Atlas。スキーマの正本は `atlas/schema.sql`） |
+| `docs/guides/ai-harness.md` | AI 開発ハーネス設計（実行環境ごとの自律範囲・hooks・段階計画） |
 
 > 用語: リリース段階は「初回リリース」「一般公開」と呼ぶ。古い Issue やコメントにある「Phase 1 / 2 / 3」の読み替えは `docs/product.md` を参照。
