@@ -191,8 +191,8 @@ apps/*/public/*
 **変更内容**
 
 1. **`verify-on-stop.sh`（Stop hook）** — 終了しようとした時点で `bun run check` を実行し、失敗したら `decision: "block"` と失敗内容を返して作業を続けさせる。
-   - 実行するのは「未コミットのコード変更があり、前回成功時と差分のハッシュが違う」ときだけ。状態は `.claude/.state/`（gitignore する）に保存する。
-   - 連続した差し戻しは 3 回まで。超えたら終了を許可し、検証が通っていないことを明示して報告させる。`stop_hook_active` も参照する。
+   - 実行するのは「`origin/main` との差分（未 push のコミットと未コミットの変更）にコードの変更があり、前回の結果から差分が変わっている」ときだけ。クラウドで commit → push → PR を 1 ターンで進める場合も検証が走る。merge・rebase などの途中は何もしない。状態は `.claude/.state/`（gitignore する）に保存する。
+   - 連続した差し戻しは 3 回まで。超えたら終了を許可し、**その差分では以後差し戻さない**（変更されたらまた検証する）。3 回目には「直せなければ報告して終了」と伝える。`stop_hook_active` も参照する。
    - infrastructure の結合テスト（Docker）と build は対象外にし、CI に任せる。
 2. `pre-pr-check` workflow を削除する（lint・テストは Stop hook と CI で自動実行されるため）。
 3. `dev` skill を更新する：手順 7 を `bun run check` に置き換え、Stop hook でも自動で走ると明記する。実行環境で分岐させる（ローカル：push 前に承認／クラウド：緑は PR まで自動、黄・赤は `cloud-plan` skill へ）。
