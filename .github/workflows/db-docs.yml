@@ -73,10 +73,10 @@ jobs:
         with:
           version: v1.96.1
 
-      # lint（説明文の付け忘れなど）は現状は警告のみ。説明文を書き終えたら --strict を付けて必須チェックにする
+      # --strict: lint（テーブル・列の説明の付け忘れ、どの領域にも入っていないテーブル）があれば失敗させる（#271）
       - name: Generate docs/db
         working-directory: packages/infrastructure
-        run: bun run db:docs
+        run: bun run db:docs --strict
         env:
           DB_DOCS_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/physifun_docs
 

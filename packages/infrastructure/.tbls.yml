@@ -99,7 +99,7 @@ viewpoints:
       - project_outbox_messages
 
 lint:
-  # テーブル・列の説明（COMMENT ON）を必須にする。#261 では警告のみ、説明文を書く PR で CI を必須チェックにする
+  # テーブル・列の説明（COMMENT ON）を必須にする。CI は `db:docs --strict` で実行するので、付け忘れると失敗する（#271）
   requireTableComment:
     enabled: true
   requireColumnComment:
