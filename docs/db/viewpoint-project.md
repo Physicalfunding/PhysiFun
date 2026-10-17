@@ -6,12 +6,12 @@
 
 ## テーブル一覧
 
-| 名前                                                                  | カラム  | 説明    | 型         |
-| --------------------------------------------------------------------- | ------- | ------- | ---------- |
-| [public.admin_accounts](public.admin_accounts.md)                     | 6       |         | BASE TABLE |
-| [public.accounts](public.accounts.md)                                 | 16      |         | BASE TABLE |
-| [public.projects](public.projects.md)                                 | 21      |         | BASE TABLE |
-| [public.project_review_feedbacks](public.project_review_feedbacks.md) | 7       |         | BASE TABLE |
+| 名前                                                                  | カラム  | 説明                                                                                                                                                                  | 型         |
+| --------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| [public.admin_accounts](public.admin_accounts.md)                     | 6       | 運営アカウント（apps/admin にログインする運営メンバー）。一般ユーザーの accounts とは別物。物理削除はせず status で無効化する。ドメインの AdminAccount 集約           | BASE TABLE |
+| [public.accounts](public.accounts.md)                                 | 16      | 一般ユーザーのアカウント（サポーター・リーダー）。リーダー応募の送信時に作られ、メールのリンクからパスワードを設定すると有効になる                                    | BASE TABLE |
+| [public.projects](public.projects.md)                                 | 21      | リーダーが立ち上げるプロジェクト。公開審査（DRAFT → PENDING_REVIEW → PUBLISHED）を持つ。リーダー応募の承認時に、応募内容から下書きが作られる。ドメインの Project 集約 | BASE TABLE |
+| [public.project_review_feedbacks](public.project_review_feedbacks.md) | 7       | プロジェクトの公開審査の履歴（承認・差戻・強制非公開）。差戻が繰り返されても全件残る。ドメインの ProjectReviewFeedback（Project のサブエンティティ）                  | BASE TABLE |
 
 ## ER 図
 
@@ -25,20 +25,20 @@ erDiagram
 "public.project_review_feedbacks" }o--|| "public.projects" : ""
 
 "public.admin_accounts" {
-  text id ""
+  text id "運営アカウント ID（UUID v4。アプリ側で生成）"
 }
 "public.accounts" {
-  text id ""
+  text id "アカウント ID（UUID v4。アプリ側で生成）"
 }
 "public.projects" {
-  text id ""
-  text ownerAccountId ""
-  text forcedUnpublishedBy ""
-  text reviewedBy ""
+  text id "プロジェクト ID（UUID v4。アプリ側で生成）"
+  text ownerAccountId "所有者（リーダー）のアカウント"
+  text forcedUnpublishedBy "【未使用】強制非公開にした運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）"
+  text reviewedBy "【未使用】審査した運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）"
 }
 "public.project_review_feedbacks" {
-  text projectId ""
-  text reviewerId ""
+  text projectId "審査したプロジェクト"
+  text reviewerId "審査した運営アカウント"
 }
 ```
 

@@ -1,16 +1,20 @@
 # public.project_review_feedbacks
 
+## 説明
+
+プロジェクトの公開審査の履歴（承認・差戻・強制非公開）。差戻が繰り返されても全件残る。ドメインの ProjectReviewFeedback（Project のサブエンティティ）
+
 ## カラム
 
-| 名前       | 型                             | 既定値            | NULL 可 | 参照先                                            | 説明 |
-| ---------- | ------------------------------ | ----------------- | ------- | ------------------------------------------------- | ---- |
-| id         | text                           |                   | false   |                                                   |      |
-| projectId  | text                           |                   | false   | [public.projects](public.projects.md)             |      |
-| reviewerId | text                           |                   | false   | [public.admin_accounts](public.admin_accounts.md) |      |
-| action     | "ReviewAction"                 |                   | false   |                                                   |      |
-| note       | text                           |                   | true    |                                                   |      |
-| reviewedAt | timestamp(3) without time zone | CURRENT_TIMESTAMP | false   |                                                   |      |
-| createdAt  | timestamp(3) without time zone | CURRENT_TIMESTAMP | false   |                                                   |      |
+| 名前       | 型                             | 既定値            | NULL 可 | 参照先                                            | 説明                                                                       |
+| ---------- | ------------------------------ | ----------------- | ------- | ------------------------------------------------- | -------------------------------------------------------------------------- |
+| id         | text                           |                   | false   |                                                   | 審査履歴 ID（UUID v4。アプリ側で生成）                                     |
+| projectId  | text                           |                   | false   | [public.projects](public.projects.md)             | 審査したプロジェクト                                                       |
+| reviewerId | text                           |                   | false   | [public.admin_accounts](public.admin_accounts.md) | 審査した運営アカウント                                                     |
+| action     | "ReviewAction"                 |                   | false   |                                                   | 審査の結果（APPROVED=承認 / REJECTED=差戻 / FORCE_UNPUBLISHED=強制非公開） |
+| note       | text                           |                   | true    |                                                   | 運営からのコメント（差戻・強制非公開では必須。最大 2000 文字）             |
+| reviewedAt | timestamp(3) without time zone | CURRENT_TIMESTAMP | false   |                                                   | 審査した日時                                                               |
+| createdAt  | timestamp(3) without time zone | CURRENT_TIMESTAMP | false   |                                                   | 作成日時                                                                   |
 
 ## 領域別のビュー
 
@@ -44,17 +48,17 @@ erDiagram
 "public.project_review_feedbacks" }o--|| "public.admin_accounts" : ""
 
 "public.project_review_feedbacks" {
-  text projectId FK ""
-  text reviewerId FK ""
+  text projectId FK "審査したプロジェクト"
+  text reviewerId FK "審査した運営アカウント"
 }
 "public.projects" {
-  text id ""
-  text ownerAccountId FK ""
-  text forcedUnpublishedBy FK ""
-  text reviewedBy FK ""
+  text id "プロジェクト ID（UUID v4。アプリ側で生成）"
+  text ownerAccountId FK "所有者（リーダー）のアカウント"
+  text forcedUnpublishedBy FK "【未使用】強制非公開にした運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）"
+  text reviewedBy FK "【未使用】審査した運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）"
 }
 "public.admin_accounts" {
-  text id ""
+  text id "運営アカウント ID（UUID v4。アプリ側で生成）"
 }
 ```
 

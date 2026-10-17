@@ -54,183 +54,609 @@ export type Supportticketstatus = "CANCELLED" | "COMPLETED" | "CONFIRMED" | "PEN
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Accounts {
+  /**
+   * アクティベーション URL に含めるトークン（ランダムな 64 桁の 16 進数）。有効化すると NULL
+   */
   activationToken: string | null;
+  /**
+   * activationToken の有効期限（発行から 24 時間）。有効化すると NULL
+   */
   activationTokenExp: Timestamp | null;
+  /**
+   * 自己紹介。公開ページと運営画面で表示するが、設定する機能が無く現状は常に NULL
+   */
   bio: string | null;
+  /**
+   * 【未使用】提供時間の累計（時間）。サポーターとして他のプロジェクトに提供した時間
+   */
   contributedHours: Generated<number>;
+  /**
+   * 作成日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * 表示名（1〜50 文字）
+   */
   displayName: string;
+  /**
+   * ログイン ID のメールアドレス（小文字・前後の空白なしに正規化）
+   */
   email: string;
+  /**
+   * 【未使用】アイコン画像の URL。設定する機能が無い
+   */
   iconUrl: string | null;
+  /**
+   * アカウント ID（UUID v4。アプリ側で生成）
+   */
   id: string;
+  /**
+   * パスワードの bcrypt ハッシュ。アクティベーション前は NULL
+   */
   passwordHash: string | null;
+  /**
+   * 電話番号（任意。最大 20 文字、ハイフン可）。リーダー応募のときに入力された値
+   */
   phoneNumber: string | null;
+  /**
+   * 【未使用】参加時間の累計（時間）。リーダーとして自分のプロジェクトでサポーターから受けた時間
+   */
   receivedHours: Generated<number>;
+  /**
+   * ロール（SUPPORTER / LEADER。複数可）。作成時は SUPPORTER で、リーダー応募の承認で LEADER が加わる
+   */
   roles: ArrayType<Role> | null;
+  /**
+   * 【未使用】SNS リンク。現状は応募（leader_applications）とプロジェクト（projects）の snsLinks を使う
+   */
   snsLinks: Json | null;
+  /**
+   * PENDING_EMAIL_CONFIRMATION=メール確認待ち（作成から 72 時間で自動削除）/ ACTIVE=有効
+   */
   status: Accountstatus;
+  /**
+   * 更新日時（アプリ側で設定する）
+   */
   updatedAt: Timestamp;
 }
 
 export interface AdminAccounts {
+  /**
+   * 作成日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * ログインに使うメールアドレス（小文字・前後の空白なしに正規化。最大 255 文字）
+   */
   email: string;
+  /**
+   * 運営アカウント ID（UUID v4。アプリ側で生成）
+   */
   id: string;
+  /**
+   * 最後にログインした日時。【注意】記録する処理（AdminAccount.recordLogin）が呼ばれておらず、現状は常に NULL
+   */
   lastLoginAt: Timestamp | null;
+  /**
+   * ACTIVE=ログインできる / DISABLED=無効化済み（退職時など。自分自身は無効化できない）
+   */
   status: Generated<Adminaccountstatus>;
+  /**
+   * 更新日時（アプリ側で設定する）
+   */
   updatedAt: Timestamp;
 }
 
 export interface AdminAuditLogs {
+  /**
+   * 操作の種類（対象.操作 の形。例: project.approve / leader_application.reject / admin_account.disable / outbox.retry）
+   */
   action: string;
+  /**
+   * 操作した運営アカウント
+   */
   adminAccountId: string;
+  /**
+   * 操作したときのセッション。セッションが削除されると NULL になる
+   */
   adminSessionId: string | null;
+  /**
+   * 操作した日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * ログ ID（UUID v4。アプリ側で生成）
+   */
   id: string;
+  /**
+   * 操作ごとの補足情報（却下理由など。JSON）
+   */
   metadata: Json | null;
+  /**
+   * 操作した対象の ID。特定のレコードが対象でない操作は NULL
+   */
   targetId: string | null;
+  /**
+   * 操作した対象の種類（AdminAccount / LeaderApplication / Project / OutboxMessage）
+   */
   targetType: string;
 }
 
 export interface AdminSessions {
+  /**
+   * ログインしている運営アカウント
+   */
   adminAccountId: string;
+  /**
+   * 作成日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * セッションの有効期限
+   */
   expires: Timestamp;
+  /**
+   * セッション ID
+   */
   id: string;
+  /**
+   * Cookie に入れるセッショントークン
+   */
   sessionToken: string;
+  /**
+   * 更新日時（アプリ側で設定する）
+   */
   updatedAt: Timestamp;
 }
 
 export interface AdminVerificationTokens {
+  /**
+   * 有効期限（発行から 10 分）
+   */
   expires: Timestamp;
+  /**
+   * Magic Link の送信先メールアドレス（小文字・前後の空白なしに正規化）
+   */
   identifier: string;
+  /**
+   * Magic Link に含まれるトークンのハッシュ値（NextAuth がハッシュ化してから保存する）
+   */
   token: string;
 }
 
 export interface LeaderApplicationOutboxMessages {
+  /**
+   * 送信を試みた回数。失敗のたびに増え、運営画面の手動リトライでも戻さない
+   */
   attempts: Generated<number>;
+  /**
+   * ワーカーが処理のために確保した日時。5 分を過ぎた確保は無効とみなし、別のワーカーが取り直せる
+   */
   claimedAt: Timestamp | null;
+  /**
+   * 確保したワーカーの実行ごとの ID（ランダムな UUID）。処理が終わると NULL
+   */
   claimedBy: string | null;
+  /**
+   * 積んだ日時。古いものから順に処理する
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * 最大試行回数（既定 10 回）を超えて再送をやめた日時。運営画面の手動リトライで NULL に戻る
+   */
   deadLetteredAt: Timestamp | null;
+  /**
+   * メッセージ ID（UUID v4。アプリ側で生成）
+   */
   id: string;
+  /**
+   * 最後に失敗したときのエラー内容。手動リトライで NULL に戻る
+   */
   lastError: string | null;
+  /**
+   * 次に再送してよい日時（失敗後に指数バックオフで設定）。NULL ならすぐ処理対象
+   */
   nextRetryAt: Timestamp | null;
+  /**
+   * 送信に必要なデータ（JSON。形はメッセージの種類ごとに違う）
+   */
   payload: Json;
+  /**
+   * 送信が完了した日時。運営画面で完了扱いにした場合も入る。未送信は NULL
+   */
   sentAt: Timestamp | null;
+  /**
+   * メッセージの種類（ACTIVATION_EMAIL=アクティベーションメール / approved.notify_applicant=承認の通知 / rejected.notify_applicant=却下の通知）
+   */
   type: string;
 }
 
 export interface LeaderApplications {
+  /**
+   * 応募者のアカウント
+   */
   accountId: string;
+  /**
+   * 活動内容（募集の種類に TIME を含むときは必須。最大 200 文字）
+   */
   activityContent: string | null;
+  /**
+   * 作成日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * 開催場所（TIME を含むときは必須。最大 200 文字）
+   */
   eventLocation: string | null;
+  /**
+   * 実施期間（TIME を含むときは必須。最大 200 文字の自由記述）
+   */
   eventPeriod: string | null;
+  /**
+   * サポーターが体験できること（必須。最大 150 文字）
+   */
   experienceOffered: string;
+  /**
+   * 応募 ID（UUID v4。アプリ側で生成）
+   */
   id: string;
+  /**
+   * 活動場所の市区町村（任意。最大 50 文字）
+   */
   municipality: string | null;
+  /**
+   * 応募時の電話番号（任意。最大 20 文字）。accounts.phoneNumber にも同じ値を保存する
+   */
   phoneNumber: string | null;
+  /**
+   * 活動場所の都道府県コード（JIS X 0401: 01〜47）
+   */
   prefectureCode: string;
+  /**
+   * 応募時点のプロジェクトの進み具合（VISION / PLANNING / READY / EXECUTION / ONGOING）
+   */
   progress: Generated<Projectphase>;
+  /**
+   * カテゴリ（MANUFACTURING / FOOD / NATURE / EVENT。CATEGORY_MASTER の値）
+   */
   projectCategory: string;
+  /**
+   * プロジェクトのストーリー（Markdown。最大 300 文字）
+   */
   projectStory: string;
+  /**
+   * プロジェクトの概要（最大 150 文字）
+   */
   projectSummary: string;
+  /**
+   * 立ち上げたいプロジェクトのタイトル（最大 60 文字）
+   */
   projectTitle: string;
+  /**
+   * 募集人数（TIME を含むときは必須。1〜1000）
+   */
   recruitCount: number | null;
+  /**
+   * 出したい募集の種類（TIME=時間（やる気）での支援 / SKILL_ITEM=スキル・モノでの支援。1 つ以上）
+   */
   recruitmentTypes: Generated<ArrayType<Leaderapplicationrecruitmenttype>>;
+  /**
+   * 運営が承認・却下した日時。審査前は NULL
+   */
   reviewedAt: Timestamp | null;
+  /**
+   * 【未使用】審査した運営アカウント。どこからも書き込まれず常に NULL（審査の記録は admin_audit_logs に残る）
+   */
   reviewedBy: string | null;
+  /**
+   * 却下理由（却下するときは必須。最大 2000 文字）
+   */
   reviewerNote: string | null;
+  /**
+   * スキル・モノの募集期限（SKILL_ITEM を含むときは必須。最大 200 文字の自由記述）
+   */
   skillItemDeadline: string | null;
+  /**
+   * 募集したいスキル・モノの内容（SKILL_ITEM を含むときは必須。最大 200 文字）
+   */
   skillItemNeeds: string | null;
+  /**
+   * スキル・モノで支援した人へのリターン（SKILL_ITEM を含むときは必須。最大 200 文字）
+   */
   skillItemReturn: string | null;
+  /**
+   * SNS リンク（x / instagram / facebook / website の URL。それぞれ任意。JSON）
+   */
   snsLinks: Json | null;
+  /**
+   * PENDING=審査待ち / APPROVED=承認 / REJECTED=却下。承認・却下のあとは変わらない
+   */
   status: Leaderapplicationstatus;
+  /**
+   * 応募した日時
+   */
   submittedAt: Generated<Timestamp>;
+  /**
+   * 時間で支援した人へのリターン（TIME を含むときは必須。最大 200 文字）
+   */
   timeReturn: string | null;
+  /**
+   * 更新日時（アプリ側で設定する）
+   */
   updatedAt: Timestamp;
 }
 
 export interface ProjectOutboxMessages {
+  /**
+   * 送信を試みた回数。失敗のたびに増え、運営画面の手動リトライでも戻さない
+   */
   attempts: Generated<number>;
+  /**
+   * ワーカーが処理のために確保した日時。5 分を過ぎた確保は無効とみなし、別のワーカーが取り直せる
+   */
   claimedAt: Timestamp | null;
+  /**
+   * 確保したワーカーの実行ごとの ID（ランダムな UUID）。処理が終わると NULL
+   */
   claimedBy: string | null;
+  /**
+   * 積んだ日時。古いものから順に処理する
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * 最大試行回数（既定 10 回）を超えて再送をやめた日時。運営画面の手動リトライで NULL に戻る
+   */
   deadLetteredAt: Timestamp | null;
+  /**
+   * メッセージ ID（UUID v4。アプリ側で生成）
+   */
   id: string;
+  /**
+   * 最後に失敗したときのエラー内容。手動リトライで NULL に戻る
+   */
   lastError: string | null;
+  /**
+   * 次に再送してよい日時（失敗後に指数バックオフで設定）。NULL ならすぐ処理対象
+   */
   nextRetryAt: Timestamp | null;
+  /**
+   * 送信に必要なデータ（JSON。形はメッセージの種類ごとに違う）
+   */
   payload: Json;
+  /**
+   * 送信が完了した日時。運営画面で完了扱いにした場合も入る。未送信は NULL
+   */
   sentAt: Timestamp | null;
+  /**
+   * メッセージの種類（admin_publish_request.notify=運営への公開申請の通知 / project_publish_approved.notify=公開承認の通知 / project_publish_rejected.notify=差戻の通知 / project_force_unpublished.notify=強制非公開の通知）
+   */
   type: string;
 }
 
 export interface ProjectReviewFeedbacks {
+  /**
+   * 審査の結果（APPROVED=承認 / REJECTED=差戻 / FORCE_UNPUBLISHED=強制非公開）
+   */
   action: Reviewaction;
+  /**
+   * 作成日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * 審査履歴 ID（UUID v4。アプリ側で生成）
+   */
   id: string;
+  /**
+   * 運営からのコメント（差戻・強制非公開では必須。最大 2000 文字）
+   */
   note: string | null;
+  /**
+   * 審査したプロジェクト
+   */
   projectId: string;
+  /**
+   * 審査した日時
+   */
   reviewedAt: Generated<Timestamp>;
+  /**
+   * 審査した運営アカウント
+   */
   reviewerId: string;
 }
 
 export interface Projects {
+  /**
+   * 活動計画（任意。最大 1000 文字。公開申請にも必須ではない）
+   */
   activityPlan: string | null;
+  /**
+   * カテゴリ（MANUFACTURING / FOOD / NATURE / EVENT。公開申請に必須）
+   */
   category: string | null;
+  /**
+   * カバー画像の URL（公開申請に必須）
+   */
   coverImageUrl: string | null;
+  /**
+   * 作成日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * 【未使用】強制非公開にした運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）
+   */
   forcedUnpublishedBy: string | null;
+  /**
+   * プロジェクト ID（UUID v4。アプリ側で生成）
+   */
   id: string;
+  /**
+   * リーダー紹介（最大 2000 文字。公開申請に必須）。ドメインでは leaderIntroduction
+   */
   leaderIntro: string | null;
+  /**
+   * 活動場所の市区町村（任意）。ドメインでは location の一部
+   */
   municipality: string | null;
+  /**
+   * 所有者（リーダー）のアカウント
+   */
   ownerAccountId: string;
+  /**
+   * 進み具合のラベル（VISION / PLANNING / READY / EXECUTION / ONGOING）。どの値にも自由に切り替えられる
+   */
   phase: Generated<Projectphase>;
+  /**
+   * 活動場所の都道府県コード（JIS X 0401: 01〜47。公開申請に必須）。ドメインでは location の一部
+   */
   prefectureCode: string | null;
+  /**
+   * 運営が公開を承認した日時。下書き（DRAFT）に戻ると NULL
+   */
   publishedAt: Timestamp | null;
+  /**
+   * 公開申請した日時。下書き（DRAFT）に戻ると NULL
+   */
   publishRequestedAt: Timestamp | null;
+  /**
+   * 【未使用】審査した運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）
+   */
   reviewedBy: string | null;
+  /**
+   * 公開ページ URL（/projects/{slug}）に使う文字列。初回の公開承認で id と同じ値を発行し、非公開にしても残す。初回承認までは NULL
+   */
   slug: string | null;
+  /**
+   * SNS リンク（x / instagram / facebook / website の URL。それぞれ任意。JSON）
+   */
   snsLinks: Json | null;
+  /**
+   * 公開状態（DRAFT=下書き / PENDING_REVIEW=審査待ち / PUBLISHED=公開中）。ドメインでは publishStatus
+   */
   status: Generated<Publishstatus>;
+  /**
+   * 本文（Markdown。最大 10000 文字。公開申請に必須）。ドメインでは body
+   */
   story: string | null;
+  /**
+   * 概要（最大 300 文字。公開申請に必須）
+   */
   summary: string | null;
+  /**
+   * タイトル（1〜100 文字）
+   */
   title: string;
+  /**
+   * 更新日時（アプリ側で設定する）
+   */
   updatedAt: Timestamp;
 }
 
 export interface RecruitmentSchedules {
+  /**
+   * 承認モード（AUTO=申し込んだ時点で確定 / MANUAL=リーダーの承認で確定）
+   */
   approvalMode: Generated<Approvalmode>;
+  /**
+   * 1 時間ごとの定員（人数）。申し込みは先着順で、またがる全時間帯が定員内に収まる必要がある想定
+   */
   capacityPerHour: number;
+  /**
+   * 作成日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * 開催日（JST のカレンダー日）
+   */
   date: Timestamp;
+  /**
+   * 受付時間帯の終了時刻（HH:MM 形式の JST）。過ぎると新規の申し込みを締め切る想定
+   */
   endTime: string;
+  /**
+   * 日程 ID
+   */
   id: string;
+  /**
+   * 受付時間帯の開始時刻（HH:MM 形式の JST）
+   */
   startTime: string;
+  /**
+   * 日程が属するサポート募集
+   */
   supportRecruitmentId: string;
+  /**
+   * 更新日時（アプリ側で設定する）
+   */
   updatedAt: Timestamp;
 }
 
 export interface SupportRecruitments {
+  /**
+   * 作成日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * 募集の説明
+   */
   description: string;
+  /**
+   * サポート募集 ID
+   */
   id: string;
+  /**
+   * 募集を出したプロジェクト
+   */
   projectId: string;
+  /**
+   * 募集のタイトル
+   */
   title: string;
+  /**
+   * 募集の種類（初回リリースは ACTIVITY のみ）
+   */
   type: Generated<Recruitmenttype>;
+  /**
+   * 更新日時（アプリ側で設定する）
+   */
   updatedAt: Timestamp;
 }
 
 export interface SupportTickets {
+  /**
+   * 一緒に参加する同伴者の人数（申し込んだ本人は含まない想定。同伴者はアカウント不要）
+   */
   companionCount: Generated<number>;
+  /**
+   * 作成日時
+   */
   createdAt: Generated<Timestamp>;
+  /**
+   * 提供する時間の長さ（時間。チケットの区分 1 / 2 / 4）
+   */
   duration: number;
+  /**
+   * サポートチケット ID
+   */
   id: string;
+  /**
+   * 申し込んだ日程
+   */
   recruitmentScheduleId: string;
+  /**
+   * 参加を始める時刻（HH:MM 形式の JST。1 時間単位）
+   */
   slotStart: string;
+  /**
+   * 申し込みの状態（PENDING=承認待ち / CONFIRMED=確定 / CANCELLED=取り消し / COMPLETED=完了。COMPLETED にする条件は未決）
+   */
   status: Generated<Supportticketstatus>;
+  /**
+   * 申し込んだサポーターのアカウント
+   */
   supporterAccountId: string;
+  /**
+   * 更新日時（アプリ側で設定する）
+   */
   updatedAt: Timestamp;
 }
 

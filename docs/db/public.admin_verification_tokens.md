@@ -1,12 +1,16 @@
 # public.admin_verification_tokens
 
+## 説明
+
+運営ログイン用 Magic Link のトークン（NextAuth の VerificationToken）。使うと削除され、期限切れのものも定期的に削除される。FK は持たない
+
 ## カラム
 
-| 名前       | 型                             | 既定値 | NULL 可 | 説明 |
-| ---------- | ------------------------------ | ------ | ------- | ---- |
-| identifier | text                           |        | false   |      |
-| token      | text                           |        | false   |      |
-| expires    | timestamp(3) without time zone |        | false   |      |
+| 名前       | 型                             | 既定値 | NULL 可 | 説明                                                                               |
+| ---------- | ------------------------------ | ------ | ------- | ---------------------------------------------------------------------------------- |
+| identifier | text                           |        | false   | Magic Link の送信先メールアドレス（小文字・前後の空白なしに正規化）                |
+| token      | text                           |        | false   | Magic Link に含まれるトークンのハッシュ値（NextAuth がハッシュ化してから保存する） |
+| expires    | timestamp(3) without time zone |        | false   | 有効期限（発行から 10 分）                                                         |
 
 ## 領域別のビュー
 

@@ -6,11 +6,11 @@
 
 ## テーブル一覧
 
-| 名前                                                        | カラム  | 説明    | 型         |
-| ----------------------------------------------------------- | ------- | ------- | ---------- |
-| [public.admin_accounts](public.admin_accounts.md)           | 6       |         | BASE TABLE |
-| [public.accounts](public.accounts.md)                       | 16      |         | BASE TABLE |
-| [public.leader_applications](public.leader_applications.md) | 28      |         | BASE TABLE |
+| 名前                                                        | カラム  | 説明                                                                                                                                                                                                                                                                            | 型         |
+| ----------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| [public.admin_accounts](public.admin_accounts.md)           | 6       | 運営アカウント（apps/admin にログインする運営メンバー）。一般ユーザーの accounts とは別物。物理削除はせず status で無効化する。ドメインの AdminAccount 集約                                                                                                                     | BASE TABLE |
+| [public.accounts](public.accounts.md)                       | 16      | 一般ユーザーのアカウント（サポーター・リーダー）。リーダー応募の送信時に作られ、メールのリンクからパスワードを設定すると有効になる                                                                                                                                              | BASE TABLE |
+| [public.leader_applications](public.leader_applications.md) | 28      | リーダー応募（リーダーになるための申請）と運営の審査結果。応募内容は送信時点のスナップショットで、承認時に作られる projects とは参照でつながらない。ドメインの LeaderApplication 集約（project 系の列は ProjectDraft、連絡先・募集情報の列は LeaderApplicationSnapshot に載る） | BASE TABLE |
 
 ## ER 図
 
@@ -21,14 +21,14 @@ erDiagram
 "public.leader_applications" }o--|| "public.accounts" : ""
 
 "public.admin_accounts" {
-  text id ""
+  text id "運営アカウント ID（UUID v4。アプリ側で生成）"
 }
 "public.accounts" {
-  text id ""
+  text id "アカウント ID（UUID v4。アプリ側で生成）"
 }
 "public.leader_applications" {
-  text accountId ""
-  text reviewedBy ""
+  text accountId "応募者のアカウント"
+  text reviewedBy "【未使用】審査した運営アカウント。どこからも書き込まれず常に NULL（審査の記録は admin_audit_logs に残る）"
 }
 ```
 

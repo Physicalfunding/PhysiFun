@@ -5,38 +5,45 @@
     {
       "name": "public.admin_accounts",
       "type": "BASE TABLE",
+      "comment": "運営アカウント（apps/admin にログインする運営メンバー）。一般ユーザーの accounts とは別物。物理削除はせず status で無効化する。ドメインの AdminAccount 集約",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "運営アカウント ID（UUID v4。アプリ側で生成）"
         },
         {
           "name": "email",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "ログインに使うメールアドレス（小文字・前後の空白なしに正規化。最大 255 文字）"
         },
         {
           "name": "status",
           "type": "\"AdminAccountStatus\"",
           "nullable": false,
-          "default": "'ACTIVE'::\"AdminAccountStatus\""
+          "default": "'ACTIVE'::\"AdminAccountStatus\"",
+          "comment": "ACTIVE=ログインできる / DISABLED=無効化済み（退職時など。自分自身は無効化できない）"
         },
         {
           "name": "lastLoginAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "最後にログインした日時。【注意】記録する処理（AdminAccount.recordLogin）が呼ばれておらず、現状は常に NULL"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "作成日時"
         },
         {
           "name": "updatedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "更新日時（アプリ側で設定する）"
         }
       ],
       "indexes": [
@@ -81,63 +88,75 @@
     {
       "name": "public.project_outbox_messages",
       "type": "BASE TABLE",
+      "comment": "プロジェクトの公開審査に関する送信待ちメール（Outbox）。状態の変更と同じトランザクションで積み、ワーカーが非同期で送る",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "メッセージ ID（UUID v4。アプリ側で生成）"
         },
         {
           "name": "type",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "メッセージの種類（admin_publish_request.notify=運営への公開申請の通知 / project_publish_approved.notify=公開承認の通知 / project_publish_rejected.notify=差戻の通知 / project_force_unpublished.notify=強制非公開の通知）"
         },
         {
           "name": "payload",
           "type": "jsonb",
-          "nullable": false
+          "nullable": false,
+          "comment": "送信に必要なデータ（JSON。形はメッセージの種類ごとに違う）"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "積んだ日時。古いものから順に処理する"
         },
         {
           "name": "sentAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "送信が完了した日時。運営画面で完了扱いにした場合も入る。未送信は NULL"
         },
         {
           "name": "attempts",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "送信を試みた回数。失敗のたびに増え、運営画面の手動リトライでも戻さない"
         },
         {
           "name": "lastError",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "最後に失敗したときのエラー内容。手動リトライで NULL に戻る"
         },
         {
           "name": "nextRetryAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "次に再送してよい日時（失敗後に指数バックオフで設定）。NULL ならすぐ処理対象"
         },
         {
           "name": "deadLetteredAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "最大試行回数（既定 10 回）を超えて再送をやめた日時。運営画面の手動リトライで NULL に戻る"
         },
         {
           "name": "claimedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "ワーカーが処理のために確保した日時。5 分を過ぎた確保は無効とみなし、別のワーカーが取り直せる"
         },
         {
           "name": "claimedBy",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "確保したワーカーの実行ごとの ID（ランダムな UUID）。処理が終わると NULL"
         }
       ],
       "indexes": [
@@ -184,63 +203,75 @@
     {
       "name": "public.leader_application_outbox_messages",
       "type": "BASE TABLE",
+      "comment": "リーダー応募に関する送信待ちメール（Outbox）。応募・審査と同じトランザクションで積み、ワーカーが非同期で送る",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "メッセージ ID（UUID v4。アプリ側で生成）"
         },
         {
           "name": "type",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "メッセージの種類（ACTIVATION_EMAIL=アクティベーションメール / approved.notify_applicant=承認の通知 / rejected.notify_applicant=却下の通知）"
         },
         {
           "name": "payload",
           "type": "jsonb",
-          "nullable": false
+          "nullable": false,
+          "comment": "送信に必要なデータ（JSON。形はメッセージの種類ごとに違う）"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "積んだ日時。古いものから順に処理する"
         },
         {
           "name": "sentAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "送信が完了した日時。運営画面で完了扱いにした場合も入る。未送信は NULL"
         },
         {
           "name": "attempts",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "送信を試みた回数。失敗のたびに増え、運営画面の手動リトライでも戻さない"
         },
         {
           "name": "lastError",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "最後に失敗したときのエラー内容。手動リトライで NULL に戻る"
         },
         {
           "name": "nextRetryAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "次に再送してよい日時（失敗後に指数バックオフで設定）。NULL ならすぐ処理対象"
         },
         {
           "name": "deadLetteredAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "最大試行回数（既定 10 回）を超えて再送をやめた日時。運営画面の手動リトライで NULL に戻る"
         },
         {
           "name": "claimedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "ワーカーが処理のために確保した日時。5 分を過ぎた確保は無効とみなし、別のワーカーが取り直せる"
         },
         {
           "name": "claimedBy",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "確保したワーカーの実行ごとの ID（ランダムな UUID）。処理が終わると NULL"
         }
       ],
       "indexes": [
@@ -287,21 +318,25 @@
     {
       "name": "public.admin_verification_tokens",
       "type": "BASE TABLE",
+      "comment": "運営ログイン用 Magic Link のトークン（NextAuth の VerificationToken）。使うと削除され、期限切れのものも定期的に削除される。FK は持たない",
       "columns": [
         {
           "name": "identifier",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Magic Link の送信先メールアドレス（小文字・前後の空白なしに正規化）"
         },
         {
           "name": "token",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Magic Link に含まれるトークンのハッシュ値（NextAuth がハッシュ化してから保存する）"
         },
         {
           "name": "expires",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "有効期限（発行から 10 分）"
         }
       ],
       "indexes": [
@@ -335,37 +370,44 @@
     {
       "name": "public.admin_sessions",
       "type": "BASE TABLE",
+      "comment": "運営アプリのログインセッション（NextAuth の Database セッション）。有効期間は 1 時間で、使っている間は延長される。期限切れのものは定期的に削除される",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "セッション ID"
         },
         {
           "name": "sessionToken",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "Cookie に入れるセッショントークン"
         },
         {
           "name": "adminAccountId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "ログインしている運営アカウント"
         },
         {
           "name": "expires",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "セッションの有効期限"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "作成日時"
         },
         {
           "name": "updatedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "更新日時（アプリ側で設定する）"
         }
       ],
       "indexes": [
@@ -431,47 +473,56 @@
     {
       "name": "public.admin_audit_logs",
       "type": "BASE TABLE",
+      "comment": "運営の操作ログ（誰が・いつ・何に対して・何をしたか）。運営画面の操作ログ一覧で見る",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "ログ ID（UUID v4。アプリ側で生成）"
         },
         {
           "name": "adminAccountId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "操作した運営アカウント"
         },
         {
           "name": "adminSessionId",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "操作したときのセッション。セッションが削除されると NULL になる"
         },
         {
           "name": "action",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "操作の種類（対象.操作 の形。例: project.approve / leader_application.reject / admin_account.disable / outbox.retry）"
         },
         {
           "name": "targetType",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "操作した対象の種類（AdminAccount / LeaderApplication / Project / OutboxMessage）"
         },
         {
           "name": "targetId",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "操作した対象の ID。特定のレコードが対象でない操作は NULL"
         },
         {
           "name": "metadata",
           "type": "jsonb",
-          "nullable": true
+          "nullable": true,
+          "comment": "操作ごとの補足情報（却下理由など。JSON）"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "操作した日時"
         }
       ],
       "indexes": [
@@ -578,89 +629,106 @@
     {
       "name": "public.accounts",
       "type": "BASE TABLE",
+      "comment": "一般ユーザーのアカウント（サポーター・リーダー）。リーダー応募の送信時に作られ、メールのリンクからパスワードを設定すると有効になる",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "アカウント ID（UUID v4。アプリ側で生成）"
         },
         {
           "name": "email",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "ログイン ID のメールアドレス（小文字・前後の空白なしに正規化）"
         },
         {
           "name": "displayName",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "表示名（1〜50 文字）"
         },
         {
           "name": "status",
           "type": "\"AccountStatus\"",
-          "nullable": false
+          "nullable": false,
+          "comment": "PENDING_EMAIL_CONFIRMATION=メール確認待ち（作成から 72 時間で自動削除）/ ACTIVE=有効"
         },
         {
           "name": "passwordHash",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "パスワードの bcrypt ハッシュ。アクティベーション前は NULL"
         },
         {
           "name": "roles",
           "type": "\"Role\"[]",
-          "nullable": true
+          "nullable": true,
+          "comment": "ロール（SUPPORTER / LEADER。複数可）。作成時は SUPPORTER で、リーダー応募の承認で LEADER が加わる"
         },
         {
           "name": "activationToken",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "アクティベーション URL に含めるトークン（ランダムな 64 桁の 16 進数）。有効化すると NULL"
         },
         {
           "name": "activationTokenExp",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "activationToken の有効期限（発行から 24 時間）。有効化すると NULL"
         },
         {
           "name": "iconUrl",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "【未使用】アイコン画像の URL。設定する機能が無い"
         },
         {
           "name": "bio",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "自己紹介。公開ページと運営画面で表示するが、設定する機能が無く現状は常に NULL"
         },
         {
           "name": "snsLinks",
           "type": "jsonb",
-          "nullable": true
+          "nullable": true,
+          "comment": "【未使用】SNS リンク。現状は応募（leader_applications）とプロジェクト（projects）の snsLinks を使う"
         },
         {
           "name": "contributedHours",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "【未使用】提供時間の累計（時間）。サポーターとして他のプロジェクトに提供した時間"
         },
         {
           "name": "receivedHours",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "【未使用】参加時間の累計（時間）。リーダーとして自分のプロジェクトでサポーターから受けた時間"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "作成日時"
         },
         {
           "name": "updatedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "更新日時（アプリ側で設定する）"
         },
         {
           "name": "phoneNumber",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "電話番号（任意。最大 20 文字、ハイフン可）。リーダー応募のときに入力された値"
         }
       ],
       "indexes": [
@@ -713,150 +781,179 @@
     {
       "name": "public.leader_applications",
       "type": "BASE TABLE",
+      "comment": "リーダー応募（リーダーになるための申請）と運営の審査結果。応募内容は送信時点のスナップショットで、承認時に作られる projects とは参照でつながらない。ドメインの LeaderApplication 集約（project 系の列は ProjectDraft、連絡先・募集情報の列は LeaderApplicationSnapshot に載る）",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "応募 ID（UUID v4。アプリ側で生成）"
         },
         {
           "name": "accountId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "応募者のアカウント"
         },
         {
           "name": "status",
           "type": "\"LeaderApplicationStatus\"",
-          "nullable": false
+          "nullable": false,
+          "comment": "PENDING=審査待ち / APPROVED=承認 / REJECTED=却下。承認・却下のあとは変わらない"
         },
         {
           "name": "reviewerNote",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "却下理由（却下するときは必須。最大 2000 文字）"
         },
         {
           "name": "projectTitle",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "立ち上げたいプロジェクトのタイトル（最大 60 文字）"
         },
         {
           "name": "projectSummary",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "プロジェクトの概要（最大 150 文字）"
         },
         {
           "name": "projectStory",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "プロジェクトのストーリー（Markdown。最大 300 文字）"
         },
         {
           "name": "projectCategory",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "カテゴリ（MANUFACTURING / FOOD / NATURE / EVENT。CATEGORY_MASTER の値）"
         },
         {
           "name": "prefectureCode",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "活動場所の都道府県コード（JIS X 0401: 01〜47）"
         },
         {
           "name": "municipality",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "活動場所の市区町村（任意。最大 50 文字）"
         },
         {
           "name": "activityContent",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "活動内容（募集の種類に TIME を含むときは必須。最大 200 文字）"
         },
         {
           "name": "snsLinks",
           "type": "jsonb",
-          "nullable": true
+          "nullable": true,
+          "comment": "SNS リンク（x / instagram / facebook / website の URL。それぞれ任意。JSON）"
         },
         {
           "name": "submittedAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "応募した日時"
         },
         {
           "name": "reviewedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "運営が承認・却下した日時。審査前は NULL"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "作成日時"
         },
         {
           "name": "updatedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "更新日時（アプリ側で設定する）"
         },
         {
           "name": "reviewedBy",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "【未使用】審査した運営アカウント。どこからも書き込まれず常に NULL（審査の記録は admin_audit_logs に残る）"
         },
         {
           "name": "phoneNumber",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "応募時の電話番号（任意。最大 20 文字）。accounts.phoneNumber にも同じ値を保存する"
         },
         {
           "name": "progress",
           "type": "\"ProjectPhase\"",
           "nullable": false,
-          "default": "'PLANNING'::\"ProjectPhase\""
+          "default": "'PLANNING'::\"ProjectPhase\"",
+          "comment": "応募時点のプロジェクトの進み具合（VISION / PLANNING / READY / EXECUTION / ONGOING）"
         },
         {
           "name": "recruitmentTypes",
           "type": "\"LeaderApplicationRecruitmentType\"[]",
           "nullable": false,
-          "default": "'{}'::\"LeaderApplicationRecruitmentType\"[]"
+          "default": "'{}'::\"LeaderApplicationRecruitmentType\"[]",
+          "comment": "出したい募集の種類（TIME=時間（やる気）での支援 / SKILL_ITEM=スキル・モノでの支援。1 つ以上）"
         },
         {
           "name": "eventLocation",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "開催場所（TIME を含むときは必須。最大 200 文字）"
         },
         {
           "name": "eventPeriod",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "実施期間（TIME を含むときは必須。最大 200 文字の自由記述）"
         },
         {
           "name": "recruitCount",
           "type": "integer",
-          "nullable": true
+          "nullable": true,
+          "comment": "募集人数（TIME を含むときは必須。1〜1000）"
         },
         {
           "name": "skillItemNeeds",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "募集したいスキル・モノの内容（SKILL_ITEM を含むときは必須。最大 200 文字）"
         },
         {
           "name": "skillItemDeadline",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "スキル・モノの募集期限（SKILL_ITEM を含むときは必須。最大 200 文字の自由記述）"
         },
         {
           "name": "timeReturn",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "時間で支援した人へのリターン（TIME を含むときは必須。最大 200 文字）"
         },
         {
           "name": "skillItemReturn",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "スキル・モノで支援した人へのリターン（SKILL_ITEM を含むときは必須。最大 200 文字）"
         },
         {
           "name": "experienceOffered",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "サポーターが体験できること（必須。最大 150 文字）"
         }
       ],
       "indexes": [
@@ -943,114 +1040,136 @@
     {
       "name": "public.projects",
       "type": "BASE TABLE",
+      "comment": "リーダーが立ち上げるプロジェクト。公開審査（DRAFT → PENDING_REVIEW → PUBLISHED）を持つ。リーダー応募の承認時に、応募内容から下書きが作られる。ドメインの Project 集約",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "プロジェクト ID（UUID v4。アプリ側で生成）"
         },
         {
           "name": "ownerAccountId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "所有者（リーダー）のアカウント"
         },
         {
           "name": "slug",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "公開ページ URL（/projects/{slug}）に使う文字列。初回の公開承認で id と同じ値を発行し、非公開にしても残す。初回承認までは NULL"
         },
         {
           "name": "title",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "タイトル（1〜100 文字）"
         },
         {
           "name": "summary",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "概要（最大 300 文字。公開申請に必須）"
         },
         {
           "name": "story",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "本文（Markdown。最大 10000 文字。公開申請に必須）。ドメインでは body"
         },
         {
           "name": "leaderIntro",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "リーダー紹介（最大 2000 文字。公開申請に必須）。ドメインでは leaderIntroduction"
         },
         {
           "name": "coverImageUrl",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "カバー画像の URL（公開申請に必須）"
         },
         {
           "name": "category",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "カテゴリ（MANUFACTURING / FOOD / NATURE / EVENT。公開申請に必須）"
         },
         {
           "name": "prefectureCode",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "活動場所の都道府県コード（JIS X 0401: 01〜47。公開申請に必須）。ドメインでは location の一部"
         },
         {
           "name": "municipality",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "活動場所の市区町村（任意）。ドメインでは location の一部"
         },
         {
           "name": "snsLinks",
           "type": "jsonb",
-          "nullable": true
+          "nullable": true,
+          "comment": "SNS リンク（x / instagram / facebook / website の URL。それぞれ任意。JSON）"
         },
         {
           "name": "status",
           "type": "\"PublishStatus\"",
           "nullable": false,
-          "default": "'DRAFT'::\"PublishStatus\""
+          "default": "'DRAFT'::\"PublishStatus\"",
+          "comment": "公開状態（DRAFT=下書き / PENDING_REVIEW=審査待ち / PUBLISHED=公開中）。ドメインでは publishStatus"
         },
         {
           "name": "phase",
           "type": "\"ProjectPhase\"",
           "nullable": false,
-          "default": "'VISION'::\"ProjectPhase\""
+          "default": "'VISION'::\"ProjectPhase\"",
+          "comment": "進み具合のラベル（VISION / PLANNING / READY / EXECUTION / ONGOING）。どの値にも自由に切り替えられる"
         },
         {
           "name": "publishRequestedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "公開申請した日時。下書き（DRAFT）に戻ると NULL"
         },
         {
           "name": "publishedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": true
+          "nullable": true,
+          "comment": "運営が公開を承認した日時。下書き（DRAFT）に戻ると NULL"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "作成日時"
         },
         {
           "name": "updatedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "更新日時（アプリ側で設定する）"
         },
         {
           "name": "activityPlan",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "活動計画（任意。最大 1000 文字。公開申請にも必須ではない）"
         },
         {
           "name": "forcedUnpublishedBy",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "【未使用】強制非公開にした運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）"
         },
         {
           "name": "reviewedBy",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "【未使用】審査した運営アカウント。どこからも書き込まれず常に NULL（記録は project_review_feedbacks に残る）"
         }
       ],
       "indexes": [
@@ -1182,43 +1301,51 @@
     {
       "name": "public.project_review_feedbacks",
       "type": "BASE TABLE",
+      "comment": "プロジェクトの公開審査の履歴（承認・差戻・強制非公開）。差戻が繰り返されても全件残る。ドメインの ProjectReviewFeedback（Project のサブエンティティ）",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "審査履歴 ID（UUID v4。アプリ側で生成）"
         },
         {
           "name": "projectId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "審査したプロジェクト"
         },
         {
           "name": "reviewerId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "審査した運営アカウント"
         },
         {
           "name": "action",
           "type": "\"ReviewAction\"",
-          "nullable": false
+          "nullable": false,
+          "comment": "審査の結果（APPROVED=承認 / REJECTED=差戻 / FORCE_UNPUBLISHED=強制非公開）"
         },
         {
           "name": "note",
           "type": "text",
-          "nullable": true
+          "nullable": true,
+          "comment": "運営からのコメント（差戻・強制非公開では必須。最大 2000 文字）"
         },
         {
           "name": "reviewedAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "審査した日時"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "作成日時"
         }
       ],
       "indexes": [
@@ -1297,43 +1424,51 @@
     {
       "name": "public.support_recruitments",
       "type": "BASE TABLE",
+      "comment": "【未実装 #212】サポート募集。プロジェクトに紐づく募集の単位。スキーマだけ存在し、コードはまだ無い",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "サポート募集 ID"
         },
         {
           "name": "projectId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "募集を出したプロジェクト"
         },
         {
           "name": "type",
           "type": "\"RecruitmentType\"",
           "nullable": false,
-          "default": "'ACTIVITY'::\"RecruitmentType\""
+          "default": "'ACTIVITY'::\"RecruitmentType\"",
+          "comment": "募集の種類（初回リリースは ACTIVITY のみ）"
         },
         {
           "name": "title",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "募集のタイトル"
         },
         {
           "name": "description",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "募集の説明"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "作成日時"
         },
         {
           "name": "updatedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "更新日時（アプリ側で設定する）"
         }
       ],
       "indexes": [
@@ -1383,53 +1518,63 @@
     {
       "name": "public.recruitment_schedules",
       "type": "BASE TABLE",
+      "comment": "【未実装 #212】サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "日程 ID"
         },
         {
           "name": "supportRecruitmentId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "日程が属するサポート募集"
         },
         {
           "name": "date",
           "type": "date",
-          "nullable": false
+          "nullable": false,
+          "comment": "開催日（JST のカレンダー日）"
         },
         {
           "name": "startTime",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "受付時間帯の開始時刻（HH:MM 形式の JST）"
         },
         {
           "name": "endTime",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "受付時間帯の終了時刻（HH:MM 形式の JST）。過ぎると新規の申し込みを締め切る想定"
         },
         {
           "name": "capacityPerHour",
           "type": "integer",
-          "nullable": false
+          "nullable": false,
+          "comment": "1 時間ごとの定員（人数）。申し込みは先着順で、またがる全時間帯が定員内に収まる必要がある想定"
         },
         {
           "name": "approvalMode",
           "type": "\"ApprovalMode\"",
           "nullable": false,
-          "default": "'AUTO'::\"ApprovalMode\""
+          "default": "'AUTO'::\"ApprovalMode\"",
+          "comment": "承認モード（AUTO=申し込んだ時点で確定 / MANUAL=リーダーの承認で確定）"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "作成日時"
         },
         {
           "name": "updatedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "更新日時（アプリ側で設定する）"
         }
       ],
       "indexes": [
@@ -1488,54 +1633,64 @@
     {
       "name": "public.support_tickets",
       "type": "BASE TABLE",
+      "comment": "【未実装 #212】サポートチケット。サポーターが日程の中の時間帯に参加を申し込んだ記録。チケットは提供する時間の単位を表す言葉で、購入や在庫は無い",
       "columns": [
         {
           "name": "id",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "サポートチケット ID"
         },
         {
           "name": "recruitmentScheduleId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "申し込んだ日程"
         },
         {
           "name": "supporterAccountId",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "申し込んだサポーターのアカウント"
         },
         {
           "name": "duration",
           "type": "integer",
-          "nullable": false
+          "nullable": false,
+          "comment": "提供する時間の長さ（時間。チケットの区分 1 / 2 / 4）"
         },
         {
           "name": "slotStart",
           "type": "text",
-          "nullable": false
+          "nullable": false,
+          "comment": "参加を始める時刻（HH:MM 形式の JST。1 時間単位）"
         },
         {
           "name": "companionCount",
           "type": "integer",
           "nullable": false,
-          "default": "0"
+          "default": "0",
+          "comment": "一緒に参加する同伴者の人数（申し込んだ本人は含まない想定。同伴者はアカウント不要）"
         },
         {
           "name": "status",
           "type": "\"SupportTicketStatus\"",
           "nullable": false,
-          "default": "'PENDING'::\"SupportTicketStatus\""
+          "default": "'PENDING'::\"SupportTicketStatus\"",
+          "comment": "申し込みの状態（PENDING=承認待ち / CONFIRMED=確定 / CANCELLED=取り消し / COMPLETED=完了。COMPLETED にする条件は未決）"
         },
         {
           "name": "createdAt",
           "type": "timestamp(3) without time zone",
           "nullable": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "作成日時"
         },
         {
           "name": "updatedAt",
           "type": "timestamp(3) without time zone",
-          "nullable": false
+          "nullable": false,
+          "comment": "更新日時（アプリ側で設定する）"
         }
       ],
       "indexes": [
