@@ -5,6 +5,9 @@
 古民家再生、米作り、DIY など——プロジェクトオーナーとサポーターをつなぎ、
 参加したサポーターはリターン（体験・成果物など）を受け取る仕組みです。
 
+> 📘 **DB ドキュメント**: https://physicalfunding.github.io/PhysiFun/
+> テーブル定義書・領域別 ER 図・[動く ER 図](https://physicalfunding.github.io/PhysiFun/er/)・設計の意図を、検索つきのサイトで読めます（`atlas/schema.sql` から自動生成）。
+
 ## 技術スタック
 
 | カテゴリ | 技術 |

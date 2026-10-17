@@ -2,7 +2,8 @@
  * Liam ERD（動く ER 図）のビルド（#273）
  *
  * docs/db/schema.json（tbls の生成物。`bun run db:docs` で作る）から、Liam ERD の静的サイトを dist/erd/ に作る。
- * GitHub Pages への公開は .github/workflows/db-erd.yml が行う。手順は docs/guides/db-migration.md §6 を参照。
+ * DB ドキュメントサイト（apps/docs-site）が /er/ に取り込み、.github/workflows/docs-site.yml が GitHub Pages に公開する。
+ * 手順は docs/guides/db-migration.md §6 を参照。
  *
  * ```bash
  * bun run db:erd          # dist/erd/ を作る
