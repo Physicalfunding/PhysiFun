@@ -117,7 +117,7 @@
 |---|---|---|
 | `accounts` | `email` | ログイン識別子の一意性 |
 | `accounts` | `activationToken` | アクティベーショントークンの一意性 |
-| `projects` | `slug` | 公開ページ URL（`/projects/{slug}`）の一意性。nullable（⚠️ 2026-10 時点では slug を発行する処理が無く、常に NULL） |
+| `projects` | `slug` | 公開ページ URL（`/projects/{slug}`）の一意性。nullable（初回承認までは null。値は `id` と同じ UUID で、非公開化しても残す） |
 | `recruitment_schedules` | `(supportRecruitmentId, date)` | 1 募集 × 1 日 = 1 スケジュール |
 | `admin_accounts` | `email` | ログイン識別子の一意性 |
 | `admin_sessions` | `sessionToken` | セッショントークンの一意性 |

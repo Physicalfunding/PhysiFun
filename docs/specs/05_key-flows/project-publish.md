@@ -101,7 +101,7 @@ sequenceDiagram
     UC->>Adapter: findProjectById(projectId)
     Adapter-->>UC: Project (PENDING_REVIEW)
     UC->>Project: approveByAdmin()
-    Project-->>UC: PUBLISHED + publishedAt = updatedAt
+    Project-->>UC: PUBLISHED + publishedAt = updatedAt<br/>+ slug（未発行なら id）
     UC->>UC: ProjectReviewFeedback 構築 (action=APPROVED, note?)
     UC->>UC: ProjectOutboxMessage 構築 (project_publish_approved.notify)
     UC->>Adapter: executeInTransaction(project, feedback, outboxMsg)
@@ -111,7 +111,7 @@ sequenceDiagram
         Adapter->>Adapter: throw OwnerPublishedLimitExceededError
         Adapter->>DB: ROLLBACK
     else count < 3
-        Adapter->>DB: UPDATE Project SET status='PUBLISHED', publishedAt=now
+        Adapter->>DB: UPDATE Project SET status='PUBLISHED', slug, publishedAt=now
         Adapter->>DB: INSERT ProjectReviewFeedback (APPROVED)
         Adapter->>DB: INSERT ProjectOutboxMessage
         Adapter->>DB: COMMIT
@@ -243,6 +243,8 @@ sequenceDiagram
 ---
 
 ## 8. 状態変化サマリ（操作別）
+
+`slug` は初回承認で `id` を発行し、以後どの操作でも変えない（非公開化しても残り、再公開で同じ URL になる）。`publishRequestedAt` は公開申請で設定し、DRAFT に戻る操作でクリアする（#262）。
 
 | 操作 | `Project.status` | `Project.publishedAt` | `ProjectReviewFeedback` | `ProjectOutboxMessage` |
 |---|---|---|---|---|

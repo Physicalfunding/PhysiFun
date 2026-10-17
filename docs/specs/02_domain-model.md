@@ -54,6 +54,9 @@ classDiagram
         AccountId ownerAccountId
         PublishStatus publishStatus
         ProjectPhase phase
+        slug?
+        publishRequestedAt?
+        publishedAt?
         requestPublish()
         approveByAdmin()
         rejectByAdmin()
@@ -117,6 +120,9 @@ classDiagram
 | `location` | `ProjectLocation` | 都道府県＋市町村（公開には必須） |
 | `snsLinks` | `SnsLinks` | x / instagram / facebook / website |
 | `activityPlan` | `string (max 1000)` | 活動計画（公開時も任意） |
+| `slug` | `string?` | 公開ページ `/projects/[slug]` の URL。初回の `approveByAdmin()` で `id`（UUID）を発行し、DRAFT に戻っても消さない（再公開で同じ URL） |
+| `publishRequestedAt` | `Date?` | 公開申請日時。`requestPublish()` で設定し、DRAFT に戻るとクリア |
+| `publishedAt` | `Date?` | 公開日時。`approveByAdmin()` で設定し、DRAFT に戻るとクリア |
 | `createdAt` / `updatedAt` | `Date` | |
 
 ### 3.3 値オブジェクト
@@ -171,6 +177,16 @@ stateDiagram-v2
 - `DRAFT → PENDING_REVIEW`: `coverImageUrl` / `category` / `location` / `summary` / `body` / `leaderIntroduction` がすべて非 null。`activityPlan` は任意。
 - `PUBLISHED` の `update()`: 上記必須フィールドを null に戻すことは禁止。
 - `PENDING_REVIEW` 中に `update()` した場合は **自動的に DRAFT へ降格**（再申請が必要）。
+
+**遷移に伴う値の変化:**
+
+| 遷移 | `slug` | `publishRequestedAt` | `publishedAt` |
+|---|---|---|---|
+| `requestPublish()` | — | 申請時刻（= `updatedAt`） | — |
+| `approveByAdmin()` | 未発行なら `id` を発行 | 残す | 承認時刻（= `updatedAt`） |
+| DRAFT に戻る遷移（`withdraw()` / `rejectByAdmin()` / `update()` の自動降格 / `unpublishSelf()` / `forceUnpublish()`） | 残す | `null` | `null` |
+
+> 💡 slug に `id` をそのまま使うのは、一意性が保証されていて重複処理が要らないため。日本語タイトルから作るとローマ字化が不正確になるか URL が長くなる。初回リリースは「URL を知っている人だけ見られる + noindex」の方針で、読みやすい slug は一般公開のときに検討する（#262）。
 
 ### 3.7 ProjectPhase は状態遷移しない（ラベルのみ）
 

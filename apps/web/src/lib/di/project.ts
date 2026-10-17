@@ -95,7 +95,6 @@ export function getApproveProjectPublicationPort(): ApproveProjectPublicationPor
       project: Project;
       reviewFeedback: ProjectReviewFeedback;
       outboxMessage: CreateProjectOutboxMessageParams;
-      publishedAt: Date;
       maxPublishedPerOwner: number;
     }) => adapter.executeApproveInTransaction(params),
   };

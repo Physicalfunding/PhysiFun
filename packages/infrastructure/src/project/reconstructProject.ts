@@ -33,6 +33,9 @@ export function reconstructProject(row: {
   leaderIntro: string | null;
   snsLinks: unknown;
   activityPlan: string | null;
+  slug: string | null;
+  publishRequestedAt: Date | null;
+  publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }): Project {
@@ -88,6 +91,9 @@ export function reconstructProject(row: {
     leaderIntroduction: row.leaderIntro,
     snsLinks: snsResult.value,
     activityPlan: row.activityPlan,
+    slug: row.slug,
+    publishRequestedAt: row.publishRequestedAt,
+    publishedAt: row.publishedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   });

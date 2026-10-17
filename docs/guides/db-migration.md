@@ -132,6 +132,9 @@ bun run db:kysely:codegen
 
 - `schema.sql` / 生成したマイグレーション / `atlas.sum` / `types.ts` は**同じコミットに含める**
 - コミット済みのマイグレーションは書き換えない（直すときは新しいマイグレーションを追加する）
+- スキーマは変えずに**データだけを直す**ときは、`atlas migrate new <名前> --dir file://atlas/migrations` で空のマイグレーションを作って SQL を書き、
+  `atlas migrate hash --dir file://atlas/migrations` で `atlas.sum` を更新する。何度流しても結果が同じになる SQL にする
+  （例: `20261017073537_backfill_project_publication.sql`、#262）
 - `id` と `updatedAt` には DB 側の DEFAULT が無い（アプリ側で値を渡す）。新しいテーブルも同じ方針にそろえる
 - テーブル・列を足したら、`schema.sql` に `COMMENT ON` で説明を書く。新しいテーブルは `.tbls.yml` の `viewpoints` のどこかに入れる（§6）
 - `docs/db/` は PR で CI が再生成するので、手元で再生成しなくてよい（手元で確認したいときは `bun run db:docs`）

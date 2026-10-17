@@ -206,7 +206,7 @@ export class MaxProjectsReachedError extends Error {
  * Issue #192 のマッピング表:
  *   id              → uuid 新規発行
  *   ownerAccountId  → application.accountId
- *   slug            → null（公開申請時に発行）
+ *   slug            → null（公開承認時に発行。#262）
  *   title           → projectTitle
  *   summary         → projectSummary
  *   story (body)    → projectStory
