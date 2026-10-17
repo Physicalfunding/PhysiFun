@@ -1,7 +1,4 @@
-import {
-  writeAdminAuditLog,
-  type WriteAdminAuditLogParams,
-} from "@physifun/infrastructure/src/kysely";
+import { writeAdminAuditLog, type WriteAdminAuditLogParams } from "@physifun/infrastructure";
 
 /**
  * Route Handler 用 AdminAuditLog 書き込みヘルパー (#145 / #157 H2)

@@ -1,5 +1,4 @@
-import { BcryptPasswordHasher } from "@physifun/infrastructure";
-import { KyselyAuthenticateAdapter } from "@physifun/infrastructure/src/kysely";
+import { BcryptPasswordHasher, KyselyAuthenticateAdapter } from "@physifun/infrastructure";
 
 /**
  * NextAuth authorize 用のアダプタ生成ヘルパー（#223 で Kysely 実装へ移行）

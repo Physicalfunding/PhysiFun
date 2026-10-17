@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { kyselyDb as db } from "@physifun/infrastructure/src/kysely";
+import { kyselyDb as db } from "@physifun/infrastructure";
 import { TEST_ADMIN } from "../fixtures";
 
 /**

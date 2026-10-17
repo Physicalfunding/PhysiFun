@@ -62,7 +62,7 @@ docs: specs/01 に AWS 移行方針を追記
 ### DI ヘルパー
 
 - `apps/*/src/lib/di/` のファクトリ関数経由でリクエストごとに生成し、モジュールレベルで `new` しない（モック差し替えを阻害しないため）
-- Kysely 実装はサブバレル `@physifun/infrastructure/src/kysely` から import する（Jest 時代の隔離の名残。統合は別途対応予定）
+- infrastructure の実装は Kysely 実装も含めて `@physifun/infrastructure` から import する。クライアントコンポーネント（`"use client"`）からは `import type` だけにする
 
 ### admin アプリの Server Component 規約（#119 / #131）
 

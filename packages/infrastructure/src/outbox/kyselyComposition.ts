@@ -16,8 +16,7 @@ import { ProjectPublishRejectedNotifyProcessor } from "./processors/ProjectPubli
  * claim/送信ループは `OutboxWorkerBase` + `KyselyOutboxDelegate`（FOR UPDATE SKIP LOCKED）に委譲し、
  * processor 側の email ルックアップは `KyselyAccountEmailLookup` を使う（#230 で Prisma 版から移行）。
  *
- * NOTE: 本モジュールは Kysely を読み込むため、メイン barrel ではなくサブバレル
- * `@physifun/infrastructure/src/kysely` からのみ公開する（ESM/Jest 隔離）。
+ * 公開は `@physifun/infrastructure`（`src/index.ts`）から行う。
  */
 
 /**

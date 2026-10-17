@@ -4,14 +4,12 @@ import {
   type AdminAuditLogListResult,
   type AdminAuditLogQueryService,
   type LeaderApplicationQueryService,
-} from "@physifun/infrastructure";
-import {
   KyselyAdminAccountRepository,
   KyselyAdminAuditLogQueryService,
   KyselyLeaderApplicationQueryService,
   KyselyOutboxQueryService,
   KyselyProjectQueryService,
-} from "@physifun/infrastructure/src/kysely";
+} from "@physifun/infrastructure";
 import type { AdminAccountRepository } from "@physifun/domain";
 import type { AdminProjectQueryPort, AdminOutboxQueryPort } from "@physifun/application";
 

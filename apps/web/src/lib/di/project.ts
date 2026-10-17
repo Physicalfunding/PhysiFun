@@ -1,7 +1,4 @@
-import {
-  KyselyProjectQueryService,
-  KyselyProjectCommandAdapter,
-} from "@physifun/infrastructure/src/kysely";
+import { KyselyProjectQueryService, KyselyProjectCommandAdapter } from "@physifun/infrastructure";
 import type {
   ApproveProjectPublicationPort,
   ProjectQueryPort,

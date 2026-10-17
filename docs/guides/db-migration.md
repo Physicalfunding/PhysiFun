@@ -25,7 +25,7 @@ DB アクセスは **Kysely**（SQL ライクな型安全クエリビルダ）�
 - `src/project/KyselyProjectQueryService.ts` — `PrismaProjectQueryService` と同一 API の drop-in。
 - `src/project/KyselyProjectCommandAdapter.ts` — `PrismaProjectCommandAdapter` と同一 API の drop-in
   （`$transaction` 相当、count→insert の TOCTOU、Outbox 書き込みを含む）。
-- `src/kysely.ts` — Kysely 実装のサブバレル（後述の ESM 事情でメイン barrel と分離）。
+- `src/kysely.ts` — Kysely 実装のサブバレル（当時は ESM 事情でメイン barrel と分離していた。#256 でメイン barrel に統合済み）。
 - DI 切替: `apps/web` / `apps/admin` の project DI が Kysely 実装を生成。
 - `test/project/KyselyProject.vitest.ts` — 実 PostgreSQL に対する統合テスト（7 件）。
 
@@ -46,12 +46,11 @@ DB アクセスは **Kysely**（SQL ライクな型安全クエリビルダ）�
 - **kysely 0.29 は Node >= 22 を要求**（`engines`）。リポジトリ側はルート `package.json` の `engines` と
   `.nvmrc`（22）で固定し、CI も `.nvmrc` を使う。Vercel の web / admin も Node 22 以上に設定する（#249）。
 
-### サブバレル `@physifun/infrastructure/src/kysely` について
-`kysely` は **ESM 専用**（CJS ビルド無し）で、以前 apps/web のテストに使っていた Jest からは読み込めなかった。
-そのため **Kysely を読み込む実装はメイン barrel（`@physifun/infrastructure`）に載せず、サブバレル
-`@physifun/infrastructure/src/kysely` に隔離**している。メイン barrel には DB に依存しない実装と
-型・純粋関数だけを置いている。テストは #253 で Vitest（ESM 対応）に統一したので隔離はもう不要だが、
-import 先の変更が多いため統合は別途対応する。
+### import 先と ESM の事情
+`kysely` は **ESM 専用**（CJS ビルド無し）。以前は apps/web のテストに使っていた Jest から読み込めなかったため、
+Kysely 実装をサブバレル `@physifun/infrastructure/src/kysely` に隔離していた。テストを Vitest（ESM 対応）に
+統一した（#253）ので、#256 でメイン barrel に統合した。**Kysely 実装も含めて `@physifun/infrastructure` から import する。**
+クライアントコンポーネントからは型だけを import する（値を import すると pg / Kysely がクライアントのバンドルに入る）。
 E2E（Playwright）は Node の `require(esm)` で Kysely を読み込むため、Node 22 以上で実行する。
 
 ---

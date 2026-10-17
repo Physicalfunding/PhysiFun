@@ -4,11 +4,9 @@ import {
   createSendAdminMagicLink,
   getAdminMagicLinkHmacSecret,
   type MailSender,
-} from "@physifun/infrastructure";
-import {
   createAdminKyselyAdapter,
   isActiveAdminByEmail,
-} from "@physifun/infrastructure/src/kysely";
+} from "@physifun/infrastructure";
 import { EMAIL_MAGIC_LINK_MAX_AGE_MIN } from "../auth-constants";
 
 /**

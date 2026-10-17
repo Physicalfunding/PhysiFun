@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@physifun/server-shared";
-import { KyselyAdminAuthGcAdapter } from "@physifun/infrastructure/src/kysely";
+import { KyselyAdminAuthGcAdapter } from "@physifun/infrastructure";
 
 /**
  * 期限切れ AdminSession / AdminVerificationToken GC Cron

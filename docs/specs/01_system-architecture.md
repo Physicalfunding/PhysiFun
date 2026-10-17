@@ -225,7 +225,7 @@ PhysiFun/
 
 `<context>` は `account` / `admin-account` / `leader-application` / `project` / `outbox`（application・infrastructure のみ）。`recruitment` は未作成（#212 で追加予定）。
 
-> 💡 Kysely 実装はメイン barrel（`@physifun/infrastructure`）ではなくサブバレル `@physifun/infrastructure/src/kysely` から import する（ESM 専用の kysely を Jest から隔離するために始めた分け方。Jest は #253 で撤去済みで、統合は別途対応予定）。
+> 💡 infrastructure の実装は Kysely 実装も含めてすべて `@physifun/infrastructure` から import する（#256 でサブバレルを統合）。クライアントコンポーネントからは型だけを import する（値を import すると pg / Kysely がクライアントのバンドルに入る）。
 
 ---
 

@@ -6,8 +6,9 @@ import {
   verifyMagicLinkSignature,
   MAGIC_LINK_SIGNATURE_PARAM,
   MAGIC_LINK_EXPIRES_PARAM,
+  findAdminAccountIdByEmail,
+  writeAdminAuditLog,
 } from "@physifun/infrastructure";
-import { findAdminAccountIdByEmail, writeAdminAuditLog } from "@physifun/infrastructure/src/kysely";
 import { authOptions } from "@/lib/auth";
 
 /**

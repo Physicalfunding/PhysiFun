@@ -1,5 +1,5 @@
 import { AdminAccountId } from "@physifun/domain";
-import { disableAdminAccountAndRevokeSessions } from "@physifun/infrastructure/src/kysely";
+import { disableAdminAccountAndRevokeSessions } from "@physifun/infrastructure";
 import {
   forbiddenResponse,
   internalErrorResponse,

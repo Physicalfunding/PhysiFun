@@ -42,5 +42,5 @@ export {
   type ProjectForceUnpublishedPayload,
 } from "./processors/ProjectForceUnpublishedNotifyProcessor";
 export type { AccountEmailLookup } from "./processors/types";
-// NOTE: Kysely を読み込む Worker composition（buildLeader/ProjectOutboxWorker）は ESM/Jest 隔離のため
-// メイン barrel ではなくサブバレル `@physifun/infrastructure/src/kysely` から公開する（#226）。
+// NOTE: Kysely を読み込む Worker composition（buildLeader/ProjectOutboxWorker）は
+// `kyselyComposition.ts` にあり、パッケージの `src/index.ts` から公開している（#226 / #256）。

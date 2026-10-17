@@ -1,8 +1,6 @@
-// ==================== メイン barrel ====================
-// DB アクセス（Kysely）を含む実装は、ESM 専用の kysely を当時の Jest (CommonJS) から切り離す目的で
-// メインの index には載せず、サブバレル `@physifun/infrastructure/src/kysely` に分離している
-// （Jest は #253 で撤去済み。統合は別途対応）。
-// ここには DB に依存しない実装と、型・純粋関数だけを置く。
+// ==================== @physifun/infrastructure の公開 API ====================
+// apps / tests はすべてここから import する（#256 で Kysely 実装のサブバレルを統合）。
+// クライアントコンポーネントからは型だけを import すること（値を import すると pg / Kysely がバンドルに入る）。
 
 export { isUniqueConstraintError } from "./database/isUniqueConstraintError";
 
@@ -36,8 +34,6 @@ export {
   type ProjectForceUnpublishedPayload,
   type AccountEmailLookup,
 } from "./outbox";
-// NOTE: Kysely を読み込む Worker composition（buildLeader/ProjectOutboxWorker）は
-// サブバレル `@physifun/infrastructure/src/kysely` から公開する（#226 / ESM・Jest 隔離）。
 
 export type { MailMessage, MailSender, MailSendError } from "./mail";
 export { ResendMailSender } from "./mail";
@@ -83,3 +79,61 @@ export {
   isValidStatus as isValidOutboxStatus,
 } from "./outbox/admin/outboxStatus";
 export type { OutboxSource, OutboxStatus, OutboxListItem } from "@physifun/application";
+
+// ==================== Kysely 実装（DB アクセス） ====================
+export { db as kyselyDb, kyselyPool } from "./database/kysely/client";
+export type { DB as KyselyDB } from "./database/kysely/types";
+export { KyselyProjectQueryService } from "./project/KyselyProjectQueryService";
+export { KyselyProjectCommandAdapter } from "./project/KyselyProjectCommandAdapter";
+
+// leader-application ドメイン（#222）
+export { KyselyLeaderApplicationQueryService } from "./leader-application/KyselyLeaderApplicationQueryService";
+export {
+  KyselySubmitLeaderApplicationAdapter,
+  type AccountRow as SubmitLeaderApplicationAccountRow,
+} from "./leader-application/KyselySubmitLeaderApplicationAdapter";
+export { KyselyApproveLeaderApplicationAdapter } from "./leader-application/KyselyApproveLeaderApplicationAdapter";
+export { KyselyRejectLeaderApplicationAdapter } from "./leader-application/KyselyRejectLeaderApplicationAdapter";
+
+// account ドメイン（#223）
+export {
+  KyselyActivateAccountAdapter,
+  type AccountForActivation,
+} from "./account/KyselyActivateAccountAdapter";
+export {
+  KyselyAuthenticateAdapter,
+  type AuthenticatedAccount,
+  type AccountRole as AuthenticatedAccountRole,
+} from "./account/KyselyAuthenticateAdapter";
+export {
+  KyselyCleanupExpiredAccountsAdapter,
+  type CleanupExpiredAccountsPort,
+} from "./account/KyselyCleanupExpiredAccountsAdapter";
+
+// admin-account ドメイン（#224）
+export { KyselyAdminAccountRepository } from "./admin-account/KyselyAdminAccountRepository";
+export { KyselyAdminAuditLogQueryService } from "./admin-account/KyselyAdminAuditLogQueryService";
+export {
+  writeAdminAuditLog,
+  type WriteAdminAuditLogParams,
+} from "./admin-account/KyselyAdminAuditLogAdapter";
+export { KyselyAdminAuthGcAdapter } from "./admin-account/KyselyAdminAuthGcAdapter";
+export {
+  isActiveAdminByEmail,
+  findAdminAccountIdByEmail,
+} from "./admin-account/kyselyAdminAccountLookup";
+export {
+  revokeAdminSessions,
+  disableAdminAccountAndRevokeSessions,
+} from "./admin-account/kyselyAdminSession";
+// NextAuth v4 カスタム Adapter（#225）
+export { createAdminKyselyAdapter } from "./admin-account/AdminKyselyAdapter";
+
+// outbox ドメイン（#226。claim を FOR UPDATE SKIP LOCKED 化）
+export { KyselyOutboxDelegate, type OutboxTableName } from "./outbox/KyselyOutboxDelegate";
+export {
+  buildLeaderApplicationOutboxWorker,
+  buildProjectOutboxWorker,
+} from "./outbox/kyselyComposition";
+export { KyselyOutboxQueryService } from "./outbox/admin/KyselyOutboxQueryService";
+export { KyselyOutboxCommandAdapter } from "./outbox/admin/KyselyOutboxCommandAdapter";
