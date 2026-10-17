@@ -18,7 +18,7 @@ Claude と開発するときの品質・安全を、**Claude の注意力では�
 | 開発体制 | 1 人＋Claude |
 | ローカル | メイン。この Mac の Claude Desktop / CLI。ユーザーが画面の前にいる |
 | クラウド | 外出時にスマホアプリから起動。ユーザーは画面を見ていない |
-| クラウドの制約 | repo を clone するだけ。`~/.claude`（global 設定・プラグイン）、Obsidian、隣接 repo は見えない。**複数 repo を選んだセッションでは repo の hooks・permission が読まれない**。ファイル編集はモードに関係なく事前承認される |
+| クラウドの制約 | repo を clone するだけ。`~/.claude`（global 設定・プラグイン）、Obsidian、隣接 repo は見えない。**複数 repo を選んだセッションでは repo の hooks・permission が読まれない**。ファイル編集はモードに関係なく事前承認される。git の認証はセッションに付いた repo にしか効かない。`gh pr create` は使えない |
 
 ## 3. 設計原則
 
@@ -112,24 +112,31 @@ apps/*/public/*
    - 許可リストは `.claude/cloud-allowlist`（1 行 1 パターン、`!` で始まる行は常に拒否、`#` はコメント）。`.claude/` はクラウドから書けないので、AI が自分で範囲を広げることはできない。
    - 位置づけ：**うっかりを防ぐガードであり、悪意ある回避を防ぐセキュリティ境界ではない**。最終防衛線はマージ前のユーザー確認。
 2. **`.claude/hooks/__tests__/cloud-scope-guard.test.sh`** — 許可・拒否の代表パターンを JSON 入力で流して判定を確かめる。
-3. **SessionStart hook（クラウドのみ）** — `../docs-repository` が無ければ clone する。あわせて依存パッケージをインストールする。
+3. **SessionStart hook（クラウドのみ）** — 依存パッケージをインストールし、docs-repository がセッションに付いているかを知らせる。docs-repository の clone はしない（下記「スパイクの結果」）。
 4. **CLAUDE.md に「実行環境ごとの自律範囲」節を追加** — 本書 4 章の要約。hook に止められる前に Claude が判断できるようにする。
-5. **`plan` skill** — 黄・赤の依頼をクラウドで受けたとき、調査して `../docs-repository/plans/YYYY-MM-DD-{Issue番号}-{slug}.md` を書き、docs-repository に PR を出す（構成：依存グラフ＋Step ごとのコンテキスト）。PhysiFun の Issue に計画 PR の URL をコメントする。帰宅後に `/dev` で実装する。
-6. クラウドセッションは **PhysiFun 単独で起動する**（複数 repo を選ぶと hooks が読まれないため）。
+5. **`plan` skill** — 黄・赤の依頼をクラウドで受けたとき、Claude が docs-repository をセッションに追加し、調査して `plans/YYYY-MM-DD-{Issue番号}-{slug}.md` を書いて docs-repository に PR を出す（構成：依存グラフ＋Step ごとのコンテキスト）。PR とコメントは `gh api`（REST）で作る。PhysiFun の Issue に計画 PR の URL をコメントする。帰宅後に `/dev` で実装する。
+6. クラウドセッションは **PhysiFun 単独で起動する**（複数 repo を選ぶと hooks が読まれないため）。docs-repository は必要になったときに Claude がセッションに追加する。
 
-**要検証（P1 の最初にスパイクで確かめる）**
+**スパイクの結果（2026-10-17）**
 
-- 1 repo のクラウドセッションから private の `docs-repository` を clone できるか（Claude GitHub App を docs-repository にもインストールする）
-- クラウドで `bun install` が通るか（bun はプロキシと相性問題があると公式に記載あり）
-- クラウドセッションから docs-repository に push して PR を出せるか。出せなければ `plan` skill の出力先を PhysiFun の Issue へのコメント（`gh issue comment`）に切り替える
+- クラウドの git 認証は**セッションに付いている repo にしか効かない**。SessionStart hook の素の `git clone` では docs-repository を取れなかった
+- Claude がセッションの途中で docs-repository を追加すると、clone・push・PR 作成まで通った（`claude/` ブランチで確認。それ以外のブランチ名は未確認）
+- クラウドでは `gh pr create` が使えない。PR は `gh api` の REST か GitHub MCP で作る
+- PR を REST や MCP で作る場合も、事前に `git push` が必要なので、`cloud-scope-guard` の push ゲートで止まる。PR 作成コマンド自体の判定は補助的なもの
 
-clone できない場合は、ガードを GitHub 側（クラウド由来 PR の判定＋必須チェック＋ブランチ保護）に移す案に切り替え、本書を更新する。
+**要検証（P1 の PR 後、クラウドでの確認で確かめる）**
+
+- 途中で docs-repository を追加したあとも、PhysiFun の hooks（`cloud-scope-guard`）が効き続けるか
+- 途中で追加した repo がどのパスに置かれるか（`plan` skill はパスを探してから使う）
+- クラウドで `bun install` が通るか
+
+hooks が効かなくなる場合は、ガードを GitHub 側（クラウド由来 PR の判定＋必須チェック＋ブランチ保護）に移す案に切り替え、本書を更新する。
 
 **完了条件**
 
 - hook のテストで許可・拒否が期待どおり
 - 実際のクラウドセッションで、赤のファイルの編集が拒否され、緑のファイルは PR まで進む
-- クラウドセッションで docs-repository が読める
+- クラウドセッションで、Claude が docs-repository を追加して読める
 
 ### P2：修理
 

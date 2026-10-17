@@ -104,7 +104,7 @@ bun run test         # ユニットテスト（Vitest）
 
 | Hook | 種類 | 用途 |
 |---|---|---|
-| `cloud-setup.sh` | SessionStart | クラウドのときだけ docs-repository を `../docs-repository` に clone し、`bun install` する |
+| `cloud-setup.sh` | SessionStart | クラウドのときだけ `bun install` し、docs-repository がセッションに付いているかを知らせる |
 | `cloud-scope-guard.sh` | PreToolUse | クラウドのときだけ、`.claude/cloud-allowlist` 外への書き込みと、それを含む commit・push・PR 作成を拒否する |
 
 P3 で書き込み時の lint（`lint-on-edit`）を導入予定（`docs/guides/ai-harness.md`）。
@@ -124,6 +124,8 @@ P3 で書き込み時の lint（`lint-on-edit`）を導入予定（`docs/guides/
 - クラウドで緑以外の依頼を受けたら、コードを書かずに `plan` skill で計画書を docs-repository に PR する
 - 許可範囲の正は `.claude/cloud-allowlist`。`cloud-scope-guard` hook が機械的に止める
 - クラウドセッションは **PhysiFun 単独**で起動する（複数 repo を選ぶと repo の hooks が読み込まれず、ガードが効かない）
+- 最新仕様（docs-repository）が必要になったら、Claude が Physicalfunding/docs-repository をセッションに追加する（クラウドの git 認証はセッションに付いた repo にしか効かないため、hook では clone できない）
+- クラウドでは `gh pr create` が使えない。PR やコメントは `gh api`（REST）か GitHub MCP で作る
 
 ---
 
