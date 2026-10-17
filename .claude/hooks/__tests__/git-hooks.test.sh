@@ -74,7 +74,7 @@ git clone -q -b main "$T/origin.git" "$T/other" &&
 git fetch -q origin && git switch -q -C main origin/main
 git update-ref refs/remotes/origin/main "$OLD_MAIN"
 git switch -q -c green2
-echo v >docs/stale.md && git add -A && git commit -qm docs4
+mkdir -p docs && echo v >docs/stale.md && git add -A && git commit -qm docs4
 try stale_origin_main_push_allowed 0 git push -q -u origin green2
 
 # ローカル（CLAUDE_CODE_REMOTE なし）では何もしない
