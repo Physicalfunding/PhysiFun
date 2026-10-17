@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@physifun/server-shared";
 import { CleanupExpiredPendingAccountsUseCase } from "@physifun/application";
-import { KyselyCleanupExpiredAccountsAdapter } from "@physifun/infrastructure/src/kysely";
+import { KyselyCleanupExpiredAccountsAdapter } from "@physifun/infrastructure";
 
 /**
  * 期限切れ PENDING_EMAIL_CONFIRMATION アカウント削除 Cron エンドポイント

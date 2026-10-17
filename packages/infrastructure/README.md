@@ -13,7 +13,7 @@ PhysiFun のインフラ層。外部サービス（PostgreSQL / Resend 等）と
 - `scripts/seed.ts` — 初期 AdminAccount の投入（`bun run db:seed`）
 - `scripts/atlas.ts` — Atlas CLI のラッパー（`apps/web/.env.local` を読み込んで実行。`bun run db:migrate:*` から使う）
 
-Kysely 実装は ESM 専用のため、メイン barrel ではなくサブバレル `@physifun/infrastructure/src/kysely` から公開している。移行の詳細は `docs/guides/db-migration.md`。
+公開 API はすべて `src/index.ts`（`@physifun/infrastructure`）から export する（Kysely 実装も含む。#256 でサブバレルを統合）。クライアントコンポーネントからは型だけを import すること。移行の詳細は `docs/guides/db-migration.md`。
 
 ## 原則
 

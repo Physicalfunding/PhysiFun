@@ -3,7 +3,7 @@ import {
   ApproveLeaderApplicationUseCase,
   type ApproveLeaderApplicationError,
 } from "@physifun/application";
-import { KyselyApproveLeaderApplicationAdapter } from "@physifun/infrastructure/src/kysely";
+import { KyselyApproveLeaderApplicationAdapter } from "@physifun/infrastructure";
 import { isUuidV4 } from "@physifun/domain";
 import {
   successResponse,

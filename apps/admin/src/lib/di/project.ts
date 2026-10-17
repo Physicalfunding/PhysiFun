@@ -1,4 +1,4 @@
-import { KyselyProjectCommandAdapter } from "@physifun/infrastructure/src/kysely";
+import { KyselyProjectCommandAdapter } from "@physifun/infrastructure";
 import type {
   ApproveProjectPublicationPort,
   RejectProjectPublicationPort,

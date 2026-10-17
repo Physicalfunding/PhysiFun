@@ -1,5 +1,4 @@
-import { BcryptPasswordHasher } from "@physifun/infrastructure";
-import { KyselyActivateAccountAdapter } from "@physifun/infrastructure/src/kysely";
+import { BcryptPasswordHasher, KyselyActivateAccountAdapter } from "@physifun/infrastructure";
 import type { ActivateAccountPort, PasswordHasher } from "@physifun/application";
 
 /**

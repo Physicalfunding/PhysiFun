@@ -1,8 +1,8 @@
-import type { OutboxWorkerBase } from "@physifun/infrastructure";
 import {
+  type OutboxWorkerBase,
   buildLeaderApplicationOutboxWorker,
   buildProjectOutboxWorker,
-} from "@physifun/infrastructure/src/kysely";
+} from "@physifun/infrastructure";
 
 /**
  * Outbox 周りの DI ヘルパー (#187 PR2)

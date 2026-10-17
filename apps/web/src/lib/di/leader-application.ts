@@ -1,11 +1,20 @@
-import type { CaptchaVerifierPort, IpRateLimitPort } from "@physifun/application";
+import type {
+  CaptchaVerifierPort,
+  IpRateLimitPort,
+  SubmitLeaderApplicationPort,
+} from "@physifun/application";
 import { err, ok } from "@physifun/domain";
+import { KyselySubmitLeaderApplicationAdapter } from "@physifun/infrastructure";
 import { createTurnstileCaptchaVerifier } from "@/lib/captcha";
 import { consumeRateLimit } from "@/lib/rateLimit";
 
-// NOTE: SubmitLeaderApplicationPort（Kysely 実装）の DI は ESM/Jest 隔離のため
-// `leader-application-submit.ts` に分離している。このファイルは IP レートリミットポートの
-// Jest テストから import されるため、Kysely を読み込む実装を持ち込まない。
+/**
+ * SubmitLeaderApplicationUseCase 用のポート（Kysely 実装, #222）。
+ * アダプタは stateless なので DI 関数ごとに独自インスタンス化する。
+ */
+export function getSubmitLeaderApplicationPort(): SubmitLeaderApplicationPort {
+  return new KyselySubmitLeaderApplicationAdapter();
+}
 
 /**
  * CAPTCHA 検証ポート（Cloudflare Turnstile 実装）。

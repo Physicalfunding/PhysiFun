@@ -4,7 +4,7 @@ import {
   KyselyOutboxCommandAdapter,
   isValidOutboxSource,
   type OutboxSource,
-} from "@physifun/infrastructure/src/kysely";
+} from "@physifun/infrastructure";
 import {
   successResponse,
   unauthorizedResponse,

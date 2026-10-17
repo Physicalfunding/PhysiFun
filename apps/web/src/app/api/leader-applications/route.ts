@@ -14,8 +14,8 @@ import {
 import {
   getCaptchaVerifierPort,
   getLeaderApplicationIpRateLimitPort,
+  getSubmitLeaderApplicationPort,
 } from "@/lib/di/leader-application";
-import { getSubmitLeaderApplicationPort } from "@/lib/di/leader-application-submit";
 import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
 
 /**
