@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# git pre-push hook: クラウドセッションで、許可リスト外のファイルを含むコミットの push を止める
+# 実際に push されるコミットだけを判定する（今いるブランチではなく、git が渡す ref を見る）。
+# cloud-setup.sh がクラウドのときだけ core.hooksPath=.claude/git-hooks を設定する。ローカルでは何もしない。
+# 参照: docs/guides/ai-harness.md 4 章・P1
+
+[[ "${CLAUDE_CODE_REMOTE:-}" == "true" ]] || exit 0
+
+ROOT=$(git rev-parse --show-toplevel) || exit 0
+ALLOWLIST="${CLOUD_ALLOWLIST:-$ROOT/.claude/cloud-allowlist}"
+# shellcheck source=../hooks/lib/allowlist.sh
+source "$(dirname "$0")/../hooks/lib/allowlist.sh"
+
+REMOTE="${1:-origin}"
+ZERO=0000000000000000000000000000000000000000
+FILES=""
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
+while read -r _lref lsha _rref rsha; do
+  [[ "$lsha" == "$ZERO" ]] && continue # ブランチの削除
+  if [[ "$rsha" != "$ZERO" ]] && git cat-file -e "$rsha^{commit}" 2>/dev/null; then
+    base="$rsha" # 既存のリモートブランチ: 新しく送るコミットだけ
+  else
+    base=$(git merge-base "$REMOTE/main" "$lsha" 2>/dev/null) || {
+      echo "$REMOTE/main との共通の祖先が分からないため push を止めました。git fetch $REMOTE main を実行してから再試行してください。" >&2
+      exit 1
+    }
+  fi
+  FILES+=$(git -c core.quotePath=false diff --name-only "$base" "$lsha")$'\n'
+done
+
+BLOCKED=$(printf '%s' "$FILES" | sort -u | blocked_files)
+[[ -z "$BLOCKED" ]] && exit 0
+
+{
+  echo "クラウドセッションでは次のファイルを含むコミットを push できません（docs/guides/ai-harness.md 4 章）:"
+  sed 's/^/  /' <<<"$BLOCKED"
+  echo "変更を取り消し、plan skill で計画書を docs-repository の plans/ に書いて PR にしてください。"
+} >&2
+exit 1

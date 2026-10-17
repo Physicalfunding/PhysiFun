@@ -104,8 +104,9 @@ bun run test         # ユニットテスト（Vitest）
 
 | Hook | 種類 | 用途 |
 |---|---|---|
-| `cloud-setup.sh` | SessionStart | クラウドのときだけ `bun install` し、docs-repository がセッションに付いているかを知らせる |
-| `cloud-scope-guard.sh` | PreToolUse | クラウドのときだけ、`.claude/cloud-allowlist` 外への書き込みと、それを含む commit・push・PR 作成を拒否する |
+| `cloud-setup.sh` | SessionStart | クラウドのときだけ、PhysiFun に `core.hooksPath=.claude/git-hooks` を設定し、`bun install` し、docs-repository がセッションに付いているかを知らせる |
+| `cloud-scope-guard.sh` | PreToolUse | クラウドのときだけ、`.claude/cloud-allowlist` 外への Edit/Write と、git hook を飛ばす操作（`--no-verify` など）を拒否する |
+| `.claude/git-hooks/pre-commit`・`pre-push` | git hook | クラウドのときだけ、許可リスト外のファイルを含む commit と、それを含むコミットの push を止める（実際に commit・push される中身で判定） |
 
 P3 で書き込み時の lint（`lint-on-edit`）を導入予定（`docs/guides/ai-harness.md`）。
 
@@ -122,7 +123,7 @@ P3 で書き込み時の lint（`lint-on-edit`）を導入予定（`docs/guides/
 | 🔴 DB・認証・`.claude/`・`.github/`・実行環境 | 通常フロー | 調査・計画まで（`plan` skill） |
 
 - クラウドで緑以外の依頼を受けたら、コードを書かずに `plan` skill で計画書を docs-repository に PR する
-- 許可範囲の正は `.claude/cloud-allowlist`。`cloud-scope-guard` hook が機械的に止める
+- 許可範囲の正は `.claude/cloud-allowlist`。`cloud-scope-guard` hook（書き込み時）と git hook（commit・push 時）が機械的に止める
 - クラウドセッションは **PhysiFun 単独**で起動する（複数 repo を選ぶと repo の hooks が読み込まれず、ガードが効かない）
 - 最新仕様（docs-repository）が必要になったら、Claude が Physicalfunding/docs-repository をセッションに追加する（クラウドの git 認証はセッションに付いた repo にしか効かないため、hook では clone できない）
 - クラウドでは `gh pr create` が使えない。PR やコメントは `gh api`（REST）か GitHub MCP で作る

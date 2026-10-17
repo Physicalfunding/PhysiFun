@@ -9,6 +9,13 @@
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
+# commit・push の中身を判定する git hook を、この repo（PhysiFun）にだけ有効にする
+if git -C "$PROJECT_DIR" config core.hooksPath .claude/git-hooks 2>/dev/null; then
+  echo "git hooks: ok（.claude/git-hooks の pre-commit / pre-push が有効）"
+else
+  echo "git hooks: failed（commit・push のガードが効かない）"
+fi
+
 if (cd "$PROJECT_DIR" 2>/dev/null && bun install --frozen-lockfile >/dev/null 2>&1); then
   echo "bun install: ok"
 else

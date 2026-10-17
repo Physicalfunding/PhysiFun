@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# git pre-commit hook: クラウドセッションで、許可リスト外のファイルを含む commit を止める
+# cloud-setup.sh がクラウドのときだけ core.hooksPath=.claude/git-hooks を設定する。ローカルでは何もしない。
+# 参照: docs/guides/ai-harness.md 4 章・P1
+
+[[ "${CLAUDE_CODE_REMOTE:-}" == "true" ]] || exit 0
+
+ROOT=$(git rev-parse --show-toplevel) || exit 0
+ALLOWLIST="${CLOUD_ALLOWLIST:-$ROOT/.claude/cloud-allowlist}"
+# shellcheck source=../hooks/lib/allowlist.sh
+source "$(dirname "$0")/../hooks/lib/allowlist.sh"
+
+BLOCKED=$(git -c core.quotePath=false diff --cached --name-only | blocked_files)
+[[ -z "$BLOCKED" ]] && exit 0
+
+{
+  echo "クラウドセッションでは次のファイルを commit できません（docs/guides/ai-harness.md 4 章）:"
+  sed 's/^/  /' <<<"$BLOCKED"
+  echo "変更を取り消し、plan skill で計画書を docs-repository の plans/ に書いて PR にしてください。"
+} >&2
+exit 1

@@ -107,15 +107,19 @@ apps/*/public/*
 **変更内容**
 
 1. **`cloud-scope-guard.sh`（PreToolUse）** — `CLAUDE_CODE_REMOTE=true` のときだけ動く。それ以外は即 exit 0。
-   - `Edit` / `Write` / `NotebookEdit`：対象パスが緑でなければ `permissionDecision: "deny"` を返し、理由に「クラウドでは編集できません。`plan` skill で計画書を PR にしてください」と書く。
-   - `Bash` で `git commit` / `git push` / `gh pr create` を含むコマンド：commit なら staged のファイル、push・PR なら `origin/main` との merge-base からの変更ファイルを緑と照合し、外れていれば拒否する。Bash 経由の書き込みもここで止まる。
-   - 許可リストは `.claude/cloud-allowlist`（1 行 1 パターン、`!` で始まる行は常に拒否、`#` はコメント）。`.claude/` はクラウドから書けないので、AI が自分で範囲を広げることはできない。
+   - `Edit` / `Write` / `NotebookEdit`：対象パスが緑でなければ `permissionDecision: "deny"` を返し、理由に「クラウドでは編集できません。`plan` skill で計画書を PR にしてください」と書く。`..` を含むパスは拒否、repo 外は許可。
+   - `Bash`：git hook を飛ばす操作（`--no-verify`、`git commit -n`、`core.hooksPath` の変更）を拒否する。commit・push の中身は判定しない（下の git hook が判定する）。
+   - 許可リストは `.claude/cloud-allowlist`（1 行 1 パターン、`!` で始まる行は常に拒否、`#` はコメント）。判定は `.claude/hooks/lib/allowlist.sh` に置き、git hook と共有する。`.claude/` はクラウドから書けないので、AI が自分で範囲を広げることはできない。
    - 位置づけ：**うっかりを防ぐガードであり、悪意ある回避を防ぐセキュリティ境界ではない**。最終防衛線はマージ前のユーザー確認。
-2. **`.claude/hooks/__tests__/cloud-scope-guard.test.sh`** — 許可・拒否の代表パターンを JSON 入力で流して判定を確かめる。
-3. **SessionStart hook（クラウドのみ）** — 依存パッケージをインストールし、docs-repository がセッションに付いているかを知らせる。docs-repository の clone はしない（下記「スパイクの結果」）。
-4. **CLAUDE.md に「実行環境ごとの自律範囲」節を追加** — 本書 4 章の要約。hook に止められる前に Claude が判断できるようにする。
-5. **`plan` skill** — 黄・赤の依頼をクラウドで受けたとき、Claude が docs-repository をセッションに追加し、調査して `plans/YYYY-MM-DD-{Issue番号}-{slug}.md` を書いて docs-repository に PR を出す（構成：依存グラフ＋Step ごとのコンテキスト）。PR とコメントは `gh api`（REST）で作る。PhysiFun の Issue に計画 PR の URL をコメントする。帰宅後に `/dev` で実装する。
-6. クラウドセッションは **PhysiFun 単独で起動する**（複数 repo を選ぶと hooks が読まれないため）。docs-repository は必要になったときに Claude がセッションに追加する。
+2. **`.claude/git-hooks/pre-commit`・`pre-push`（git hook）** — `cloud-setup.sh` がクラウドのときだけ PhysiFun に `core.hooksPath=.claude/git-hooks` を設定して有効にする（docs-repository には設定しないので、そちらへの push は止めない）。
+   - pre-commit：stage されたファイルが緑でなければ commit を止める
+   - pre-push：git が渡す「実際に push される ref とコミット」で判定する。既存のリモートブランチなら新しく送るコミットだけ、新しいブランチなら `origin/main` との共通の祖先からの差分を見る
+   - **PreToolUse で判定しない理由**：PreToolUse はコマンド実行前に走るため、1 コマンドにまとめた書き込み＋commit を見られず、今いるブランチ以外の push も判定できなかった（P1 のクラウド確認で判明）
+3. **`.claude/hooks/__tests__/cloud-scope-guard.test.sh`・`git-hooks.test.sh`** — 許可・拒否の代表パターンを JSON 入力で流して判定を確かめる。
+4. **SessionStart hook（クラウドのみ）** — PhysiFun に `core.hooksPath=.claude/git-hooks` を設定し、依存パッケージをインストールし、docs-repository がセッションに付いているかを知らせる。docs-repository の clone はしない（下記「スパイクの結果」）。
+5. **CLAUDE.md に「実行環境ごとの自律範囲」節を追加** — 本書 4 章の要約。hook に止められる前に Claude が判断できるようにする。
+6. **`plan` skill** — 黄・赤の依頼をクラウドで受けたとき、Claude が docs-repository をセッションに追加し、調査して `plans/YYYY-MM-DD-{Issue番号}-{slug}.md` を書いて docs-repository に PR を出す（構成：依存グラフ＋Step ごとのコンテキスト）。PR とコメントは `gh api`（REST）で作る。PhysiFun の Issue に計画 PR の URL をコメントする。帰宅後に `/dev` で実装する。
+7. クラウドセッションは **PhysiFun 単独で起動する**（複数 repo を選ぶと hooks が読まれないため）。docs-repository は必要になったときに Claude がセッションに追加する。
 
 **スパイクの結果（2026-10-17）**
 

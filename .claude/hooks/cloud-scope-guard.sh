@@ -2,6 +2,7 @@
 # PreToolUse hook: クラウドセッションで、許可リスト（緑）以外への書き込みを拒否する
 # ローカル（CLAUDE_CODE_REMOTE != true）では何もしない。
 # うっかりを防ぐガードであり、悪意ある回避を防ぐセキュリティ境界ではない。
+# commit・push の中身の判定は .claude/git-hooks が行う（PreToolUse はコマンド実行前に走るため、1 コマンドにまとめた書き込み＋commit を見られない）。
 # 参照: docs/guides/ai-harness.md 4 章・P1
 
 [[ "${CLAUDE_CODE_REMOTE:-}" == "true" ]] || exit 0
@@ -10,21 +11,8 @@ PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 ALLOWLIST="${CLOUD_ALLOWLIST:-$PROJECT_DIR/.claude/cloud-allowlist}"
 INPUT=$(cat)
 
-# 常に拒否に当たれば 1、緑に当たれば 0、どれでもなければ 1
-is_allowed() {
-  local rel="$1" line allowed=1
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    [[ -z "$line" || "$line" == \#* ]] && continue
-    if [[ "$line" == !* ]]; then
-      # shellcheck disable=SC2053
-      [[ "$rel" == ${line#!} ]] && return 1
-    else
-      # shellcheck disable=SC2053
-      [[ "$rel" == $line ]] && allowed=0
-    fi
-  done <"$ALLOWLIST"
-  return $allowed
-}
+# shellcheck source=lib/allowlist.sh
+source "$(dirname "$0")/lib/allowlist.sh"
 
 deny() {
   jq -cn --arg r "$1" \
@@ -51,24 +39,12 @@ case "$TOOL" in
       deny "クラウドセッションでは $REL を編集できません（docs/guides/ai-harness.md 4 章）。plan skill で計画書を docs-repository の plans/ に書き、PR にしてください。"
     ;;
   Bash)
+    # commit・push の中身は .claude/git-hooks（pre-commit / pre-push）が判定する。
+    # ここでは git hook を飛ばす操作だけを止める。
     CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
-    git_q() { git -C "$PROJECT_DIR" -c core.quotePath=false "$@"; }
-    if [[ "$CMD" == *"git push"* || "$CMD" == *"gh pr create"* ]]; then
-      FILES=$(git_q diff --name-only origin/main...HEAD 2>/dev/null) ||
-        deny "origin/main との差分を計算できないため push を止めました。git fetch origin main を実行してから再試行してください。"
-    elif [[ "$CMD" == *"git commit"* ]]; then
-      FILES=$(git_q diff --name-only HEAD 2>/dev/null) || exit 0
-    else
-      exit 0
-    fi
-    BLOCKED=()
-    while IFS= read -r f; do
-      [[ -z "$f" ]] && continue
-      is_allowed "$f" || BLOCKED+=("$f")
-    done <<<"$FILES"
-    if ((${#BLOCKED[@]} > 0)); then
-      LIST=$(printf '%s, ' "${BLOCKED[@]}")
-      deny "クラウドセッションでは次のファイルを commit/push できません: ${LIST%, }（docs/guides/ai-harness.md 4 章）。変更を取り消し、plan skill で計画書を PR にしてください。"
+    if [[ "$CMD" == *"--no-verify"* || "$CMD" == *"hooksPath"* ]] ||
+      [[ "$CMD" =~ git[[:space:]]+commit([[:space:]]+[^[:space:]]+)*[[:space:]]+-[a-zA-Z]*n[a-zA-Z]*([[:space:]]|$) ]]; then
+      deny "クラウドセッションでは git hook を飛ばす操作（--no-verify、commit -n、core.hooksPath の変更）はできません（docs/guides/ai-harness.md 4 章）。"
     fi
     ;;
 esac
