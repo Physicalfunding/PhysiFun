@@ -34,7 +34,7 @@ const FILE_SCHEMA = {
     },
     hasSchemaChanges: {
       type: "boolean",
-      description: "Prisma スキーマ / Kysely 型定義 / Atlas schema.sql の変更があるか",
+      description: "Atlas schema.sql / atlas/migrations / Kysely 型（types.ts）の変更があるか",
     },
     allFiles: {
       type: "array",
@@ -61,13 +61,13 @@ const files = await agent(
 1. git diff --name-only main...HEAD で変更ファイルを取得
    - main と同じコミットなら git diff --name-only HEAD~1 を使う
    - それでもなければ git status --short で変更を確認
-2. .ts / .tsx ファイルに絞る（+ schema.prisma, types.ts, schema.sql も対象）
+2. .ts / .tsx ファイルに絞る（+ atlas/schema.sql と atlas/migrations/*.sql も対象）
 3. 分類:
-   - appFiles: apps/ 配下
+   - appFiles: apps/ 配下と packages/server-shared/ 配下（サーバー側の共通コード）
    - domainFiles: packages/domain/ 配下
    - applicationFiles: packages/application/ 配下
    - infraFiles: packages/infrastructure/ 配下
-   - hasSchemaChanges: schema.prisma / types.ts（kysely）/ schema.sql の変更があるか
+   - hasSchemaChanges: atlas/schema.sql / atlas/migrations / src/database/kysely/types.ts の変更があるか
    - allFiles: 全 .ts/.tsx ファイル
 `,
   { label: "ファイル分類", schema: FILE_SCHEMA }
@@ -89,23 +89,10 @@ if (files.allFiles.length > 0) {
   tasks.push(() =>
     agent(
       `
-PhysiFun のアーキテクチャ境界レビューを行ってください。
+\`.claude/agents/arch-reviewer.md\` を読み、その指示（最初にやること・検査項目・出力フォーマット）に従って、次のファイルをレビューしてください。コードは修正しないでください。
 
 ## 対象ファイル
 ${files.allFiles.join("\n")}
-
-## 手順
-1. CLAUDE.md を読む（禁止事項・推奨事項）
-2. .docs/structure.md を読む（レイヤー別責務・命名規則）
-3. 対象ファイルを読む
-4. 以下を検査:
-   A. レイヤー境界違反: infrastructure/ 以外での Supabase/Kysely/Prisma import、domain/ での外部ライブラリ依存
-   B. UseCase パターン: Result 型、判別共用体エラー、Port DI
-   C. 命名規則: UseCase/Port/Repository の命名
-   D. API Route Handler: 薄い BFF になっているか
-   E. 依存方向: Presentation → Application → Domain ← Infrastructure
-
-ファイルごとに「違反 / 注意 / OK」を報告。違反は行番号付きで。
 `,
       { label: "arch-reviewer", phase: "並列レビュー" }
     )
@@ -116,22 +103,10 @@ if (files.appFiles.length > 0 || files.infraFiles.length > 0) {
   tasks.push(() =>
     agent(
       `
-PhysiFun のセキュリティレビューを行ってください。
+\`.claude/agents/security-reviewer.md\` を読み、その指示（最初にやること・検査項目・出力フォーマット）に従って、次のファイルをレビューしてください。コードは修正しないでください。
 
 ## 対象ファイル
 ${[...files.appFiles, ...files.infraFiles].join("\n")}
-
-## 手順
-1. .docs/tech.md を読む（認証方式・環境変数）
-2. 対象ファイルを読む
-3. 以下を検査:
-   A. SQL インジェクション: Kysely sql タグ、Prisma $queryRaw のパラメータバインド
-   B. XSS: dangerouslySetInnerHTML、ユーザー入力の URL 埋め込み
-   C. 認証・認可: getServerSession 呼び出し漏れ、ロールチェック、IDOR
-   D. 機密情報: NEXT_PUBLIC 以外の環境変数露出、API レスポンスの内部情報
-   E. 入力バリデーション: Zod 検証、ファイルアップロード制限
-
-リスクレベル（高/中/低）と対処法を報告。
 `,
       { label: "security-reviewer", phase: "並列レビュー" }
     )
@@ -142,25 +117,11 @@ if (files.hasSchemaChanges || files.infraFiles.length > 0) {
   tasks.push(() =>
     agent(
       `
-PhysiFun の DB スキーマ安全チェックを行ってください。
+\`.claude/agents/data-guardian.md\` を読み、その指示（最初にやること・検査項目・出力フォーマット）に従って、次のファイルをレビューしてください。コードは修正しないでください。
 
 ## 対象ファイル
 ${files.infraFiles.join("\n")}
-${files.hasSchemaChanges ? "（スキーマ変更あり）" : ""}
-
-## 手順
-1. packages/infrastructure/prisma/schema.prisma を読む
-2. packages/infrastructure/src/database/kysely/types.ts を読む
-3. .docs/db-migration-kysely-atlas.md を読む
-4. git diff で変更内容を確認
-5. 以下を検査:
-   A. Prisma スキーマ互換性: カラム追加時の @default、型変更、カスケード削除
-   B. Kysely 型定義との整合: camelCase 一致、NULL 許容、INSERT 省略可能
-   C. Atlas schema.sql との整合
-   D. Repository / QueryService への波及
-   E. ドメイン層への波及
-
-リスクレベル（高/中/低）と推奨アクションを報告。
+${files.hasSchemaChanges ? "（スキーマ変更あり。git diff で変更内容も確認すること）" : ""}
 `,
       { label: "data-guardian", phase: "並列レビュー" }
     )

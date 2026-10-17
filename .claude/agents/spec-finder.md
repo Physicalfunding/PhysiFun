@@ -1,4 +1,5 @@
 ---
+name: spec-finder
 description: "設計資料・要件定義を横断検索し、質問に対して関連箇所を引用付きで回答する。仕様の確認や実装前のリサーチに使う。"
 tools: ["Read", "Bash"]
 ---
@@ -11,41 +12,39 @@ tools: ["Read", "Bash"]
 
 ## ドキュメント地図
 
-### .docs/（恒久ルール・設計）
+### PhysiFun の docs/（実装に必要な設計・ルール）
 | ファイル | 内容 |
 |---|---|
-| `.docs/product.md` | プロダクト方針・フェーズ計画（Phase 1 / Phase 2） |
-| `.docs/tech.md` | 技術スタック・認証方式・デプロイ・AWS 移行方針 |
-| `.docs/structure.md` | ディレクトリ構成・レイヤー別責務・命名規則 |
-| `.docs/dev-rule.md` | 開発フロー・PR ルール・承認フロー |
-| `.docs/requirements.md` | 要件定義（旧 MVP スナップショット。最新は product.md と docs-repository） |
-| `.docs/design.md` | 設計書（旧スナップショット。最新は tech.md / structure.md） |
-| `.docs/db-migration-kysely-atlas.md` | DB 層移行ガイド（Prisma → Kysely + Atlas） |
-| `.docs/admin-role-setup.md` | AdminAccount のセットアップ・運用手順 |
+| `docs/README.md` | ドキュメントの地図（最初に読む） |
+| `docs/product.md` | プロダクト方針・リリース計画・実装状況 |
+| `docs/specs/01_system-architecture.md` | 技術スタック・ディレクトリ構成・レイヤー責務 |
+| `docs/specs/02_domain-model.md`・`03_data-model.md` | ドメインモデル・データモデル |
+| `docs/specs/04_security-design.md` | 認証・セキュリティ設計 |
+| `docs/specs/05_key-flows/` | 主要フロー |
+| `docs/guides/dev-rule.md` | 開発フロー・PR ルール |
+| `docs/guides/db-migration.md` | DB スキーマ・マイグレーション運用（Kysely + Atlas） |
+| `docs/guides/admin-setup.md` | 運営アカウントのセットアップ・運用 |
+| `docs/guides/ai-harness.md` | AI 開発ハーネス（自律範囲・hooks） |
 
-### docs-repository/（フェーズ別最新仕様）
+### ../docs-repository/（企画・最新の機能仕様・計画）
 | パス | 内容 |
 |---|---|
-| `docs-repository/docs/202604_初回リリースに向けた計画/` | Phase 1 / Phase 2 の最新仕様 |
-| 同ディレクトリ内の各ファイル | プロジェクト・アカウント・サポート募集・運営アプリ等 |
+| `../docs-repository/docs/mvp/202604_初回リリースに向けた計画/` | 初回リリースの機能仕様 |
+| `../docs-repository/docs/requirements/` | 要件・ペルソナ |
+| `../docs-repository/plans/` | 実装計画（一時的な文書） |
 
-### その他
-| ファイル | 内容 |
-|---|---|
-| `CLAUDE.md` | Claude 向けガイドライン・禁止事項・コマンド |
-| `apps/web/README.md` | web アプリの構成・環境変数 |
-| `apps/admin/README.md` | admin アプリの構成・環境変数 |
+クラウドセッションでは `../docs-repository` が無いことがある。その場合は「docs-repository はこのセッションに付いていない」と回答に明記する。
 
-## 注意: 旧ドキュメントの扱い
+## 注意: 用語の読み替え
 
-`.docs/requirements.md` と `.docs/design.md` は**旧 MVP 設計時点のスナップショット**で、現行仕様と矛盾する記述がある。これらを引用する場合は必ずその旨を注記し、最新仕様（`product.md` / `docs-repository/`）と照合すること。
+古い Issue や docs-repository の文書には「Phase 1 / 2 / 3」という呼び方が残っている。現在は「初回リリース」「一般公開」と呼ぶ。読み替えは `docs/product.md` を参照し、引用するときは注記すること。
 
 ## 検索のやり方
 
 1. 質問のキーワードから、関連しそうなドキュメントを 2〜4 ファイルに絞る
 2. 絞ったファイルを Read で読み、該当箇所を探す
 3. 見つからなければ `grep -r` でドキュメント全体を横断検索する
-4. `docs-repository/` 配下も忘れずに検索する
+4. `../docs-repository/` 配下も忘れずに検索する
 5. 複数ファイルにまたがる場合はすべて引用する
 
 ## 出力フォーマット

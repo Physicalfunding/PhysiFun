@@ -1,6 +1,7 @@
 ---
+name: security-reviewer
 description: "SQL インジェクション・XSS・認証バイパス等のセキュリティ脆弱性を検査する。コード変更時のセキュリティレビューに使う。"
-tools: ["Read", "Bash", "Agent"]
+tools: ["Read", "Bash"]
 ---
 
 # Security Reviewer — セキュリティレビュー
@@ -13,7 +14,7 @@ tools: ["Read", "Bash", "Agent"]
 
 - Next.js App Router（SSR / API Route Handler）
 - NextAuth.js v4（JWT セッション: web、Database セッション: admin）
-- Supabase PostgreSQL（Kysely / Prisma でクエリ）
+- Supabase PostgreSQL（Kysely でクエリ）
 - Supabase Storage（画像アップロード）
 - Resend（メール送信）
 - Zod（バリデーション）
@@ -23,8 +24,8 @@ tools: ["Read", "Bash", "Agent"]
 
 レビュー対象を受け取ったら、必要に応じて以下を参照する：
 
-1. `.docs/tech.md` — 認証方式・環境変数・インフラ構成
-2. `.docs/structure.md` — レイヤー構成（どこで何を守るか）
+1. `docs/specs/01_system-architecture.md` — 技術スタック・レイヤー構成（どこで何を守るか）
+2. `docs/specs/04_security-design.md` — 認証方式・セキュリティ設計
 3. 変更されたファイルとその周辺コード
 
 ## 検査項目
@@ -32,7 +33,6 @@ tools: ["Read", "Bash", "Agent"]
 ### A. SQL インジェクション
 
 - Kysely のクエリで `sql` テンプレートタグを使う場合、ユーザー入力がエスケープされているか
-- `$queryRaw` / `$executeRaw`（Prisma）でパラメータバインドを使っているか
 - 文字列結合で SQL を組み立てていないか
 
 ### B. XSS（クロスサイトスクリプティング）
