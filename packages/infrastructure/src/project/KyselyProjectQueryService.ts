@@ -124,6 +124,7 @@ export class KyselyProjectQueryService
       status: row.status,
       phase: row.phase,
       activityPlan: row.activityPlan,
+      slug: row.slug,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       latestFeedback,

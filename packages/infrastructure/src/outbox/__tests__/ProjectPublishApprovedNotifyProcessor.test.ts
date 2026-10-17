@@ -23,6 +23,7 @@ describe("ProjectPublishApprovedNotifyProcessor", () => {
     payload: {
       projectId: "project-1",
       projectTitle: "テストプロジェクト",
+      slug: "project-1",
       leaderAccountId: "leader-1",
       reviewerId: "reviewer-1",
       approvedAt: "2026-04-17T00:00:00.000Z",
@@ -61,11 +62,25 @@ describe("ProjectPublishApprovedNotifyProcessor", () => {
     expect(mailSender.sentMessages[0].subject).toContain("環境保全");
   });
 
-  it("本文にプロジェクト URL を含む", async () => {
-    await processor.process(makeMessage({ projectId: "proj-abc" }));
+  it("CTA のリンク先は公開ページ /projects/{slug}（#265）", async () => {
+    await processor.process(makeMessage({ projectId: "proj-abc", slug: "slug-abc" }));
+
+    const sent = mailSender.sentMessages[0];
+    expect(sent.text).toContain("https://physifun.com/projects/slug-abc");
+    expect(sent.html).toContain('href="https://physifun.com/projects/slug-abc"');
+    expect(sent.html).toContain("公開ページを見る");
+    expect(sent.text).not.toContain("/my/projects/");
+  });
+
+  it("slug の無い旧 payload はマイページのプロジェクト詳細へのリンクにする", async () => {
+    const message = makeMessage({ projectId: "proj-abc" });
+    const { slug: _omitted, ...legacyPayload } = message.payload;
+    await processor.process({ ...message, payload: legacyPayload });
 
     const sent = mailSender.sentMessages[0];
     expect(sent.text).toContain("https://physifun.com/my/projects/proj-abc");
+    expect(sent.html).toContain('href="https://physifun.com/my/projects/proj-abc"');
+    expect(sent.html).toContain("プロジェクトを確認する");
   });
 
   it("HTML テンプレートでユーザー入力がエスケープされる", async () => {

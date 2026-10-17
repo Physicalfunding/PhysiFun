@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PREFECTURE_MASTER, type PublishStatus, type ProjectPhase } from "@physifun/domain";
 import { isAllowedImageUrl } from "@physifun/ui-shared";
@@ -10,6 +11,7 @@ import { useToast } from "@/components/common/Toast";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { ProjectStatusBadge } from "./ProjectStatusBadge";
 import { PendingReviewBanner } from "./PendingReviewBanner";
+import { getPublicPagePath } from "./publicPagePath";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
   PREFECTURE_MASTER.map((p) => [p.code, p.name])
@@ -34,6 +36,7 @@ interface ProjectDetailDTO {
   status: string;
   phase: string;
   activityPlan: string | null;
+  slug: string | null;
   createdAt: string;
   updatedAt: string;
   latestFeedback: {
@@ -151,6 +154,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
 
   const status = project.status as PublishStatus;
   const phase = project.phase as ProjectPhase;
+  const publicPagePath = getPublicPagePath(status, project.slug);
 
   const locationParts: string[] = [];
   if (project.prefectureCode && PREFECTURE_MAP[project.prefectureCode]) {
@@ -255,6 +259,13 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
                   非公開にする
                 </Button>
               </>
+            )}
+            {publicPagePath && (
+              <Link href={publicPagePath} data-testid="public-page-link">
+                <Button variant="outline" size="sm">
+                  公開ページを見る
+                </Button>
+              </Link>
             )}
           </div>
         </CardContent>

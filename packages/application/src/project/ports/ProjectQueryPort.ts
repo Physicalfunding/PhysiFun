@@ -50,6 +50,8 @@ export interface ProjectDetailDTO {
   readonly status: string;
   readonly phase: string;
   readonly activityPlan: string | null;
+  /** 公開ページ `/projects/[slug]` の slug。初回の公開承認までは null。非公開化しても残る */
+  readonly slug: string | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
   readonly latestFeedback: {
