@@ -1,6 +1,6 @@
 # AI 開発ハーネス設計
 
-> 作成: 2026-10-17 / 状態: P0・P1 完了、P2 実装中
+> 作成: 2026-10-17 / 状態: P0〜P2 完了、P3 実装中
 > 2026-10-17 改訂: main の変更（`.docs/` → `docs/` 再配置、Prisma 撤去、Vitest 統一、`packages/server-shared` 追加）に合わせて更新
 > 対象: `.claude/`（skills・agents・workflows・hooks・settings）、ESLint、CI のうち AI 開発に関わる部分
 

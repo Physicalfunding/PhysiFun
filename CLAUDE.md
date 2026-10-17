@@ -105,11 +105,12 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 
 | Hook | 種類 | 用途 |
 |---|---|---|
+| `lint-on-edit.sh` | PostToolUse | `.ts` / `.tsx` を書いた直後に Prettier と ESLint（境界ルールを含む）をかけ、違反を Claude に返す |
 | `cloud-setup.sh` | SessionStart | クラウドのときだけ、PhysiFun に `core.hooksPath=.claude/git-hooks` を設定し、`bun install` し、docs-repository がセッションに付いているかを知らせる |
 | `cloud-scope-guard.sh` | PreToolUse | クラウドのときだけ、`.claude/cloud-allowlist` 外への Edit/Write と、git hook を飛ばす操作（`--no-verify` など）を拒否する |
 | `.claude/git-hooks/pre-commit`・`pre-push` | git hook | クラウドのときだけ、許可リスト外のファイルを含む commit と、それを含むコミットの push を止める（実際に commit・push される中身で判定） |
 
-P3 で書き込み時の lint（`lint-on-edit`）を導入予定（`docs/guides/ai-harness.md`）。
+
 
 ---
 
