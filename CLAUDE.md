@@ -75,6 +75,7 @@ bun run test         # ユニットテスト（Vitest）
 | `issue` | GitHub Issue 作成（種別・ラベル自動判定、ブランチ名提案） |
 | `dev` | Issue → 実装 → 検証 → PR → レビュー → 修正の一貫開発フロー |
 | `add-usecase` | application 層に UseCase を追加する（`Result` 型・Port DI・併設ユニットテスト必須の規範手順とテンプレート） |
+| `cloud-plan` | クラウドで緑以外の依頼を受けたとき、実装計画を docs-repository の `plans/` に書いて PR にする |
 
 ## Agents（専門レビューエージェント）
 
@@ -99,7 +100,33 @@ bun run test         # ユニットテスト（Vitest）
 
 ## Hooks（自動検査）
 
-現在有効な hook はない。P3 で書き込み時の lint（`lint-on-edit`）を導入予定（`docs/guides/ai-harness.md`）。
+`.claude/hooks/` 配下。テストは `bash .claude/hooks/__tests__/run-all.sh`。
+
+| Hook | 種類 | 用途 |
+|---|---|---|
+| `cloud-setup.sh` | SessionStart | クラウドのときだけ、PhysiFun に `core.hooksPath=.claude/git-hooks` を設定し、`bun install` し、docs-repository がセッションに付いているかを知らせる |
+| `cloud-scope-guard.sh` | PreToolUse | クラウドのときだけ、`.claude/cloud-allowlist` 外への Edit/Write と、git hook を飛ばす操作（`--no-verify` など）を拒否する |
+| `.claude/git-hooks/pre-commit`・`pre-push` | git hook | クラウドのときだけ、許可リスト外のファイルを含む commit と、それを含むコミットの push を止める（実際に commit・push される中身で判定） |
+
+P3 で書き込み時の lint（`lint-on-edit`）を導入予定（`docs/guides/ai-harness.md`）。
+
+---
+
+## 実行環境ごとの自律範囲
+
+クラウドセッションかどうかは環境変数 `CLAUDE_CODE_REMOTE`（クラウドでは `true`）で判断する。詳細は `docs/guides/ai-harness.md` 4 章。
+
+| 区分 | ローカル | クラウド |
+|---|---|---|
+| 🟢 緑（`docs/`・`*.md`・テストのみ・`apps/*/src/components/`・`apps/*/public/`） | 通常フロー（push 前にユーザー承認） | PR 作成まで自動。マージはユーザー |
+| 🟡 通常の機能実装 | 通常フロー | 調査・計画まで（`cloud-plan` skill） |
+| 🔴 DB・認証・`.claude/`・`.github/`・実行環境 | 通常フロー | 調査・計画まで（`cloud-plan` skill） |
+
+- クラウドで緑以外の依頼を受けたら、コードを書かずに `cloud-plan` skill で計画書を docs-repository に PR する
+- 許可範囲の正は `.claude/cloud-allowlist`。`cloud-scope-guard` hook（書き込み時）と git hook（commit・push 時）が機械的に止める
+- クラウドセッションは **PhysiFun 単独**で起動する（複数 repo を選ぶと repo の hooks が読み込まれず、ガードが効かない）
+- 最新仕様（docs-repository）が必要になったら、Claude が Physicalfunding/docs-repository をセッションに追加する（クラウドの git 認証はセッションに付いた repo にしか効かないため、hook では clone できない）
+- クラウドでは `gh pr create` が使えない。PR やコメントは `gh api`（REST）か GitHub MCP で作る
 
 ---
 

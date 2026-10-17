@@ -18,7 +18,7 @@ Claude と開発するときの品質・安全を、**Claude の注意力では�
 | 開発体制 | 1 人＋Claude |
 | ローカル | メイン。この Mac の Claude Desktop / CLI。ユーザーが画面の前にいる |
 | クラウド | 外出時にスマホアプリから起動。ユーザーは画面を見ていない |
-| クラウドの制約 | repo を clone するだけ。`~/.claude`（global 設定・プラグイン）、Obsidian、隣接 repo は見えない。**複数 repo を選んだセッションでは repo の hooks・permission が読まれない**。ファイル編集はモードに関係なく事前承認される |
+| クラウドの制約 | repo を clone するだけ。`~/.claude`（global 設定・プラグイン）、Obsidian、隣接 repo は見えない。**複数 repo を選んだセッションでは repo の hooks・permission が読まれない**。ファイル編集はモードに関係なく事前承認される。git の認証はセッションに付いた repo にしか効かない。`gh pr create` は使えない |
 
 ## 3. 設計原則
 
@@ -63,7 +63,7 @@ apps/*/public/*
 | 層 | 仕組み | ローカル | クラウド | 役割 |
 |---|---|---|---|---|
 | 文脈 | `CLAUDE.md` | ✅ | ✅ | 前提・禁止事項・自律範囲の案内 |
-| 手順 | skills（`dev` / `issue` / `add-usecase` / `plan`） | ✅ | ✅ | 定型作業の手順 |
+| 手順 | skills（`dev` / `issue` / `add-usecase` / `cloud-plan`） | ✅ | ✅ | 定型作業の手順 |
 | 専門レビュー | agents ＋ `full-review` workflow | ✅ | ✅ | 機械で判定できない観点（ビジネスロジックの置き場など） |
 | 書き込み直後 | PostToolUse hook `lint-on-edit` | ✅ | ✅ | 書いたファイルに ESLint・Prettier |
 | 書き込み直前 | PreToolUse hook `cloud-scope-guard` | 何もしない | ✅ | 緑以外への書き込み・commit・push を拒否 |
@@ -107,29 +107,40 @@ apps/*/public/*
 **変更内容**
 
 1. **`cloud-scope-guard.sh`（PreToolUse）** — `CLAUDE_CODE_REMOTE=true` のときだけ動く。それ以外は即 exit 0。
-   - `Edit` / `Write` / `NotebookEdit`：対象パスが緑でなければ `permissionDecision: "deny"` を返し、理由に「クラウドでは編集できません。`plan` skill で計画書を PR にしてください」と書く。
-   - `Bash` で `git commit` / `git push` / `gh pr create` を含むコマンド：commit なら staged のファイル、push・PR なら `origin/main` との merge-base からの変更ファイルを緑と照合し、外れていれば拒否する。Bash 経由の書き込みもここで止まる。
-   - 許可リストは `.claude/cloud-allowlist`（1 行 1 パターン、`!` で始まる行は常に拒否、`#` はコメント）。`.claude/` はクラウドから書けないので、AI が自分で範囲を広げることはできない。
+   - `Edit` / `Write` / `NotebookEdit`：対象パスが緑でなければ `permissionDecision: "deny"` を返し、理由に「クラウドでは編集できません。`cloud-plan` skill で計画書を PR にしてください」と書く。`..` を含むパスは拒否、repo 外は許可。
+   - `Bash`：git hook を飛ばす操作（`--no-verify`、`git commit -n`、`core.hooksPath` の変更）を拒否する。commit・push の中身は判定しない（下の git hook が判定する）。
+   - 許可リストは `.claude/cloud-allowlist`（1 行 1 パターン、`!` で始まる行は常に拒否、`#` はコメント）。判定は `.claude/hooks/lib/allowlist.sh` に置き、git hook と共有する。`.claude/` はクラウドから書けないので、AI が自分で範囲を広げることはできない。
    - 位置づけ：**うっかりを防ぐガードであり、悪意ある回避を防ぐセキュリティ境界ではない**。最終防衛線はマージ前のユーザー確認。
-2. **`.claude/hooks/__tests__/cloud-scope-guard.test.sh`** — 許可・拒否の代表パターンを JSON 入力で流して判定を確かめる。
-3. **SessionStart hook（クラウドのみ）** — `../docs-repository` が無ければ clone する。あわせて依存パッケージをインストールする。
-4. **CLAUDE.md に「実行環境ごとの自律範囲」節を追加** — 本書 4 章の要約。hook に止められる前に Claude が判断できるようにする。
-5. **`plan` skill** — 黄・赤の依頼をクラウドで受けたとき、調査して `../docs-repository/plans/YYYY-MM-DD-{Issue番号}-{slug}.md` を書き、docs-repository に PR を出す（構成：依存グラフ＋Step ごとのコンテキスト）。PhysiFun の Issue に計画 PR の URL をコメントする。帰宅後に `/dev` で実装する。
-6. クラウドセッションは **PhysiFun 単独で起動する**（複数 repo を選ぶと hooks が読まれないため）。
+2. **`.claude/git-hooks/pre-commit`・`pre-push`（git hook）** — `cloud-setup.sh` がクラウドのときだけ PhysiFun に `core.hooksPath=.claude/git-hooks` を設定して有効にする（docs-repository には設定しないので、そちらへの push は止めない）。
+   - pre-commit：stage されたファイルが緑でなければ commit を止める
+   - pre-push：git が渡す「実際に push される ref とコミット」で判定する。既存のリモートブランチなら新しく送るコミットだけ、新しいブランチなら `origin/main` との共通の祖先からの差分を見る
+   - **PreToolUse で判定しない理由**：PreToolUse はコマンド実行前に走るため、1 コマンドにまとめた書き込み＋commit を見られず、今いるブランチ以外の push も判定できなかった（P1 のクラウド確認で判明）
+3. **`.claude/hooks/__tests__/cloud-scope-guard.test.sh`・`git-hooks.test.sh`** — 許可・拒否の代表パターンを JSON 入力で流して判定を確かめる。
+4. **SessionStart hook（クラウドのみ）** — PhysiFun に `core.hooksPath=.claude/git-hooks` を設定し、依存パッケージをインストールし、docs-repository がセッションに付いているかを知らせる。docs-repository の clone はしない（下記「スパイクの結果」）。
+5. **CLAUDE.md に「実行環境ごとの自律範囲」節を追加** — 本書 4 章の要約。hook に止められる前に Claude が判断できるようにする。
+6. **`cloud-plan` skill**（組み込みの `/plan` コマンドとぶつからない名前にした） — 黄・赤の依頼をクラウドで受けたとき、Claude が docs-repository をセッションに追加し、調査して `plans/YYYY-MM-DD-{Issue番号}-{slug}.md` を書いて docs-repository に PR を出す（構成：依存グラフ＋Step ごとのコンテキスト）。PR とコメントは `gh api`（REST）で作る。PhysiFun の Issue に計画 PR の URL をコメントする。帰宅後に `/dev` で実装する。
+7. クラウドセッションは **PhysiFun 単独で起動する**（複数 repo を選ぶと hooks が読まれないため）。docs-repository は必要になったときに Claude がセッションに追加する。
 
-**要検証（P1 の最初にスパイクで確かめる）**
+**スパイクの結果（2026-10-17）**
 
-- 1 repo のクラウドセッションから private の `docs-repository` を clone できるか（Claude GitHub App を docs-repository にもインストールする）
-- クラウドで `bun install` が通るか（bun はプロキシと相性問題があると公式に記載あり）
-- クラウドセッションから docs-repository に push して PR を出せるか。出せなければ `plan` skill の出力先を PhysiFun の Issue へのコメント（`gh issue comment`）に切り替える
+- クラウドの git 認証は**セッションに付いている repo にしか効かない**。SessionStart hook の素の `git clone` では docs-repository を取れなかった
+- Claude がセッションの途中で docs-repository を追加すると、clone・push・PR 作成まで通った（`claude/` ブランチで確認。それ以外のブランチ名は未確認）
+- クラウドでは `gh pr create` が使えない。PR は `gh api` の REST か GitHub MCP で作る
+- PR を REST や MCP で作る場合も、事前に `git push` が必要なので、`cloud-scope-guard` の push ゲートで止まる。PR 作成コマンド自体の判定は補助的なもの
 
-clone できない場合は、ガードを GitHub 側（クラウド由来 PR の判定＋必須チェック＋ブランチ保護）に移す案に切り替え、本書を更新する。
+**要検証（P1 の PR 後、クラウドでの確認で確かめる）**
+
+- 途中で docs-repository を追加したあとも、PhysiFun の hooks（`cloud-scope-guard`）が効き続けるか
+- 途中で追加した repo がどのパスに置かれるか（`cloud-plan` skill はパスを探してから使う）
+- クラウドで `bun install` が通るか
+
+hooks が効かなくなる場合は、ガードを GitHub 側（クラウド由来 PR の判定＋必須チェック＋ブランチ保護）に移す案に切り替え、本書を更新する。
 
 **完了条件**
 
 - hook のテストで許可・拒否が期待どおり
 - 実際のクラウドセッションで、赤のファイルの編集が拒否され、緑のファイルは PR まで進む
-- クラウドセッションで docs-repository が読める
+- クラウドセッションで、Claude が docs-repository を追加して読める
 
 ### P2：修理
 
@@ -185,7 +196,7 @@ clone できない場合は、ガードを GitHub 側（クラウド由来 PR �
    - 連続した差し戻しは 3 回まで。超えたら終了を許可し、検証が通っていないことを明示して報告させる。`stop_hook_active` も参照する。
    - infrastructure の結合テスト（Docker）と build は対象外にし、CI に任せる。
 2. `pre-pr-check` workflow を削除する（lint・テストは Stop hook と CI で自動実行されるため）。
-3. `dev` skill を更新する：手順 7 を `bun run check` に置き換え、Stop hook でも自動で走ると明記する。実行環境で分岐させる（ローカル：push 前に承認／クラウド：緑は PR まで自動、黄・赤は `plan` skill へ）。
+3. `dev` skill を更新する：手順 7 を `bun run check` に置き換え、Stop hook でも自動で走ると明記する。実行環境で分岐させる（ローカル：push 前に承認／クラウド：緑は PR まで自動、黄・赤は `cloud-plan` skill へ）。
 
 **実測（2026-10-17、Vitest 移行前）**：typecheck 約 4 秒、テスト約 1 秒、lint 数秒。Vitest 移行後の所要時間は P2 で測り直し、30 秒程度に収まれば Stop hook で `bun run check` をそのまま実行する。
 
