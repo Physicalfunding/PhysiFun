@@ -1,6 +1,6 @@
 # AI 開発ハーネス設計
 
-> 作成: 2026-10-17 / 状態: 設計合意済み・実装中（P0）
+> 作成: 2026-10-17 / 状態: P0・P1 完了、P2 実装中
 > 2026-10-17 改訂: main の変更（`.docs/` → `docs/` 再配置、Prisma 撤去、Vitest 統一、`packages/server-shared` 追加）に合わせて更新
 > 対象: `.claude/`（skills・agents・workflows・hooks・settings）、ESLint、CI のうち AI 開発に関わる部分
 
@@ -128,13 +128,12 @@ apps/*/public/*
 - クラウドでは `gh pr create` が使えない。PR は `gh api` の REST か GitHub MCP で作る
 - PR を REST や MCP で作る場合も、事前に `git push` が必要なので、`cloud-scope-guard` の push ゲートで止まる。PR 作成コマンド自体の判定は補助的なもの
 
-**要検証（P1 の PR 後、クラウドでの確認で確かめる）**
+**クラウドでの確認結果（2026-10-17、#263・#274）**
 
-- 途中で docs-repository を追加したあとも、PhysiFun の hooks（`cloud-scope-guard`）が効き続けるか
-- 途中で追加した repo がどのパスに置かれるか（`cloud-plan` skill はパスを探してから使う）
-- クラウドで `bun install` が通るか
-
-hooks が効かなくなる場合は、ガードを GitHub 側（クラウド由来 PR の判定＋必須チェック＋ブランチ保護）に移す案に切り替え、本書を更新する。
+- 途中で docs-repository を追加したあとも、PhysiFun の hooks は効き続ける。追加した repo は `../docs-repository`（`/home/user/docs-repository`）に置かれる
+- クラウドで `bun install` は通る
+- 赤のファイルの Edit 拒否、1 コマンドにまとめた書き込み＋commit の停止（pre-commit）、`--no-verify` の拒否、`cloud-plan` での計画 PR 作成、緑のファイルの PR 作成をすべて確認した
+- クラウドからはリモートブランチを削除できない（`git push --delete` が HTTP 403）。同名ブランチへの fast-forward でない push も拒否される。検証用ブランチは毎回別名にし、片付けはローカルから行う
 
 **完了条件**
 
@@ -198,7 +197,7 @@ hooks が効かなくなる場合は、ガードを GitHub 側（クラウド由
 2. `pre-pr-check` workflow を削除する（lint・テストは Stop hook と CI で自動実行されるため）。
 3. `dev` skill を更新する：手順 7 を `bun run check` に置き換え、Stop hook でも自動で走ると明記する。実行環境で分岐させる（ローカル：push 前に承認／クラウド：緑は PR まで自動、黄・赤は `cloud-plan` skill へ）。
 
-**実測（2026-10-17、Vitest 移行前）**：typecheck 約 4 秒、テスト約 1 秒、lint 数秒。Vitest 移行後の所要時間は P2 で測り直し、30 秒程度に収まれば Stop hook で `bun run check` をそのまま実行する。
+**実測（2026-10-17、P2 で測定）**：`bun run check`（lint web・admin → format:check → typecheck → test 682 件）で約 11 秒。Stop hook では `bun run check` をそのまま実行する。
 
 **完了条件**
 

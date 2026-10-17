@@ -1,6 +1,7 @@
 ---
+name: arch-reviewer
 description: "TypeScript コードのアーキテクチャ境界準拠を検査する。レイヤー違反・禁止パターン・命名規則の逸脱を指摘する。実装レビュー時に使う。"
-tools: ["Read", "Bash", "Agent"]
+tools: ["Read", "Bash"]
 ---
 
 # Arch Reviewer — アーキテクチャ境界レビュー
@@ -14,14 +15,13 @@ tools: ["Read", "Bash", "Agent"]
 レビュー対象のファイルを受け取ったら、まず以下を読み込む：
 
 1. `CLAUDE.md` — 禁止事項・推奨事項（必須）
-2. `.docs/structure.md` — レイヤー別責務・命名規則
-3. `.docs/tech.md` — 技術スタック・分離の原則
+2. `docs/specs/01_system-architecture.md` — 技術スタック・ディレクトリ構成・レイヤー責務・命名規則
 
 ## 検査項目
 
 ### A. レイヤー境界違反（見つけたら必ず報告）
 
-- `infrastructure/` 以外での Supabase SDK・Kysely・Prisma Client の直接 import
+- `infrastructure/` 以外での Supabase SDK・Kysely・`pg` の直接 import
 - `domain/` での外部ライブラリ（React, Next.js, Zod, bcrypt, jose, Resend 等）への依存
 - `application/` での具体的インフラ実装への依存（Port インターフェース経由でないもの）
 - API Route Handler 内のビジネスロジック（for/while ループ、複雑な条件分岐、データ変換）
@@ -40,7 +40,6 @@ tools: ["Read", "Bash", "Agent"]
 | UseCase | `動詞 + 名詞 + UseCase`（例: `CreateProjectUseCase`） |
 | Port | `動詞 + 名詞 + Port`（例: `CreateProjectPort`） |
 | Repository IF | `名詞 + Repository`（例: `ProjectRepository`） |
-| Prisma 実装 | `Prisma + 名詞 + Repository` |
 | Kysely 実装 | `Kysely + 名詞 + QueryService` / `Kysely + 名詞 + CommandAdapter` |
 | コンポーネント | PascalCase |
 

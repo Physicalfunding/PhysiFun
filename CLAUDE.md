@@ -24,6 +24,7 @@ bun run build        # ビルド
 bun run lint         # Lint
 bun run typecheck    # 型チェック
 bun run test         # ユニットテスト（Vitest）
+bun run check        # CI と同じ検証（lint → format:check → typecheck → test）
 ```
 
 ---
@@ -85,9 +86,9 @@ bun run test         # ユニットテスト（Vitest）
 | Agent | 用途 |
 |---|---|
 | `arch-reviewer` | アーキテクチャ境界検査（レイヤー違反・命名規則・依存方向） |
-| `data-guardian` | DB スキーマ安全チェック（Prisma / Kysely 型整合・マイグレーションリスク） |
+| `data-guardian` | DB スキーマ安全チェック（Atlas schema.sql・マイグレーション・Kysely 型の整合とリスク） |
 | `security-reviewer` | セキュリティ脆弱性検査（SQLi / XSS / 認証バイパス） |
-| `spec-finder` | 設計資料横断検索（.docs/ / docs-repository/ を引用付きで回答） |
+| `spec-finder` | 設計資料横断検索（docs/ / ../docs-repository/ を引用付きで回答） |
 
 ## Workflows（品質チェック自動化）
 

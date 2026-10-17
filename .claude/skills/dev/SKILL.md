@@ -3,7 +3,6 @@ name: dev
 description: >-
   Issue 番号を起点に、コンテキスト収集 → 実装計画 → 実装 → 検証（lint/format/typecheck/test/build）→ PR 作成 → レビュー → 修正までを一貫して行う開発フロー。
   「開発を始めたい」「Issue に着手」「PR を作る」「コミットしたい」「検証して」に該当する作業で使う。
-  旧 verify-and-pr skill の検証フローを内包している。
 ---
 
 # /dev — 開発フロー
@@ -37,10 +36,10 @@ Issue を起点に開発を進める。ブランチ作成から実装・検証�
 Issue の内容に基づいて、関連するドキュメントとコードを読む。以下を優先的にチェック：
 
 - `CLAUDE.md` — 禁止事項・推奨事項（必須）
-- `.docs/structure.md` — レイヤー別責務・命名規則
-- `.docs/tech.md` — 技術スタック・認証方式
-- `.docs/product.md` — フェーズ計画・機能スコープ
-- `docs-repository/` — 該当する機能仕様
+- `docs/README.md` — ドキュメントの地図（ここから辿る）
+- `docs/specs/01_system-architecture.md` — 技術スタック・レイヤー責務・命名規則
+- `docs/product.md` — リリース計画・機能スコープ
+- `../docs-repository/` — 該当する機能仕様
 - 既存の関連コード（`apps/`、`packages/`）
 
 何を読んだかを簡潔に報告する。
@@ -75,11 +74,7 @@ Issue の内容に基づいて、関連するドキュメントとコードを�
 
 ```bash
 bun install --frozen-lockfile     # ロックファイル固定でインストール
-
-bun run lint                      # ESLint
-bun run format:check              # Prettier チェック（自動修正はしない）
-bun run typecheck                 # 全パッケージ tsc --noEmit
-bun test apps packages            # ユニットテスト
+bun run check                     # lint（web・admin）→ format:check → typecheck → test（CI と同じ順）
 bun run build                     # web ビルド
 ```
 
