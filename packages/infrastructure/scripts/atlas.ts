@@ -41,7 +41,12 @@ disableSslForLocalHost("DATABASE_URL");
 disableSslForLocalHost("ATLAS_DEV_URL");
 
 // atlas.hcl の相対パス（file://atlas/...）を解決できるよう、packages/infrastructure で実行する。
-const result = spawnSync("atlas", process.argv.slice(2), { cwd: infraDir, stdio: "inherit" });
+// Bun では env を明示しないと、上で読み込み・補完した process.env が子プロセスに渡らない（#288）。
+const result = spawnSync("atlas", process.argv.slice(2), {
+  cwd: infraDir,
+  stdio: "inherit",
+  env: process.env,
+});
 
 if (result.error) {
   const notFound = (result.error as NodeJS.ErrnoException).code === "ENOENT";

@@ -72,13 +72,13 @@ bun install
 
 ### 2. Supabase ローカル環境の起動
 
-Docker Desktop が起動していることを確認してから、リポジトリルートで実行する:
+Docker Desktop が起動していることを確認してから、リポジトリルートで実行する（Supabase の設定 `config.toml` は `apps/web/supabase/` にあるため、`supabase` コマンドには `--workdir apps/web` を付ける）:
 
 ```bash
-make start          # = supabase start
+make start          # = supabase start --workdir apps/web
 ```
 
-起動後、`make status`（= `supabase status`）で接続情報が確認できる:
+起動後、`make status`（= `supabase status --workdir apps/web`）で接続情報が確認できる:
 
 ```
 Studio   : http://127.0.0.1:54323     # DB 管理 GUI
@@ -118,7 +118,7 @@ bun run db:migrate:deploy    # マイグレーション適用
 
 ```bash
 SEED_ADMIN_EMAIL="you@example.com" \
-  bun --cwd packages/infrastructure run db:seed
+  bun run db:seed
 ```
 
 冪等な upsert なので何度実行しても安全。詳細・運用は [`docs/guides/admin-setup.md`](./docs/guides/admin-setup.md) を参照。
@@ -192,13 +192,13 @@ bun run db:migrate:deploy       # 未適用のマイグレーションを適用
 bun run db:migrate:status       # 適用状況を確認
 
 # Supabase ローカル（Makefile 経由でも可）
-supabase start             # ローカル環境起動（make start）
-supabase stop              # ローカル環境停止（make stop）
-supabase status            # 起動状態・接続情報の確認（make status）
+supabase start --workdir apps/web    # ローカル環境起動（make start）
+supabase stop --workdir apps/web     # ローカル環境停止（make stop）
+supabase status --workdir apps/web   # 起動状態・接続情報の確認（make status）
 
 # 初期 AdminAccount の seed
 SEED_ADMIN_EMAIL="you@example.com" \
-  bun --cwd packages/infrastructure run db:seed
+  bun run db:seed
 ```
 
 ---

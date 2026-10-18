@@ -72,7 +72,7 @@ AdminAccount (運営アカウント)
 DATABASE_URL=postgres://...
 SEED_ADMIN_EMAIL=admin@your-domain.example
 
-bun --cwd packages/infrastructure run db:seed
+bun run db:seed
 ```
 
 `packages/infrastructure/scripts/seed.ts` が `SEED_ADMIN_EMAIL` の `AdminAccount` を `ACTIVE` で upsert する。完了後は `SEED_ADMIN_EMAIL` を Vercel から削除して構わない。
