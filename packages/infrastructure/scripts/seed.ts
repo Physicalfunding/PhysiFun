@@ -9,7 +9,7 @@
  * ```bash
  * # 必須: 初期 email
  * SEED_ADMIN_EMAIL="admin@example.com" \
- *   bun --cwd packages/infrastructure run db:seed
+ *   bun run db:seed
  * ```
  *
  * - #145 でマジックリンク方式に切替したためパスワードは不要。

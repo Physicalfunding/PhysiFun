@@ -24,6 +24,7 @@
     "db:migrate:diff": "bun --filter @physifun/infrastructure db:migrate:diff",
     "db:migrate:deploy": "bun --filter @physifun/infrastructure db:migrate:deploy",
     "db:migrate:status": "bun --filter @physifun/infrastructure db:migrate:status",
+    "db:seed": "bun --filter @physifun/infrastructure db:seed",
     "db:docs": "bun --filter @physifun/infrastructure db:docs",
     "db:erd": "bun --filter @physifun/infrastructure db:erd",
     "docs:dev": "bun --filter @physifun/docs-site dev",

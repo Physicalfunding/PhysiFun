@@ -1,6 +1,9 @@
 # PhysiFun - 開発用Makefile
 # 使用方法: make [コマンド名]
 
+# Supabase の設定（config.toml）は apps/web/supabase/ にある
+SUPABASE_WORKDIR := --workdir apps/web
+
 .PHONY: help start stop status db-migrate db-status db-reset dev build test test-watch test-coverage lint format format-check setup clean env-setup
 
 # ヘルプ表示
@@ -39,7 +42,7 @@ help:
 start:
 	@echo "Supabaseローカル環境を起動中..."
 	@echo "（初回は数分かかります）"
-	supabase start
+	supabase start $(SUPABASE_WORKDIR)
 	@echo ""
 	@echo "✅ Supabaseが起動しました"
 	@echo "   Studio: http://127.0.0.1:54323"
@@ -48,12 +51,12 @@ start:
 # Supabaseローカル環境を停止
 stop:
 	@echo "Supabaseローカル環境を停止中..."
-	supabase stop
+	supabase stop $(SUPABASE_WORKDIR)
 	@echo "✅ Supabaseを停止しました"
 
 # Supabaseの状態を確認
 status:
-	supabase status
+	supabase status $(SUPABASE_WORKDIR)
 
 # ==================== データベース ====================
 
@@ -70,7 +73,7 @@ db-status:
 db-reset:
 	@echo "警告: データベースをリセットします。全てのデータが削除されます。"
 	@read -p "続行しますか？ (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
-	supabase db reset
+	supabase db reset $(SUPABASE_WORKDIR)
 	@$(MAKE) db-migrate
 	@echo "✅ データベースをリセットしました"
 
@@ -110,7 +113,7 @@ format-check:
 env-setup:
 	@echo ".envファイルを生成中..."
 	@echo "# Database (Supabase Local)" > .env
-	@echo "DATABASE_URL=\"$$(supabase status | grep 'DB URL' | awk '{print $$NF}')\"" >> .env
+	@echo "DATABASE_URL=\"$$(supabase status $(SUPABASE_WORKDIR) | grep 'DB URL' | awk '{print $$NF}')\"" >> .env
 	@echo "" >> .env
 	@echo "# Authentication" >> .env
 	@echo "NEXTAUTH_SECRET=\"$$(openssl rand -base64 32)\"" >> .env
@@ -118,8 +121,8 @@ env-setup:
 	@echo "" >> .env
 	@echo "# Storage (Supabase Local)" >> .env
 	@echo "NEXT_PUBLIC_SUPABASE_URL=\"http://127.0.0.1:54321\"" >> .env
-	@echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$$(supabase status | grep 'Publishable' | awk '{print $$NF}')\"" >> .env
-	@echo "SUPABASE_SERVICE_ROLE_KEY=\"$$(supabase status | grep 'Secret' | awk '{print $$NF}')\"" >> .env
+	@echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$$(supabase status $(SUPABASE_WORKDIR) | grep 'Publishable' | awk '{print $$NF}')\"" >> .env
+	@echo "SUPABASE_SERVICE_ROLE_KEY=\"$$(supabase status $(SUPABASE_WORKDIR) | grep 'Secret' | awk '{print $$NF}')\"" >> .env
 	@echo "✅ .envファイルを生成しました"
 
 # 初期セットアップ（全手順）
@@ -132,7 +135,7 @@ setup:
 	bun install
 	@echo ""
 	@echo "[2/4] Supabaseを起動中..."
-	supabase start
+	supabase start $(SUPABASE_WORKDIR)
 	@echo ""
 	@echo "[3/4] .envファイルを生成中..."
 	@$(MAKE) env-setup
@@ -154,5 +157,5 @@ setup:
 # Supabaseを停止してクリーンアップ
 clean:
 	@echo "クリーンアップ中..."
-	supabase stop --no-backup
+	supabase stop $(SUPABASE_WORKDIR) --no-backup
 	@echo "✅ クリーンアップが完了しました"

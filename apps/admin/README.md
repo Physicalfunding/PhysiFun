@@ -96,7 +96,7 @@ admin は **既知の email にしか Magic Link を送らない**ため、ロ�
 
 ```bash
 SEED_ADMIN_EMAIL="you@example.com" \
-  bun --cwd packages/infrastructure run db:seed
+  bun run db:seed
 ```
 
 冪等な upsert なので何度実行しても安全。ローカル開発では Resend で送られたメールを実際に開けるアドレスを指定すること。
