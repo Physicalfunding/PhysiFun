@@ -63,7 +63,7 @@ apps/*/public/*
 | 層 | 仕組み | ローカル | クラウド | 役割 |
 |---|---|---|---|---|
 | 文脈 | `CLAUDE.md` | ✅ | ✅ | 前提・禁止事項・自律範囲の案内 |
-| 手順 | skills（`dev` / `issue` / `add-usecase` / `cloud-plan`） | ✅ | ✅ | 定型作業の手順 |
+| 手順 | skills（`dev` / `issue` / `split-issue` / `add-usecase` / `cloud-plan`） | ✅ | ✅ | 定型作業の手順 |
 | 専門レビュー | agents ＋ `full-review` workflow | ✅ | ✅ | 機械で判定できない観点（ビジネスロジックの置き場など） |
 | 書き込み直後 | PostToolUse hook `lint-on-edit` | ✅ | ✅ | 書いたファイルに ESLint・Prettier |
 | 書き込み直前 | PreToolUse hook `cloud-scope-guard` | 何もしない | ✅ | 緑以外への書き込み・commit・push を拒否 |
