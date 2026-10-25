@@ -1,3 +1,14 @@
+export {
+  RecruitmentSchedule,
+  type RecruitmentScheduleChanges,
+} from "./entities/RecruitmentSchedule";
+export { SUPPORT_RECRUITMENT_LIMITS, SupportRecruitment } from "./entities/SupportRecruitment";
+export {
+  ScheduleDateConflictError,
+  type RecruitmentScheduleError,
+  type SupportRecruitmentUpdateError,
+} from "./errors/RecruitmentError";
+export type { RecruitmentRepository } from "./repositories/RecruitmentRepository";
 export { APPROVAL_MODE_VALUES, ApprovalMode, isApprovalMode } from "./value-objects/ApprovalMode";
 export {
   CAPACITY_PER_HOUR_LIMITS,
