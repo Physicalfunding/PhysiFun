@@ -74,7 +74,8 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 | Skill | 用途 |
 |---|---|
 | `issue` | GitHub Issue 作成（種別・ラベル自動判定、ブランチ名提案） |
-| `dev` | Issue → 実装 → 検証 → PR → レビュー → 修正の一貫開発フロー |
+| `split-issue` | 親 Issue を PR 1 本ずつのサブ Issue に分解する（分解案の確認 → 作成 → 親子づけ → 親にタスク一覧） |
+| `dev` | Issue → 実装 → 検証 → 受け入れ要件の確認 → PR → レビュー → 修正の一貫開発フロー |
 | `add-usecase` | application 層に UseCase を追加する（`Result` 型・Port DI・併設ユニットテスト必須の規範手順とテンプレート） |
 | `cloud-plan` | クラウドで緑以外の依頼を受けたとき、実装計画を docs-repository の `plans/` に書いて PR にする |
 
