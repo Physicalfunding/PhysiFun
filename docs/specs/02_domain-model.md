@@ -416,12 +416,14 @@ classDiagram
 | 値オブジェクト | ルール |
 |---|---|
 | `ScheduleDate` | JST のカレンダー日を `"YYYY-MM-DD"` の文字列で持つ（`Date` を持たないので、タイムゾーンで日付がずれない）。実在する日付だけ |
-| `TimeRange` | `"HH:MM"`・1 時間単位（分は `00`）・終了 > 開始。使える時刻は `"00:00"`〜`"23:00"`（`"24:00"` は不可） |
-| `CapacityPerHour` | リーダーが日程ごとに決める 1 時間あたりの定員。`CAPACITY_PER_HOUR_LIMITS` の範囲の整数 |
+| `TimeRange` | `"HH:MM"`・1 時間単位（分は `00`）・終了 > 開始。使える時刻は `"00:00"`〜`"23:00"`（`"24:00"` は不可）なので、23 時台の枠は作れない |
+| `CapacityPerHour` | リーダーが日程ごとに決める 1 時間あたりの定員。`CAPACITY_PER_HOUR_LIMITS` の範囲の整数。⚠️ 上限を下げると、上限を超える既存の日程が DB から復元できなくなる。下げる前に既存データを確かめる |
 | `ApprovalMode` | `AUTO`（申し込んだ時点で確定）/ `MANUAL`（リーダーの承認で確定）。日程ごとに選ぶ |
 
 ### 8.4 ユースケースに任せるルール（#216 で決める）
 
+- **日程は必ずルートのメソッド（`addSchedule` / `updateSchedule` / `removeSchedule`）で作る・変える**。`RecruitmentSchedule.create()` / `withChanges()` は TypeScript の都合で public だが、直接呼んでリポジトリに渡すと、日付の重複チェックが飛ばされる
+- **リポジトリが投げる `ScheduleDateConflictError` は、ユースケースで必ず catch し、`DUPLICATE_SCHEDULE_DATE` の `Result` に変える**（例外をユースケースの外に漏らさない。前例: `CreateProjectDraftUseCase` の `ProjectLimitExceededError`）
 - 操作できるのはプロジェクトの所有者（リーダー）だけ
 - 過去の日付の日程を作れるか（「今日」が要るので、ドメインでは見ない）
 - プロジェクトの公開状態によって、募集の編集を制限するか
