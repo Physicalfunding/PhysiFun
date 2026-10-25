@@ -8,7 +8,7 @@ PhysiFun のドメイン層。エンティティ・値オブジェクト・リ�
 - `admin-account/` — `AdminAccount`（運営アカウント、独立アグリゲート）
 - `leader-application/` — `LeaderApplication`, `LeaderApplicationStatus`, `ProjectDraft`
 - `project/` — `Project`, `ProjectPhase`, `PublishStatus`, `ProjectReviewFeedback`
-- `recruitment/` — サポート募集（#212 で実装中。今は値オブジェクトのみ: `TimeRange`, `ScheduleDate`, `CapacityPerHour`, `ApprovalMode`, `RecruitmentType` など）
+- `recruitment/` — `SupportRecruitment`（集約ルート）, `RecruitmentSchedule`（子）, `TimeRange`, `ScheduleDate`, `CapacityPerHour`, `ApprovalMode`, `RecruitmentType`
 - `shared/` — `Result` 型、共通値オブジェクト（`ProjectCategory` / `ProjectLocation` / `SnsLinks`）
 
 ## 禁止事項

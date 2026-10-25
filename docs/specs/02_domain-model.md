@@ -26,7 +26,7 @@ PhysiFun のドメイン（`packages/domain/`）と、それを動かすユー�
 | `LeaderApplication` | リーダー応募と運営の審査 | `leader-application/` | ✅ |
 | `Account` | 一般ユーザー（サポーター / リーダー） | `account/`（値オブジェクトのみ） | ⚠️ 最小構成（§5） |
 | `AdminAccount` | 運営アカウント | `admin-account/` | ✅ |
-| サポート募集（Recruitment） | 募集・日程・サポートチケット | （無し） | 🚧 未実装（§8） |
+| `SupportRecruitment`（＋`RecruitmentSchedule`） | サポート募集と日程 | `recruitment/` | 🚧 ドメインのみ（§8） |
 
 ```mermaid
 classDiagram
@@ -72,11 +72,21 @@ classDiagram
         enable()
         recordLogin()
     }
+    class SupportRecruitment {
+        SupportRecruitmentId id
+        ProjectId projectId
+        RecruitmentSchedule[] schedules
+        update()
+        addSchedule()
+        updateSchedule()
+        removeSchedule()
+    }
 
     Account "1" --> "0..*" LeaderApplication : 応募者
     Account "1" --> "0..*" Project : 所有者（リーダー）
     Project "1" --> "0..*" ProjectReviewFeedback : 審査履歴
     AdminAccount "1" --> "0..*" ProjectReviewFeedback : 審査した運営
+    Project "1" --> "0..*" SupportRecruitment : サポート募集
     LeaderApplication ..> Project : 承認時に初期 Project を作る（参照は持たない）
 ```
 
@@ -97,7 +107,7 @@ classDiagram
 | infrastructure | application の Port を Kysely で実装し、集約・審査履歴・Outbox を **1 つのトランザクション** で書く | `KyselyProjectCommandAdapter` |
 
 - **保存は、ユースケースごとの Port を通す**（`packages/application/src/*/ports/`）。例: `ApproveProjectPublicationPort`
-- ⚠️ domain の `repositories/` にあるインターフェースのうち、実装されて使われているのは `AdminAccountRepository` だけ。`ProjectRepository` / `ProjectReviewFeedbackRepository` / `LeaderApplicationRepository` は定義だけで、どこからも使われていない（§10）
+- ⚠️ domain の `repositories/` にあるインターフェースのうち、実装されて使われているのは `AdminAccountRepository` だけ。`ProjectRepository` / `ProjectReviewFeedbackRepository` / `LeaderApplicationRepository` は定義だけで、どこからも使われていない（§10）。`RecruitmentRepository` は、application の port がここから `Pick` して使う予定（§8.2）
 - 運営アカウントの操作（作成・無効化・有効化）には application のユースケースが無い。`apps/admin` の Route Handler が、エンティティとリポジトリを直接使う
 
 ---
@@ -347,16 +357,78 @@ stateDiagram-v2
 
 ---
 
-## 8. 未実装: サポート募集（Recruitment）
+## 8. SupportRecruitment 集約（サポート募集）
 
-- **スキーマだけがある**（`support_recruitments` / `recruitment_schedules` / `support_tickets`。列の意味は [`docs/db/viewpoint-recruitment.md`](../db/viewpoint-recruitment.md)）。ドメイン層・application 層のコードは無い
-- リーダー側の募集作成は初回リリース（#212）、サポーターの申し込みは一般公開で実装する予定
-- **募集の種類**: #212 は `ACTIVITY`（活動参加）だけで実装する。スキル・モノ募集は enum の追加を含めて別に設計する（#291）
-- 着手するときの方針:
-  - 新しいディレクトリ `packages/domain/src/recruitment/` を作る
-  - 集約の候補: `SupportRecruitment` をルートに、`RecruitmentSchedule` を子に（同じトランザクションで整合させる）。`SupportTicket` は別の集約（サポーターが起点で作成・取り消しするため）
-  - `Project` からは参照しない（募集側が `projectId` を持つ）
-- **リターン**: 業務側で「リターンは募集ごとに必須・リーダーが設計・金銭リターンも可」と決まっている。ドメインにリターンの概念はまだ無い。DB 変更が要るため #212 には含めず、要件を詰めてから新しく設計する（#290。以前あった `Return.ts` は廃止済み）
+### 8.1 役割
+
+リーダーがプロジェクトに出すサポート募集と、その日程。サポーターは日程の時間帯の中から 1 時間単位で参加する（申し込みの `SupportTicket` は一般公開で実装する）。
+
+- 定義: `packages/domain/src/recruitment/entities/SupportRecruitment.ts`（ルート）/ `RecruitmentSchedule.ts`（子）。上限は `SUPPORT_RECRUITMENT_LIMITS` / `CAPACITY_PER_HOUR_LIMITS`
+- 列の意味: [`docs/db/viewpoint-recruitment.md`](../db/viewpoint-recruitment.md)
+- 実装状況: ドメインまで（#215）。application（#216）・インフラ（#217）・UI（#218 / #219）はこれから
+- **募集の種類**: `ACTIVITY`（活動参加）だけ。スキル・モノ募集は enum の追加を含めて別に設計する（#291）
+- `Project` からは参照しない（募集側が `projectId` を持つ）
+
+### 8.2 集約の境界と保存の仕方
+
+```mermaid
+classDiagram
+    class SupportRecruitment {
+        SupportRecruitmentId id
+        ProjectId projectId
+        RecruitmentType type
+        title / description
+        update()
+        addSchedule()
+        updateSchedule()
+        removeSchedule()
+    }
+    class RecruitmentSchedule {
+        RecruitmentScheduleId id
+        ScheduleDate date
+        TimeRange timeRange
+        CapacityPerHour capacityPerHour
+        ApprovalMode approvalMode
+        withChanges()
+    }
+    SupportRecruitment "1" *-- "0..*" RecruitmentSchedule : 日程（1 日に 1 つ）
+```
+
+- **1 つの集約**: `SupportRecruitment` がルート、`RecruitmentSchedule` が子。日程の追加・変更・削除はルートのメソッドから行い、「同じ日付の日程は 1 募集に 1 つ」をルートが検証する（`DUPLICATE_SCHEDULE_DATE`）
+- **子は書き換えできない**: 変更は `withChanges()` で新しいインスタンスを作り、ルートが差し替える。外から日程を直接書き換えて、ルートの検証をすり抜けられないようにするため
+- **保存は日程 1 件ずつ**（`RecruitmentRepository` の `addSchedule` / `updateSchedule` / `removeSchedule`）。集約をまるごと保存すると、同じ募集に別々の日程を同時に追加したとき、後から保存した側が、先に追加された日程を「消された」と見なして消してしまう（更新の取りこぼし）
+- **同じ日付を同時に追加したとき**: どちらもルートの検証を通ってしまうので、DB の unique（`supportRecruitmentId` + `date`）が止め、リポジトリが `ScheduleDateConflictError` を投げる
+- **リポジトリ**: `RecruitmentRepository`（domain）。application の port は、ここから必要なメソッドを `Pick` して組む（§10 の「使われていないリポジトリ」を増やさないため）
+- `SupportTicket`（サポーターの申し込み）は別の集約にする予定（サポーターが起点で作成・取り消しするため）
+
+> 💡 2 つの別集約（日付の重複は DB の unique だけで守る）にする案もあった。日付のルールをドメインで持てる 1 集約を選び、保存だけを日程単位にした（#215）。
+
+### 8.3 不変条件（ドメインが守る）
+
+- `title` / `description` は前後の空白を除いて 1 文字以上（どちらも必須）。上限は `SUPPORT_RECRUITMENT_LIMITS`
+- `id` / `projectId` / `type` / `createdAt` は変わらない（`type` は作成時に決まる）
+- `update()` は guard-first, write-last（§3.5 と同じ）
+- 1 募集につき 1 日 1 日程。`schedules` は常に日付の古い順
+- 募集の `updatedAt` はタイトル・説明を変えたときだけ更新する。日程を変えたときは、その日程の `updatedAt` が変わる（日程は 1 件ずつ保存するため）
+
+日程の値は値オブジェクトが守る。
+
+| 値オブジェクト | ルール |
+|---|---|
+| `ScheduleDate` | JST のカレンダー日を `"YYYY-MM-DD"` の文字列で持つ（`Date` を持たないので、タイムゾーンで日付がずれない）。実在する日付だけ |
+| `TimeRange` | `"HH:MM"`・1 時間単位（分は `00`）・終了 > 開始。使える時刻は `"00:00"`〜`"23:00"`（`"24:00"` は不可） |
+| `CapacityPerHour` | リーダーが日程ごとに決める 1 時間あたりの定員。`CAPACITY_PER_HOUR_LIMITS` の範囲の整数 |
+| `ApprovalMode` | `AUTO`（申し込んだ時点で確定）/ `MANUAL`（リーダーの承認で確定）。日程ごとに選ぶ |
+
+### 8.4 ユースケースに任せるルール（#216 で決める）
+
+- 操作できるのはプロジェクトの所有者（リーダー）だけ
+- 過去の日付の日程を作れるか（「今日」が要るので、ドメインでは見ない）
+- プロジェクトの公開状態によって、募集の編集を制限するか
+
+### 8.5 リターン
+
+業務側で「リターンは募集ごとに必須・リーダーが設計・金銭リターンも可」と決まっている。ドメインにリターンの概念はまだ無い。DB 変更が要るため #212 には含めず、要件を詰めてから新しく設計する（#290。以前あった `Return.ts` は廃止済み）。
 
 ---
 
@@ -419,3 +491,4 @@ stateDiagram-v2
 | 2026-10-17 | 公開 URL（slug）と公開申請日時・公開日時の仕様を追加（#262） | 設計チーム |
 | 2026-10-17 | 「境界・状態遷移・ルールの置き場所・なぜ」に絞って作り直し（#276）。フィールドの一覧と上限はコード・`docs/db/` に任せた。ルールの置き場所（§2）と既知のズレ（§10）を追加。コードとのズレを修正（存在しない `Email` 値オブジェクト、ProjectDraft の中身、カテゴリの値、却下の待ち時間、`disable()` の冪等性、PUBLISHED 上限の判定タイミング、公開中は編集不可） | 設計チーム |
 | 2026-10-20 | サポート募集（§8）のスコープを反映：#212 は `ACTIVITY` のみ・リターンなし。リターン（#290）とスキル・モノ募集（#291）は別 Issue に切り出した | 設計チーム |
+| 2026-10-25 | サポート募集のドメイン層を実装（#215）。§8 を「未実装」から `SupportRecruitment` 集約の説明に書き換えた（集約の境界・日程単位の保存・不変条件・ユースケースに任せるルール） | 設計チーム |

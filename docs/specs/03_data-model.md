@@ -23,7 +23,7 @@
 |---|---|---|---|
 | アカウントと応募 | `accounts` / `leader_applications` | ✅ | [viewpoint-account](../db/viewpoint-account.md) |
 | プロジェクトと公開審査 | `projects` / `project_review_feedbacks` | ✅ | [viewpoint-project](../db/viewpoint-project.md) |
-| サポート募集 | `support_recruitments` / `recruitment_schedules` / `support_tickets` | 🚧 schema のみ（リーダー側の募集作成は初回リリース #212、サポーター申請は一般公開） | [viewpoint-recruitment](../db/viewpoint-recruitment.md) |
+| サポート募集 | `support_recruitments` / `recruitment_schedules` / `support_tickets` | 🚧 ドメイン層まで（リーダー側の募集作成は初回リリース #212、サポーター申請は一般公開） | [viewpoint-recruitment](../db/viewpoint-recruitment.md) |
 | 運営の認証と監査 | `admin_accounts` / `admin_sessions` / `admin_audit_logs` / `admin_verification_tokens` | ✅ | [viewpoint-admin](../db/viewpoint-admin.md) |
 | Outbox（非同期メール送信） | `leader_application_outbox_messages` / `project_outbox_messages` | ✅ | [viewpoint-outbox](../db/viewpoint-outbox.md) |
 
@@ -36,7 +36,7 @@
 - `admin_accounts` への参照はすべて **Restrict**（監査履歴を物理削除から守る。運営アカウントは論理無効化のみ）
 - `admin_verification_tokens` は NextAuth の Magic Link 用トークン置き場で、FK を持たない
 
-**サポート募集まわりの注意（未実装のため、実装時に見直す前提）:**
+**サポート募集まわりの注意（インフラ層は未実装。#217 で実装するときに見直す前提）:**
 
 - `recruitment_schedules.date` は `date` 型（JST のカレンダー日）。`startTime` / `endTime` は `"HH:MM"` 形式の文字列（JST）
 - `(supportRecruitmentId, date)` に unique 制約（1 募集 × 1 日 = 1 スケジュール）
@@ -54,7 +54,8 @@
 | `admin_accounts` | `AdminAccount` 集約 | |
 | `admin_sessions` / `admin_verification_tokens` | なし | NextAuth が管理 |
 | `admin_audit_logs` | なし | 運営アプリから直接書き込む |
-| `support_recruitments` / `recruitment_schedules` / `support_tickets` | なし | 未実装（#212） |
+| `support_recruitments` / `recruitment_schedules` | `SupportRecruitment` 集約（子に `RecruitmentSchedule`） | `02_domain-model.md` §8。インフラ層は未実装（#217） |
+| `support_tickets` | なし | 未実装（一般公開） |
 | `*_outbox_messages` | なし | infrastructure 層の Outbox |
 
 ### 列名とドメインのフィールド名が違うもの
