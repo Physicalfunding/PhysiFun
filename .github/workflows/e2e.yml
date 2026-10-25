@@ -15,7 +15,9 @@ concurrency:
 jobs:
   e2e:
     name: Playwright (Phase 1 メインフロー)
-    runs-on: ubuntu-latest
+    # ubuntu-latest は 26.04 を指すようになったが、lock 中の Playwright（1.59）は 26.04 のブラウザを入れられない（#297）。
+    # 26.04 に対応するのは Playwright 1.61 から。上げるまでは 24.04 に固定する。
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     services:
