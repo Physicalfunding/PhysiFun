@@ -208,13 +208,18 @@ export class SupportRecruitment {
 
   /**
    * 日程を削除する。日程が無ければエラー。
+   *
+   * 削除した日程を返す（リポジトリの `removeSchedule()` に渡して保存する）。
    */
-  removeSchedule(scheduleId: RecruitmentScheduleId): Result<void, RecruitmentScheduleError> {
-    if (!this._schedules.some((s) => s.id.equals(scheduleId))) {
+  removeSchedule(
+    scheduleId: RecruitmentScheduleId
+  ): Result<RecruitmentSchedule, RecruitmentScheduleError> {
+    const removed = this._schedules.find((s) => s.id.equals(scheduleId));
+    if (!removed) {
       return err({ type: "SCHEDULE_NOT_FOUND", scheduleId: scheduleId.toString() });
     }
     this._schedules = this._schedules.filter((s) => !s.id.equals(scheduleId));
-    return ok(undefined);
+    return ok(removed);
   }
 
   // ---- Private helpers ----

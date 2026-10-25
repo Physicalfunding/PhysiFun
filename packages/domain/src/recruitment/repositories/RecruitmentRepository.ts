@@ -1,7 +1,6 @@
 import type { ProjectId } from "../../project/value-objects/ProjectId";
 import type { RecruitmentSchedule } from "../entities/RecruitmentSchedule";
 import type { SupportRecruitment } from "../entities/SupportRecruitment";
-import type { RecruitmentScheduleId } from "../value-objects/RecruitmentScheduleId";
 import type { SupportRecruitmentId } from "../value-objects/SupportRecruitmentId";
 
 /**
@@ -11,6 +10,8 @@ import type { SupportRecruitmentId } from "../value-objects/SupportRecruitmentId
  * 集約をまるごと保存すると、同じ募集に別々の日程を同時に追加したとき、後から保存した側が
  * 先に追加された日程を「消された」と見なして消してしまうため。
  * 日程のルール（同じ日付は 1 つ）は、保存する前に `SupportRecruitment` のメソッドで検証しておく。
+ * 日程のメソッドには、ルートのメソッドが返した日程を渡す。実装は日程の ID と `supportRecruitmentId` の
+ * 両方で行を絞り、別の募集の日程を書き換え・削除しないようにする。
  *
  * application 層の port は、ここから必要なメソッドを `Pick` して組む（`02_domain-model.md` §8）。
  */
@@ -18,7 +19,7 @@ export interface RecruitmentRepository {
   /** 募集を日程ごと取得する。無ければ null。 */
   findById(id: SupportRecruitmentId): Promise<SupportRecruitment | null>;
 
-  /** プロジェクトの募集を日程ごと取得する。 */
+  /** プロジェクトの募集を日程ごと取得する（作成日時の古い順）。 */
   findByProjectId(projectId: ProjectId): Promise<SupportRecruitment[]>;
 
   /** 新しい募集を、持っている日程ごと保存する。 */
@@ -45,5 +46,5 @@ export interface RecruitmentRepository {
   updateSchedule(schedule: RecruitmentSchedule): Promise<void>;
 
   /** 日程を 1 件削除する。 */
-  removeSchedule(id: RecruitmentScheduleId): Promise<void>;
+  removeSchedule(schedule: RecruitmentSchedule): Promise<void>;
 }

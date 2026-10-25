@@ -67,6 +67,7 @@
 | `projects.status` | `Project.publishStatus` |
 | `projects.prefectureCode` + `municipality` | `Project.location`（`ProjectLocation`） |
 | `leader_applications.prefectureCode` + `municipality` | `ProjectDraft.location`（`ProjectLocation`） |
+| `recruitment_schedules.startTime` + `endTime` | `RecruitmentSchedule.timeRange`（`TimeRange`） |
 
 変換は `packages/infrastructure/src/project/reconstructProject.ts`（読み込み）と `KyselyProjectCommandAdapter.ts`（書き込み）で行う。
 

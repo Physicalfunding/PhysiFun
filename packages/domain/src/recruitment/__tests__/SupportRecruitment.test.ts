@@ -145,12 +145,18 @@ describe("SupportRecruitment", () => {
       }
       expect(recruitment.schedules).toHaveLength(1);
     });
+  });
 
-    it("日程を変えても、募集の updatedAt は変わらない", () => {
-      const recruitment = createRecruitment();
-      addSchedule(recruitment, "2026-11-03");
-      expect(recruitment.updatedAt).toEqual(PAST);
-    });
+  it("日程を追加・変更・削除しても、募集の updatedAt は変わらない", () => {
+    const recruitment = createRecruitment();
+    const schedule = addSchedule(recruitment, "2026-11-03");
+    expect(recruitment.updatedAt).toEqual(PAST);
+
+    recruitment.updateSchedule(schedule.id, { capacityPerHour: capacity(20) });
+    expect(recruitment.updatedAt).toEqual(PAST);
+
+    recruitment.removeSchedule(schedule.id);
+    expect(recruitment.updatedAt).toEqual(PAST);
   });
 
   describe("updateSchedule", () => {
@@ -207,12 +213,16 @@ describe("SupportRecruitment", () => {
   });
 
   describe("removeSchedule", () => {
-    it("日程を削除する", () => {
+    it("日程を削除し、削除した日程を返す", () => {
       const recruitment = createRecruitment();
       const first = addSchedule(recruitment, "2026-11-03");
       addSchedule(recruitment, "2026-11-10");
 
-      expect(recruitment.removeSchedule(first.id).ok).toBe(true);
+      const result = recruitment.removeSchedule(first.id);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toBe(first);
+      }
       expect(scheduleDates(recruitment)).toEqual(["2026-11-10"]);
     });
 
