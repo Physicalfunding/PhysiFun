@@ -36,15 +36,14 @@ describe("TimeRange", () => {
       }
     });
 
-    it("分が 00 でない時刻はエラー（1 時間単位）", () => {
-      const result = TimeRange.create({ start: "10:30", end: "12:00" });
+    it.each([
+      ["start", { start: "10:30", end: "12:00" }, "10:30"],
+      ["end", { start: "10:00", end: "12:30" }, "12:30"],
+    ] as const)("分が 00 でない時刻はエラー（1 時間単位、%s 側）", (field, input, value) => {
+      const result = TimeRange.create(input);
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error).toEqual({
-          type: "TIME_NOT_ON_THE_HOUR",
-          field: "start",
-          value: "10:30",
-        });
+        expect(result.error).toEqual({ type: "TIME_NOT_ON_THE_HOUR", field, value });
       }
     });
 
