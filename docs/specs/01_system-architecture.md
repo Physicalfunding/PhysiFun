@@ -223,7 +223,7 @@ PhysiFun/
 └── docs/                        # ドキュメント（docs/README.md が地図）
 ```
 
-`<context>` は `account` / `admin-account` / `leader-application` / `project` / `outbox`（application・infrastructure のみ）。`recruitment` は未作成（#212 で追加予定）。
+`<context>` は `account` / `admin-account` / `leader-application` / `project` / `outbox`（application・infrastructure のみ）。`recruitment` は domain のみ（application・infrastructure は #212 で追加予定）。
 
 > 💡 infrastructure の実装は Kysely 実装も含めてすべて `@physifun/infrastructure` から import する（#256 でサブバレルを統合）。クライアントコンポーネントからは型だけを import する（値を import すると pg / Kysely がクライアントのバンドルに入る）。
 
