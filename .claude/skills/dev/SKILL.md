@@ -26,7 +26,7 @@ Issue を起点に開発を進める。ブランチ作成から実装・検証�
 | クラウドで、変更が緑（`.claude/cloud-allowlist` の範囲）だけ | ユーザーの返事を待つ手順を省いて PR 作成まで進める（下記）。マージはユーザーが行う |
 | クラウドで、変更が緑以外を含む | コードを書かずに `cloud-plan` skill に切り替える |
 
-- クラウドでは `gh pr create` と `gh issue view` が使えないことがある。Issue は `gh api repos/Physicalfunding/PhysiFun/issues/{番号}`、PR は手順 12 の REST で扱う
+- クラウドでは `gh pr create` が使えないことがある。PR は手順 12 の REST で作る
 - クラウドのブランチはセッションが用意した `claude/...` をそのまま使う（手順 2 のブランチ作成は省く）
 - クラウドで緑だけのときは、手順 4（質問）・5（計画の合意）・8（満たさない受け入れ要件の確認）・11（承認）・15（指摘の分類の合意）で**ユーザーの返事を待たない**。質問や判断が必要な点は PR body の「確認してほしい点」に書いて進める。指摘は「修正する」だけ直し、「見送る」「要確認」は PR にコメントで残す
 
@@ -34,7 +34,13 @@ Issue を起点に開発を進める。ブランチ作成から実装・検証�
 
 ### 1. 何をやるか確定
 
-- **番号あり** → `gh issue view {番号}` で Issue 内容を取得し、要件を把握する
+- **番号あり** → Issue の内容を取得し、要件を把握する（`gh issue view` は Projects (classic) の廃止で GraphQL のエラーになるため、REST を使う）
+
+  ```bash
+  gh api repos/Physicalfunding/PhysiFun/issues/{番号} --jq '.title, (.labels | map(.name)), .body'
+  gh api repos/Physicalfunding/PhysiFun/issues/{番号}/comments --jq '.[] | .user.login + ": " + .body'
+  ```
+
   - 「受け入れ要件」（古い Issue では「受け入れ条件」）のチェックリストを控える。ステップ 8 で 1 項目ずつ確かめる
   - 受け入れ要件が無い・何で確かめるか分からない書き方のときは、ステップ 4 で確認する
 - **番号なし** → 「まず `/issue` で Issue を作成してください」と案内して**終了する**。Issue なしの開発は行わない
@@ -73,6 +79,7 @@ Issue の内容に基づいて、関連するドキュメントとコードを�
 - 実装の手順（順序）
 - 判断した設計方針（選択肢があった場合はその理由も）
 - 受け入れ要件の各項目を、どの変更・テストで満たすか
+- 差分の見込み。テストを含めて 200〜300 行が目安。大きく超えそうなら PR を分ける案を出す（最後の PR 以外は `Closes` ではなく `Refs #{番号}` で参照し、先にマージした PR で Issue が閉じないようにする）
 
 合意が得られるまで実装に着手しない。
 
@@ -168,10 +175,14 @@ Closes #{番号}
 
 ## スクリーンショット
 （UI 変更がある場合のみ添付。なければセクションごと省略）
+
+## 確認してほしい点
+- （判断に迷った点・ユーザーに決めてほしい点）
 ```
 
 - 「技術的な判断」は判断事項がなければ省略する
 - 「スクリーンショット」は UI 変更がなければ省略する
+- 「確認してほしい点」は無ければ省略する（クラウドで緑だけのときは、ユーザーに聞くはずだった質問をここに書く）
 
 ### 11. ユーザーに承認を求める
 
@@ -217,10 +228,12 @@ Agent({
 
 ### 14. レビュー結果の取得
 
-レビュー完了通知を受けたら、PR コメントを取得する：
+レビュー完了通知を受けたら、PR コメントを取得する（`gh pr view --comments` は手順 1 と同じ理由でエラーになるため、REST を使う）：
 
 ```bash
-gh pr view {PR番号} --comments
+gh api repos/Physicalfunding/PhysiFun/issues/{PR番号}/comments --jq '.[] | .user.login + ": " + .body'                              # 会話のコメント
+gh api repos/Physicalfunding/PhysiFun/pulls/{PR番号}/reviews --jq '.[] | select(.body != "") | .user.login + ": " + .body'           # レビューの本文
+gh api repos/Physicalfunding/PhysiFun/pulls/{PR番号}/comments --jq '.[] | "\(.user.login) \(.path):\(.line // .original_line): \(.body)"'  # 行へのコメント
 ```
 
 ### 15. 指摘の吟味
@@ -254,7 +267,7 @@ gh pr view {PR番号} --comments
 - すべてのローカル検証が green になり、受け入れ要件を確かめ終わるまで PR 準備に進まない
 - ローカルでは、push / PR 作成はユーザー承認後。勝手に push しない（クラウドで緑だけのときは「実行環境による分岐」に従う）
 - PR タイトルは Issue のタイトルをそのまま使う（二重管理を避ける）
-- `Closes #{番号}` でマージ時に Issue を自動クローズする
+- `Closes #{番号}` でマージ時に Issue を自動クローズする（1 つの Issue を PR 複数本に分けたときは、最後の PR 以外は `Refs #{番号}`）
 - 変更内容はファイル一覧ではなく**機能単位**で書く
 - push 前にリモートブランチの存在を確認し、既に push 済みなら `git push` のみ行う
 - CodeRabbit の自動レビューが走る場合は、その指摘も同様に吟味する
