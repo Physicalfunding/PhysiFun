@@ -1,7 +1,8 @@
 ---
 name: issue
 description: >-
-  GitHub Issue を作成する。種別・ラベルを自動判定し、ブランチ命名規約に沿った名前を提案する。
+  GitHub Issue を作成する。まず何のために・誰のために・何ができたら完了かをユーザーとそろえ、
+  種別・ラベルを自動判定し、ブランチ命名規約に沿った名前を提案する。
   「Issue を作りたい」「タスクを登録」「バグ報告」に該当する作業で使う。
 ---
 
@@ -13,16 +14,16 @@ description: >-
 
 ### 1. 意図と範囲をそろえる
 
-`superpowers:brainstorming` を使い、何のために・誰のために・何ができたら完了かをユーザーとそろえる。
-使うのは「Establish Shared Understanding」（意図を 1 問ずつ聞く → 理解を書き戻して直してもらう）と、大きさの確認まで。
+`superpowers:brainstorming` を使い、何のために・誰のために・何ができたら完了かの 3 点をユーザーとそろえる。
+使うのは前半だけ。意図を 1 問ずつ聞く → 理解を書き戻して直してもらう → 大きさを確かめる、までで止める（brainstorming の見出し名は版によって違うので、見出しではなくこの振る舞いで判断する）。
 
-- 依頼の時点で目的と完了の条件が分かっていれば、質問せずに手順 2 へ進む（手順 4 で見せる body が理解の書き戻しを兼ねる）
+- 依頼の時点で 3 点が分かっていれば、質問せずに手順 2 へ進む（手順 4 で見せる body が理解の書き戻しを兼ねる）
 - superpowers が無い環境（Skill に `superpowers:brainstorming` が無い）では、同じ 3 点を自分で確かめてから進む
 
 Issue を作る段階なので、brainstorming の以下の部分は使わない。
 
-- spike / bounded / architectural の分類（大きさは手順 3 の「PR 1 本」の基準で判断する）
-- spec ファイル（`docs/superpowers/specs/`）を書くこと。成果物は手順 3 の Issue body
+- 大きさを分類して進め方を変えること（spike / 小さな変更 / 設計書が要る仕事、など）。大きさは手順 3 の「PR 1 本」の基準で判断する
+- spec（設計書）ファイル（`docs/superpowers/specs/`）を書くこと。成果物は手順 3 の Issue body
 - `writing-plans` に進むこと（実装計画は `dev` skill の手順 5 で作る）
 
 ### 2. 種別（type）を判定
