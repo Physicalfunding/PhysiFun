@@ -32,8 +32,10 @@ vi.mock("../di/auth", () => ({
   getSendAdminMagicLink: () => async () => {},
 }));
 
-// NextAuth EmailProvider は内部で `require("nodemailer")` するが、
-// apps/admin は ResendMailSender 経由で送信するため nodemailer を dependency に入れていない。
+// NextAuth EmailProvider はモジュール読み込み時に `require("nodemailer")` するため、
+// apps/admin の dependencies に nodemailer を入れている (`auth.ts` のコメント参照)。
+// 送信は ResendMailSender に差し替えていて `createTransport` には到達しないので、
+// ここでは import 時の副作用を避けるためだけにモックする。
 vi.mock("nodemailer", () => ({
   default: { createTransport: () => ({ sendMail: async () => {} }) },
   createTransport: () => ({ sendMail: async () => {} }),
