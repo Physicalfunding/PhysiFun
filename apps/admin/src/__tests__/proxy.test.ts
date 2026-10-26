@@ -62,6 +62,8 @@ describe("admin proxy", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
+    // 許可オリジンは NEXTAUTH_URL から決まる。各テストで渡している `host` ヘッダーは
+    // この設定がある限り参照されない（web の proxy.test.ts と作りを揃えるために残している）。
     process.env.NEXTAUTH_URL = ADMIN_ORIGIN;
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -89,18 +91,8 @@ describe("admin proxy", () => {
       });
     });
 
-    it("同一オリジンの POST /api/admin/applications/x/approve は通過する", () => {
-      const req = buildRequest({
-        method: "POST",
-        pathname: "/api/admin/applications/x/approve",
-        headers: { origin: ADMIN_ORIGIN, host: "admin.example.com" },
-      });
-      const res = proxy(req);
-      expect(res.status).not.toBe(403);
-      expect(res.headers.get("location")).toBeNull();
-    });
-
-    it("Cookie が無くても `/api/*` は proxy ではリダイレクトしない (認可は Route Handler 側)", () => {
+    it("同一オリジンの POST /api/admin/applications/x/approve は Cookie 無しでも通過する (認可は Route Handler 側)", () => {
+      // `/api/*` は CSRF だけを見て Cookie は見ない。Cookie を付けずに呼び、403 にもリダイレクトにもならないことを確かめる。
       const req = buildRequest({
         method: "POST",
         pathname: "/api/admin/applications/x/approve",
@@ -133,7 +125,7 @@ describe("admin proxy", () => {
   });
 
   describe("`/login` 配下", () => {
-    it.each(["/login", "/login/verify"])("%s は Cookie 無しでも素通しする", (pathname) => {
+    it.each(["/login", "/login/verify-request"])("%s は Cookie 無しでも素通しする", (pathname) => {
       const res = proxy(buildRequest({ pathname }));
       expect(res.status).toBe(200);
       expect(res.headers.get("location")).toBeNull();
