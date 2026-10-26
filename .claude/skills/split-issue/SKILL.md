@@ -20,7 +20,7 @@ PR 1 本では終わらない大きさの Issue（親 Issue）を、PR 1 本ず�
 
 ## 前提
 
-- GitHub への操作はすべて `gh api`（REST）で行う。クラウドでは `gh issue view` などが使えないことがあり、親子をつなぐ API にはサブ Issue の `id`（Issue 番号とは別の数値）が要るため
+- GitHub への操作はすべて `gh api`（REST）で行う。`gh issue view` などは Projects (classic) の廃止で GraphQL のエラーになり、親子をつなぐ API にはサブ Issue の `id`（Issue 番号とは別の数値）が要るため
 - ファイルは変更しないので、ローカルでもクラウドでも同じ手順で使える
 
 ## 手順
@@ -37,6 +37,8 @@ gh api repos/Physicalfunding/PhysiFun/issues/{親}/sub_issues --jq '.[] | "#\(.n
 ```
 
 - すでにサブ Issue があるときは、それと重ならないように分ける
+- 親の本文にタスク案（「タスク」節など）がすでにあるときは、それを分解案の出発点にし、記号もそのまま使う（例: #301 の S-1〜S-5）
+- 親の受け入れ要件（古い Issue では「受け入れ条件」）を控える。手順 3 でサブ Issue との対応を取る
 - 要件が固まっていない（「要件は別途詰める」「未定」など）ときは、分解の前に決めることを質問する。推測で分けない
 
 ### 2. コンテキストを集める
@@ -52,13 +54,13 @@ gh api repos/Physicalfunding/PhysiFun/issues/{親}/sub_issues --jq '.[] | "#\(.n
 
 #### 分け方
 
-- **PR 1 本 = サブ Issue 1 本**。差分 200〜300 行程度を目安にする（レビューしながら理解できる大きさ）。超えそうなら分ける
+- **PR 1 本 = サブ Issue 1 本**。差分はテストを含めて 200〜300 行程度を目安にする（レビューしながら理解できる大きさ）。超えそうなら分ける。実装してみて超えたときは、サブ Issue 1 本を PR 複数本に分けてよい（`dev` skill の手順 5）
 - 分け目は基本的にレイヤー。依存の向きどおりに着手順を決める
   - domain → application → infrastructure → web（薄い API ＋ UI）/ admin
   - DB スキーマの変更（`atlas/schema.sql`・マイグレーション）は、ほかと混ぜずに 1 本にする
   - 依存し合わないものは「並行可」とする
 - サブ Issue ごとに、クラウドでの扱い（`CLAUDE.md` の「実行環境ごとの自律範囲」の 🟢 / 🟡 / 🔴）を決める。緑だけで済むもの（`docs/`・`apps/*/src/components/` など）を切り出しておくと、クラウドで PR まで進められる
-- 記号は着手順に `A-1`, `A-2`, … と振る。すでにサブ Issue がある親を追加で分けるときは、次のアルファベット（`B-1`, …）にする
+- 記号は着手順に `A-1`, `A-2`, … と振る。親にタスク案があればその記号を使う。すでにサブ Issue がある親を追加で分けるときは、次のアルファベット（`B-1`, …）にする
 
 #### 各サブ Issue に決めること
 
@@ -91,7 +93,7 @@ gh api repos/Physicalfunding/PhysiFun/issues/{親}/sub_issues --jq '.[] | "#\(.n
 1. 分解の一覧表（記号・タイトル・ラベル・依存・実行環境）と着手順（例: A-1 → A-2 → A-3 → (A-4 / A-5 は並行可)）
 2. 親の受け入れ要件とサブ Issue の対応表
 3. 各サブ Issue の本文（手順 5 のテンプレート）
-4. 親 Issue の本文の変更点（手順 6）
+4. 親 Issue の本文とタイトルの変更点（手順 6）
 
 修正を頼まれたら直して、もう一度見せる。
 
@@ -115,7 +117,7 @@ gh api repos/Physicalfunding/PhysiFun/issues/{親}/sub_issues --jq '.[] | "#\(.n
 - （作る・変えるもの。置き場所のパスまで）
 
 ## スコープ外
-- （やらないこと。担当するサブ Issue の番号を添える）
+- （やらないこと。担当するサブ Issue を添える。先に作ったものは番号（#217）、まだ作っていないものは記号（A-4）で書く）
 
 ## 注意
 - （守ること・ハマりどころ）
@@ -131,17 +133,13 @@ gh api repos/Physicalfunding/PhysiFun/issues/{親}/sub_issues --jq '.[] | "#\(.n
 
 - 最初に着手するものは「依存」を省く。「注意」「参照」は書くことが無ければ省く
 - ユーザーストーリーは親 Issue にあるので、サブ Issue には書かない
-- 依存先の番号は、先に作ったサブ Issue の番号で埋める
+- 依存先は着手順で先に作っているので、番号で書く。後から作るサブ Issue は記号のまま書く（番号との対応は親のタスク一覧で分かる）
 
-本文は一時ファイルに書いてから渡す（改行やバッククォートを崩さないため）。
+本文は `/tmp/split-issue-{親}-{記号}.md` に書いてから渡す（改行やバッククォートを崩さないため）。Bash の呼び出しをまたぐと shell の変数は消えるので、`mktemp` ではなく決まったパスを使う。
 
 ```bash
-body=$(mktemp)
-cat > "$body" <<'EOF'
-（本文）
-EOF
 gh api repos/Physicalfunding/PhysiFun/issues \
-  -f title="feat(domain): ... [#{親} A-1]" -f "labels[]=feat" -F body=@"$body" \
+  -f title="feat(domain): ... [#{親} A-1]" -f "labels[]=feat" -F body=@/tmp/split-issue-{親}-A-1.md \
   --jq '"\(.number) \(.id) \(.html_url)"'
 ```
 
@@ -152,27 +150,30 @@ gh api repos/Physicalfunding/PhysiFun/issues \
 1. サブ Issue を親につなぐ（着手順に。`id` は手順 5 で控えた値）
 
    ```bash
-   gh api repos/Physicalfunding/PhysiFun/issues/{親}/sub_issues -X POST -F sub_issue_id={id} --jq '.number'
+   gh api repos/Physicalfunding/PhysiFun/issues/{親}/sub_issues -X POST -F sub_issue_id={id} --silent
    ```
 
-2. 親 Issue の本文に「タスク」節を書く。すでにあれば置き換え、無ければ「受け入れ要件」の前に入れる。親の受け入れ要件に「サブ Issue に分ける」があればチェックを付ける
+   つながったかは、手順 7 で sub_issues の一覧を見て確かめる。
+
+2. 親 Issue の本文に「タスク」節を書く。すでにあれば置き換え、無ければ「受け入れ要件」（古い Issue では「受け入れ条件」）の前に入れる。親の受け入れ要件に「サブ Issue に分ける」があればチェックを付ける。各行の末尾に実行環境（🟢 / 🟡 / 🔴）を付ける
 
    ```markdown
    ## タスク（1 つが PR 1 本）
 
-   - [ ] #{番号} **A-1 {短い名前}**（{一言}）
-   - [ ] #{番号} **A-2 {短い名前}**（{一言}）
+   - [ ] #{番号} **A-1 {短い名前}**（{一言}）🟡
+   - [ ] #{番号} **A-2 {短い名前}**（{一言}）🟢
 
    順番は A-1 → A-2 → (A-3 / A-4 は並行可)
    ```
 
    緑以外のサブ Issue があれば、「実行環境の注意」として「クラウドでは `cloud-plan` skill で計画まで」と添える（#212 と同じ）。
 
+   今の本文を決まったパスに取り出し、編集してから戻す（手順 5 と同じ理由で `mktemp` は使わない）。
+
    ```bash
-   parent=$(mktemp)
-   gh api repos/Physicalfunding/PhysiFun/issues/{親} --jq .body > "$parent"
-   # $parent を編集する
-   gh api repos/Physicalfunding/PhysiFun/issues/{親} -X PATCH -F body=@"$parent" --jq .html_url
+   gh api repos/Physicalfunding/PhysiFun/issues/{親} --jq .body > /tmp/split-issue-{親}-parent.md
+   # /tmp/split-issue-{親}-parent.md を編集する
+   gh api repos/Physicalfunding/PhysiFun/issues/{親} -X PATCH -F body=@/tmp/split-issue-{親}-parent.md --jq .html_url
    ```
 
 3. 親のタイトルが `[親] ` で始まっていなければ付ける（同じ PATCH に `-f title="[親] ..."` を足す）
