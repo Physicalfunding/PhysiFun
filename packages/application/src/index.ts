@@ -194,3 +194,35 @@ export {
   type ForceUnpublishProjectError,
 } from "./project/ForceUnpublishProjectUseCase";
 export type { ForceUnpublishProjectPort } from "./project/ports/ForceUnpublishProjectPort";
+
+// ---- サポート募集（#216） ----
+
+// ProjectOwnerPort（募集の port で共通）
+export type { ProjectOwnerPort } from "./recruitment/ports/ProjectOwnerPort";
+
+// CreateRecruitmentUseCase
+export {
+  CreateRecruitmentUseCase,
+  type CreateRecruitmentInput,
+  type CreateRecruitmentOutput,
+  type CreateRecruitmentError,
+} from "./recruitment/CreateRecruitmentUseCase";
+export type { CreateRecruitmentPort } from "./recruitment/ports/CreateRecruitmentPort";
+
+// UpdateRecruitmentUseCase
+export {
+  UpdateRecruitmentUseCase,
+  type UpdateRecruitmentInput,
+  type UpdateRecruitmentOutput,
+  type UpdateRecruitmentError,
+} from "./recruitment/UpdateRecruitmentUseCase";
+export type { UpdateRecruitmentPort } from "./recruitment/ports/UpdateRecruitmentPort";
+
+// DeleteRecruitmentUseCase
+export {
+  DeleteRecruitmentUseCase,
+  type DeleteRecruitmentInput,
+  type DeleteRecruitmentOutput,
+  type DeleteRecruitmentError,
+} from "./recruitment/DeleteRecruitmentUseCase";
+export type { DeleteRecruitmentPort } from "./recruitment/ports/DeleteRecruitmentPort";
