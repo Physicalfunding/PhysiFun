@@ -226,3 +226,33 @@ export {
   type DeleteRecruitmentError,
 } from "./recruitment/DeleteRecruitmentUseCase";
 export type { DeleteRecruitmentPort } from "./recruitment/ports/DeleteRecruitmentPort";
+
+// AddScheduleUseCase
+export {
+  AddScheduleUseCase,
+  type AddScheduleInput,
+  type AddScheduleOutput,
+  type AddScheduleError,
+} from "./recruitment/AddScheduleUseCase";
+export type { AddSchedulePort } from "./recruitment/ports/AddSchedulePort";
+
+// UpdateScheduleUseCase
+export {
+  UpdateScheduleUseCase,
+  type UpdateScheduleInput,
+  type UpdateScheduleOutput,
+  type UpdateScheduleError,
+} from "./recruitment/UpdateScheduleUseCase";
+export type { UpdateSchedulePort } from "./recruitment/ports/UpdateSchedulePort";
+
+// RemoveScheduleUseCase
+export {
+  RemoveScheduleUseCase,
+  type RemoveScheduleInput,
+  type RemoveScheduleOutput,
+  type RemoveScheduleError,
+} from "./recruitment/RemoveScheduleUseCase";
+export type { RemoveSchedulePort } from "./recruitment/ports/RemoveSchedulePort";
+
+// 日程の入力エラー（AddSchedule / UpdateSchedule で共通）
+export type { ScheduleInputError } from "./recruitment/scheduleInput";
