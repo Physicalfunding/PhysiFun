@@ -25,7 +25,7 @@ import { getLeaderApplicationOutboxWorker } from "@/lib/di/outbox";
  * リーダー応募を承認する。ADMIN ロール必須。
  *
  * 認証の注意:
- * - middleware.ts は /api パスを除外しているため、この Route Handler が唯一の認可チェック
+ * - proxy.ts は /api パスを除外しているため、この Route Handler が唯一の認可チェック
  * - 運営認証は `@/lib/api/auth#getAuthenticatedAdminId` で AdminSession 経由の Database 戦略 (#145)
  * - 認証後にレート制限 (adminAccountId 単位 60 req/min) を適用 (#157 H1)
  * - 成功後に AdminAuditLog へ post-hook 書き込み (#157 H2)

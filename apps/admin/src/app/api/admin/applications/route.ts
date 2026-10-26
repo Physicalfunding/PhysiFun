@@ -18,7 +18,7 @@ type Status = (typeof VALID_STATUSES)[number];
  * リーダー応募の一覧を返す。ADMIN ロール必須。
  *
  * 認証の注意:
- * - middleware.ts は /api パスを除外しているため、この Route Handler が唯一の認可チェック
+ * - proxy.ts は /api パスを除外しているため、この Route Handler が唯一の認可チェック
  * - 運営認証は `@/lib/api/auth#getAuthenticatedAdminId` で AdminSession 経由の Database 戦略 (#145)
  *
  * クエリパラメータ:

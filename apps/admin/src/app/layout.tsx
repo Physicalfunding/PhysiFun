@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "フィジファン 運営管理",
   description: "フィジファン 運営管理画面",
   // 運営管理アプリは検索エンジンにインデックスさせない (#147 Nit-2)。
-  // middleware / Vercel 側の `X-Robots-Tag: noindex, nofollow` ヘッダと
+  // `vercel.json` 側の `X-Robots-Tag: noindex, nofollow` ヘッダと
   // 二重防衛の意味でここでも meta robots を明示する。
   robots: { index: false, follow: false },
 };

@@ -3,19 +3,19 @@ import type { NextRequest } from "next/server";
 import { verifyCsrf } from "@physifun/server-shared";
 
 /**
- * 運営管理アプリ認証ミドルウェア (#145 / #166)
+ * 運営管理アプリ認証 proxy (#145 / #166。Next.js 16 の `proxy.ts` 規約、旧 `middleware.ts` #334)
  *
- * ⚠️ このミドルウェアは **認証の最終防衛線ではない**。
- *   Edge ランタイムで動作するため DB クライアントを使えず、ここでは
+ * ⚠️ この proxy は **認証の最終防衛線ではない**。
+ *   DB クライアントを持ち込まない方針（Edge でも動く軽量な層に保つ）のため、ここでは
  *   「NextAuth セッション Cookie が存在するか」だけしか確認できない。
  *   Cookie 値は暗号署名されていないため、任意の文字列で通過可能。
  *
  * 真の認可は Server Component / Route Handler 側で行う:
- *   - Server Component: `getServerSession(authOptions)` + AdminSession 検証
- *   - Route Handler:    `getAuthenticatedAdminId()` (apps/admin/src/lib/api/auth.ts)
- *                       が AdminSession 行と AdminAccount.status=ACTIVE を DB で確認
+ *   - Server Component / Route Handler とも `getAuthenticatedAdminId()`
+ *     (apps/admin/src/lib/api/auth.ts) が AdminSession 行と AdminAccount.status=ACTIVE を
+ *     DB で確認する
  *
- * このミドルウェアの責務はあくまで UX のため (未ログインで画面に来たら
+ * この proxy の責務はあくまで UX のため (未ログインで画面に来たら
  * /login へリダイレクトする) であり、セキュリティ境界は Route Handler / RSC 側にある。
  *
  * 今後このファイルに「role チェック」「権限チェック」等を追加してはならない。
@@ -32,11 +32,11 @@ import { verifyCsrf } from "@physifun/server-shared";
  * - 旧実装 (`token.roles.includes("ADMIN")`) は JWT 戦略専用。Database 戦略に
  *   切り替えたため role チェックは Route Handler 側で getServerSession 経由で行う。
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. `/api/*` の state-changing リクエストは CSRF 検証 (NextAuth 配下は除外)。
-  //    Edge ランタイムで Cookie を読まずに Origin/Referer だけで判定する純関数。
+  //    Cookie を読まずに Origin/Referer だけで判定する純関数。
   if (pathname.startsWith("/api/")) {
     const csrfResponse = verifyCsrf(request);
     if (csrfResponse) {

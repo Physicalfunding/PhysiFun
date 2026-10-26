@@ -171,7 +171,7 @@ export default async function AuditLogsPage({
 }: {
   searchParams: Promise<AuditLogSearchParams>;
 }) {
-  // 非 ACTIVE は null になるので弾く (middleware は Cookie 有無しか見ないため最終防衛は RSC 側で)
+  // 非 ACTIVE は null になるので弾く (proxy は Cookie 有無しか見ないため最終防衛は RSC 側で)
   const adminId = await getAuthenticatedAdminId();
   if (!adminId) {
     redirect("/login");

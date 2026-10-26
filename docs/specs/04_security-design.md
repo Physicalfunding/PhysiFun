@@ -214,7 +214,7 @@ flowchart TD
 |---|---|---|
 | **SQL Injection** | Kysely の parameterized query / Zod 入力検証 | なし（標準的） |
 | **XSS** | React の自動エスケープ / CSP `script-src 'self'` + `'unsafe-inline'`（暫定） | `'unsafe-inline'` の暫定許可（Issue #109 follow-up） |
-| **CSRF** | NextAuth の SameSite=lax Cookie + middleware で状態変更リクエストの `Origin` / `Referer` を検証（`@physifun/server-shared` の `verifyCsrf`、web / admin 共通） | `NEXTAUTH_URL` の設定漏れ時は 403 に倒す（fail-safe） |
+| **CSRF** | NextAuth の SameSite=lax Cookie + proxy（旧 middleware）で状態変更リクエストの `Origin` / `Referer` を検証（`@physifun/server-shared` の `verifyCsrf`、web / admin 共通） | `NEXTAUTH_URL` の設定漏れ時は 403 に倒す（fail-safe） |
 | **Clickjacking** | `X-Frame-Options: DENY` + `frame-ancestors 'none'`（二重化） | なし |
 | **Open Redirect** | NextAuth `callbackUrl` の同一オリジン検証 | NextAuth 依存 |
 | **タイミング攻撃** | `bcrypt.compare` / `timingSafeEqual` / 存在しない email へのダミーハッシュ | URL 長さの差はわずかに残る（許容） |
@@ -402,7 +402,7 @@ flowchart TD
 
 | 項目 | 概要 | 対応 |
 |---|---|---|
-| CSP `'unsafe-inline'` 暫定許可 | Next.js App Router のインラインスクリプト対応 | Issue #109 follow-up（nonce middleware） |
+| CSP `'unsafe-inline'` 暫定許可 | Next.js App Router のインラインスクリプト対応 | Issue #109 follow-up（nonce 化） |
 | 運営 TOTP / 2FA | 未実装 | 運営増加時 / 一般公開時 |
 | 監査ログのアラート | dashboard のみ | 一般公開時に異常検知 |
 | メール DKIM/SPF | Resend デフォルト依存 | 本番ドメイン取得後 |

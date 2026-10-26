@@ -189,7 +189,7 @@ flowchart TB
 | `application` | ユースケース（ビジネスロジック）+ ports | — |
 | `infrastructure` | Kysely 実装 / Outbox / メール / Bcrypt / HMAC / Atlas スキーマ・マイグレーション 等 | `03_data-model.md` |
 | `ui-shared` | 両アプリ共通の UI コンポーネント・設定 | — |
-| `server-shared` | 両アプリ共通のサーバー側コード（CSRF 検証 / API レスポンス / 429 レスポンス / cron 認証）。middleware（Edge）からも読むため Node 専用 API に依存しない | `04_security-design.md` |
+| `server-shared` | 両アプリ共通のサーバー側コード（CSRF 検証 / API レスポンス / 429 レスポンス / cron 認証）。proxy（旧 middleware。Edge でも動く層に保つ）からも読むため Node 専用 API に依存しない | `04_security-design.md` |
 
 ### 3.3 ディレクトリ構成
 

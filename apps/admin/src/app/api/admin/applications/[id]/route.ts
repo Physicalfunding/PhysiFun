@@ -17,7 +17,7 @@ import { enforceAdminRateLimit } from "@/lib/rateLimit";
  * リーダー応募の詳細を返す。ADMIN ロール必須。
  *
  * 認証の注意:
- * - middleware.ts は /api パスを除外しているため、この Route Handler が唯一の認可チェック
+ * - proxy.ts は /api パスを除外しているため、この Route Handler が唯一の認可チェック
  * - 運営認証は `@/lib/api/auth#getAuthenticatedAdminId` で AdminSession 経由の Database 戦略 (#145)
  */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

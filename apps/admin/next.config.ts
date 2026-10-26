@@ -40,7 +40,7 @@ const remotePatterns = buildImageRemotePatterns({
  * - 審査画面では Supabase Storage のカバー画像を next/image 経由で表示するため
  *   `img-src` に `https://*.supabase.co` を許可 (dev では localhost も追加)。
  * - Next.js App Router が出すインラインスクリプトのため `'unsafe-inline'` は
- *   暫定的に維持。nonce middleware 導入で今後外す予定 (web 側と同じ TODO)。
+ *   暫定的に維持。nonce 化で今後外す予定 (web 側と同じ TODO)。
  * - `frame-ancestors 'none'` + `X-Frame-Options: DENY` の二重化で埋め込み禁止。
  */
 function buildContentSecurityPolicy(): string {
