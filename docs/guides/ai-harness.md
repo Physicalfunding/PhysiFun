@@ -68,15 +68,21 @@ packages/*/src/*
 !CLAUDE.md
 !*/CLAUDE.md
 !*/middleware.ts
+!*/proxy.ts
 !*/src/lib/auth.ts
+!*/src/lib/auth/*
 !*/src/lib/auth-constants.ts
 !*/src/lib/session.ts
+!*/src/lib/captcha.ts
 !*/src/lib/di/auth.ts
 !*/src/lib/api/auth.ts
 !*/app/api/auth/*
 !*/app/api/cron/*
 !*/types/next-auth.d.ts
 !*Auth*Adapter.ts
+!apps/web/src/infrastructure/storage/ImageUploadService.ts
+!packages/infrastructure/src/admin-account/AdminKyselyAdapter.ts
+!packages/infrastructure/src/admin-account/kyselyAdminAccountLookup.ts
 !packages/infrastructure/src/admin-account/kyselyAdminSession.ts
 !packages/infrastructure/src/admin-account/magicLinkHmac.ts
 !packages/infrastructure/src/admin-account/sendAdminMagicLink.ts
@@ -85,6 +91,10 @@ packages/*/src/*
 !packages/server-shared/src/cronAuth.ts
 !packages/server-shared/src/csrf.ts
 ```
+
+- `*/proxy.ts`・`*/src/lib/auth/*` は今は無いファイルの先回り（Next 16 で `middleware.ts` が `proxy.ts` に改名される。認証をディレクトリに分けたときのため）
+- `AdminKyselyAdapter.ts`（管理者 NextAuth の Adapter。自動サインアップ禁止などの不変条件を持つ）と `kyselyAdminAccountLookup.ts`（signIn のゲート）は名前に Auth を含まないので個別に書く。`ImageUploadService.ts`（`SUPABASE_SERVICE_ROLE_KEY`）・`captcha.ts`（Turnstile の秘密鍵）は秘密鍵を扱うので🔴
+- 「常に拒否」はディレクトリごと効くので、`app/api/cron/` や `app/api/auth/` の下の `__tests__/` もクラウドからは編集できない（意図どおり。テストだけ直したいときはローカルで）
 
 許可リストに書かないので🔴のまま: `packages/infrastructure/atlas/`（スキーマ・マイグレーション）、`package.json`・`bun.lock`（依存の追加）、`next.config.ts`・`vercel.json`・`apps/web/supabase/`・`eslint.config.mjs`、`.claude/`、`.github/`、`CLAUDE.md`。
 `.claude/` が🔴なので、クラウドの Claude が自分で許可範囲を広げることはできない。
@@ -230,7 +240,7 @@ packages/*/src/*
    - 連続した差し戻しは 3 回まで。超えたら終了を許可し、**その差分では以後差し戻さない**（変更されたらまた検証する）。3 回目には「直せなければ報告して終了」と伝える。`stop_hook_active` も参照する。
    - infrastructure の結合テスト（Docker）と build は対象外にし、CI に任せる。
 2. `pre-pr-check` workflow を削除する（lint・テストは Stop hook と CI で自動実行されるため）。
-3. `dev` skill を更新する：手順 7 を `bun run check` に置き換え、Stop hook でも自動で走ると明記する。実行環境で分岐させる（ローカル：push 前に承認／クラウド：緑は PR まで自動、黄・赤は `cloud-plan` skill へ）。
+3. `dev` skill を更新する：手順 7 を `bun run check` に置き換え、Stop hook でも自動で走ると明記する。実行環境で分岐させる（ローカル：push 前に承認／クラウド：緑は PR まで自動、黄・赤は `cloud-plan` skill へ）。※この分岐は P5 で `cloud-dev` skill に分離し、`dev` はローカル専用になった。
 
 **実測（2026-10-17、P2 で測定）**：`bun run check`（lint web・admin → format:check → typecheck → test 682 件）で約 11 秒。Stop hook では `bun run check` をそのまま実行する。
 
@@ -247,7 +257,7 @@ packages/*/src/*
 **変更内容**
 
 1. **`.claude/cloud-allowlist`** — 🟡として `apps/*/src/*`・`packages/*/src/*` を許可し、その中の認証・DB クライアント・cron・セキュリティ関連を「常に拒否」で🔴に戻す（4 章）。DB スキーマ（`atlas/`）・依存（`package.json`）・実行環境（`next.config.ts`・`vercel.json`）は許可リストに書かないので🔴のまま。
-2. **`cloud-dev` skill** — クラウド専用の開発フロー。Issue → 区分の判定（`blocked_files` で変更予定のパスを機械的に判定）→ 質問と実装計画をまとめて出して**ここだけユーザーの OK を待つ** → 実装 → 検証 → 受け入れ要件の確認 → `full-review` → push と REST での PR 作成 → PR の見張り（CI の失敗を直す）→ 独立レビューと指摘対応（「修正する」だけ直し、「見送る」「要確認」は PR コメント）。🔴が含まれれば `cloud-plan` に切り替える。PR body テンプレートなど `dev` と共通の参考情報は `dev` skill を参照する。
+2. **`cloud-dev` skill** — クラウド専用の開発フロー。Issue → 区分の判定（`blocked_files` で変更予定のパスを機械的に判定）→ 質問と実装計画をまとめて出して**ここだけユーザーの OK を待つ**（変更がすべて🟢なら待たない。P1 と同じ）→ 実装 → 検証 → 受け入れ要件の確認 → `full-review` → push と REST での PR 作成 → PR の見張り（CI の失敗を直す）→ 独立レビューと指摘対応（「修正する」だけ直し、「見送る」「要確認」は PR コメント）。🔴が含まれれば `cloud-plan` に切り替える。PR body テンプレートなど `dev` と共通の参考情報は `dev` skill を参照する。
 3. **`dev` skill をローカル専用に** — 「実行環境による分岐」の節と REST での PR 作成を外し、クラウドでは `cloud-dev` を使うと書く。
 4. **`cloud-plan` skill の対象を🔴だけに**、`split-issue` skill の注意書きを「🟢・🟡は `cloud-dev`、🔴は `cloud-plan`」にする。
 5. **hook のテスト** — 🟡が許可され🔴が拒否されるケースを足す（`cloud-scope-guard.test.sh`・`git-hooks.test.sh`）。git hook と `cloud-scope-guard.sh` の拒否メッセージは変えない（拒否されるのが🔴だけになるので「cloud-plan で計画書を」で合っている）。
