@@ -50,6 +50,9 @@ const remotePatterns = buildImageRemotePatterns({
  * - Next.js Dev 環境は HMR のために `'unsafe-eval'` / `'unsafe-inline'` が必要。
  * - img-src は Supabase Storage / Unsplash / data URL を明示的に許可 (最小化)。
  * - connect-src はクライアントから直叩きする外部 API が無いので `'self'` 基本。
+ * - Cloudflare Turnstile（応募フォームの CAPTCHA、#333）は script-src と frame-src で
+ *   `https://challenges.cloudflare.com` を許可する。connect-src は pre-clearance モードを
+ *   使わない限り不要（公式 CSP ガイド参照）。
  *   (Supabase はサーバー側 infrastructure 層からのみ `@supabase/supabase-js` を呼び、
  *    ブラウザ側では `createBrowserClient` 等を一切使用していないことを確認済み。
  *    もし将来的にブラウザから Supabase SDK を直接叩くようになったら、
@@ -72,7 +75,12 @@ function buildContentSecurityPolicy(): string {
     "img-src": ["'self'", "data:", "blob:", "https://*.supabase.co", "https://images.unsplash.com"],
     "font-src": ["'self'", "data:"],
     "style-src": ["'self'", "'unsafe-inline'"],
-    "script-src": ["'self'"],
+    // script-src: 自ドメインに加え、応募フォームの CAPTCHA（Cloudflare Turnstile）の
+    // api.js を読み込むため challenges.cloudflare.com を許可する (#333)。
+    "script-src": ["'self'", "https://challenges.cloudflare.com"],
+    // frame-src: Turnstile のウィジェットは iframe で描画されるため同ホストを許可する (#333)。
+    // 未指定だと default-src 'self' が効いて遮断される。
+    "frame-src": ["'self'", "https://challenges.cloudflare.com"],
     // クライアントから直接叩く外部 API は現状なし (Supabase SDK はサーバー側のみ)。
     // NextAuth / API Routes は同一オリジン。
     "connect-src": ["'self'"],
