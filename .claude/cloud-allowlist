@@ -1,12 +1,30 @@
 # クラウドセッションで書き込み・commit・push を許可するパス（docs/guides/ai-harness.md 4 章）
 # 1 行 1 パターン。bash の [[ path == pattern ]] で評価する（* は / をまたいでマッチする）。
-# path は repo ルートからの相対パス。! で始まる行は常に拒否（緑より優先）。
+# path は repo ルートからの相対パス。! で始まる行は常に拒否（🟡・緑より優先）。
+# ここに書いていないパス（packages/infrastructure/atlas/・package.json・next.config.ts・vercel.json など）はすべて拒否（🔴）。
 
-# 常に拒否
+# 常に拒否（🔴: ガードレール・認証・DB クライアント・実行環境）
 !.claude/*
 !.github/*
 !CLAUDE.md
 !*/CLAUDE.md
+!*/middleware.ts
+!*/src/lib/auth.ts
+!*/src/lib/auth-constants.ts
+!*/src/lib/session.ts
+!*/src/lib/di/auth.ts
+!*/src/lib/api/auth.ts
+!*/app/api/auth/*
+!*/app/api/cron/*
+!*/types/next-auth.d.ts
+!*Auth*Adapter.ts
+!packages/infrastructure/src/admin-account/kyselyAdminSession.ts
+!packages/infrastructure/src/admin-account/magicLinkHmac.ts
+!packages/infrastructure/src/admin-account/sendAdminMagicLink.ts
+!packages/infrastructure/src/database/kysely/*
+!packages/infrastructure/src/security/*
+!packages/server-shared/src/cronAuth.ts
+!packages/server-shared/src/csrf.ts
 
 # 緑
 docs/*
@@ -18,3 +36,7 @@ docs/*
 tests/e2e/*
 apps/*/src/components/*
 apps/*/public/*
+
+# 🟡（通常の機能実装。上の「常に拒否」に当たるものは除く）
+apps/*/src/*
+packages/*/src/*
