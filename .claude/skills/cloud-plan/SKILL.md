@@ -1,16 +1,17 @@
 ---
 name: cloud-plan
 description: >-
-  クラウドセッションで、コード変更を伴う依頼（緑以外）を受けたときに使う。
-  調査して docs-repository の plans/ に実装計画を書き、docs-repository に PR を出す。
-  「クラウドで実装して」と頼まれたが変更先が .claude/cloud-allowlist の外にあるとき、
-  または cloud-scope-guard hook に書き込みを拒否されたときに参照すること。
+  クラウドセッション（CLAUDE_CODE_REMOTE=true）で、🔴（.claude/cloud-allowlist の外: DB スキーマ・認証・.claude/・.github/・依存・実行環境）
+  の変更を伴う依頼を受けたときに使う。調査して docs-repository の plans/ に実装計画を書き、docs-repository に PR を出す。
+  変更先が許可リストの外にあるとき、または cloud-scope-guard hook に書き込みを拒否されたときに参照すること。
+  🟢・🟡だけで済む依頼は cloud-dev skill で PR まで進める。
 ---
 
-# /cloud-plan — クラウドで実装計画を PR にする
+# /cloud-plan — クラウドで🔴の実装計画を PR にする
 
-クラウドセッション（`CLAUDE_CODE_REMOTE=true`）では、緑以外のパスを変更できない（`docs/guides/ai-harness.md` 4 章）。
+クラウドセッション（`CLAUDE_CODE_REMOTE=true`）では、🔴のパス（`.claude/cloud-allowlist` の外。DB スキーマ・認証・`.claude/`・`.github/`・依存・実行環境）を変更できない（`docs/guides/ai-harness.md` 4 章）。
 その代わりに実装計画を書いて docs-repository に PR し、帰宅後にローカルの `/dev` で実装する。
+🟢・🟡だけで済む依頼はこのスキルではなく `cloud-dev` skill で PR まで進める。
 
 ## 引数
 
@@ -109,5 +110,6 @@ gh api repos/Physicalfunding/PhysiFun/issues/{番号}/comments -F body=@<計画�
 
 ## 注意事項
 
-- このスキルの間は PhysiFun のコードを変更しない（`cloud-scope-guard` hook にも拒否される）
-- 緑のパス（`docs/` など）だけで完結する依頼なら、このスキルは使わず通常どおり PR まで進めてよい
+- このスキルの間は PhysiFun のコードを変更しない（🔴は `cloud-scope-guard` hook にも拒否される）
+- 🟢・🟡（許可リストの範囲）だけで完結する依頼なら、このスキルは使わず `cloud-dev` skill で PR まで進める
+- 🔴と🟢・🟡が混ざる Issue は、🔴の部分だけをこのスキルで計画 PR にし、残りは `cloud-dev` skill で進められないか検討する（`cloud-dev` の手順 4・6）
