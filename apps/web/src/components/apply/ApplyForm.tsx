@@ -508,7 +508,7 @@ export function ApplyForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} className="space-y-8">
       {/* 1. 基本情報 */}
       <section className={sectionClassName}>
         <h2 className={sectionHeadingClassName}>1. 基本情報</h2>

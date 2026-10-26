@@ -87,7 +87,14 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
   }, [projectId]);
 
   useEffect(() => {
-    fetchProject();
+    // setState は fetch の await 後にしか走らないが、react-hooks/set-state-in-effect は
+    // useCallback 越しには判定できないため、effect 内に宣言した関数を経由して呼ぶ
+    //（他の画面は fetch 自体を effect 内の関数に書いている。ここは公開申請後の
+    // 再取得でも fetchProject を使うので useCallback に残している）。
+    async function load() {
+      await fetchProject();
+    }
+    void load();
   }, [fetchProject]);
 
   const handleRequestPublish = async () => {
