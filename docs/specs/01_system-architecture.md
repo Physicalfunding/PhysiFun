@@ -223,7 +223,7 @@ PhysiFun/
 └── docs/                        # ドキュメント（docs/README.md が地図）
 ```
 
-`<context>` は `account` / `admin-account` / `leader-application` / `project` / `outbox`（application・infrastructure のみ）。`recruitment` は domain のみ（application・infrastructure は #212 で追加予定）。
+`<context>` は `account` / `admin-account` / `leader-application` / `project` / `outbox`（application・infrastructure のみ）。`recruitment` は domain・application まで（infrastructure は #217 で追加予定）。
 
 > 💡 infrastructure の実装は Kysely 実装も含めてすべて `@physifun/infrastructure` から import する（#256 でサブバレルを統合）。クライアントコンポーネントからは型だけを import する（値を import すると pg / Kysely がクライアントのバンドルに入る）。
 
@@ -436,7 +436,7 @@ flowchart TB
 
 **初回リリース → 一般公開の移行**は**ランタイムフィーチャーフラグではなくコード変更リリース**で行う方針（`docs/product.md` 参照）。
 
-> 💡 `SupportRecruitment` / `RecruitmentSchedule` は **ドメイン層まで**実装済みで、application 層・インフラ層・UI はまだ無い（#212）。`SupportTicket` は schema（`atlas/schema.sql`）のみ。詳細は `02_domain-model.md` §8、`03_data-model.md` §1 参照。
+> 💡 `SupportRecruitment` / `RecruitmentSchedule` は **application 層まで**実装済みで、インフラ層・UI はまだ無い（#212）。`SupportTicket` は schema（`atlas/schema.sql`）のみ。詳細は `02_domain-model.md` §8、`03_data-model.md` §1 参照。
 
 ---
 
