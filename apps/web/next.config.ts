@@ -44,7 +44,7 @@ const remotePatterns = buildImageRemotePatterns({
  *
  * 方針 (Issue #109):
  * - Next.js App Router はインラインスクリプトを注入するため、script-src は nonce ベースか
- *   `'unsafe-inline'` フォールバックが必要。Phase 1 現時点では nonce middleware を
+ *   `'unsafe-inline'` フォールバックが必要。初回リリース現時点では nonce の仕組みを
  *   導入していないので `'self'` + 本番で `'strict-dynamic'` を入れずに
  *   Turnstile（下記）以外の外部ホストは許可しない最小構成にしている。
  * - Next.js Dev 環境は HMR のために `'unsafe-eval'` / `'unsafe-inline'` が必要。
@@ -103,7 +103,7 @@ function buildContentSecurityPolicy(): string {
     directives["img-src"].push("http://127.0.0.1:54321", "http://localhost:54321");
   } else {
     // 本番環境: Next.js の App Router ランタイムがインラインスクリプトを出力するため、
-    // nonce middleware 導入までの暫定として `'unsafe-inline'` を維持する。
+    // nonce 化までの暫定として `'unsafe-inline'` を維持する。
     // TODO(Issue #109 follow-up): nonce ベースへ移行して `'unsafe-inline'` を外す。
     directives["script-src"].push("'unsafe-inline'");
   }
