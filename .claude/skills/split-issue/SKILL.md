@@ -59,7 +59,7 @@ gh api repos/Physicalfunding/PhysiFun/issues/{親}/sub_issues --jq '.[] | "#\(.n
   - domain → application → infrastructure → web（薄い API ＋ UI）/ admin
   - DB スキーマの変更（`atlas/schema.sql`・マイグレーション）は、ほかと混ぜずに 1 本にする
   - 依存し合わないものは「並行可」とする
-- サブ Issue ごとに、クラウドでの扱い（`CLAUDE.md` の「実行環境ごとの自律範囲」の 🟢 / 🟡 / 🔴）を決める。緑だけで済むもの（`docs/`・`apps/*/src/components/` など）を切り出しておくと、クラウドで PR まで進められる
+- サブ Issue ごとに、クラウドでの扱い（`CLAUDE.md` の「実行環境ごとの自律範囲」の 🟢 / 🟡 / 🔴）を決める。🟢・🟡（`.claude/cloud-allowlist` の範囲）だけで済むものはクラウドの `cloud-dev` skill で PR まで進められるので、🔴（DB スキーマ・認証・依存の追加など）を別のサブ Issue に切り出しておく
 - 記号は着手順に `A-1`, `A-2`, … と振る。親にタスク案があればその記号を使う。すでにサブ Issue がある親を追加で分けるときは、次のアルファベット（`B-1`, …）にする
 
 #### 各サブ Issue に決めること
@@ -166,7 +166,7 @@ gh api repos/Physicalfunding/PhysiFun/issues \
    順番は A-1 → A-2 → (A-3 / A-4 は並行可)
    ```
 
-   緑以外のサブ Issue があれば、「実行環境の注意」として「クラウドでは `cloud-plan` skill で計画まで」と添える（#212 と同じ）。
+   🔴のサブ Issue があれば、「実行環境の注意」として「🟢・🟡はクラウドの `cloud-dev` skill で PR まで、🔴はクラウドでは `cloud-plan` skill で計画まで」と添える。
 
    今の本文を決まったパスに取り出し、編集してから戻す（手順 5 と同じ理由で `mktemp` は使わない）。
 

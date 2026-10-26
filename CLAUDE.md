@@ -75,9 +75,10 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 |---|---|
 | `issue` | GitHub Issue 作成（種別・ラベル自動判定、ブランチ名提案） |
 | `split-issue` | 親 Issue を PR 1 本ずつのサブ Issue に分解する（分解案の確認 → 作成 → 親子づけ → 親にタスク一覧） |
-| `dev` | Issue → 実装 → 検証 → 受け入れ要件の確認 → PR → レビュー → 修正の一貫開発フロー |
+| `dev` | **ローカルで** Issue → 実装 → 検証 → 受け入れ要件の確認 → PR → レビュー → 修正の一貫開発フロー |
+| `cloud-dev` | **クラウドで** 🟢・🟡の Issue を PR まで進める（実装計画の OK だけ待つ。🔴が含まれれば `cloud-plan` に切り替える） |
 | `add-usecase` | application 層に UseCase を追加する（`Result` 型・Port DI・併設ユニットテスト必須の規範手順とテンプレート） |
-| `cloud-plan` | クラウドで緑以外の依頼を受けたとき、実装計画を docs-repository の `plans/` に書いて PR にする |
+| `cloud-plan` | クラウドで🔴（許可リストの外）の依頼を受けたとき、実装計画を docs-repository の `plans/` に書いて PR にする |
 
 ## Agents（専門レビューエージェント）
 
@@ -121,12 +122,12 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 
 | 区分 | ローカル | クラウド |
 |---|---|---|
-| 🟢 緑（`docs/`・`*.md`・テストのみ・`apps/*/src/components/`・`apps/*/public/`） | 通常フロー（push 前にユーザー承認） | PR 作成まで自動。マージはユーザー |
-| 🟡 通常の機能実装 | 通常フロー | 調査・計画まで（`cloud-plan` skill） |
-| 🔴 DB・認証・`.claude/`・`.github/`・実行環境 | 通常フロー | 調査・計画まで（`cloud-plan` skill） |
+| 🟢 緑（`docs/`・`*.md`・テストのみ・`apps/*/src/components/`・`apps/*/public/`） | 通常フロー（`dev` skill。push 前にユーザー承認） | PR 作成まで自動（`cloud-dev` skill）。マージはユーザー |
+| 🟡 通常の機能実装（`apps/*/src/`・`packages/*/src/`。🔴に当たるものを除く） | 通常フロー（`dev` skill） | 実装計画の OK を待ってから PR 作成まで自動（`cloud-dev` skill）。マージはユーザー |
+| 🔴 DB スキーマ・認証・DB クライアント・依存の追加・`.claude/`・`.github/`・実行環境 | 通常フロー（`dev` skill） | 調査・計画まで（`cloud-plan` skill） |
 
-- クラウドで緑以外の依頼を受けたら、コードを書かずに `cloud-plan` skill で計画書を docs-repository に PR する
-- 許可範囲の正は `.claude/cloud-allowlist`。`cloud-scope-guard` hook（書き込み時）と git hook（commit・push 時）が機械的に止める
+- クラウドでは `dev` skill ではなく `cloud-dev` skill を使う。🔴を含む依頼は、コードを書かずに `cloud-plan` skill で計画書を docs-repository に PR する（🟢・🟡の部分だけ `cloud-dev` で進められるなら、🔴だけを計画に回す）
+- 許可範囲の正は `.claude/cloud-allowlist`（🟡として `apps/*/src/*`・`packages/*/src/*` を許可し、認証・DB クライアントなどを「常に拒否」で🔴に戻している）。`cloud-scope-guard` hook（書き込み時）と git hook（commit・push 時）が機械的に止める
 - クラウドセッションは **PhysiFun 単独**で起動する（複数 repo を選ぶと repo の hooks が読み込まれず、ガードが効かない）
 - 最新仕様（docs-repository）が必要になったら、Claude が Physicalfunding/docs-repository をセッションに追加する（クラウドの git 認証はセッションに付いた repo にしか効かないため、hook では clone できない）
 - クラウドでは `gh pr create` が使えない。PR やコメントは `gh api`（REST）か GitHub MCP で作る
