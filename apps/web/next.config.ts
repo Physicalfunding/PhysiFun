@@ -46,7 +46,7 @@ const remotePatterns = buildImageRemotePatterns({
  * - Next.js App Router はインラインスクリプトを注入するため、script-src は nonce ベースか
  *   `'unsafe-inline'` フォールバックが必要。Phase 1 現時点では nonce middleware を
  *   導入していないので `'self'` + 本番で `'strict-dynamic'` を入れずに
- *   外部依存なしの最小許可としている。
+ *   Turnstile（下記）以外の外部ホストは許可しない最小構成にしている。
  * - Next.js Dev 環境は HMR のために `'unsafe-eval'` / `'unsafe-inline'` が必要。
  * - img-src は Supabase Storage / Unsplash / data URL を明示的に許可 (最小化)。
  * - connect-src はクライアントから直叩きする外部 API が無いので `'self'` 基本。
