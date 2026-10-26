@@ -37,7 +37,7 @@ setup("DB リセット + admin seed + admin storageState 保存", async ({ page 
   ]);
 
   // Cookie を実際にサーバーに送って認証が効いていることを確認。
-  // middleware は Cookie 存在のみチェックし、実際の AdminSession 検証は
+  // proxy（旧 middleware）は Cookie 存在のみチェックし、実際の AdminSession 検証は
   // Server Component / Route Handler で行う。トップページは認可済みなら
   // /login にリダイレクトしない。
   await page.goto(`${ADMIN_BASE_URL}/`);

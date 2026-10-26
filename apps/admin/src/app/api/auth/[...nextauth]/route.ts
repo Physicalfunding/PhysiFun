@@ -24,9 +24,9 @@ import { authOptions } from "@/lib/auth";
  *        攻撃者は本物の token でも検証 URL を通せない)
  *   2. AdminAuditLog に `magic_link.signature_invalid` を記録
  *
- * ## なぜ middleware ではなく route で
- * middleware は Edge ランタイムで動くため @physifun/infrastructure (DB 依存)
- * を読み込めない。したがって route handler の入口で verify を差し込む。
+ * ## なぜ proxy ではなく route で
+ * proxy（旧 middleware）は DB 依存の @physifun/infrastructure を読み込まない方針
+ * （Edge でも動く軽量な層に保つ）のため、route handler の入口で verify を差し込む。
  *
  * ## 検証対象
  * - method === "GET"

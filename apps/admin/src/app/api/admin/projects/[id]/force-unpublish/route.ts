@@ -25,7 +25,7 @@ import { enforceAdminRateLimit } from "@/lib/rateLimit";
  * リクエストボディに reviewerNote（強制非公開理由）が必須。
  *
  * 認証の注意:
- * - middleware.ts は /api パスを除外しているため、この Route Handler が第一防衛線
+ * - proxy.ts は /api パスを除外しているため、この Route Handler が第一防衛線
  * - UseCase 層でも findAdminReviewerById (ACTIVE な AdminAccount) で二重防御している
  * - 認証後にレート制限 (adminAccountId 単位 60 req/min) を適用 (#157 H1)
  * - 成功後に AdminAuditLog へ post-hook 書き込み (#157 H2)

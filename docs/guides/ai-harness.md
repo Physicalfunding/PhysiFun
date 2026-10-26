@@ -92,7 +92,7 @@ packages/*/src/*
 !packages/server-shared/src/csrf.ts
 ```
 
-- `*/proxy.ts`・`*/src/lib/auth/*` は今は無いファイルの先回り（Next 16 で `middleware.ts` が `proxy.ts` に改名される。認証をディレクトリに分けたときのため）
+- `*/proxy.ts` は Next 16 の `proxy.ts` 規約（#334 で `middleware.ts` から移行済み）。`*/middleware.ts` は旧規約のファイルが戻されないための保険。`*/src/lib/auth/*` は今は無いディレクトリの先回り（認証をディレクトリに分けたときのため）
 - `AdminKyselyAdapter.ts`（管理者 NextAuth の Adapter。自動サインアップ禁止などの不変条件を持つ）と `kyselyAdminAccountLookup.ts`（signIn のゲート）は名前に Auth を含まないので個別に書く。`ImageUploadService.ts`（`SUPABASE_SERVICE_ROLE_KEY`）・`captcha.ts`（Turnstile の秘密鍵）は秘密鍵を扱うので🔴
 - 「常に拒否」はディレクトリごと効くので、`app/api/cron/` や `app/api/auth/` の下の `__tests__/` もクラウドからは編集できない（意図どおり。テストだけ直したいときはローカルで）
 

@@ -1,5 +1,6 @@
 // web / admin（Next.js）のサーバー側で共通に使うコード（#252）。
-// middleware（Edge）からも読み込むため、Node 専用 API（node:crypto など）に依存させない。
+// proxy（旧 middleware）からも読み込む。proxy は Node ランタイムになったが、Edge でも動く軽量な層に
+// 保つため、Node 専用 API（node:crypto など）に依存させない。
 
 export { shouldCheckCsrf, getAllowedOrigins, verifyCsrf } from "./csrf";
 export {

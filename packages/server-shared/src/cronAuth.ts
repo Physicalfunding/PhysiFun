@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
  * 比較は内容について constant-time（timing attack 対策, #159 L-2）。
  * 長さが違う場合は内容比較まで進めずに 401 にする。`CRON_SECRET` の長さは固定運用で、
  * HTTPS 下では長さの情報が漏れても意味のある攻撃にならないため許容している。
- * middleware（Edge）からも読めるよう、`node:crypto` を使わずに比較している。
+ * proxy（Edge でも動く層に保つ）からも読めるよう、`node:crypto` を使わずに比較している。
  *
  * @example
  * const unauthorized = verifyCronRequest(request);

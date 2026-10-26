@@ -31,7 +31,7 @@ function buildQueryString(overrides: { page?: number; perPage?: number }): strin
 /**
  * /members — 運営メンバー管理 (#148 / #167 ページネーション対応)
  *
- * - ACTIVE な AdminAccount のみが到達可能 (middleware + getAuthenticatedAdminId)
+ * - ACTIVE な AdminAccount のみが到達可能 (proxy + getAuthenticatedAdminId)
  * - 自分自身に対しては「無効化」ボタンを表示しない (Route Handler 側でも集約ガードあり)
  * - `page` / `perPage` クエリでページング (audit-logs と同じパターン)
  */
@@ -42,7 +42,7 @@ export default async function MembersListPage({
 }) {
   const operatorId = await getAuthenticatedAdminId();
   if (!operatorId) {
-    // middleware が弾く想定だが、防御的に。
+    // proxy が弾く想定だが、防御的に。
     redirect("/login");
   }
 

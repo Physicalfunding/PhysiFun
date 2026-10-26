@@ -1,5 +1,5 @@
 /**
- * middleware 全体の統合テスト (CSRF 層 + `/my/*` 委譲)。
+ * proxy（旧 middleware）全体の統合テスト (CSRF 層 + `/my/*` 委譲)。
  *
  * `/my/*` 配下のテストは NextAuth の `withAuth` ラッパー (cookie / JWT 検証) に
  * 依存する。認証トークンが無い場合の挙動 (サインイン画面へのリダイレクト) を
@@ -8,7 +8,7 @@
  * CSRF OK / NG でどのように応答されるかを検証する。
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import middleware from "../middleware";
+import proxy from "../proxy";
 import type { NextFetchEvent, NextRequest } from "next/server";
 
 function buildRequest(options: {
@@ -48,14 +48,14 @@ function buildRequest(options: {
 }
 
 /**
- * NextFetchEvent の軽量モック (middleware の第 2 引数用)。
+ * NextFetchEvent の軽量モック (proxy の第 2 引数用)。
  * 実装上 CSRF パスでは使われない & withAuth 委譲でも最低限でよい。
  */
 const mockEvent = {
   waitUntil: () => {},
 } as unknown as NextFetchEvent;
 
-describe("middleware (CSRF 層)", () => {
+describe("proxy (CSRF 層)", () => {
   const origUrl = process.env.NEXTAUTH_URL;
   const origSecret = process.env.NEXTAUTH_SECRET;
   let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -89,7 +89,7 @@ describe("middleware (CSRF 層)", () => {
         host: "app.example.com",
       },
     });
-    const res = await middleware(req, mockEvent);
+    const res = await proxy(req, mockEvent);
     // next() / undefined (pass-through) どちらでも 403 以外であれば CSRF は通過している。
     expect(res?.status).not.toBe(403);
   });
@@ -107,7 +107,7 @@ describe("middleware (CSRF 層)", () => {
         host: "app.example.com",
       },
     });
-    const res = await middleware(req, mockEvent);
+    const res = await proxy(req, mockEvent);
     expect(res?.status).toBe(403);
     const body = await res!.json();
     expect(body).toEqual({
@@ -125,7 +125,7 @@ describe("middleware (CSRF 層)", () => {
         host: "app.example.com",
       },
     });
-    const res = await middleware(req, mockEvent);
+    const res = await proxy(req, mockEvent);
     expect(res?.status).not.toBe(403);
   });
 
@@ -140,7 +140,7 @@ describe("middleware (CSRF 層)", () => {
         host: "app.example.com",
       },
     });
-    const res = await middleware(req, mockEvent);
+    const res = await proxy(req, mockEvent);
     expect(res).toBeDefined();
     // NextAuth v4 系は 307 (Temporary Redirect) を返す実装だが、バージョンによっては
     // 302 (Found) もありうるため両方を許容する。
@@ -161,7 +161,7 @@ describe("middleware (CSRF 層)", () => {
         host: "app.example.com",
       },
     });
-    const res = await middleware(req, mockEvent);
+    const res = await proxy(req, mockEvent);
     expect(res?.status).not.toBe(403);
   });
 });

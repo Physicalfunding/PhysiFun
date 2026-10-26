@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
  * ACTIVE な AdminAccount 以外は参照不可。`getAuthenticatedAdminId` は
  * NextAuth v4 Database 戦略経由で AdminSession 行 + AdminAccount.status === ACTIVE
  * の両方を DB で検証する契約のため、null が返った時点で非 ACTIVE / 未ログインが
- * 確定する (#145 / #157)。middleware は Cookie 有無しか見ないため、最終防衛は
+ * 確定する (#145 / #157)。proxy は Cookie 有無しか見ないため、最終防衛は
  * RSC 側で行う。
  */
 export default async function AdminTopPage() {

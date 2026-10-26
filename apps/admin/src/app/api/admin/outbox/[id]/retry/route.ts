@@ -27,7 +27,7 @@ const commandAdapter = new KyselyOutboxCommandAdapter();
  * - source: "leaderApplication" | "project" (必須)
  *
  * 認証の注意:
- * - middleware.ts は /api パスを除外しているため、この Route Handler が第一防衛線
+ * - proxy.ts は /api パスを除外しているため、この Route Handler が第一防衛線
  * - 認証後にレート制限 (adminAccountId 単位 60 req/min) を適用 (#157 H1)
  * - 成功後に AdminAuditLog へ post-hook 書き込み (#158 M3)
  */

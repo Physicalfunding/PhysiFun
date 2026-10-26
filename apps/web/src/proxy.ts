@@ -5,7 +5,10 @@ import type { NextFetchEvent, NextRequest } from "next/server";
 import { verifyCsrf } from "@physifun/server-shared";
 
 /**
- * Middleware エントリポイント
+ * Proxy エントリポイント（Next.js 16 の `proxy.ts` 規約。旧 `middleware.ts`、#334）
+ *
+ * ランタイム: `proxy.ts` は Node.js で動く（`middleware.ts` は Edge だった）。ただし DB には触らず、
+ * 認証の最終防衛線を RSC / Route Handler 側に置く設計は変えない。
  *
  * 役割:
  * 1. `/api/*` の state-changing リクエスト (POST / PUT / PATCH / DELETE) に対する
@@ -22,10 +25,10 @@ import { verifyCsrf } from "@physifun/server-shared";
  */
 
 /**
- * `/my/*` 配下の認証チェック付きミドルウェア。
+ * `/my/*` 配下の認証チェック（next-auth の `withAuth`）。
  * NextAuth の `withAuth` を利用し、token が無ければ自動でログインページにリダイレクトする。
  *
- * 型メモ (next-auth@^4.24.11, next@16.1.1):
+ * 型メモ (next-auth 4.24.15, next 16.4.3 時点):
  * - `withAuth` の戻り値は `NextMiddlewareWithAuth` (`req` に `nextauth.token` が生える
  *   拡張 NextRequest を受ける) だが、呼び出し側で通常の `NextRequest` を渡すだけで
  *   内部的に cookie から token を復元してくれるため、`NextRequest` を渡しても実行上は
@@ -37,7 +40,7 @@ import { verifyCsrf } from "@physifun/server-shared";
  * 混ぜる案は採用しない。ここでは withAuth を純粋に認証判定のみに使う。
  */
 const authMiddleware: ReturnType<typeof withAuth> = withAuth(
-  function middleware() {
+  function afterAuth() {
     return NextResponse.next();
   },
   {
@@ -48,10 +51,10 @@ const authMiddleware: ReturnType<typeof withAuth> = withAuth(
 );
 
 /**
- * Next.js middleware 本体。
+ * Next.js proxy 本体。
  * CSRF を先に検証し、その後 `/my/*` のみ `withAuth` へ委譲する。
  */
-export default async function middleware(request: NextRequest, event: NextFetchEvent) {
+export default async function proxy(request: NextRequest, event: NextFetchEvent) {
   // 1. CSRF 検証は `/api/*` だけに限定する。
   //    (matcher で `/my/:path*` も拾っているが、これはページ遷移なので CSRF の対象にしない)
   if (request.nextUrl.pathname.startsWith("/api/")) {
@@ -64,7 +67,7 @@ export default async function middleware(request: NextRequest, event: NextFetchE
   // 2. `/my/*` は認証必須。NextAuth の withAuth に委譲する。
   //
   // `withAuth` の戻り値シグネチャは `NextRequestWithAuth` (nextauth.token 付き) を
-  // 要求するが、ここでは token を middleware 自身では使わないため (authorized
+  // 要求するが、ここでは token を proxy 自身では使わないため (authorized
   // callback 側で判定する)、最低限の `nextauth` プロパティだけを補って渡す。
   // 実体の token は withAuth 内部で cookie から復元される。
   if (request.nextUrl.pathname.startsWith("/my")) {
@@ -78,7 +81,7 @@ export default async function middleware(request: NextRequest, event: NextFetchE
 }
 
 /**
- * ミドルウェアを適用するパス。
+ * proxy を適用するパス。
  *
  * - `/my/:path*`: 認証必須ルート (withAuth)
  * - `/api/:path*`: CSRF 検証対象ルート
