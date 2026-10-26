@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreToolUse hook: クラウドセッションで、許可リスト（緑）以外への書き込みを拒否する
+# PreToolUse hook: クラウドセッションで、許可リスト（🟢・🟡）以外への書き込みを拒否する
 # ローカル（CLAUDE_CODE_REMOTE != true）では何もしない。
 # うっかりを防ぐガードであり、悪意ある回避を防ぐセキュリティ境界ではない。
 # commit・push の中身の判定は .claude/git-hooks が行う（PreToolUse はコマンド実行前に走るため、1 コマンドにまとめた書き込み＋commit を見られない）。
