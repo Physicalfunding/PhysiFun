@@ -340,10 +340,11 @@ flowchart TD
 | `object-src` | `'none'` |
 | `img-src` | `'self' data: blob: https://*.supabase.co https://images.unsplash.com` |
 | `style-src` | `'self' 'unsafe-inline'` |
-| `script-src` | `'self' 'unsafe-inline'`（本番、Issue #109 follow-up で nonce 化予定） |
+| `script-src` | `'self' 'unsafe-inline' https://challenges.cloudflare.com`（本番。Turnstile の api.js を許可（#333）。Issue #109 follow-up で nonce 化予定） |
+| `frame-src` | `'self' https://challenges.cloudflare.com`（Turnstile のウィジェット iframe、#333） |
 | `connect-src` | `'self'` |
 
-詳細は `apps/web/next.config.ts:37-103` 参照。
+詳細は `apps/web/next.config.ts` の `buildContentSecurityPolicy()` を参照。
 
 ### 9.2 admin 側の追加設定
 

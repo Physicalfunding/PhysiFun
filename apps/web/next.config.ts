@@ -44,12 +44,15 @@ const remotePatterns = buildImageRemotePatterns({
  *
  * 方針 (Issue #109):
  * - Next.js App Router はインラインスクリプトを注入するため、script-src は nonce ベースか
- *   `'unsafe-inline'` フォールバックが必要。Phase 1 現時点では nonce middleware を
+ *   `'unsafe-inline'` フォールバックが必要。初回リリース現時点では nonce の仕組みを
  *   導入していないので `'self'` + 本番で `'strict-dynamic'` を入れずに
- *   外部依存なしの最小許可としている。
+ *   Turnstile（下記）以外の外部ホストは許可しない最小構成にしている。
  * - Next.js Dev 環境は HMR のために `'unsafe-eval'` / `'unsafe-inline'` が必要。
  * - img-src は Supabase Storage / Unsplash / data URL を明示的に許可 (最小化)。
  * - connect-src はクライアントから直叩きする外部 API が無いので `'self'` 基本。
+ * - Cloudflare Turnstile（応募フォームの CAPTCHA、#333）は script-src と frame-src で
+ *   `https://challenges.cloudflare.com` を許可する。connect-src は pre-clearance モードを
+ *   使わない限り不要（公式 CSP ガイド参照）。
  *   (Supabase はサーバー側 infrastructure 層からのみ `@supabase/supabase-js` を呼び、
  *    ブラウザ側では `createBrowserClient` 等を一切使用していないことを確認済み。
  *    もし将来的にブラウザから Supabase SDK を直接叩くようになったら、
@@ -72,7 +75,12 @@ function buildContentSecurityPolicy(): string {
     "img-src": ["'self'", "data:", "blob:", "https://*.supabase.co", "https://images.unsplash.com"],
     "font-src": ["'self'", "data:"],
     "style-src": ["'self'", "'unsafe-inline'"],
-    "script-src": ["'self'"],
+    // script-src: 自ドメインに加え、応募フォームの CAPTCHA（Cloudflare Turnstile）の
+    // api.js を読み込むため challenges.cloudflare.com を許可する (#333)。
+    "script-src": ["'self'", "https://challenges.cloudflare.com"],
+    // frame-src: Turnstile のウィジェットは iframe で描画されるため同ホストを許可する (#333)。
+    // 未指定だと default-src 'self' が効いて遮断される。
+    "frame-src": ["'self'", "https://challenges.cloudflare.com"],
     // クライアントから直接叩く外部 API は現状なし (Supabase SDK はサーバー側のみ)。
     // NextAuth / API Routes は同一オリジン。
     "connect-src": ["'self'"],
@@ -95,7 +103,7 @@ function buildContentSecurityPolicy(): string {
     directives["img-src"].push("http://127.0.0.1:54321", "http://localhost:54321");
   } else {
     // 本番環境: Next.js の App Router ランタイムがインラインスクリプトを出力するため、
-    // nonce middleware 導入までの暫定として `'unsafe-inline'` を維持する。
+    // nonce 化までの暫定として `'unsafe-inline'` を維持する。
     // TODO(Issue #109 follow-up): nonce ベースへ移行して `'unsafe-inline'` を外す。
     directives["script-src"].push("'unsafe-inline'");
   }
