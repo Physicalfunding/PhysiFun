@@ -1,5 +1,6 @@
 export { isSafeHttpsUrl } from "./isSafeHttpsUrl";
 export { isAllowedImageUrl } from "./isAllowedImageUrl";
+export { ProjectStoryView } from "./ProjectStoryView";
 export { SafeSnsLink } from "./SafeSnsLink";
 export {
   buildImageRemotePatterns,

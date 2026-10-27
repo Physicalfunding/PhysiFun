@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Tailwind はアプリの中のファイルしか自動で見ないので、共通部品（@physifun/ui-shared）が使うクラスも見に行かせる */
+@source "../../../../packages/ui-shared/src";
 
 :root {
   --background: #ffffff;
