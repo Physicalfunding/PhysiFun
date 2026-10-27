@@ -145,7 +145,7 @@ function Inlines({ inlines }: { inlines: readonly StoryInline[] }) {
   return inlines.map((inline, i) => {
     if (inline.type === "hardBreak") return <br key={i} />;
     if (inline.type === "text" && typeof inline.text === "string") {
-      return <Text key={i} text={inline.text} marks={list(inline.marks)} />;
+      return <StoryText key={i} text={inline.text} marks={list(inline.marks)} />;
     }
     return null;
   });
@@ -154,7 +154,7 @@ function Inlines({ inlines }: { inlines: readonly StoryInline[] }) {
 /**
  * 文字に装飾を付ける。リンクを一番外側にする
  */
-function Text({ text, marks }: { text: string; marks: readonly StoryMark[] }) {
+function StoryText({ text, marks }: { text: string; marks: readonly StoryMark[] }) {
   const has = (type: StoryMark["type"]) => marks.some((mark) => mark.type === type);
   let node: ReactNode = text;
   if (has("strike")) node = <s>{node}</s>;
