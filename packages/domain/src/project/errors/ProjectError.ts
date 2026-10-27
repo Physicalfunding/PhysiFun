@@ -71,3 +71,57 @@ export type ProjectUpdateError =
       readonly type: "INVALID_CATEGORY";
       readonly value: string;
     };
+
+/**
+ * ストーリー（本文の文書データ）に許可していないものが含まれる理由
+ */
+export type StoryNotAllowedReason =
+  /** 文書データの形になっていない（オブジェクトでない・知らないキー・置けない場所にある要素など） */
+  | "INVALID_STRUCTURE"
+  /** 入れ子が深すぎる */
+  | "TOO_DEEP"
+  /** 許可していない要素（h1 は見出しの level で INVALID_ATTRIBUTE_VALUE になる） */
+  | "UNSUPPORTED_NODE"
+  /** 許可していない装飾（文字色など） */
+  | "UNSUPPORTED_MARK"
+  /** 許可していない属性 */
+  | "UNSUPPORTED_ATTRIBUTE"
+  /** 属性の値が許可した範囲にない（見出しの level・配置など） */
+  | "INVALID_ATTRIBUTE_VALUE"
+  /** リンク先が http / https でない */
+  | "INVALID_LINK_HREF"
+  /** 画像が自サイトの Storage の URL でない */
+  | "INVALID_IMAGE_SRC"
+  /** YouTube の動画 ID の形でない */
+  | "INVALID_YOUTUBE_ID";
+
+/**
+ * ストーリー（本文の文書データ）の検査エラー
+ */
+export type ProjectStoryError =
+  | {
+      readonly type: "STORY_NOT_ALLOWED";
+      readonly reason: StoryNotAllowedReason;
+      /** 問題のある場所（例: `$.content[2].attrs.src`） */
+      readonly path: string;
+    }
+  | {
+      readonly type: "STORY_TOO_LONG";
+      readonly maxLength: number;
+      readonly actualLength: number;
+    }
+  | {
+      readonly type: "STORY_TOO_MANY_IMAGES";
+      readonly maxCount: number;
+      readonly actualCount: number;
+    }
+  | {
+      readonly type: "STORY_TOO_MANY_VIDEOS";
+      readonly maxCount: number;
+      readonly actualCount: number;
+    }
+  | {
+      readonly type: "STORY_TOO_LARGE";
+      readonly maxBytes: number;
+      readonly actualBytes: number;
+    };
