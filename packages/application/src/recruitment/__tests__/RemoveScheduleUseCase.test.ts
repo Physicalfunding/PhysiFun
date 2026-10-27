@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { RemoveScheduleUseCase } from "../RemoveScheduleUseCase";
 import {
+  FOREIGN_SCHEDULE_ID,
   InMemoryRecruitmentPort,
   MISSING_ID,
   OTHER_ACCOUNT_ID,
   OWNER_ACCOUNT_ID,
   RECRUITMENT_ID,
   SCHEDULE_ID,
+  addOthersRecruitment,
   createRecruitment,
   createSchedule,
 } from "./fixtures";
@@ -55,6 +57,17 @@ describe("RemoveScheduleUseCase", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.type).toBe(type);
+    expect(port.hasWrites).toBe(false);
+  });
+
+  it("他人の募集にある日程 ID を、自分の募集 ID と組み合わせても SCHEDULE_NOT_FOUND（削除しない）", async () => {
+    addOthersRecruitment(port);
+
+    const result = await useCase.execute({ ...base, scheduleId: FOREIGN_SCHEDULE_ID });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("SCHEDULE_NOT_FOUND");
     expect(port.hasWrites).toBe(false);
   });
 });

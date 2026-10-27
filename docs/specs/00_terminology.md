@@ -85,7 +85,7 @@ PhysiFun の実装に関わるエンジニアが、コード・schema・ドキ�
 
 ## 5. 募集（Recruitment）
 
-ドメイン層（`packages/domain/src/recruitment/`）まで実装済み。リーダー側の募集作成の application 層・インフラ層・UI は初回リリースで実装予定（#212）、サポーターの申請は一般公開で実装予定。
+ドメイン層・application 層（`packages/domain/src/recruitment/`・`packages/application/src/recruitment/`）まで実装済み。リーダー側の募集作成のインフラ層・UI は初回リリースで実装予定（#212）、サポーターの申請は一般公開で実装予定。
 
 | 用語 | コード上の表現 | 説明 |
 |---|---|---|

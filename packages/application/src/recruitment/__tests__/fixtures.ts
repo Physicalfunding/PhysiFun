@@ -24,9 +24,13 @@ import type { UpdateSchedulePort } from "../ports/UpdateSchedulePort";
 export const OWNER_ACCOUNT_ID = "00000000-0000-4000-a000-000000000001";
 export const OTHER_ACCOUNT_ID = "00000000-0000-4000-a000-000000000002";
 export const PROJECT_ID = "00000000-0000-4000-b000-000000000001";
+export const OTHER_PROJECT_ID = "00000000-0000-4000-b000-000000000002";
 export const RECRUITMENT_ID = "00000000-0000-4000-8000-000000000001";
+export const OTHER_RECRUITMENT_ID = "00000000-0000-4000-8000-000000000002";
 export const SCHEDULE_ID = "00000000-0000-4000-9000-000000000001";
 export const OTHER_SCHEDULE_ID = "00000000-0000-4000-9000-000000000002";
+/** 他人の募集（OTHER_RECRUITMENT_ID）にある日程の ID */
+export const FOREIGN_SCHEDULE_ID = "00000000-0000-4000-9000-000000000003";
 /** 形式は正しいが、どこにも無い ID */
 export const MISSING_ID = "00000000-0000-4000-8000-0000000000ff";
 
@@ -44,11 +48,15 @@ export const scheduleId = (value: string) => unwrap(RecruitmentScheduleId.from(v
 
 // ==================== エンティティ ====================
 
-/** テスト用の日程（既定は 2099-01-10 の 10:00〜15:00・定員 5・AUTO） */
-export function createSchedule(overrides?: { id?: string; date?: string }): RecruitmentSchedule {
+/** テスト用の日程（既定は RECRUITMENT_ID の募集の、2099-01-10 の 10:00〜15:00・定員 5・AUTO） */
+export function createSchedule(overrides?: {
+  id?: string;
+  date?: string;
+  recruitmentId?: string;
+}): RecruitmentSchedule {
   return RecruitmentSchedule.reconstruct({
     id: scheduleId(overrides?.id ?? SCHEDULE_ID),
-    supportRecruitmentId: recruitmentId(RECRUITMENT_ID),
+    supportRecruitmentId: recruitmentId(overrides?.recruitmentId ?? RECRUITMENT_ID),
     date: unwrap(ScheduleDate.from(overrides?.date ?? "2099-01-10")),
     timeRange: unwrap(TimeRange.create({ start: "10:00", end: "15:00" })),
     capacityPerHour: unwrap(CapacityPerHour.from(5)),
@@ -58,11 +66,14 @@ export function createSchedule(overrides?: { id?: string; date?: string }): Recr
   });
 }
 
-/** テスト用の募集（PROJECT_ID のプロジェクトに属する） */
-export function createRecruitment(schedules: RecruitmentSchedule[] = []): SupportRecruitment {
+/** テスト用の募集（既定は RECRUITMENT_ID。PROJECT_ID のプロジェクトに属する） */
+export function createRecruitment(
+  schedules: RecruitmentSchedule[] = [],
+  overrides?: { id?: string; projectId?: string }
+): SupportRecruitment {
   return SupportRecruitment.reconstruct({
-    id: recruitmentId(RECRUITMENT_ID),
-    projectId: projectId(PROJECT_ID),
+    id: recruitmentId(overrides?.id ?? RECRUITMENT_ID),
+    projectId: projectId(overrides?.projectId ?? PROJECT_ID),
     type: RecruitmentType.ACTIVITY,
     title: "畑の草刈り",
     description: "一緒に草刈りをしてくれる人を募集します",
@@ -147,4 +158,17 @@ export class InMemoryRecruitmentPort
       0
     );
   }
+}
+
+/**
+ * 他人（OTHER_ACCOUNT_ID）のプロジェクトの募集 OTHER_RECRUITMENT_ID を足す。日程 FOREIGN_SCHEDULE_ID を持つ。
+ */
+export function addOthersRecruitment(port: InMemoryRecruitmentPort): void {
+  port.owners.set(OTHER_PROJECT_ID, OTHER_ACCOUNT_ID);
+  port.recruitments.push(
+    createRecruitment(
+      [createSchedule({ id: FOREIGN_SCHEDULE_ID, recruitmentId: OTHER_RECRUITMENT_ID })],
+      { id: OTHER_RECRUITMENT_ID, projectId: OTHER_PROJECT_ID }
+    )
+  );
 }

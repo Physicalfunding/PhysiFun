@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { ApprovalMode, ScheduleDateConflictError } from "@physifun/domain";
 import { UpdateScheduleUseCase, type UpdateScheduleInput } from "../UpdateScheduleUseCase";
 import {
+  FOREIGN_SCHEDULE_ID,
   InMemoryRecruitmentPort,
   MISSING_ID,
   OTHER_ACCOUNT_ID,
@@ -9,6 +10,7 @@ import {
   OWNER_ACCOUNT_ID,
   RECRUITMENT_ID,
   SCHEDULE_ID,
+  addOthersRecruitment,
   createRecruitment,
   createSchedule,
 } from "./fixtures";
@@ -82,6 +84,33 @@ describe("UpdateScheduleUseCase", () => {
 
     expect(result.ok).toBe(true);
     expect(port.updatedSchedules[0].capacityPerHour.value).toBe(8);
+  });
+
+  it("過去の日程でも、別の過去の日付には変えられない（SCHEDULE_DATE_IN_PAST）", async () => {
+    seed("2000-01-01");
+
+    const result = await useCase.execute({ ...base, date: "2000-01-02" });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toEqual({ type: "SCHEDULE_DATE_IN_PAST", date: "2000-01-02" });
+    expect(port.hasWrites).toBe(false);
+  });
+
+  it("他人の募集にある日程 ID を、自分の募集 ID と組み合わせても SCHEDULE_NOT_FOUND（保存しない）", async () => {
+    seed();
+    addOthersRecruitment(port);
+
+    const result = await useCase.execute({
+      ...base,
+      scheduleId: FOREIGN_SCHEDULE_ID,
+      capacityPerHour: 10,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.type).toBe("SCHEDULE_NOT_FOUND");
+    expect(port.hasWrites).toBe(false);
   });
 
   // ---- エラーケース ----
