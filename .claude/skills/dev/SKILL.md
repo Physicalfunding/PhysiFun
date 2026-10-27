@@ -216,7 +216,7 @@ Agent({
 
 #### 13b. Codex のレビュー
 
-Codex CLI の `codex review` で、`origin/main` との差分をレビューさせる。まず `codex` があるかを確かめ、あれば 2 行目を Bash の `run_in_background: true` で起動する。最終のレビューは stdout、途中経過は stderr に出る。
+Codex CLI の `codex review` で、`origin/main` との差分をレビューさせる。まず `codex` があるかを確かめ、あれば 2 行目を Bash の `run_in_background: true` で起動する。最終のレビューは stdout、途中経過は stderr に出る。Codex を使うのはローカルだけ（クラウドの `cloud-dev` では使わない）。
 
 ```bash
 command -v codex >/dev/null || echo "Codex CLI が無い"

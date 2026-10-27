@@ -30,6 +30,7 @@ description: >-
 | ブランチ | セッションが用意した `claude/...` をそのまま使う |
 | GitHub 操作 | `gh pr create` は使えない。Issue・PR・コメントは `gh api`（REST）か GitHub MCP で扱う |
 | Docker | 使えない。infrastructure の結合テストは CI に任せる |
+| Codex | 使わない（独立レビューは Claude だけ）。クラウドには ChatGPT のログインが無く、API キーだと従量課金になるため。Codex のレビューはローカルの `dev` だけで行う |
 | ガードの位置づけ | うっかりを防ぐもので、セキュリティ境界ではない。最終防衛線はマージ前のユーザー確認 |
 
 ## フロー
@@ -147,22 +148,9 @@ PR のアクティビティを購読し（`subscribe_pr_activity`）、CI の失
 
 ### 12. 独立レビューと指摘への対応
 
-1. `dev` skill の手順 13 と同じく、Claude と Codex のレビューをバックグラウンドで並行に起動する
-   - Claude（`dev` の 13a）: Agent tool で起動する（PR 番号と Issue 番号を渡し、実装者のコンテキストは引き継がない。受け入れ要件も別の目で確かめさせる）
-   - Codex（`dev` の 13b）: Codex CLI があり、ログインできるときだけ動かす。先に次で確かめ、何か出たら飛ばす。判定は終了コードで行う（`codex login` は成功しても stderr にメッセージを出すので、出力は捨てる）
-
-     ```bash
-     if ! command -v codex >/dev/null; then
-       echo "Codex CLI が無い"
-     elif ! codex login status >/dev/null 2>&1 &&
-       ! { [[ -n "${OPENAI_API_KEY:-}" ]] && printenv OPENAI_API_KEY | codex login --with-api-key >/dev/null 2>&1; }; then
-       echo "Codex にログインできない（OPENAI_API_KEY が無いか、正しくない）"
-     fi
-     ```
-
-     使えるときは、`dev` の 13b のコマンドとファイル名（`/tmp/dev-{PR番号}-codex.md`・`.log`）のまま動かす。止まったままにならないように、`codex review` の前に `timeout 900` を付ける（Linux の `timeout`。mac には無いので `dev` では付けない）。実行して失敗したとき（`api.openai.com` につながらない、など）も飛ばす。飛ばしたときは、そのことと理由を PR にコメントで残す（下の 3 で「見送る・要確認」のコメントを書くなら、そこに書き足す）。クラウドの環境の設定は `docs/guides/ai-harness.md` の P6
+1. `dev` skill の手順 13a と同じく、Claude のレビューを Agent tool でバックグラウンドに起動する（PR 番号と Issue 番号を渡し、実装者のコンテキストは引き継がない。受け入れ要件も別の目で確かめさせる）。Codex のレビュー（`dev` の 13b）はクラウドでは使わない（前提の表）
 2. 完了したら `dev` skill の手順 14 のコマンド（REST）で PR のコメント・レビューを取得する
-3. 各指摘を `dev` skill の手順 15 の表（修正する / 見送る / 要確認。どちらのレビューの指摘かも書く）で分類する。分類の合意は待たない
+3. 各指摘を `dev` skill の手順 15 の表（修正する / 見送る / 要確認）で分類する。分類の合意は待たない
    - **修正する** → 直して手順 7 を通し、`fix: レビュー指摘対応` でコミットして push する
    - **見送る**・**要確認** → 理由（要確認は判断してほしい点）を PR にコメントで残す
 

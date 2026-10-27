@@ -89,7 +89,7 @@ apps/*/public/*
 | 文脈 | `CLAUDE.md` | ✅ | ✅ | 前提・禁止事項・自律範囲の案内 |
 | 手順 | skills（`dev` / `cloud-dev` / `issue` / `split-issue` / `add-usecase` / `cloud-plan`） | ✅（`dev`） | ✅（`cloud-dev`） | 定型作業の手順。Issue の開発はローカルで `dev`、クラウドで `cloud-dev` |
 | 専門レビュー | agents ＋ `full-review` workflow | ✅ | ✅ | 機械で判定できない観点（ビジネスロジックの置き場など） |
-| 別の AI のレビュー | Codex CLI（`codex review`）。`dev` の手順 13b・`cloud-dev` の手順 12 | ✅（CLI があれば） | ✅（CLI と API キーがあれば） | 同じモデルどうしの見落としを減らす。使えなければ飛ばし、Claude のレビューだけで進める |
+| 別の AI のレビュー | Codex CLI（`codex review`）。`dev` の手順 13b | ✅（CLI があれば） | —（使わない） | 同じモデルどうしの見落としを減らす。ChatGPT のログインで、サブスクリプションの範囲で動かす。使えなければ飛ばし、Claude のレビューだけで進める |
 | 書き込み直後 | PostToolUse hook `lint-on-edit` | ✅ | ✅ | 書いたファイルに ESLint・Prettier |
 | 書き込み直前 | PreToolUse hook `cloud-scope-guard` ＋ git hook | 何もしない | ✅ | 🔴（許可リストの「常に拒否」）への書き込み・commit・push を拒否 |
 | 終了時 | Stop hook `verify-on-stop` | ✅ | ✅ | `bun run check` が通るまで完了させない |
@@ -268,27 +268,26 @@ apps/*/public/*
 2. **🟢の定義** — `*.md` のうち `CLAUDE.md` と `.claude/` の下（skills・agents）は🟡にする。Claude の動き方を変えるので、実装計画の OK を挟む。
 3. **skills・`CLAUDE.md`** — `cloud-dev`・`cloud-plan`・`split-issue` の🔴の説明を新しい範囲に合わせる。`cloud-dev` に「依存を足すときは `bun.lock` も一緒にコミットする」を書く。
 4. **hook のテスト** — 以前は🔴だったもの（`package.json`・`bun.lock`・`vitest.config.ts`・`next.config.ts`・`auth.ts`・`CLAUDE.md`・`.claude/skills/` など）が許可され、新しい🔴（`.claude/hooks/` の下の `__tests__/` を含む）が拒否されるケースにする。
-5. **Codex のレビュー** — `dev` の手順 13 で、Claude のレビュー（Agent）と並行に `codex review --base origin/main` をバックグラウンドで動かし、結果を PR にコメントで残す。手順 15 の分類の表に、どちらのレビューの指摘かを書く。`cloud-dev` の手順 12 も同じで、Codex CLI と API キーが無ければ飛ばす。
-   - プラグインの `/codex:review` ではなく CLI を直接呼ぶ。プラグインは同じ組み込みのレビューを包んだもので、`~/.claude` にしか無くクラウドでは使えない。CLI ならローカルとクラウドで手順を 1 つにできる（原則 4）
+5. **Codex のレビュー（ローカルだけ）** — `dev` の手順 13 で、Claude のレビュー（Agent）と並行に `codex review --base origin/main` をバックグラウンドで動かし、結果を PR にコメントで残す。手順 15 の分類の表に、どちらのレビューの指摘かを書く。クラウドの `cloud-dev` では Codex を使わず、独立レビューは Claude だけにする（下の「クラウドで Codex を使わない理由」）。
+   - プラグインの `/codex:review` ではなく CLI を直接呼ぶ。プラグインは同じ組み込みのレビューを包んだもので、`~/.claude` にしか無い。repo の skill から呼ぶなら、CLI のほうが頼るものが少ない（原則 4）
    - 使えたかどうかは終了コードで判定する。`codex login status` が通っても、CLI が古くて `~/.codex/config.toml` のモデルに対応しておらず失敗することがある（0.145.0 で起きた。0.164.0 で解消）
-   - `--base` と指示文（PROMPT）は一緒に渡せない。ローカルでは `~/.codex/AGENTS.md` の影響で日本語で返るが、クラウドでは英語で返ることがある
+   - `--base` と指示文（PROMPT）は一緒に渡せない。ローカルでは `~/.codex/AGENTS.md` の影響で日本語で返る
 
-**クラウドで Codex を動かすための環境の設定（repo の外。ユーザーが行う）**
+**クラウドで Codex を使わない理由**
 
-PC のブラウザの claude.ai/code で、新しいセッションの画面の環境の選択から、いつも使う環境の **Edit cloud environment** を開いて設定する（スマホのアプリで編集できるとは公式の文書に書かれていない）。環境はアカウントに保存され、スマホから始めたセッションにも使われる。
+料金は Codex CLI のログインの方法で決まる。ChatGPT でログインするとサブスクリプションの範囲、API キーでログインすると API の従量課金になる（プラグインを使うかどうかは関係ない）。ローカルは ChatGPT でログインしているので、サブスクリプションの範囲で動く。クラウドで ChatGPT のログインを使う方法は、どれも個人の開発に合わなかった（2026-10-28 時点）。
 
-- **Setup script**: `npm install -g @openai/codex || true`（npm は既定のネットワークでつながる。`|| true` は、失敗してもセッションを起動させるため）
-- **Network secrets**: Secret type は Bearer、Allowed websites は `api.openai.com`、ヘッダーは `Authorization`（Prefix `Bearer`）、Value に API キー。キーは VM の外に置かれ、プロキシが `api.openai.com` 宛ての通信にだけ付ける。このホストへの接続もこれで許可される
-- **Environment variables**: `OPENAI_API_KEY=proxy-injected`（仮の値。Codex CLI はキーが無いと起動せず、`cloud-dev` もこの値でログインする。GitHub の `gh` と同じ方式）
-- 確かめ方: クラウドのセッションで `curl -s https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"` がモデルの一覧を返すか見る。401 なら差し替えが効いていない。そのときの代わりは、環境変数に本物のキーを入れ、Network access を Custom にして `api.openai.com` を足す方法（キーが VM の中から読めるので、上限を低くした専用のキーにする）
-- 料金: API キーでのログインは API の従量課金になる。ローカルは ChatGPT のログインなので、サブスクリプションの範囲で動く。クラウドで ChatGPT のログインを使う方法のうち、アクセストークン（`codex login --with-access-token`）は ChatGPT の Business・Enterprise だけが対象（2026-10-28 時点）
+- アクセストークン（`codex login --with-access-token`）: ChatGPT の Business・Enterprise のワークスペースだけが対象
+- デバイスコード（`codex login --device-auth`、ベータ）: セッションのたびにコードを入れる必要があり、ChatGPT のログイン情報が VM の中に残る
+- `~/.codex/auth.json` のコピー: パスワードと同じ扱いのファイルで、公式も自動化には API キーを勧めている
+
+将来クラウドでも動かすなら、クラウド環境の Network secrets に API キー（`api.openai.com` 宛て、Bearer）を入れ、環境変数に仮の値 `OPENAI_API_KEY=proxy-injected`、セットアップスクリプトで `npm install -g @openai/codex` を入れる方法が候補（従量課金。動くかは未確認）。
 
 **完了条件**
 
 - hook のテストで、新しい範囲の許可・拒否が期待どおり
 - 実際のクラウドセッションで、依存か設定を変える小さな Issue を `/cloud-dev` で PR まで進められる（結果はここに追記する）
-- ローカルの `/dev` で、Codex のレビューが PR にコメントで残る。Codex を使えない環境では飛ばして Claude のレビューだけで進む
-- 上の環境の設定をしたクラウドセッションで、`cloud-dev` が Codex のレビューを PR にコメントで残す（結果はここに追記する）
+- ローカルの `/dev` で、Codex のレビューが PR にコメントで残る。Codex を使えない環境では飛ばして Claude のレビューだけで進む（PR #343 で確認）
 
 ---
 
