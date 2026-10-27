@@ -26,7 +26,7 @@ PhysiFun のドメイン（`packages/domain/`）と、それを動かすユー�
 | `LeaderApplication` | リーダー応募と運営の審査 | `leader-application/` | ✅ |
 | `Account` | 一般ユーザー（サポーター / リーダー） | `account/`（値オブジェクトのみ） | ⚠️ 最小構成（§5） |
 | `AdminAccount` | 運営アカウント | `admin-account/` | ✅ |
-| `SupportRecruitment`（＋`RecruitmentSchedule`） | サポート募集と日程 | `recruitment/` | 🚧 ドメインのみ（§8） |
+| `SupportRecruitment`（＋`RecruitmentSchedule`） | サポート募集と日程 | `recruitment/` | 🚧 ドメインと application まで（§8） |
 
 ```mermaid
 classDiagram
@@ -107,7 +107,7 @@ classDiagram
 | infrastructure | application の Port を Kysely で実装し、集約・審査履歴・Outbox を **1 つのトランザクション** で書く | `KyselyProjectCommandAdapter` |
 
 - **保存は、ユースケースごとの Port を通す**（`packages/application/src/*/ports/`）。例: `ApproveProjectPublicationPort`
-- ⚠️ domain の `repositories/` にあるインターフェースのうち、実装されて使われているのは `AdminAccountRepository` だけ。`ProjectRepository` / `ProjectReviewFeedbackRepository` / `LeaderApplicationRepository` は定義だけで、どこからも使われていない（§10）。`RecruitmentRepository` は、application の port がここから `Pick` して使う予定（§8.2）
+- ⚠️ domain の `repositories/` にあるインターフェースのうち、実装されて使われているのは `AdminAccountRepository` だけ。`ProjectRepository` / `ProjectReviewFeedbackRepository` / `LeaderApplicationRepository` は定義だけで、どこからも使われていない（§10）。`RecruitmentRepository` は、application の port がここから `Pick` して使う（§8.4。実装は #217）
 - 運営アカウントの操作（作成・無効化・有効化）には application のユースケースが無い。`apps/admin` の Route Handler が、エンティティとリポジトリを直接使う
 
 ---
@@ -365,7 +365,7 @@ stateDiagram-v2
 
 - 定義: `packages/domain/src/recruitment/entities/SupportRecruitment.ts`（ルート）/ `RecruitmentSchedule.ts`（子）。上限は `SUPPORT_RECRUITMENT_LIMITS` / `CAPACITY_PER_HOUR_LIMITS`
 - 列の意味: [`docs/db/viewpoint-recruitment.md`](../db/viewpoint-recruitment.md)
-- 実装状況: ドメインまで（#215）。application（#216）・インフラ（#217）・UI（#218 / #219）はこれから
+- 実装状況: ドメイン（#215）と application（#216）まで。インフラ（#217）・UI（#218 / #219）はこれから
 - **募集の種類**: `ACTIVITY`（活動参加）だけ。スキル・モノ募集は enum の追加を含めて別に設計する（#291）
 - `Project` からは参照しない（募集側が `projectId` を持つ）
 
@@ -420,13 +420,30 @@ classDiagram
 | `CapacityPerHour` | リーダーが日程ごとに決める 1 時間あたりの定員。`CAPACITY_PER_HOUR_LIMITS` の範囲の整数。⚠️ 上限を下げると、上限を超える既存の日程が DB から復元できなくなる。下げる前に既存データを確かめる |
 | `ApprovalMode` | `AUTO`（申し込んだ時点で確定）/ `MANUAL`（リーダーの承認で確定）。日程ごとに選ぶ |
 
-### 8.4 ユースケースに任せるルール（#216 で決める）
+### 8.4 ユースケースが守るルール
 
-- **日程は必ずルートのメソッド（`addSchedule` / `updateSchedule` / `removeSchedule`）で作る・変える**。`RecruitmentSchedule.create()` / `withChanges()` は TypeScript の都合で public だが、直接呼んでリポジトリに渡すと、日付の重複チェックが飛ばされる
-- **リポジトリが投げる `ScheduleDateConflictError` は、ユースケースで必ず catch し、`DUPLICATE_SCHEDULE_DATE` の `Result` に変える**（例外をユースケースの外に漏らさない。前例: `CreateProjectDraftUseCase` の `ProjectLimitExceededError`）
-- 操作できるのはプロジェクトの所有者（リーダー）だけ
-- 過去の日付の日程を作れるか（「今日」が要るので、ドメインでは見ない）
-- プロジェクトの公開状態によって、募集の編集を制限するか
+`packages/application/src/recruitment/`（#216）。主体はすべてリーダー。
+
+| ルール | 場所 | 補足 |
+|---|---|---|
+| 操作できるのはプロジェクトの所有者だけ | 6 本すべて（`NOT_OWNER`） | 作成はプロジェクトの、それ以外は募集が属するプロジェクトの `ownerAccountId` と比べる（`ProjectOwnerPort.findProjectOwner`・`findOwnedRecruitment`） |
+| プロジェクトの公開状態は問わない | 6 本すべて | 公開中（PUBLISHED）でも募集・日程を作成・編集・削除できる。リーダーが空いた日を日程に足していく運用のため（`Project` の公開中は編集不可（§3.6）とは扱いが違う）。⚠️ 公開後に書いた募集のタイトル・説明は、運営の審査を通らずに公開ページに出る |
+| JST の今日より前の日付には追加・変更できない | `AddScheduleUseCase` / `UpdateScheduleUseCase`（`SCHEDULE_DATE_IN_PAST`） | 今日は可。日付を変えない編集（今と同じ日付が送られてきた場合を含む）と削除は、過去の日程でもできる。「今日」が要るので、ドメインでは見ない |
+| 日程は必ずルートのメソッドで作る・変える | 日程の 3 本 | `addSchedule` / `updateSchedule` / `removeSchedule` の戻り値をリポジトリに渡す。`RecruitmentSchedule.create()` / `withChanges()` は TypeScript の都合で public だが、直接呼んでリポジトリに渡すと、日付の重複チェックが飛ばされる |
+| 同時実行での日付の重複は `DUPLICATE_SCHEDULE_DATE` に変える | `AddScheduleUseCase` / `UpdateScheduleUseCase` | リポジトリが投げる `ScheduleDateConflictError` を catch して `Result` にする（例外をユースケースの外に漏らさない。前例: `CreateProjectDraftUseCase` の `ProjectLimitExceededError`） |
+
+| ユースケース | 操作 | 保存（`RecruitmentRepository`） |
+|---|---|---|
+| `CreateRecruitmentUseCase` | 募集を作る（種類は `ACTIVITY` で固定。日程はまだ無い） | `create` |
+| `UpdateRecruitmentUseCase` | タイトル・説明を変える | `update` |
+| `DeleteRecruitmentUseCase` | 募集を消す（日程も消える） | `delete` |
+| `AddScheduleUseCase` | 日程を足す | `addSchedule` |
+| `UpdateScheduleUseCase` | 日程を変える（指定した項目だけ。開始・終了は片方だけでも可） | `updateSchedule` |
+| `RemoveScheduleUseCase` | 日程を消す | `removeSchedule` |
+
+port はユースケースごとに、`RecruitmentRepository` から使うメソッドを `Pick` し、所有者チェック用の `ProjectOwnerPort` を足して組む。
+
+> ⚠️ 申し込み（`support_tickets`）は日程に外部キー（`ON DELETE CASCADE`）でつながる。一般公開で申し込みを入れるときは、申し込みのある日程・募集の削除と、日程の日付・時間帯の変更をどう扱うかを見直す（今は申し込みが無いので制限していない）。
 
 ### 8.5 リターン
 
@@ -494,3 +511,4 @@ classDiagram
 | 2026-10-17 | 「境界・状態遷移・ルールの置き場所・なぜ」に絞って作り直し（#276）。フィールドの一覧と上限はコード・`docs/db/` に任せた。ルールの置き場所（§2）と既知のズレ（§10）を追加。コードとのズレを修正（存在しない `Email` 値オブジェクト、ProjectDraft の中身、カテゴリの値、却下の待ち時間、`disable()` の冪等性、PUBLISHED 上限の判定タイミング、公開中は編集不可） | 設計チーム |
 | 2026-10-20 | サポート募集（§8）のスコープを反映：#212 は `ACTIVITY` のみ・リターンなし。リターン（#290）とスキル・モノ募集（#291）は別 Issue に切り出した | 設計チーム |
 | 2026-10-25 | サポート募集のドメイン層を実装（#215）。§8 を「未実装」から `SupportRecruitment` 集約の説明に書き換えた（集約の境界・日程単位の保存・不変条件・ユースケースに任せるルール） | 設計チーム |
+| 2026-10-26 | サポート募集のユースケースを実装（#216）。§8.4 を「#216 で決める」からユースケースが守るルールに書き換えた（公開状態は問わない・過去の日付には追加・変更できない・ユースケースの一覧） | 設計チーム |
