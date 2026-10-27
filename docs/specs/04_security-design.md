@@ -213,7 +213,7 @@ flowchart TD
 | 脅威 | 対策 | 残存リスク |
 |---|---|---|
 | **SQL Injection** | Kysely の parameterized query / Zod 入力検証 | なし（標準的） |
-| **XSS** | React の自動エスケープ / CSP `script-src 'self'` + `'unsafe-inline'`（暫定） | `'unsafe-inline'` の暫定許可（Issue #109 follow-up） |
+| **XSS** | React の自動エスケープ / CSP `script-src 'self'` + `'unsafe-inline'`（暫定） / リーダーが書いた本文（ストーリー）は保存時の検査と表示部品で二重に守る（6.3） | `'unsafe-inline'` の暫定許可（Issue #109 follow-up） |
 | **CSRF** | NextAuth の SameSite=lax Cookie + proxy（旧 middleware）で状態変更リクエストの `Origin` / `Referer` を検証（`@physifun/server-shared` の `verifyCsrf`、web / admin 共通） | `NEXTAUTH_URL` の設定漏れ時は 403 に倒す（fail-safe） |
 | **Clickjacking** | `X-Frame-Options: DENY` + `frame-ancestors 'none'`（二重化） | なし |
 | **Open Redirect** | NextAuth `callbackUrl` の同一オリジン検証 | NextAuth 依存 |
@@ -238,6 +238,24 @@ flowchart TD
 | CSP `'unsafe-inline'` | Next.js App Router の暫定 | Issue #109 follow-up（nonce ベース移行） |
 | 運営の TOTP / 2FA | 未実装 | 運営数増加時に検討（一般公開以降） |
 | メール送信先の検証強化（DKIM / SPF） | Resend 側設定依存 | 本番ドメイン取得後に DNS 設定 |
+
+### 6.3 本文（ストーリー）の表示と XSS 対策
+
+プロジェクトの本文（ストーリー）は、リーダーが見たまま編集で書いた文書データ（エディタの JSON）で、ログインしていない人も含めて他人に見せる（#301）。そのため、保存するときと表示するときの 2 か所で守る。
+
+| 段階 | 守り方 | 場所 |
+|---|---|---|
+| 保存 | 許可した要素・装飾・属性だけを受け付け、それ以外が 1 つでもあれば保存を断る（黙って捨てない） | domain の値オブジェクト `ProjectStory`（`02_domain-model.md` §3.8） |
+| 表示 | 下の決まりで、許可したものだけを React の要素として組み立てる | `@physifun/ui-shared` の `ProjectStoryView`（公開ページ・マイページ・運営の審査画面で共通） |
+
+表示の決まり:
+
+- **HTML の文字列を作って流し込まない**。`dangerouslySetInnerHTML` は使わず、文書データから React の要素を組み立てる。文字は React がエスケープする
+- **知らない要素は描かない**（中身ごと）。知らない装飾は無視して文字だけ出す。見出しは h2 / h3 だけ
+- **属性は決まったものだけを読む**。配置（`left` / `center` / `right`）は決まったクラスに置き換え、`style` には値を流し込まない
+- **リンク**は `http://` か `https://` で始まり、URL として読めるものだけを `<a>` にする（合わなければ文字だけ出す）。`target="_blank" rel="noopener noreferrer nofollow"` を付ける
+- **画像**は `@physifun/ui-shared` の `isAllowedImageUrl` に合うものだけを描く。今の範囲は Supabase Storage（1 階層の `<ラベル>.supabase.co` と、`NEXT_PUBLIC_SUPABASE_URL` のホスト。パスは問わない）とモック用の `images.unsplash.com/photo-*` で、詳しくはその関数のコメントを参照。自分のバケットの決まったフォルダだけに絞るかは、画像アップロード API（#319）で決める
+- **YouTube** は動画 ID だけを保存し、表示するときに埋め込みの URL を組み立てる。埋め込みの表示と CSP の `frame-src` への `https://www.youtube-nocookie.com` の追加は #321 で行う（それまでは描かない）
 
 ---
 
@@ -415,3 +433,4 @@ flowchart TD
 |---|---|---|
 | 2026-05-09 | 初稿作成（認証・認可・データ保護・脅威モデル・セキュリティヘッダー・運用） | 設計チーム |
 | 2026-10-16 | ドキュメント棚卸し：Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一、サポート募集の位置づけ（初回リリースでリーダー側を実装予定）を修正 | 設計チーム |
+| 2026-10-28 | §6.3 に本文（ストーリー）の表示と XSS 対策を追加し、§6.1 の XSS の行から参照（#314） | 設計チーム |

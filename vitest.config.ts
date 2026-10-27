@@ -33,7 +33,13 @@ export default defineConfig({
           include: ["src/**/*.test.ts"],
         },
       },
-      { test: { name: "ui-shared", root: "packages/ui-shared", include: ["src/**/*.test.ts"] } },
+      {
+        test: {
+          name: "ui-shared",
+          root: "packages/ui-shared",
+          include: ["src/**/*.test.{ts,tsx}"],
+        },
+      },
       {
         resolve: { alias: { "@": appSrc("web") } },
         test: { name: "web", root: "apps/web", include: ["src/**/*.test.{ts,tsx}"] },
