@@ -11,7 +11,6 @@ import type { Insertable, Updateable, Transaction } from "kysely";
 import { db } from "../database/kysely/client";
 import type { DB, Json, ProjectReviewFeedbacks, Projects } from "../database/kysely/types";
 import { reconstructProject } from "./reconstructProject";
-import { textToStory } from "./storyText";
 
 // ==================== 型定義（Prisma 版と構造的に一致させる） ====================
 
@@ -229,7 +228,7 @@ function toProjectInsert(p: Project, accountId: string): Insertable<Projects> {
     phase: p.phase,
     status: p.publishStatus,
     summary: p.summary,
-    story: textToStory(p.body),
+    story: (p.body?.toJSON() ?? null) as Json | null,
     leaderIntro: p.leaderIntroduction,
     snsLinks: serializeSnsLinks(p),
     activityPlan: p.activityPlan,
@@ -252,7 +251,7 @@ function toProjectUpdate(p: Project): Updateable<Projects> {
     phase: p.phase,
     status: p.publishStatus,
     summary: p.summary,
-    story: textToStory(p.body),
+    story: (p.body?.toJSON() ?? null) as Json | null,
     leaderIntro: p.leaderIntroduction,
     snsLinks: serializeSnsLinks(p),
     activityPlan: p.activityPlan,

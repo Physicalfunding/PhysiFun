@@ -12,6 +12,7 @@ import {
   errorResponse,
   internalErrorResponse,
 } from "@physifun/server-shared";
+import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { projectFormSchema } from "@/lib/validations/projectFormSchema";
 
 /**
@@ -73,6 +74,10 @@ function handleUpdateError(error: UpdateProjectDraftError) {
       return validationErrorResponse("無効なフェーズです", {
         phase: [`無効な値: ${error.value}`],
       });
+    case "INVALID_STORY":
+      return validationErrorResponse("本文に使えない内容が含まれているか、長すぎます", {
+        body: [JSON.stringify(error.storyError)],
+      });
   }
 }
 
@@ -113,7 +118,7 @@ export async function PATCH(
 
     // UseCase 入力に変換
     const adapter = getProjectCommandAdapter();
-    const useCase = new UpdateProjectDraftUseCase(adapter);
+    const useCase = new UpdateProjectDraftUseCase(adapter, isAllowedImageUrl);
 
     const result = await useCase.execute({
       projectId,

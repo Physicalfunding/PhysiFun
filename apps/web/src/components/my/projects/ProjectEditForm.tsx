@@ -4,7 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CATEGORY_MASTER, PREFECTURE_MASTER } from "@physifun/domain";
+import { z } from "zod";
+import {
+  CATEGORY_MASTER,
+  PREFECTURE_MASTER,
+  PROJECT_STORY_LIMITS,
+  ProjectStory,
+  type ProjectStoryDocument,
+} from "@physifun/domain";
 import {
   Button,
   Card,
@@ -15,7 +22,7 @@ import {
   LoadingSpinner,
 } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
-import { projectFormSchema, type ProjectFormValues } from "@/lib/validations/projectFormSchema";
+import { projectFormSchema } from "@/lib/validations/projectFormSchema";
 
 const PREFECTURE_OPTIONS = PREFECTURE_MASTER.map((p) => ({
   value: p.code,
@@ -26,6 +33,27 @@ const CATEGORY_OPTIONS = CATEGORY_MASTER.map((c) => ({
   value: c.value,
   label: c.label,
 }));
+
+// 本文のつなぎ（#315）。S-5（#317）のエディタが入るまで、本文は Textarea の文字で持ち、
+// 送るときに文書データ（1 行を 1 段落）に変える。読み込むときは段落の文字を改行でつなぐ。S-5 で消す
+const editFormSchema = projectFormSchema.extend({
+  body: z
+    .string()
+    .max(PROJECT_STORY_LIMITS.textLength, `本文は${PROJECT_STORY_LIMITS.textLength}文字以内です`)
+    .nullable()
+    .optional(),
+});
+type EditFormValues = z.infer<typeof editFormSchema>;
+
+function storyToText(story: ProjectStoryDocument | null): string {
+  return (story?.content ?? [])
+    .flatMap((block) =>
+      block.type === "paragraph" || block.type === "heading"
+        ? [(block.content ?? []).map((i) => (i.type === "text" ? i.text : "\n")).join("")]
+        : []
+    )
+    .join("\n");
+}
 
 interface ProjectEditFormProps {
   projectId: string;
@@ -43,8 +71,8 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<ProjectFormValues>({
-    resolver: zodResolver(projectFormSchema),
+  } = useForm<EditFormValues>({
+    resolver: zodResolver(editFormSchema),
   });
 
   useEffect(() => {
@@ -60,7 +88,7 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
         reset({
           title: data.title || "",
           summary: data.summary || "",
-          body: data.body || "",
+          body: storyToText(data.body),
           leaderIntroduction: data.leaderIntroduction || "",
           activityPlan: data.activityPlan || "",
           coverImageUrl: data.coverImageUrl || "",
@@ -84,13 +112,22 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const onSubmit = async (values: ProjectFormValues) => {
+  const onSubmit = async (values: EditFormValues) => {
+    let body: ProjectStoryDocument | null = null;
+    if (values.body?.trim()) {
+      const story = ProjectStory.fromPlainText(values.body);
+      if (!story.ok) {
+        showToast("本文が長すぎます", "error");
+        return;
+      }
+      body = story.value.toJSON();
+    }
     setIsSaving(true);
     try {
       const res = await fetch(`/api/my/projects/${projectId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, body }),
       });
       if (!res.ok) {
         const json = await res.json();

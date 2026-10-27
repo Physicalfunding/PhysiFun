@@ -138,7 +138,7 @@ stateDiagram-v2
 
 **ガード条件:**
 
-- `requestPublish()`: DRAFT のときだけ。`coverImageUrl` / `category` / `location` / `summary` / `body` / `leaderIntroduction` がすべて入っていること（`activityPlan` は任意）
+- `requestPublish()`: DRAFT のときだけ。`coverImageUrl` / `category` / `location` / `summary` / `body` / `leaderIntroduction` がすべて入っていること（`activityPlan` は任意）。`body` は `ProjectStory.isFilled()` で判定する（見出しだけでは未入力。§3.8）
 - `approveByAdmin()` / `rejectByAdmin()` / `withdraw()`: PENDING_REVIEW のときだけ
 - `unpublishSelf()` / `forceUnpublish()`: PUBLISHED のときだけ
 - 審査待ち（PENDING_REVIEW）の間に `update()` すると、自動で DRAFT に戻る（もう一度申請が必要）
@@ -214,7 +214,10 @@ stateDiagram-v2
 
 本文（ストーリー）を見たまま編集で書けるようにするため（#301）、本文はエディタの文書データ（JSON）で持つ。その中身を検査する値オブジェクトが `ProjectStory`（`packages/domain/src/project/value-objects/ProjectStory.ts`）。
 
-> ⚠️ まだ `Project` にはつながっていない。今の `Project.body` は文字列のまま。保存と表示をまとめて切り替えるのは #315（S-3）。
+`Project.body` はこの値オブジェクト（または `null`）で、DB の `projects.story`（jsonb）にそのまま入る（#315）。
+
+- **作るのはユースケース**: `UpdateProjectDraftUseCase` は受け取った JSON を `create` で検査し、通らなければ `INVALID_STORY` で保存しない。`ApproveLeaderApplicationUseCase` は応募時のストーリー（文字だけ）を `fromPlainText` で段落にする。`Project` は検査済みのものを受け取るだけ（`SnsLinks` などと同じ）
+- **DB から戻すときは検査しない**（`reconstruct`）: 保存時に検査済みのため。画像の URL の判定は環境変数で変わるので、読むたびに検査すると、判定が変わったときに本文を開けなくなる。表示する側（`ProjectStoryView`）でも許可したものだけを描く
 
 - **形**: エディタ（Tiptap / ProseMirror）の JSON と同じ `{ type, attrs?, content?, marks?, text? }`。domain には外部ライブラリを入れないので、Tiptap には頼らずただの JSON として検査する
 - **許可するものだけを通す**（設計書 §6.1）。それ以外が 1 つでもあれば、黙って捨てずに `STORY_NOT_ALLOWED`（理由と場所つき）で断る
@@ -229,7 +232,7 @@ stateDiagram-v2
 - **画像の URL の判定は外から渡す**（`create(json, { isAllowedImageUrl })`）。判定（`@physifun/ui-shared` の `isAllowedImageUrl`）が環境変数で変わるため、domain に環境変数を持ち込まない
 - **上限**（値は `PROJECT_STORY_LIMITS`）: 表示される文字の数・画像の枚数・動画の本数・JSON 全体の大きさ・入れ子の深さ。文字は画面に表示されるものだけを数える（文字ノードの文字。リンク先・画像の情報は数えない）
 - 検査を通った文書は作り直して持つ。値が `null` の属性と空の `marks` は「指定なし」として省く
-- **文字だけの本文から作る**（`fromPlainText`）: 1 行を 1 段落にし、空の行は段落の区切りとして捨てる（今ある本文と、応募時のストーリーの変換に使う）
+- **文字だけの本文から作る**（`fromPlainText`）: 1 行を 1 段落にし、空の行は段落の区切りとして捨てる（応募時のストーリーの変換に使う。今ある本文は同じ変換をマイグレーション `20261027233716_story_document.sql` で行った）
 - **公開申請の「入力済み」**（`isFilled()`）: 見出し以外に空白でない文字があるか、画像か動画が 1 つ以上あれば入力済み。見出しの型だけが入った本文は未入力（設計書 §5.5）
 
 ---
@@ -535,3 +538,4 @@ port はユースケースごとに、`RecruitmentRepository` から使うメソ
 | 2026-10-25 | サポート募集のドメイン層を実装（#215）。§8 を「未実装」から `SupportRecruitment` 集約の説明に書き換えた（集約の境界・日程単位の保存・不変条件・ユースケースに任せるルール） | 設計チーム |
 | 2026-10-26 | サポート募集のユースケースを実装（#216）。§8.4 を「#216 で決める」からユースケースが守るルールに書き換えた（公開状態は問わない・過去の日付には追加・変更できない・ユースケースの一覧） | 設計チーム |
 | 2026-10-27 | ストーリーの文書データの値オブジェクト `ProjectStory` を追加（#313）。§3.8 に許可するもの・上限の種類・文字だけの本文の変換・「入力済み」の判定を書いた（`Project` へのつなぎ込みは #315） | 設計チーム |
+| 2026-10-28 | `Project.body` を `ProjectStory` にした（#315）。§3.8 に作る場所（ユースケース）・DB からの復元（検査しない）を、§3.2 に公開申請の本文の判定を書いた | 設計チーム |

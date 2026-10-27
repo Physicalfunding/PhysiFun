@@ -62,7 +62,7 @@
 
 | テーブル.列 | ドメイン |
 |---|---|
-| `projects.story` | `Project.body` |
+| `projects.story` | `Project.body`（jsonb の文書データ ↔ `ProjectStory`。#315） |
 | `projects.leaderIntro` | `Project.leaderIntroduction` |
 | `projects.status` | `Project.publishStatus` |
 | `projects.prefectureCode` + `municipality` | `Project.location`（`ProjectLocation`） |

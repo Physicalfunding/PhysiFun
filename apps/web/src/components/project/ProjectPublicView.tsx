@@ -3,7 +3,7 @@ import type { ProjectPublicDetailDTO } from "@physifun/application";
 import { PREFECTURE_MASTER, type ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
-import { SafeSnsLink, isAllowedImageUrl } from "@physifun/ui-shared";
+import { ProjectStoryView, SafeSnsLink, isAllowedImageUrl } from "@physifun/ui-shared";
 import { ProjectPublicTabs } from "./ProjectPublicTabs";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
@@ -61,9 +61,7 @@ export function ProjectPublicView({ project }: Props) {
         <Card>
           <CardContent>
             <h3 className="text-sm font-semibold text-gray-900 mb-3">プロジェクト詳細</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {project.body}
-            </p>
+            <ProjectStoryView story={project.body} />
           </CardContent>
         </Card>
       )}

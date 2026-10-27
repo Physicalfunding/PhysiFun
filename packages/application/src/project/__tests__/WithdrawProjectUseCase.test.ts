@@ -9,9 +9,17 @@ import {
   AccountId,
   ProjectLocation,
   SnsLinks,
+  ProjectStory,
 } from "@physifun/domain";
 
 // ==================== テストヘルパー ====================
+
+/** 文字だけの本文（1 段落） */
+function storyOf(text: string): ProjectStory {
+  const r = ProjectStory.fromPlainText(text);
+  if (!r.ok) throw new Error("ProjectStory creation failed");
+  return r.value;
+}
 
 const OWNER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000001";
 const OTHER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000002";
@@ -58,7 +66,7 @@ function createPendingReviewProject(): Project {
     phase: ProjectPhase.VISION,
     publishStatus: PublishStatus.PENDING_REVIEW,
     summary: "サマリー",
-    body: "本文",
+    body: storyOf("本文"),
     leaderIntroduction: "リーダー紹介",
     snsLinks: createEmptySnsLinks(),
     activityPlan: null,
@@ -84,7 +92,7 @@ function createProjectWithStatus(publishStatus: PublishStatus): Project {
     phase: ProjectPhase.VISION,
     publishStatus,
     summary: "サマリー",
-    body: "本文",
+    body: storyOf("本文"),
     leaderIntroduction: "リーダー紹介",
     snsLinks: createEmptySnsLinks(),
     activityPlan: null,

@@ -4,8 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PREFECTURE_MASTER, type PublishStatus, type ProjectPhase } from "@physifun/domain";
-import { isAllowedImageUrl } from "@physifun/ui-shared";
+import {
+  PREFECTURE_MASTER,
+  type ProjectStoryDocument,
+  type PublishStatus,
+  type ProjectPhase,
+} from "@physifun/domain";
+import { ProjectStoryView, isAllowedImageUrl } from "@physifun/ui-shared";
 import { Button, Card, CardContent, LoadingSpinner, ConfirmModal } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
@@ -21,7 +26,7 @@ interface ProjectDetailDTO {
   id: string;
   title: string;
   summary: string | null;
-  body: string | null;
+  body: ProjectStoryDocument | null;
   leaderIntroduction: string | null;
   coverImageUrl: string | null;
   category: string | null;
@@ -331,7 +336,7 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
             <Card>
               <CardContent>
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">プロジェクト詳細</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.body}</p>
+                <ProjectStoryView story={project.body} />
               </CardContent>
             </Card>
           )}
