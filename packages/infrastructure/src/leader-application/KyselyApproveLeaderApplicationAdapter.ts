@@ -6,6 +6,7 @@ import type {
 import { MaxProjectsReachedError } from "@physifun/application";
 import type { Insertable } from "kysely";
 import { db } from "../database/kysely/client";
+import { textToStory } from "../project/storyText";
 import { parsePgEnumArray } from "../database/kysely/pgArray";
 import type { Json, Projects, Role } from "../database/kysely/types";
 import { reconstructLeaderApplication } from "./reconstructLeaderApplication";
@@ -170,7 +171,7 @@ function toProjectInsert(p: Project): Insertable<Projects> {
     slug: p.slug,
     title: p.title,
     summary: p.summary,
-    story: p.body,
+    story: textToStory(p.body),
     leaderIntro: p.leaderIntroduction,
     coverImageUrl: p.coverImageUrl,
     category: p.category,

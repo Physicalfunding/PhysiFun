@@ -10,6 +10,7 @@ import type {
   ProjectAdminDetail,
 } from "@physifun/application";
 import { db } from "../database/kysely/client";
+import { storyToText } from "./storyText";
 
 // admin 向け DTO 型は application 層の AdminProjectQueryPort に定義（#231）。
 // 既存 import 互換のため infra からも type-only で再 export する。
@@ -114,7 +115,7 @@ export class KyselyProjectQueryService
       id: row.id,
       title: row.title,
       summary: row.summary,
-      body: row.story,
+      body: storyToText(row.story),
       leaderIntroduction: row.leaderIntro,
       coverImageUrl: row.coverImageUrl,
       category: row.category,
@@ -257,7 +258,7 @@ export class KyselyProjectQueryService
       id: row.id,
       title: row.title,
       summary: row.summary,
-      body: row.story,
+      body: storyToText(row.story),
       leaderIntroduction: row.leaderIntro,
       coverImageUrl: row.coverImageUrl,
       category: row.category,
@@ -335,7 +336,7 @@ export class KyselyProjectQueryService
       slug: row.slug,
       title: row.title,
       summary: row.summary,
-      body: row.story,
+      body: storyToText(row.story),
       leaderIntroduction: row.leaderIntro,
       coverImageUrl: row.coverImageUrl,
       category: row.category,

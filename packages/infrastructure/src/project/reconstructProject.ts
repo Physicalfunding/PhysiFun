@@ -9,6 +9,7 @@ import {
   type ProjectCategory,
   isProjectCategory,
 } from "@physifun/domain";
+import { storyToText } from "./storyText";
 
 /**
  * Prisma の Project 行データからドメインエンティティを復元する共通ヘルパー
@@ -29,7 +30,7 @@ export function reconstructProject(row: {
   phase: string;
   status: string;
   summary: string | null;
-  story: string | null;
+  story: unknown;
   leaderIntro: string | null;
   snsLinks: unknown;
   activityPlan: string | null;
@@ -87,7 +88,7 @@ export function reconstructProject(row: {
     phase: row.phase as ProjectPhase,
     publishStatus: row.status as PublishStatus,
     summary: row.summary,
-    body: row.story,
+    body: storyToText(row.story),
     leaderIntroduction: row.leaderIntro,
     snsLinks: snsResult.value,
     activityPlan: row.activityPlan,

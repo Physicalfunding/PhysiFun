@@ -1,5 +1,6 @@
-h1:KVek24M/02236WmuGKGrOB7BfmJKvmEi34ETrSIwXRQ=
+h1:Ykz8p6kDrxLUpl5cx09S0jWyD+hZUianwbaIX24XY5Q=
 20261016081927_baseline.sql h1:K4WRMlvVmW+weMFAMwWU7s2KfFX3T2FvWZ/WmEAAIVc=
 20261017073537_backfill_project_publication.sql h1:rNIf+dzd020kJq70+dcqxJwlMk1I7W26FnjPKnA3U6M=
 20261017082700_add_table_column_comments.sql h1:Vbi9rI22y3dyX+QUJBKjmg3b6gYiwC0asD9LZbcwMqQ=
 20261017085602_fix_admin_email_comment.sql h1:U1v/uljIHsWv1X+MZsvZ5jr0VOIFvsG+mm9TrZWbPCA=
+20261027233716_story_document.sql h1:gjy49aAFMX6/UaVt1OBJ5dQcnSVWhzSl4p0sQXqhem8=

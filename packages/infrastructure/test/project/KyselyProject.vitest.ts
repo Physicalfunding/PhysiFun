@@ -352,7 +352,10 @@ describe("Kysely Project 実装 integration", () => {
         category: "FOOD",
         prefectureCode: "13",
         summary: "概要",
-        story: "本文",
+        story: {
+          type: "doc",
+          content: [{ type: "paragraph", content: [{ type: "text", text: "本文" }] }],
+        },
         leaderIntro: "自己紹介",
       });
 

@@ -323,7 +323,7 @@ CREATE TABLE "projects" (
   "slug" text NULL,
   "title" text NOT NULL,
   "summary" text NULL,
-  "story" text NULL,
+  "story" jsonb NULL,
   "leaderIntro" text NULL,
   "coverImageUrl" text NULL,
   "category" text NULL,
@@ -367,7 +367,7 @@ COMMENT ON COLUMN "projects"."ownerAccountId" IS '所有者（リーダー）の
 COMMENT ON COLUMN "projects"."slug" IS '公開ページ URL（/projects/{slug}）に使う文字列。初回の公開承認で id と同じ値を発行し、非公開にしても残す。初回承認までは NULL';
 COMMENT ON COLUMN "projects"."title" IS 'タイトル（1〜100 文字）';
 COMMENT ON COLUMN "projects"."summary" IS '概要（最大 300 文字。公開申請に必須）';
-COMMENT ON COLUMN "projects"."story" IS '本文（Markdown。最大 10000 文字。公開申請に必須）。ドメインでは body';
+COMMENT ON COLUMN "projects"."story" IS '本文（ストーリー）。見たまま編集のエディタの文書データ（JSON）で、許可した要素・装飾・属性だけを持つ。上限（表示される文字の数・画像・動画・大きさ）はドメインの PROJECT_STORY_LIMITS。公開申請に必須（見出し以外の文字か、画像か動画が要る）。ドメインでは body（値オブジェクト ProjectStory）';
 COMMENT ON COLUMN "projects"."leaderIntro" IS 'リーダー紹介（最大 2000 文字。公開申請に必須）。ドメインでは leaderIntroduction';
 COMMENT ON COLUMN "projects"."coverImageUrl" IS 'カバー画像の URL（公開申請に必須）';
 COMMENT ON COLUMN "projects"."category" IS 'カテゴリ（MANUFACTURING / FOOD / NATURE / EVENT。公開申請に必須）';
