@@ -254,7 +254,7 @@ flowchart TD
 - **知らない要素は描かない**（中身ごと）。知らない装飾は無視して文字だけ出す。見出しは h2 / h3 だけ
 - **属性は決まったものだけを読む**。配置（`left` / `center` / `right`）は決まったクラスに置き換え、`style` には値を流し込まない
 - **リンク**は `http://` か `https://` で始まり、URL として読めるものだけを `<a>` にする（合わなければ文字だけ出す）。`target="_blank" rel="noopener noreferrer nofollow"` を付ける
-- **画像**は `isAllowedImageUrl`（自サイトの Storage など）に合うものだけを描く
+- **画像**は `@physifun/ui-shared` の `isAllowedImageUrl` に合うものだけを描く。今の範囲は Supabase Storage（1 階層の `<ラベル>.supabase.co` と、`NEXT_PUBLIC_SUPABASE_URL` のホスト。パスは問わない）とモック用の `images.unsplash.com/photo-*` で、詳しくはその関数のコメントを参照。自分のバケットの決まったフォルダだけに絞るかは、画像アップロード API（#319）で決める
 - **YouTube** は動画 ID だけを保存し、表示するときに埋め込みの URL を組み立てる。埋め込みの表示と CSP の `frame-src` への `https://www.youtube-nocookie.com` の追加は #321 で行う（それまでは描かない）
 
 ---

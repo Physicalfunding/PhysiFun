@@ -21,12 +21,14 @@ import { isAllowedImageUrl } from "./isAllowedImageUrl";
  * - 画像は `isAllowedImageUrl` に合うものだけ
  *
  * 見た目は docs-repository `docs/mvp/202604_claude_design/project-page/decided/` の見本に合わせる。
- * 色（orange-600）は見本の仮の色。admin でも使うため、web にだけある physifun-red ではなく Tailwind の標準色にしている
+ * 色（orange）は見本の仮の色。admin でも使うため、web にだけある physifun-red ではなく Tailwind の標準色にしている。
+ * リンクの文字は、白地とのコントラストが WCAG AA（4.5:1）に届くよう orange-700 にする
  */
 export function ProjectStoryView({ story }: { story: ProjectStoryDocument }) {
   return (
     <div className="break-words text-sm leading-[1.7] text-gray-800 md:text-[15px] md:leading-[1.9]">
-      <Blocks blocks={story.content} />
+      {/* story も型どおりとは限らない（null でも止まらないように） */}
+      <Blocks blocks={story?.content} />
     </div>
   );
 }
@@ -44,10 +46,23 @@ function withAlign(base: string, attrs: { readonly textAlign?: unknown } | undef
 }
 
 /**
- * 子の一覧。配列でなければ空として扱う（型どおりでないデータで描画が止まらないように）
+ * 子の一覧。配列でなければ空として扱い、オブジェクトでない要素（null など）は落とす
+ * （型どおりでないデータで描画が止まらないように）
  */
 function list<T>(items: readonly T[] | undefined): readonly T[] {
-  return Array.isArray(items) ? items : [];
+  return Array.isArray(items)
+    ? items.filter((item) => typeof item === "object" && item !== null)
+    : [];
+}
+
+/**
+ * 空白でない文字が 1 文字でもあるか
+ */
+function hasText(inlines: readonly StoryInline[]): boolean {
+  return inlines.some(
+    (inline) =>
+      inline.type === "text" && typeof inline.text === "string" && inline.text.trim().length > 0
+  );
 }
 
 function Blocks({ blocks }: { blocks: readonly StoryBlock[] | undefined }) {
@@ -65,7 +80,10 @@ function Block({ block }: { block: StoryBlock }) {
         </p>
       );
     }
-    case "heading":
+    case "heading": {
+      const content = list(block.content);
+      // 文字の無い見出し（見出しの行の文字を消したもの）は、線だけが残るので描かない
+      if (!hasText(content)) return null;
       if (block.attrs?.level === 2) {
         return (
           <h2
@@ -74,7 +92,7 @@ function Block({ block }: { block: StoryBlock }) {
               block.attrs
             )}
           >
-            <Inlines inlines={list(block.content)} />
+            <Inlines inlines={content} />
           </h2>
         );
       }
@@ -86,11 +104,12 @@ function Block({ block }: { block: StoryBlock }) {
               block.attrs
             )}
           >
-            <Inlines inlines={list(block.content)} />
+            <Inlines inlines={content} />
           </h3>
         );
       }
       return null;
+    }
     case "bulletList":
       return (
         <ul className="mb-2.5 list-disc pl-6 md:mb-3">
@@ -133,8 +152,8 @@ function Block({ block }: { block: StoryBlock }) {
 function ListItems({ items }: { items: readonly StoryListItem[] | undefined }) {
   return list(items).map((item, i) =>
     item.type === "listItem" ? (
-      // 項目の中の段落は余白をなくし、項目どうしの間を詰める
-      <li key={i} className="[&>p]:mb-0">
+      // 項目の中の段落・入れ子のリストは余白をなくし、項目どうしの間を詰める
+      <li key={i} className="[&>ol]:mb-0 [&>p]:mb-0 [&>ul]:mb-0">
         <Blocks blocks={item.content} />
       </li>
     ) : null
@@ -169,7 +188,7 @@ function StoryText({ text, marks }: { text: string; marks: readonly StoryMark[] 
         href={href}
         target="_blank"
         rel="noopener noreferrer nofollow"
-        className="text-orange-600 underline hover:text-orange-700"
+        className="text-orange-700 underline hover:text-orange-800"
       >
         {node}
       </a>

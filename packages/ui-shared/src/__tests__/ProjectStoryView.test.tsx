@@ -64,6 +64,13 @@ describe("ProjectStoryView", () => {
       );
     });
 
+    it("http:// のリンクも <a> にする", () => {
+      const html = render(
+        doc(paragraph(text("サイト", [{ type: "link", attrs: { href: "http://example.com" } }])))
+      );
+      expect(html).toContain('<a href="http://example.com" target="_blank"');
+    });
+
     it("箇条書きと番号付きリストを描く（番号の始まりも）", () => {
       const item = (value: string) => ({ type: "listItem", content: [paragraph(text(value))] });
       const html = render(
@@ -77,6 +84,29 @@ describe("ProjectStoryView", () => {
       );
       expect(html).toMatch(
         /<ol start="3" class="[^"]*list-decimal[^"]*"><li [^>]*><p [^>]*>三つめ/
+      );
+    });
+
+    it("項目の中の入れ子のリストを描き、項目の中の余白をなくす", () => {
+      const html = render(
+        doc({
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                paragraph(text("壁塗り")),
+                {
+                  type: "orderedList",
+                  content: [{ type: "listItem", content: [paragraph(text("下地づくり"))] }],
+                },
+              ],
+            },
+          ],
+        })
+      );
+      expect(html).toMatch(
+        /<li class="[^"]*\[&amp;&gt;ol\]:mb-0[^"]*"><p [^>]*>壁塗り<\/p><ol [^>]*><li [^>]*><p [^>]*>下地づくり<\/p><\/li><\/ol><\/li>/
       );
     });
 
@@ -117,6 +147,28 @@ describe("ProjectStoryView", () => {
 
     it("空の文書は何も描かない", () => {
       expect(render({ type: "doc" })).toMatch(/^<div class="[^"]*"><\/div>$/);
+    });
+  });
+
+  describe("型どおりでないデータでも止まらない", () => {
+    it.each([
+      ["文書が null", null],
+      ["文書の content に null", doc(null, paragraph(text("残る")))],
+      ["段落の content に null", doc(paragraph(null, text("残る")))],
+      ["装飾に null", doc(paragraph(text("残る", [null, { type: "bold" }])))],
+      ["属性が null", doc({ type: "paragraph", attrs: null, content: [text("残る")] })],
+      ["リストの項目に null", doc({ type: "bulletList", content: [null] })],
+      ["子が配列でない", doc({ type: "paragraph", content: "残らない" })],
+    ])("%s", (_, value) => {
+      expect(() => render(value)).not.toThrow();
+      const html = render(value);
+      expect(html).not.toContain("残らない");
+      expect(html).not.toContain("null");
+    });
+
+    it("null を落としたうえで、ほかの要素は描く", () => {
+      const html = render(doc(null, paragraph(null, text("残る", [null, { type: "bold" }]))));
+      expect(html).toContain('<strong class="font-bold">残る</strong>');
     });
   });
 
@@ -162,6 +214,16 @@ describe("ProjectStoryView", () => {
       );
       expect(html).not.toContain("<h1");
       expect(html).not.toContain("大見出し");
+    });
+
+    it.each([
+      ["中身が無い", { type: "heading", attrs: { level: 2 } }],
+      ["空白だけ", { type: "heading", attrs: { level: 2 }, content: [text("  ")] }],
+      ["改行だけ", { type: "heading", attrs: { level: 3 }, content: [{ type: "hardBreak" }] }],
+    ])("文字の無い見出し（%s）は描かない", (_, heading) => {
+      const html = render(doc(heading));
+      expect(html).not.toContain("<h2");
+      expect(html).not.toContain("<h3");
     });
 
     it.each([
