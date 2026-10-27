@@ -124,7 +124,7 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 |---|---|---|
 | 🟢 緑（`docs/`・`*.md`・テストのみ・`apps/*/src/components/`・`apps/*/public/`。`CLAUDE.md` と `.claude/` の下は除く） | 通常フロー（`dev` skill。push 前にユーザー承認） | PR 作成まで自動（`cloud-dev` skill）。マージはユーザー |
 | 🟡 🟢・🔴以外すべて（通常の機能実装・依存の追加・認証・実行環境の設定・skills・`CLAUDE.md`） | 通常フロー（`dev` skill） | 実装計画の OK を待ってから PR 作成まで自動（`cloud-dev` skill）。マージはユーザー |
-| 🔴 Docker が要る作業（`packages/infrastructure/atlas/`・kysely の `types.ts`）と、ガード・CI（`.github/`・`.claude/cloud-allowlist`・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`） | 通常フロー（`dev` skill） | 調査・計画まで（`cloud-plan` skill） |
+| 🔴 Docker が要る作業（`packages/infrastructure/atlas/`・kysely の `types.ts`）と、ガード・CI（`.github/`・`.claude/cloud-allowlist`・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`・`.git/`） | 通常フロー（`dev` skill） | 調査・計画まで（`cloud-plan` skill） |
 
 - クラウドでは `dev` skill ではなく `cloud-dev` skill を使う。🔴を含む依頼は、コードを書かずに `cloud-plan` skill で計画書を docs-repository に PR する（🟢・🟡の部分だけ `cloud-dev` で進められるなら、🔴だけを計画に回す）
 - 許可範囲の正は `.claude/cloud-allowlist`（🔴を「常に拒否」で書き、それ以外を最後の `*` で許可している）。`cloud-scope-guard` hook（書き込み時）と git hook（commit・push 時）が機械的に止める

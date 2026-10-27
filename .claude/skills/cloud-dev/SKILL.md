@@ -26,7 +26,7 @@ description: >-
 
 | 項目 | 内容 |
 |---|---|
-| 許可範囲 | `.claude/cloud-allowlist`（`docs/guides/ai-harness.md` 4 章）。🔴（Docker が要る作業: `packages/infrastructure/atlas/`・kysely の `types.ts`。ガードと CI: `.github/`・許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`）は `cloud-scope-guard` hook と git hook が機械的に止める。依存の追加・認証・実行環境の設定・skills・`CLAUDE.md` は🟡 |
+| 許可範囲 | `.claude/cloud-allowlist`（`docs/guides/ai-harness.md` 4 章）。🔴（Docker が要る作業: `packages/infrastructure/atlas/`・kysely の `types.ts`。ガードと CI: `.github/`・許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`・`.git/`）は `cloud-scope-guard` hook と git hook が機械的に止める。依存の追加・認証・実行環境の設定・skills・`CLAUDE.md` は🟡 |
 | ブランチ | セッションが用意した `claude/...` をそのまま使う |
 | GitHub 操作 | `gh pr create` は使えない。Issue・PR・コメントは `gh api`（REST）か GitHub MCP で扱う |
 | Docker | 使えない。infrastructure の結合テストは CI に任せる |
@@ -84,7 +84,7 @@ printf '%s\n' <変更予定のパス...> | blocked_files   # 何か出たら🔴
 スマホから短く返せるように、質問は「A か B か」の形にし、推奨を先に書く。
 **OK が出るまで実装しない。** 修正を頼まれたら直してもう一度出す。OK が出たあとはユーザーの返事を待たずに進める。
 
-例外: 手順 4 の判定で変更予定がすべて🟢（`docs/`・`*.md`・テスト・`components/`・`public/`。`CLAUDE.md` と `.claude/` の下は Claude の動き方を変えるので🟡）のときは、計画を出すだけで OK を待たずに進める（P1 以来の🟢の扱いと同じ。`docs/guides/ai-harness.md` 4 章）。質問があれば PR body の「確認してほしい点」に書く。
+例外: 変更予定のパスがすべて🟢（`docs/`・`*.md`・テスト・`components/`・`public/`。`CLAUDE.md` と `.claude/` の下は Claude の動き方を変えるので🟡）のときは、計画を出すだけで OK を待たずに進める（P1 以来の🟢の扱いと同じ）。🟢と🟡は許可リストでは区別しないので、手順 4 の `blocked_files` では分からない。`docs/guides/ai-harness.md` 4 章の🟢のパターンと見比べて決める。質問があれば PR body の「確認してほしい点」に書く。
 
 ### 6. 実装
 
@@ -149,14 +149,18 @@ PR のアクティビティを購読し（`subscribe_pr_activity`）、CI の失
 
 1. `dev` skill の手順 13 と同じく、Claude と Codex のレビューをバックグラウンドで並行に起動する
    - Claude（`dev` の 13a）: Agent tool で起動する（PR 番号と Issue 番号を渡し、実装者のコンテキストは引き継がない。受け入れ要件も別の目で確かめさせる）
-   - Codex（`dev` の 13b）: Codex CLI と API キーがあるときだけ動かす。先に次で確かめ、何か出たら飛ばす
+   - Codex（`dev` の 13b）: Codex CLI があり、ログインできるときだけ動かす。先に次で確かめ、何か出たら飛ばす。判定は終了コードで行う（`codex login` は成功しても stderr にメッセージを出すので、出力は捨てる）
 
      ```bash
-     command -v codex >/dev/null || echo "Codex CLI が無い"
-     codex login status >/dev/null 2>&1 || { [[ -n "${OPENAI_API_KEY:-}" ]] && printenv OPENAI_API_KEY | codex login --with-api-key >/dev/null; } || echo "Codex にログインできない（OPENAI_API_KEY が無い）"
+     if ! command -v codex >/dev/null; then
+       echo "Codex CLI が無い"
+     elif ! codex login status >/dev/null 2>&1 &&
+       ! { [[ -n "${OPENAI_API_KEY:-}" ]] && printenv OPENAI_API_KEY | codex login --with-api-key >/dev/null 2>&1; }; then
+       echo "Codex にログインできない（OPENAI_API_KEY が無いか、正しくない）"
+     fi
      ```
 
-     出力のファイルは `/tmp/cloud-dev-{番号}-codex.md`・`.log` にする。実行して失敗したとき（`api.openai.com` につながらない、など）も飛ばす。飛ばしたことと理由は、手順 3 の PR コメントに書く。クラウドの環境の設定は `docs/guides/ai-harness.md` の P6
+     使えるときは、`dev` の 13b のコマンドとファイル名（`/tmp/dev-{PR番号}-codex.md`・`.log`）のまま動かす。止まったままにならないように、`codex review` の前に `timeout 900` を付ける（Linux の `timeout`。mac には無いので `dev` では付けない）。実行して失敗したとき（`api.openai.com` につながらない、など）も飛ばす。飛ばしたときは、そのことと理由を PR にコメントで残す（下の 3 で「見送る・要確認」のコメントを書くなら、そこに書き足す）。クラウドの環境の設定は `docs/guides/ai-harness.md` の P6
 2. 完了したら `dev` skill の手順 14 のコマンド（REST）で PR のコメント・レビューを取得する
 3. 各指摘を `dev` skill の手順 15 の表（修正する / 見送る / 要確認。どちらのレビューの指摘かも書く）で分類する。分類の合意は待たない
    - **修正する** → 直して手順 7 を通し、`fix: レビュー指摘対応` でコミットして push する
@@ -175,7 +179,7 @@ PR の URL と「確認してほしい点」（PR body に書いた内容の要�
 ## 注意事項
 
 - ユーザーの返事を待つのは手順 5 だけ（🟢だけならそこも待たない。番号なしで始めたときの手順 1 の Issue 作成の確認は `issue` skill 側の手順で、この例外に含めない）。それ以外で聞きたくなったことは PR body の「確認してほしい点」か PR コメントに書いて進める
-- DB スキーマ（`packages/infrastructure/atlas/`）・kysely の型（`types.ts`）は Docker が要るので🔴、`.github/`・許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json` はガードと CI そのものなので🔴。hook に止められる前に手順 4 で判定し、触らない計画にする。許可範囲を広げる変更はローカルで行う
+- DB スキーマ（`packages/infrastructure/atlas/`）・kysely の型（`types.ts`）は Docker が要るので🔴、`.github/`・許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`・`.git/` はガードと CI そのものなので🔴。hook に止められる前に手順 4 で判定し、触らない計画にする。許可範囲を広げる変更はローカルで行う
 - git hook を飛ばす操作（`--no-verify`・`commit -n`・`core.hooksPath` の変更）は `cloud-scope-guard` hook が拒否する。止められたら回避せず、手順 6 の「拒否されたとき」に従う
 - クラウドからはリモートブランチを削除できず、fast-forward でない push も拒否される。履歴の書き換えはしない
 - Stop hook（`verify-on-stop`）も `bun run check` を自動で実行するが、それに頼らず手順 7 で明示的に通す

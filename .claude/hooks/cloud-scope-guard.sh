@@ -56,8 +56,10 @@ case "$TOOL" in
   Edit | Write | NotebookEdit)
     FILE=$(jq -r '.tool_input.file_path // .tool_input.notebook_path // empty' <<<"$INPUT")
     [[ -z "$FILE" ]] && exit 0
-    if [[ "$FILE" == *"/../"* || "$FILE" == ../* || "$FILE" == *"/.." ]]; then
-      deny "クラウドセッションでは '..' を含むパス（$FILE）を編集できません。正規化したパスで指定してください。"
+    # 正規化されていないパス（..・.・//）は「常に拒否」の行に当たらず、許可リストの最後の * で許可されてしまうので拒否する
+    if [[ "$FILE" == *"/../"* || "$FILE" == ../* || "$FILE" == *"/.." ||
+      "$FILE" == *"/./"* || "$FILE" == ./* || "$FILE" == *"/." || "$FILE" == *"//"* ]]; then
+      deny "クラウドセッションでは '..'・'.'・'//' を含むパス（$FILE）を編集できません。正規化したパスで指定してください。"
     fi
     if [[ "$FILE" == /* ]]; then
       [[ "$FILE" == "$PROJECT_DIR/"* ]] || exit 0 # repo 外は PR に入らないので許可

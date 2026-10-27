@@ -13,6 +13,9 @@
 !.claude/hooks/*
 !.claude/git-hooks/*
 !.claude/settings*.json
+# .git/ は git の管理外だが、config の core.hooksPath を消すと git hook が外れるので拒否する
+!.git
+!.git/*
 
 # それ以外はすべて許可（🟢・🟡。どちらにするかは docs/guides/ai-harness.md 4 章）
 *

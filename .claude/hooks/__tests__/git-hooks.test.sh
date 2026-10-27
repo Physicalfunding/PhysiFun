@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # .claude/git-hooks（pre-commit / pre-push）と、それを有効にする cloud-setup.sh のテスト
 # 一時的な git repo（origin は bare repo）で、実際に commit・push して確かめる。
-# 🔴の例には「常に拒否」の packages/infrastructure/atlas/*.sql（Docker が要る作業）と .github/workflows/ci.yml（CI）を使う。
+# 🔴の例には「常に拒否」の packages/infrastructure/atlas/*.sql（Docker が要る作業）・.github/workflows/ci.yml（CI）・.claude/hooks/（ガード）を使う。
 
 cd "$(dirname "$0")" || exit 1
 source ./lib.sh
@@ -24,7 +24,7 @@ git init -q --bare "$T/origin.git"
 git init -q -b main "$T/work"
 cd "$T/work" || exit 1
 git config user.email t@example.com && git config user.name t
-mkdir -p docs packages/domain/src packages/infrastructure/atlas .github/workflows
+mkdir -p docs packages/domain/src packages/infrastructure/atlas .github/workflows .claude/hooks
 echo a >README.md && echo b >packages/infrastructure/atlas/b.sql
 git add -A && git commit -qm init
 git remote add origin "$T/origin.git" && git push -q origin main
@@ -49,6 +49,11 @@ echo x >.github/workflows/ci.yml && git add -A
 try red_github_commit_blocked 1 git commit -qm ci
 assert_eq red_github_commit_names_file 1 "$(grep -c '.github/workflows/ci.yml' <<<"$ERR")"
 git reset -q && rm .github/workflows/ci.yml
+
+echo x >.claude/hooks/guard.sh && git add -A
+try red_guard_commit_blocked 1 git commit -qm guard
+assert_eq red_guard_commit_names_file 1 "$(grep -c '.claude/hooks/guard.sh' <<<"$ERR")"
+git reset -q && rm .claude/hooks/guard.sh
 
 try chained_write_commit_blocked 1 bash -c 'echo x >packages/infrastructure/atlas/c.sql && git add -A && git commit -qm x'
 git reset -q && rm -f packages/infrastructure/atlas/c.sql

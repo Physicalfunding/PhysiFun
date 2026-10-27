@@ -50,10 +50,14 @@ Claude と開発するときの品質・安全を、**Claude の注意力では�
 !.claude/hooks/*
 !.claude/git-hooks/*
 !.claude/settings*.json
+!.git
+!.git/*
 ```
 
 - **Docker が要る作業**: Atlas のマイグレーションは、Docker で起動する使い捨ての dev DB との差分から作る（`atlas.hcl`）。`types.ts` は、マイグレーションを適用した DB から kysely-codegen で作る。クラウドには Docker も DB も無いので作れない（手で書くと実際の DB とずれる）。infrastructure の結合テストと `docs/db/` の作り直しは CI がやるので、これらは🔴にしない
-- **ガードと CI**: 許可リスト・hooks・git hooks・settings はガードそのもので、クラウドの Claude が自分で外せたら意味がない（`.claude/hooks/` の下の `__tests__/` も含む）。`.github/` のワークフローは、マージ前の push の時点で書き込み権限つきで動くので、マージ前のユーザー確認が効かない
+- **ガードと CI**: 許可リスト・hooks・git hooks・settings はガードそのもので、クラウドの Claude が自分で外せたら意味がない（`.claude/hooks/` の下の `__tests__/` も含む）。`.github/` のワークフローは、マージ前の push の時点で書き込み権限つきで動くので、マージ前のユーザー確認が効かない。`.git/` は git の管理外だが、`config` の `core.hooksPath` を消すと git hook が外れる（Bash の `git config core.hooksPath` は `cloud-scope-guard` が止めている）
+- **パスの書き方**: 最後の `*` で許可する方式では、`./`・`//`・`/./`・`..` を含むパスが「常に拒否」の行に当たらず許可に倒れる。そのため `cloud-scope-guard` は、これらを含むパスを書き方の段階で拒否する（git hook は git が整えたパスで判定するので影響しない）
+- **残っているリスク（#341 の時点）**: `db-docs.yml` は、PR のブランチのコードを `contents: write` の権限で動かす（`bun install` で動く `package.json` の scripts と、`packages/infrastructure/scripts/db-docs.ts`）。どちらもクラウドから書けるので、`.github/` を🔴にした理由と同じことが起きうる（main にブランチ保護は無い）。ワークフローの権限を分ける（生成は読み取り権限だけで行い、コミットは PR のコードを動かさない別のジョブで行う）のは別 Issue
 
 ### 🟢（クラウドで、ユーザーの返事を待たずに PR まで進めるパス）
 
@@ -259,7 +263,8 @@ apps/*/public/*
 
 **変更内容**
 
-1. **`.claude/cloud-allowlist`** — 「常に拒否」を、Docker が要る作業（`atlas/`・kysely の `types.ts`）とガード・CI（`.github/`・許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`）の 7 行に絞り、最後の `*` でそれ以外をすべて許可する（4 章）。判定の仕組み（`is_allowed`・hook・git hook）と拒否メッセージは変えない。
+1. **`.claude/cloud-allowlist`** — 「常に拒否」を、Docker が要る作業（`atlas/`・kysely の `types.ts`）とガード・CI（`.github/`・許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`・`.git/`）に絞り、最後の `*` でそれ以外をすべて許可する（4 章）。判定の仕組み（`is_allowed`・hook・git hook）は変えない。`.git/` は Issue の受け入れ要件の一覧に無いが、git 管理外で、ガードの抜け道をふさぐために足した（PR #343 のレビューで判明）。
+   - `cloud-scope-guard` は、`./`・`//`・`/./` を含むパスも `..` と同じく拒否する（4 章「パスの書き方」。PR #343 のレビューで判明）
 2. **🟢の定義** — `*.md` のうち `CLAUDE.md` と `.claude/` の下（skills・agents）は🟡にする。Claude の動き方を変えるので、実装計画の OK を挟む。
 3. **skills・`CLAUDE.md`** — `cloud-dev`・`cloud-plan`・`split-issue` の🔴の説明を新しい範囲に合わせる。`cloud-dev` に「依存を足すときは `bun.lock` も一緒にコミットする」を書く。
 4. **hook のテスト** — 以前は🔴だったもの（`package.json`・`bun.lock`・`vitest.config.ts`・`next.config.ts`・`auth.ts`・`CLAUDE.md`・`.claude/skills/` など）が許可され、新しい🔴（`.claude/hooks/` の下の `__tests__/` を含む）が拒否されるケースにする。
@@ -270,9 +275,13 @@ apps/*/public/*
 
 **クラウドで Codex を動かすための環境の設定（repo の外。ユーザーが行う）**
 
-- API キー: 環境の設定の Network secrets か環境変数に `OPENAI_API_KEY` を入れる（`cloud-dev` が `codex login --with-api-key` でログインする）
-- ネットワーク: `api.openai.com` への接続を許可する（既定では中継に断られる）
-- CLI: 環境のセットアップスクリプトで `npm install -g @openai/codex` を入れる（npm にはつながる）
+PC のブラウザの claude.ai/code で、新しいセッションの画面の環境の選択から、いつも使う環境の **Edit cloud environment** を開いて設定する（スマホのアプリで編集できるとは公式の文書に書かれていない）。環境はアカウントに保存され、スマホから始めたセッションにも使われる。
+
+- **Setup script**: `npm install -g @openai/codex || true`（npm は既定のネットワークでつながる。`|| true` は、失敗してもセッションを起動させるため）
+- **Network secrets**: Secret type は Bearer、Allowed websites は `api.openai.com`、ヘッダーは `Authorization`（Prefix `Bearer`）、Value に API キー。キーは VM の外に置かれ、プロキシが `api.openai.com` 宛ての通信にだけ付ける。このホストへの接続もこれで許可される
+- **Environment variables**: `OPENAI_API_KEY=proxy-injected`（仮の値。Codex CLI はキーが無いと起動せず、`cloud-dev` もこの値でログインする。GitHub の `gh` と同じ方式）
+- 確かめ方: クラウドのセッションで `curl -s https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"` がモデルの一覧を返すか見る。401 なら差し替えが効いていない。そのときの代わりは、環境変数に本物のキーを入れ、Network access を Custom にして `api.openai.com` を足す方法（キーが VM の中から読めるので、上限を低くした専用のキーにする）
+- 料金: API キーでのログインは API の従量課金になる。ローカルは ChatGPT のログインなので、サブスクリプションの範囲で動く。クラウドで ChatGPT のログインを使う方法のうち、アクセストークン（`codex login --with-access-token`）は ChatGPT の Business・Enterprise だけが対象（2026-10-28 時点）
 
 **完了条件**
 
