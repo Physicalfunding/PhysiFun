@@ -1,15 +1,16 @@
 ---
 name: cloud-plan
 description: >-
-  クラウドセッション（CLAUDE_CODE_REMOTE=true）で、🔴（.claude/cloud-allowlist の外: DB スキーマ・認証・.claude/・.github/・依存・実行環境）
-  の変更を伴う依頼を受けたときに使う。調査して docs-repository の plans/ に実装計画を書き、docs-repository に PR を出す。
-  変更先が許可リストの外にあるとき、または cloud-scope-guard hook に書き込みを拒否されたときに参照すること。
+  クラウドセッション（CLAUDE_CODE_REMOTE=true）で、🔴（.claude/cloud-allowlist で拒否: Docker が要る DB スキーマ・マイグレーション・kysely の型、
+  .github/、ガード（許可リスト・hooks・git hooks・settings・.git/））の変更を伴う依頼を受けたときに使う。
+  調査して docs-repository の plans/ に実装計画を書き、docs-repository に PR を出す。
+  変更先が許可リストで拒否されるとき、または cloud-scope-guard hook に書き込みを拒否されたときに参照すること。
   🟢・🟡だけで済む依頼は cloud-dev skill で PR まで進める。
 ---
 
 # /cloud-plan — クラウドで🔴の実装計画を PR にする
 
-クラウドセッション（`CLAUDE_CODE_REMOTE=true`）では、🔴のパス（`.claude/cloud-allowlist` の外。DB スキーマ・認証・`.claude/`・`.github/`・依存・実行環境）を変更できない（`docs/guides/ai-harness.md` 4 章）。
+クラウドセッション（`CLAUDE_CODE_REMOTE=true`）では、🔴のパス（`.claude/cloud-allowlist` で拒否。Docker が要る `packages/infrastructure/atlas/`・kysely の `types.ts`、`.github/`、許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`・`.git/`）を変更できない（`docs/guides/ai-harness.md` 4 章）。
 その代わりに実装計画を書いて docs-repository に PR し、帰宅後にローカルの `/dev` で実装する。
 🟢・🟡だけで済む依頼はこのスキルではなく `cloud-dev` skill で PR まで進める。
 

@@ -59,7 +59,7 @@ gh api repos/Physicalfunding/PhysiFun/issues/{親}/sub_issues --jq '.[] | "#\(.n
   - domain → application → infrastructure → web（薄い API ＋ UI）/ admin
   - DB スキーマの変更（`atlas/schema.sql`・マイグレーション）は、ほかと混ぜずに 1 本にする
   - 依存し合わないものは「並行可」とする
-- サブ Issue ごとに、クラウドでの扱い（`CLAUDE.md` の「実行環境ごとの自律範囲」の 🟢 / 🟡 / 🔴）を決める。🟢・🟡（`.claude/cloud-allowlist` の範囲）だけで済むものはクラウドの `cloud-dev` skill で PR まで進められるので、🔴（DB スキーマ・認証・依存の追加など）を別のサブ Issue に切り出しておく
+- サブ Issue ごとに、クラウドでの扱い（`CLAUDE.md` の「実行環境ごとの自律範囲」の 🟢 / 🟡 / 🔴）を決める。🟢・🟡（`.claude/cloud-allowlist` の範囲）だけで済むものはクラウドの `cloud-dev` skill で PR まで進められるので、🔴（DB スキーマの変更と kysely の型の生成・`.github/`・ガード）を別のサブ Issue に切り出しておく
 - 記号は着手順に `A-1`, `A-2`, … と振る。親にタスク案があればその記号を使う。すでにサブ Issue がある親を追加で分けるときは、次のアルファベット（`B-1`, …）にする
 
 #### 各サブ Issue に決めること

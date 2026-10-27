@@ -4,7 +4,7 @@
 # 呼び出し側で ALLOWLIST に許可リストのパスを入れておくこと。
 
 # is_allowed <repo ルートからの相対パス>
-# 常に拒否（! 行）に当たれば 1、緑に当たれば 0、どれでもなければ 1
+# 常に拒否（! 行）に当たれば 1、許可の行に当たれば 0、どれでもなければ 1
 is_allowed() {
   local rel="$1" line allowed=1
   while IFS= read -r line || [[ -n "$line" ]]; do

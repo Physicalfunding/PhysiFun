@@ -1,8 +1,9 @@
 # AI 開発ハーネス設計
 
-> 作成: 2026-10-17 / 状態: P0〜P4 完了、P5 実装中
+> 作成: 2026-10-17 / 状態: P0〜P4 完了、P5・P6 実装中
 > 2026-10-17 改訂: main の変更（`.docs/` → `docs/` 再配置、Prisma 撤去、Vitest 統一、`packages/server-shared` 追加）に合わせて更新
 > 2026-10-26 改訂: P5（クラウドで🟡まで開発する）を追加し、4 章の許可リストを🟡・🔴に分けた（#327）
+> 2026-10-28 改訂: P6（クラウドで止めるものを Docker が要る作業とガード・CI に絞る・Codex のレビュー）を追加し、3 章の原則 3 と 4 章を書き直した（#341）
 > 対象: `.claude/`（skills・agents・workflows・hooks・settings）、ESLint、CI のうち AI 開発に関わる部分
 
 ---
@@ -25,7 +26,7 @@ Claude と開発するときの品質・安全を、**Claude の注意力では�
 
 1. **決定論的なものに寄せる** — 「Claude にお願いするルール」より「通らないと先に進めない仕組み」（hook・ESLint・CI）を優先する。AI レビューは機械で判定できないものだけに使う。
 2. **ルールの正は 1 か所** — アーキテクチャルールは ESLint、検証コマンドは `bun run check`、クラウドの許可範囲は `.claude/cloud-allowlist`。hook・skill・CI はそれを呼ぶだけにする。
-3. **クラウドは許可リスト方式** — 許可したパス以外はすべて拒否。新しいディレクトリは自動的に拒否側に倒れる。
+3. **クラウドで止めるものは絞る** — 止めるのは、クラウドでは技術的にできないもの（Docker が要る作業）と、クラウドの Claude が外せては困るもの（ガードと CI）だけ。それ以外は、ローカルと同じ確認の手順（実装計画の OK・`full-review`・独立レビュー・マージ前の確認）を通して PR まで進める（P6）。P1〜P5 では「許可したパス以外はすべて拒否」にしていたが、依存や設定を少し変えるだけで進められなくなった。
 4. **必須の部分は repo 内で完結させる** — クラウドで効かない場所（`~/.claude` など）に頼らない。
 5. **長く使う文書と一時的な計画を分ける** — PhysiFun には実装を理解・変更するために必要な文書（本書など）だけを置く。実装計画のようにその時点で使う文書は docs-repository の `plans/` に置く。本書の実装計画は `docs-repository/plans/2026-10-17-ai-harness.md`。
 
@@ -34,16 +35,35 @@ Claude と開発するときの品質・安全を、**Claude の注意力では�
 | 区分 | ローカル | クラウド |
 |---|---|---|
 | 🟢 緑 | 通常フロー（`dev` skill。push 前にユーザー承認） | **PR 作成まで自動**（`cloud-dev` skill）。マージはユーザー |
-| 🟡 通常の機能実装 | 通常フロー（`dev` skill） | **実装計画の OK を待ってから PR 作成まで自動**（`cloud-dev` skill）。マージはユーザー |
-| 🔴 DB スキーマ・認証・DB クライアント・依存・ガードレール・実行環境 | 通常フロー（`dev` skill） | 調査・計画まで（`cloud-plan` skill で計画書を docs-repository に PR） |
+| 🟡 🟢・🔴以外すべて | 通常フロー（`dev` skill） | **実装計画の OK を待ってから PR 作成まで自動**（`cloud-dev` skill）。マージはユーザー |
+| 🔴 Docker が要る作業・ガードと CI | 通常フロー（`dev` skill） | 調査・計画まで（`cloud-plan` skill で計画書を docs-repository に PR） |
 
-許可リストの正は `.claude/cloud-allowlist`。パターンは bash の `[[ path == pattern ]]` で評価する（`*` は `/` をまたいでマッチする）。path は repo ルートからの相対パス。判定は `.claude/hooks/lib/allowlist.sh` の `is_allowed`（「常に拒否」に当たれば拒否、緑・🟡に当たれば許可、どれにも当たらなければ拒否）。
+許可リストの正は `.claude/cloud-allowlist`。パターンは bash の `[[ path == pattern ]]` で評価する（`*` は `/` をまたいでマッチする）。path は repo ルートからの相対パス。判定は `.claude/hooks/lib/allowlist.sh` の `is_allowed`（「常に拒否」に当たれば拒否、許可の行に当たれば許可、どれにも当たらなければ拒否）。許可の行は最後の `*` だけなので、「常に拒否」に当たらないパスはすべて許可になる（P6）。
 
-### 緑（クラウドで、ユーザーの返事を待たずに PR まで進めるパス）
+### 常に拒否（🔴。🟢・🟡より優先）
+
+```
+!packages/infrastructure/atlas/*
+!packages/infrastructure/src/database/kysely/types.ts
+!.github/*
+!.claude/cloud-allowlist
+!.claude/hooks/*
+!.claude/git-hooks/*
+!.claude/settings*.json
+!.git
+!.git/*
+```
+
+- **Docker が要る作業**: Atlas のマイグレーションは、Docker で起動する使い捨ての dev DB との差分から作る（`atlas.hcl`）。`types.ts` は、マイグレーションを適用した DB から kysely-codegen で作る。クラウドには Docker も DB も無いので作れない（手で書くと実際の DB とずれる）。infrastructure の結合テストと `docs/db/` の作り直しは CI がやるので、これらは🔴にしない
+- **ガードと CI**: 許可リスト・hooks・git hooks・settings はガードそのもので、クラウドの Claude が自分で外せたら意味がない（`.claude/hooks/` の下の `__tests__/` も含む）。`.github/` のワークフローは、マージ前の push の時点で書き込み権限つきで動くので、マージ前のユーザー確認が効かない。`.git/` は git の管理外だが、`config` の `core.hooksPath` を消すと git hook が外れる（Bash の `git config core.hooksPath` は `cloud-scope-guard` が止めている）
+- **パスの書き方**: 最後の `*` で許可する方式では、`./`・`//`・`/./`・`..` を含むパスが「常に拒否」の行に当たらず許可に倒れる。そのため `cloud-scope-guard` は、これらを含むパスを書き方の段階で拒否する（git hook は git が整えたパスで判定するので影響しない）
+- **残っているリスク（#341 の時点）**: `db-docs.yml` は、PR のブランチのコードを `contents: write` の権限で動かす（`bun install` で動く `package.json` の scripts と、`packages/infrastructure/scripts/db-docs.ts`）。どちらもクラウドから書けるので、`.github/` を🔴にした理由と同じことが起きうる（main にブランチ保護は無い）。ワークフローの権限を分ける（生成は読み取り権限だけで行い、コミットは PR のコードを動かさない別のジョブで行う）のは別 Issue
+
+### 🟢（クラウドで、ユーザーの返事を待たずに PR まで進めるパス）
 
 ```
 docs/*
-*.md
+*.md（CLAUDE.md と .claude/ の下を除く）
 */__tests__/*
 *.test.ts
 *.test.tsx
@@ -53,54 +73,14 @@ apps/*/src/components/*
 apps/*/public/*
 ```
 
-### 🟡（クラウドで、実装計画の OK を待ってから PR まで進めるパス）
+🟢と🟡はどちらも許可リストで許可されるので、hook では区別しない。OK を待つかどうかは、`cloud-dev` skill が変更予定のパスを見て決める。`CLAUDE.md` と `.claude/` の下（skills・agents・workflows）は Claude の動き方を変えるので🟡にする。
 
-```
-apps/*/src/*
-packages/*/src/*
-```
+### 🟡（クラウドで、実装計画の OK を待ってから PR まで進めるもの）
 
-### 常に拒否（🔴。🟡・緑に一致しても拒否が優先）
+🟢・🔴以外すべて。通常の機能実装（`apps/*/src/`・`packages/*/src/`）に加えて、依存の追加（`package.json`・`bun.lock`）、認証（`auth.ts`・`proxy.ts`・Adapter など）、DB クライアント（kysely の `client.ts`）、実行環境の設定（`next.config.ts`・`vercel.json`・`vitest.config.ts`・`eslint.config.mjs`・`atlas.hcl`）、skills・agents・workflows、`CLAUDE.md`。新しく作ったディレクトリも🟡になる。
 
-```
-!.claude/*
-!.github/*
-!CLAUDE.md
-!*/CLAUDE.md
-!*/middleware.ts
-!*/proxy.ts
-!*/src/lib/auth.ts
-!*/src/lib/auth/*
-!*/src/lib/auth-constants.ts
-!*/src/lib/session.ts
-!*/src/lib/captcha.ts
-!*/src/lib/di/auth.ts
-!*/src/lib/api/auth.ts
-!*/app/api/auth/*
-!*/app/api/cron/*
-!*/types/next-auth.d.ts
-!*Auth*Adapter.ts
-!apps/web/src/infrastructure/storage/ImageUploadService.ts
-!packages/infrastructure/src/admin-account/AdminKyselyAdapter.ts
-!packages/infrastructure/src/admin-account/kyselyAdminAccountLookup.ts
-!packages/infrastructure/src/admin-account/kyselyAdminSession.ts
-!packages/infrastructure/src/admin-account/magicLinkHmac.ts
-!packages/infrastructure/src/admin-account/sendAdminMagicLink.ts
-!packages/infrastructure/src/database/kysely/*
-!packages/infrastructure/src/security/*
-!packages/server-shared/src/cronAuth.ts
-!packages/server-shared/src/csrf.ts
-```
-
-- `*/proxy.ts` は Next 16 の `proxy.ts` 規約（#334 で `middleware.ts` から移行済み）。`*/middleware.ts` は旧規約のファイルが戻されないための保険。`*/src/lib/auth/*` は今は無いディレクトリの先回り（認証をディレクトリに分けたときのため）
-- `AdminKyselyAdapter.ts`（管理者 NextAuth の Adapter。自動サインアップ禁止などの不変条件を持つ）と `kyselyAdminAccountLookup.ts`（signIn のゲート）は名前に Auth を含まないので個別に書く。`ImageUploadService.ts`（`SUPABASE_SERVICE_ROLE_KEY`）・`captcha.ts`（Turnstile の秘密鍵）は秘密鍵を扱うので🔴
-- 「常に拒否」はディレクトリごと効くので、`app/api/cron/` や `app/api/auth/` の下の `__tests__/` もクラウドからは編集できない（意図どおり。テストだけ直したいときはローカルで）
-
-許可リストに書かないので🔴のまま: `packages/infrastructure/atlas/`（スキーマ・マイグレーション）、`package.json`・`bun.lock`（依存の追加）、`next.config.ts`・`vercel.json`・`apps/web/supabase/`・`eslint.config.mjs`、`.claude/`、`.github/`、`CLAUDE.md`。
-`.claude/` が🔴なので、クラウドの Claude が自分で許可範囲を広げることはできない。
-
-> 🟡を許可しても、ガードは「うっかりを防ぐもの」で、セキュリティ境界ではない（P1）。最終防衛線はマージ前のユーザー確認。
-> 🟡の変更は実装計画でユーザーが一度 OK を出しているので、何が変わるかをユーザーが知らないまま PR になることはない。
+> ガードは「うっかりを防ぐもの」で、セキュリティ境界ではない（P1）。最終防衛線はマージ前のユーザー確認。
+> 🟡の変更は、実装計画でユーザーが一度 OK を出し、`full-review` と独立レビューを通ってから PR になる。確認の手順はローカルと同じなので、それだけではローカルとクラウドを分ける理由にならない（P6）。
 
 ## 5. 全体構成（どこで何が効くか）
 
@@ -109,8 +89,9 @@ packages/*/src/*
 | 文脈 | `CLAUDE.md` | ✅ | ✅ | 前提・禁止事項・自律範囲の案内 |
 | 手順 | skills（`dev` / `cloud-dev` / `issue` / `split-issue` / `add-usecase` / `cloud-plan`） | ✅（`dev`） | ✅（`cloud-dev`） | 定型作業の手順。Issue の開発はローカルで `dev`、クラウドで `cloud-dev` |
 | 専門レビュー | agents ＋ `full-review` workflow | ✅ | ✅ | 機械で判定できない観点（ビジネスロジックの置き場など） |
+| 別の AI のレビュー | Codex CLI（`codex review`）。`dev` の手順 13b | ✅（CLI があれば） | —（使わない） | 同じモデルどうしの見落としを減らす。ChatGPT のログインで、サブスクリプションの範囲で動かす。使えなければ飛ばし、Claude のレビューだけで進める |
 | 書き込み直後 | PostToolUse hook `lint-on-edit` | ✅ | ✅ | 書いたファイルに ESLint・Prettier |
-| 書き込み直前 | PreToolUse hook `cloud-scope-guard` ＋ git hook | 何もしない | ✅ | 🔴（許可リストの外）への書き込み・commit・push を拒否 |
+| 書き込み直前 | PreToolUse hook `cloud-scope-guard` ＋ git hook | 何もしない | ✅ | 🔴（許可リストの「常に拒否」）への書き込み・commit・push を拒否 |
 | 終了時 | Stop hook `verify-on-stop` | ✅ | ✅ | `bun run check` が通るまで完了させない |
 | マージ前 | CI（GitHub Actions） | — | — | lint・format・typecheck・test・infra 結合テスト・build・e2e |
 | 許可確認 | auto モード（`~/.claude/settings.json`） | ✅ | （クラウドは別仕様） | 確認の削減。危険な操作は deny ルールと hook で止める |
@@ -129,6 +110,7 @@ packages/*/src/*
 | P3 ルールを CI に移す | P2 |
 | P4 自律ループの強化 | P2・P3 |
 | P5 クラウドで🟡まで開発する | P1・P4 |
+| P6 クラウドで止めるものを絞る・Codex のレビュー | P5 |
 
 ### P0：土台・すぐ効く改善
 
@@ -154,7 +136,7 @@ packages/*/src/*
 1. **`cloud-scope-guard.sh`（PreToolUse）** — `CLAUDE_CODE_REMOTE=true` のときだけ動く。それ以外は即 exit 0。
    - `Edit` / `Write` / `NotebookEdit`：対象パスが緑でなければ `permissionDecision: "deny"` を返し、理由に「クラウドでは編集できません。`cloud-plan` skill で計画書を PR にしてください」と書く。`..` を含むパスは拒否、repo 外は許可。
    - `Bash`：git hook を飛ばす操作（`--no-verify`、`git commit -n`、`core.hooksPath` の変更）を拒否する。commit・push の中身は判定しない（下の git hook が判定する）。
-   - 許可リストは `.claude/cloud-allowlist`（1 行 1 パターン、`!` で始まる行は常に拒否、`#` はコメント）。判定は `.claude/hooks/lib/allowlist.sh` に置き、git hook と共有する。`.claude/` はクラウドから書けないので、AI が自分で範囲を広げることはできない。
+   - 許可リストは `.claude/cloud-allowlist`（1 行 1 パターン、`!` で始まる行は常に拒否、`#` はコメント）。判定は `.claude/hooks/lib/allowlist.sh` に置き、git hook と共有する。`.claude/` はクラウドから書けないので、AI が自分で範囲を広げることはできない。※P6 で、クラウドから書けない `.claude/` は許可リスト・hooks・git hooks・settings だけになった（skills などは🟡）。
    - 位置づけ：**うっかりを防ぐガードであり、悪意ある回避を防ぐセキュリティ境界ではない**。最終防衛線はマージ前のユーザー確認。
 2. **`.claude/git-hooks/pre-commit`・`pre-push`（git hook）** — `cloud-setup.sh` がクラウドのときだけ PhysiFun に `core.hooksPath=.claude/git-hooks` を設定して有効にする（docs-repository には設定しないので、そちらへの push は止めない）。
    - pre-commit：stage されたファイルが緑でなければ commit を止める
@@ -256,7 +238,7 @@ packages/*/src/*
 
 **変更内容**
 
-1. **`.claude/cloud-allowlist`** — 🟡として `apps/*/src/*`・`packages/*/src/*` を許可し、その中の認証・DB クライアント・cron・セキュリティ関連を「常に拒否」で🔴に戻す（4 章）。DB スキーマ（`atlas/`）・依存（`package.json`）・実行環境（`next.config.ts`・`vercel.json`）は許可リストに書かないので🔴のまま。
+1. **`.claude/cloud-allowlist`** — 🟡として `apps/*/src/*`・`packages/*/src/*` を許可し、その中の認証・DB クライアント・cron・セキュリティ関連を「常に拒否」で🔴に戻す（4 章）。DB スキーマ（`atlas/`）・依存（`package.json`）・実行環境（`next.config.ts`・`vercel.json`）は許可リストに書かないので🔴のまま。※P6 で、認証・DB クライアント・依存・実行環境も🟡にした。
 2. **`cloud-dev` skill** — クラウド専用の開発フロー。Issue → 区分の判定（`blocked_files` で変更予定のパスを機械的に判定）→ 質問と実装計画をまとめて出して**ここだけユーザーの OK を待つ**（変更がすべて🟢なら待たない。P1 と同じ）→ 実装 → 検証 → 受け入れ要件の確認 → `full-review` → push と REST での PR 作成 → PR の見張り（CI の失敗を直す）→ 独立レビューと指摘対応（「修正する」だけ直し、「見送る」「要確認」は PR コメント）。🔴が含まれれば `cloud-plan` に切り替える。PR body テンプレートなど `dev` と共通の参考情報は `dev` skill を参照する。
 3. **`dev` skill をローカル専用に** — 「実行環境による分岐」の節と REST での PR 作成を外し、クラウドでは `cloud-dev` を使うと書く。
 4. **`cloud-plan` skill の対象を🔴だけに**、`split-issue` skill の注意書きを「🟢・🟡は `cloud-dev`、🔴は `cloud-plan`」にする。
@@ -273,6 +255,39 @@ packages/*/src/*
 - hook のテストで🟡の許可・🔴の拒否が期待どおり
 - 実際のクラウドセッションで、🟡の小さな Issue を `/cloud-dev` で PR まで進められる（結果はここに追記する。P1 と同じやり方）
 - 🔴のファイルの編集・commit・push は引き続き拒否される
+
+### P6：クラウドで止めるものを絞る・Codex のレビュー（#341）
+
+**動機**：P5 のあとも、🔴の多くは「ローカルなら画面の前で確かめられる」が理由だった。でも確認の手順（実装計画の OK・`full-review`・独立レビュー・マージ前の確認）はクラウドでも同じで、分ける理由にならない。#301 S-2 では、テスト用の依存と `vitest.config.ts` を変えるだけで、クラウドから進められなくなった。クラウドで技術的にできないのは Docker が要る作業だけ。ガードと CI だけは、クラウドの Claude が自分で外せないように残す。
+あわせて、独立レビューに Claude とは別の AI（Codex）を足す。以前は Codex プラグインの `/codex:review` を Claude のレビューと並行で動かしていた（Tunely の `dev` skill に残っている）が、今のハーネスには無かった（#258 で git 管理外の `.claude/` を消したときに失った可能性がある）。
+
+**変更内容**
+
+1. **`.claude/cloud-allowlist`** — 「常に拒否」を、Docker が要る作業（`atlas/`・kysely の `types.ts`）とガード・CI（`.github/`・許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`・`.git/`）に絞り、最後の `*` でそれ以外をすべて許可する（4 章）。判定の仕組み（`is_allowed`・hook・git hook）は変えない。`.git/` は Issue の受け入れ要件の一覧に無いが、git 管理外で、ガードの抜け道をふさぐために足した（PR #343 のレビューで判明）。
+   - `cloud-scope-guard` は、`./`・`//`・`/./` を含むパスも `..` と同じく拒否する（4 章「パスの書き方」。PR #343 のレビューで判明）
+2. **🟢の定義** — `*.md` のうち `CLAUDE.md` と `.claude/` の下（skills・agents）は🟡にする。Claude の動き方を変えるので、実装計画の OK を挟む。
+3. **skills・`CLAUDE.md`** — `cloud-dev`・`cloud-plan`・`split-issue` の🔴の説明を新しい範囲に合わせる。`cloud-dev` に「依存を足すときは `bun.lock` も一緒にコミットする」を書く。
+4. **hook のテスト** — 以前は🔴だったもの（`package.json`・`bun.lock`・`vitest.config.ts`・`next.config.ts`・`auth.ts`・`CLAUDE.md`・`.claude/skills/` など）が許可され、新しい🔴（`.claude/hooks/` の下の `__tests__/` を含む）が拒否されるケースにする。
+5. **Codex のレビュー（ローカルだけ）** — `dev` の手順 13 で、Claude のレビュー（Agent）と並行に `codex review --base origin/main` をバックグラウンドで動かし、結果を PR にコメントで残す。手順 15 の分類の表に、どちらのレビューの指摘かを書く。クラウドの `cloud-dev` では Codex を使わず、独立レビューは Claude だけにする（下の「クラウドで Codex を使わない理由」）。
+   - プラグインの `/codex:review` ではなく CLI を直接呼ぶ。プラグインは同じ組み込みのレビューを包んだもので、`~/.claude` にしか無い。repo の skill から呼ぶなら、CLI のほうが頼るものが少ない（原則 4）
+   - 使えたかどうかは終了コードで判定する。`codex login status` が通っても、CLI が古くて `~/.codex/config.toml` のモデルに対応しておらず失敗することがある（0.145.0 で起きた。0.164.0 で解消）
+   - `--base` と指示文（PROMPT）は一緒に渡せない。ローカルでは `~/.codex/AGENTS.md` の影響で日本語で返る
+
+**クラウドで Codex を使わない理由**
+
+料金は Codex CLI のログインの方法で決まる。ChatGPT でログインするとサブスクリプションの範囲、API キーでログインすると API の従量課金になる（プラグインを使うかどうかは関係ない）。ローカルは ChatGPT でログインしているので、サブスクリプションの範囲で動く。クラウドで ChatGPT のログインを使う方法は、どれも個人の開発に合わなかった（2026-10-28 時点）。
+
+- アクセストークン（`codex login --with-access-token`）: ChatGPT の Business・Enterprise のワークスペースだけが対象
+- デバイスコード（`codex login --device-auth`、ベータ）: セッションのたびにコードを入れる必要があり、ChatGPT のログイン情報が VM の中に残る
+- `~/.codex/auth.json` のコピー: パスワードと同じ扱いのファイルで、公式も自動化には API キーを勧めている
+
+将来クラウドでも動かすなら、クラウド環境の Network secrets に API キー（`api.openai.com` 宛て、Bearer）を入れ、環境変数に仮の値 `OPENAI_API_KEY=proxy-injected`、セットアップスクリプトで `npm install -g @openai/codex` を入れる方法が候補（従量課金。動くかは未確認）。
+
+**完了条件**
+
+- hook のテストで、新しい範囲の許可・拒否が期待どおり
+- 実際のクラウドセッションで、依存か設定を変える小さな Issue を `/cloud-dev` で PR まで進められる（結果はここに追記する）
+- ローカルの `/dev` で、Codex のレビューが PR にコメントで残る。Codex を使えない環境では飛ばして Claude のレビューだけで進む（PR #343 で確認）
 
 ---
 

@@ -1,48 +1,21 @@
 # クラウドセッションで書き込み・commit・push を許可するパス（docs/guides/ai-harness.md 4 章）
 # 1 行 1 パターン。bash の [[ path == pattern ]] で評価する（* は / をまたいでマッチする）。
-# path は repo ルートからの相対パス。! で始まる行は常に拒否（🟡・緑より優先）。
-# ここに書いていないパス（packages/infrastructure/atlas/・package.json・next.config.ts・vercel.json など）はすべて拒否（🔴）。
+# path は repo ルートからの相対パス。! で始まる行は常に拒否（許可の行より優先）。
+# 止めるのは「Docker が要る作業」と「ガード・CI そのもの」だけ（🔴）。それ以外は最後の * で許可する（🟢・🟡）。
 
-# 常に拒否（🔴: ガードレール・認証・DB クライアント・実行環境）
-!.claude/*
+# 常に拒否（🔴: Docker が要る作業。Atlas のスキーマ・マイグレーションと kysely-codegen の型）
+!packages/infrastructure/atlas/*
+!packages/infrastructure/src/database/kysely/types.ts
+
+# 常に拒否（🔴: ガードと CI。クラウドの Claude が自分でガードを外せないように。ワークフローはマージ前の push で書き込み権限つきで動く）
 !.github/*
-!CLAUDE.md
-!*/CLAUDE.md
-!*/middleware.ts
-!*/proxy.ts
-!*/src/lib/auth.ts
-!*/src/lib/auth/*
-!*/src/lib/auth-constants.ts
-!*/src/lib/session.ts
-!*/src/lib/captcha.ts
-!*/src/lib/di/auth.ts
-!*/src/lib/api/auth.ts
-!*/app/api/auth/*
-!*/app/api/cron/*
-!*/types/next-auth.d.ts
-!*Auth*Adapter.ts
-!apps/web/src/infrastructure/storage/ImageUploadService.ts
-!packages/infrastructure/src/admin-account/AdminKyselyAdapter.ts
-!packages/infrastructure/src/admin-account/kyselyAdminAccountLookup.ts
-!packages/infrastructure/src/admin-account/kyselyAdminSession.ts
-!packages/infrastructure/src/admin-account/magicLinkHmac.ts
-!packages/infrastructure/src/admin-account/sendAdminMagicLink.ts
-!packages/infrastructure/src/database/kysely/*
-!packages/infrastructure/src/security/*
-!packages/server-shared/src/cronAuth.ts
-!packages/server-shared/src/csrf.ts
+!.claude/cloud-allowlist
+!.claude/hooks/*
+!.claude/git-hooks/*
+!.claude/settings*.json
+# .git/ は git の管理外だが、config の core.hooksPath を消すと git hook が外れるので拒否する
+!.git
+!.git/*
 
-# 緑
-docs/*
-*.md
-*/__tests__/*
-*.test.ts
-*.test.tsx
-*.vitest.ts
-tests/e2e/*
-apps/*/src/components/*
-apps/*/public/*
-
-# 🟡（通常の機能実装。上の「常に拒否」に当たるものは除く）
-apps/*/src/*
-packages/*/src/*
+# それ以外はすべて許可（🟢・🟡。どちらにするかは docs/guides/ai-harness.md 4 章）
+*
