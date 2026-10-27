@@ -26,7 +26,7 @@ description: >-
 
 | 項目 | 内容 |
 |---|---|
-| 許可範囲 | `.claude/cloud-allowlist`（`docs/guides/ai-harness.md` 4 章）。🔴（DB スキーマ・認証・`.claude/`・`.github/`・依存の追加・実行環境）は `cloud-scope-guard` hook と git hook が機械的に止める |
+| 許可範囲 | `.claude/cloud-allowlist`（`docs/guides/ai-harness.md` 4 章）。🔴（Docker が要る作業: `packages/infrastructure/atlas/`・kysely の `types.ts`。ガードと CI: `.github/`・許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`）は `cloud-scope-guard` hook と git hook が機械的に止める。依存の追加・認証・実行環境の設定・skills・`CLAUDE.md` は🟡 |
 | ブランチ | セッションが用意した `claude/...` をそのまま使う |
 | GitHub 操作 | `gh pr create` は使えない。Issue・PR・コメントは `gh api`（REST）か GitHub MCP で扱う |
 | Docker | 使えない。infrastructure の結合テストは CI に任せる |
@@ -84,11 +84,12 @@ printf '%s\n' <変更予定のパス...> | blocked_files   # 何か出たら🔴
 スマホから短く返せるように、質問は「A か B か」の形にし、推奨を先に書く。
 **OK が出るまで実装しない。** 修正を頼まれたら直してもう一度出す。OK が出たあとはユーザーの返事を待たずに進める。
 
-例外: 手順 4 の判定で変更予定がすべて🟢（`docs/`・`*.md`・テスト・`components/`・`public/`）のときは、計画を出すだけで OK を待たずに進める（P1 以来の🟢の扱いと同じ。`docs/guides/ai-harness.md` 4 章）。質問があれば PR body の「確認してほしい点」に書く。
+例外: 手順 4 の判定で変更予定がすべて🟢（`docs/`・`*.md`・テスト・`components/`・`public/`。`CLAUDE.md` と `.claude/` の下は Claude の動き方を変えるので🟡）のときは、計画を出すだけで OK を待たずに進める（P1 以来の🟢の扱いと同じ。`docs/guides/ai-harness.md` 4 章）。質問があれば PR body の「確認してほしい点」に書く。
 
 ### 6. 実装
 
 `dev` skill の手順 6 と同じ（lint-on-edit hook の指摘をその場で直す・型チェックが通る単位で進める・論理的な単位でコミットする・UseCase は `add-usecase` skill に従う）。
+依存を追加・更新するときは `bun add` などで入れ、`bun.lock` も一緒にコミットする（CI と手順 7 は `--frozen-lockfile` で入れるので、ずれていると落ちる）。
 
 途中で `cloud-scope-guard` hook に書き込みを拒否された（🔴に触る必要が出た）とき:
 
@@ -165,7 +166,7 @@ PR の URL と「確認してほしい点」（PR body に書いた内容の要�
 ## 注意事項
 
 - ユーザーの返事を待つのは手順 5 だけ（🟢だけならそこも待たない。番号なしで始めたときの手順 1 の Issue 作成の確認は `issue` skill 側の手順で、この例外に含めない）。それ以外で聞きたくなったことは PR body の「確認してほしい点」か PR コメントに書いて進める
-- `.claude/`・`CLAUDE.md`・`.github/`・DB スキーマ（`packages/infrastructure/atlas/`）・認証・依存の追加（`package.json`）は🔴。hook に止められる前に手順 4 で判定し、触らない計画にする。許可範囲を広げる変更はローカルで行う
+- DB スキーマ（`packages/infrastructure/atlas/`）・kysely の型（`types.ts`）は Docker が要るので🔴、`.github/`・許可リスト・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json` はガードと CI そのものなので🔴。hook に止められる前に手順 4 で判定し、触らない計画にする。許可範囲を広げる変更はローカルで行う
 - git hook を飛ばす操作（`--no-verify`・`commit -n`・`core.hooksPath` の変更）は `cloud-scope-guard` hook が拒否する。止められたら回避せず、手順 6 の「拒否されたとき」に従う
 - クラウドからはリモートブランチを削除できず、fast-forward でない push も拒否される。履歴の書き換えはしない
 - Stop hook（`verify-on-stop`）も `bun run check` を自動で実行するが、それに頼らず手順 7 で明示的に通す

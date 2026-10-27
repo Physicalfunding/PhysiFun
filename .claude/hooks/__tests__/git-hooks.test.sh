@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # .claude/git-hooks（pre-commit / pre-push）と、それを有効にする cloud-setup.sh のテスト
 # 一時的な git repo（origin は bare repo）で、実際に commit・push して確かめる。
-# 🔴の例には許可リストに無い packages/infrastructure/atlas/*.sql と、「常に拒否」の apps/web/src/lib/auth.ts を使う。
+# 🔴の例には「常に拒否」の packages/infrastructure/atlas/*.sql（Docker が要る作業）と .github/workflows/ci.yml（CI）を使う。
 
 cd "$(dirname "$0")" || exit 1
 source ./lib.sh
@@ -24,7 +24,7 @@ git init -q --bare "$T/origin.git"
 git init -q -b main "$T/work"
 cd "$T/work" || exit 1
 git config user.email t@example.com && git config user.name t
-mkdir -p docs packages/domain/src packages/infrastructure/atlas apps/web/src/lib
+mkdir -p docs packages/domain/src packages/infrastructure/atlas .github/workflows
 echo a >README.md && echo b >packages/infrastructure/atlas/b.sql
 git add -A && git commit -qm init
 git remote add origin "$T/origin.git" && git push -q origin main
@@ -37,15 +37,18 @@ try japanese_path_commit_allowed 0 git commit -qm docs
 echo x >packages/domain/src/a.ts && git add -A
 try yellow_commit_allowed 0 git commit -qm yellow
 
+echo '{}' >package.json && git add -A
+try deps_commit_allowed 0 git commit -qm deps
+
 echo x >packages/infrastructure/atlas/a.sql && git add -A
 try red_commit_blocked 1 git commit -qm red
 assert_eq red_commit_names_file 1 "$(grep -c 'packages/infrastructure/atlas/a.sql' <<<"$ERR")"
 git reset -q && rm packages/infrastructure/atlas/a.sql
 
-echo x >apps/web/src/lib/auth.ts && git add -A
-try red_auth_commit_blocked 1 git commit -qm auth
-assert_eq red_auth_commit_names_file 1 "$(grep -c 'apps/web/src/lib/auth.ts' <<<"$ERR")"
-git reset -q && rm apps/web/src/lib/auth.ts
+echo x >.github/workflows/ci.yml && git add -A
+try red_github_commit_blocked 1 git commit -qm ci
+assert_eq red_github_commit_names_file 1 "$(grep -c '.github/workflows/ci.yml' <<<"$ERR")"
+git reset -q && rm .github/workflows/ci.yml
 
 try chained_write_commit_blocked 1 bash -c 'echo x >packages/infrastructure/atlas/c.sql && git add -A && git commit -qm x'
 git reset -q && rm -f packages/infrastructure/atlas/c.sql

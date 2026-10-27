@@ -78,7 +78,7 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 | `dev` | **ローカルで** Issue → 実装 → 検証 → 受け入れ要件の確認 → PR → レビュー → 修正の一貫開発フロー |
 | `cloud-dev` | **クラウドで** 🟢・🟡の Issue を PR まで進める（実装計画の OK だけ待つ。🔴が含まれれば `cloud-plan` に切り替える） |
 | `add-usecase` | application 層に UseCase を追加する（`Result` 型・Port DI・併設ユニットテスト必須の規範手順とテンプレート） |
-| `cloud-plan` | クラウドで🔴（許可リストの外）の依頼を受けたとき、実装計画を docs-repository の `plans/` に書いて PR にする |
+| `cloud-plan` | クラウドで🔴（許可リストで拒否されるもの）の依頼を受けたとき、実装計画を docs-repository の `plans/` に書いて PR にする |
 
 ## Agents（専門レビューエージェント）
 
@@ -109,8 +109,8 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 | `lint-on-edit.sh` | PostToolUse | `.ts` / `.tsx` を書いた直後に Prettier と ESLint（境界ルールを含む）をかけ、違反を Claude に返す |
 | `verify-on-stop.sh` | Stop | 終了しようとした時点で `bun run check` を実行し、失敗していたら差し戻す（コードに未コミットの変更があるときだけ。連続 3 回まで） |
 | `cloud-setup.sh` | SessionStart | クラウドのときだけ、PhysiFun に `core.hooksPath=.claude/git-hooks` を設定し、`bun install` し、docs-repository がセッションに付いているかを知らせる |
-| `cloud-scope-guard.sh` | PreToolUse | クラウドのときだけ、`.claude/cloud-allowlist` 外への Edit/Write と、git hook を飛ばす操作（`--no-verify` など）を拒否する |
-| `.claude/git-hooks/pre-commit`・`pre-push` | git hook | クラウドのときだけ、許可リスト外のファイルを含む commit と、それを含むコミットの push を止める（実際に commit・push される中身で判定） |
+| `cloud-scope-guard.sh` | PreToolUse | クラウドのときだけ、`.claude/cloud-allowlist` で拒否されるパス（🔴）への Edit/Write と、git hook を飛ばす操作（`--no-verify` など）を拒否する |
+| `.claude/git-hooks/pre-commit`・`pre-push` | git hook | クラウドのときだけ、許可リストで拒否されるファイルを含む commit と、それを含むコミットの push を止める（実際に commit・push される中身で判定） |
 
 
 
@@ -122,12 +122,12 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 
 | 区分 | ローカル | クラウド |
 |---|---|---|
-| 🟢 緑（`docs/`・`*.md`・テストのみ・`apps/*/src/components/`・`apps/*/public/`） | 通常フロー（`dev` skill。push 前にユーザー承認） | PR 作成まで自動（`cloud-dev` skill）。マージはユーザー |
-| 🟡 通常の機能実装（`apps/*/src/`・`packages/*/src/`。🔴に当たるものを除く） | 通常フロー（`dev` skill） | 実装計画の OK を待ってから PR 作成まで自動（`cloud-dev` skill）。マージはユーザー |
-| 🔴 DB スキーマ・認証・DB クライアント・依存の追加・`.claude/`・`.github/`・実行環境 | 通常フロー（`dev` skill） | 調査・計画まで（`cloud-plan` skill） |
+| 🟢 緑（`docs/`・`*.md`・テストのみ・`apps/*/src/components/`・`apps/*/public/`。`CLAUDE.md` と `.claude/` の下は除く） | 通常フロー（`dev` skill。push 前にユーザー承認） | PR 作成まで自動（`cloud-dev` skill）。マージはユーザー |
+| 🟡 🟢・🔴以外すべて（通常の機能実装・依存の追加・認証・実行環境の設定・skills・`CLAUDE.md`） | 通常フロー（`dev` skill） | 実装計画の OK を待ってから PR 作成まで自動（`cloud-dev` skill）。マージはユーザー |
+| 🔴 Docker が要る作業（`packages/infrastructure/atlas/`・kysely の `types.ts`）と、ガード・CI（`.github/`・`.claude/cloud-allowlist`・`.claude/hooks/`・`.claude/git-hooks/`・`.claude/settings*.json`） | 通常フロー（`dev` skill） | 調査・計画まで（`cloud-plan` skill） |
 
 - クラウドでは `dev` skill ではなく `cloud-dev` skill を使う。🔴を含む依頼は、コードを書かずに `cloud-plan` skill で計画書を docs-repository に PR する（🟢・🟡の部分だけ `cloud-dev` で進められるなら、🔴だけを計画に回す）
-- 許可範囲の正は `.claude/cloud-allowlist`（🟡として `apps/*/src/*`・`packages/*/src/*` を許可し、認証・DB クライアントなどを「常に拒否」で🔴に戻している）。`cloud-scope-guard` hook（書き込み時）と git hook（commit・push 時）が機械的に止める
+- 許可範囲の正は `.claude/cloud-allowlist`（🔴を「常に拒否」で書き、それ以外を最後の `*` で許可している）。`cloud-scope-guard` hook（書き込み時）と git hook（commit・push 時）が機械的に止める
 - クラウドセッションは **PhysiFun 単独**で起動する（複数 repo を選ぶと repo の hooks が読み込まれず、ガードが効かない）
 - 最新仕様（docs-repository）が必要になったら、Claude が Physicalfunding/docs-repository をセッションに追加する（クラウドの git 認証はセッションに付いた repo にしか効かないため、hook では clone できない）
 - クラウドでは `gh pr create` が使えない。PR やコメントは `gh api`（REST）か GitHub MCP で作る
