@@ -155,8 +155,10 @@ const MARK_KEYS = ["type", "attrs"];
  * できているか検査してから持つ。許可外のものは黙って捨てず、エラーで断る（設計書 §6.1）。
  *
  * - 画像の URL の判定は外から受け取る（判定が環境変数で変わるため、domain には持ち込まない）
- * - 検査を通った文書は作り直して持つ（検査したものと持つものを必ず一致させるため）。
+ * - 検査を通った文書は作り直し、凍結して持つ（検査したものと持つものを必ず一致させ、後から書き換えられないため）。
  *   値が null の属性と、空の marks は「指定なし」として省く
+ * - `URL`・`TextEncoder` は外部ライブラリではなく、どの実行環境にもある標準の API（型は `ProjectId` の
+ *   `node:crypto` と同じく `@types/node` から来る）
  */
 export class ProjectStory {
   private constructor(private readonly document: ProjectStoryDocument) {}
@@ -259,7 +261,8 @@ function normalizeNode(
   if (!isPlainObject(value) || Object.keys(value).some((k) => !NODE_KEYS.includes(k))) {
     return notAllowed("INVALID_STRUCTURE", path);
   }
-  const { type } = value;
+  // 値は最初に 1 回だけ読む（検査した値と持つ値を必ず一致させるため）
+  const { type, attrs: rawAttrs, marks: rawMarks, text, content: rawContent } = value;
   if (typeof type !== "string" || !Object.hasOwn(NODE_RULES, type)) {
     return notAllowed("UNSUPPORTED_NODE", path);
   }
@@ -268,49 +271,47 @@ function normalizeNode(
   const rule = NODE_RULES[type] as (typeof NODE_RULES)[string];
   const node: Json = { type };
 
-  const attrs = normalizeAttrs(value.attrs, rule.attrs, `${path}.attrs`, ctx);
+  const attrs = normalizeAttrs(rawAttrs, rule.attrs, `${path}.attrs`, ctx);
   if (!attrs.ok) return attrs;
   if (attrs.value) node.attrs = attrs.value;
 
-  if (value.marks !== undefined) {
-    if (!INLINES.includes(type) || !Array.isArray(value.marks)) {
+  if (rawMarks !== undefined) {
+    if (!INLINES.includes(type) || !Array.isArray(rawMarks)) {
       return notAllowed("INVALID_STRUCTURE", path);
     }
     const marks: Json[] = [];
-    for (const [i, raw] of value.marks.entries()) {
+    for (const [i, raw] of rawMarks.entries()) {
       const mark = normalizeMark(raw, `${path}.marks[${i}]`, ctx);
       if (!mark.ok) return mark;
       marks.push(mark.value);
     }
-    if (marks.length > 0) node.marks = marks;
+    if (marks.length > 0) node.marks = Object.freeze(marks);
   }
 
   if (type === "text") {
-    if (typeof value.text !== "string" || value.text.length === 0) {
-      return notAllowed("INVALID_STRUCTURE", path);
-    }
-    node.text = value.text;
-    ctx.textLength += value.text.length;
-  } else if (value.text !== undefined) {
+    if (typeof text !== "string" || text.length === 0) return notAllowed("INVALID_STRUCTURE", path);
+    node.text = text;
+    ctx.textLength += text.length;
+  } else if (text !== undefined) {
     return notAllowed("INVALID_STRUCTURE", path);
   }
 
-  if (value.content !== undefined) {
-    if (rule.children === null || !Array.isArray(value.content)) {
+  if (rawContent !== undefined) {
+    if (rule.children === null || !Array.isArray(rawContent)) {
       return notAllowed("INVALID_STRUCTURE", path);
     }
     const content: Json[] = [];
-    for (const [i, raw] of value.content.entries()) {
+    for (const [i, raw] of rawContent.entries()) {
       const child = normalizeNode(raw, rule.children, `${path}.content[${i}]`, depth + 1, ctx);
       if (!child.ok) return child;
       content.push(child.value);
     }
-    node.content = content;
+    node.content = Object.freeze(content);
   }
 
   if (type === "image") ctx.images += 1;
   if (type === "youtube") ctx.videos += 1;
-  return ok(node);
+  return ok(Object.freeze(node));
 }
 
 function normalizeMark(
@@ -325,14 +326,15 @@ function normalizeMark(
   if (typeof type !== "string" || !Object.hasOwn(MARK_RULES, type)) {
     return notAllowed("UNSUPPORTED_MARK", path);
   }
+  const { attrs: rawAttrs } = value;
   const attrs = normalizeAttrs(
-    value.attrs,
+    rawAttrs,
     MARK_RULES[type] as Record<string, AttrRule>,
     `${path}.attrs`,
     ctx
   );
   if (!attrs.ok) return attrs;
-  return ok(attrs.value ? { type, attrs: attrs.value } : { type });
+  return ok(Object.freeze(attrs.value ? { type, attrs: attrs.value } : { type }));
 }
 
 /**
@@ -356,7 +358,7 @@ function normalizeAttrs(
     if (!rule.test(v, ctx)) return notAllowed(rule.reason, `${path}.${key}`);
     attrs[key] = v;
   }
-  return ok(Object.keys(attrs).length > 0 ? attrs : null);
+  return ok(Object.keys(attrs).length > 0 ? Object.freeze(attrs) : null);
 }
 
 function isPlainObject(value: unknown): value is Json {

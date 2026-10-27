@@ -44,6 +44,24 @@ describe("ProjectStory", () => {
       if (result.ok) expect(result.value.toJSON()).toEqual(JSON.parse(JSON.stringify(value)));
     });
 
+    it("作り直して凍結して持つので、元の値を変えても、持っている文書を書き換えようとしても変わらない", () => {
+      const value = doc(p(text("元の文", [{ type: "link", attrs: { href: "https://a.jp" } }])));
+      const result = create(value);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      value.content.push(img("https://evil.example.com/a.png"));
+      const json = result.value.toJSON();
+      expect(json.content).toHaveLength(1);
+      const [paragraph] = json.content ?? [];
+      const [inline] = paragraph?.type === "paragraph" ? (paragraph.content ?? []) : [];
+      expect(() => {
+        (json.content as unknown[]).push(img("https://evil.example.com/a.png"));
+      }).toThrow(TypeError);
+      expect(() => {
+        (inline?.marks?.[0] as { attrs: { href: string } }).attrs.href = "javascript:alert(1)";
+      }).toThrow(TypeError);
+    });
+
     it("値が null の属性と空の marks は「指定なし」として省く", () => {
       const result = create(
         doc(
