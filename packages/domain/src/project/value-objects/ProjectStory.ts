@@ -283,6 +283,10 @@ function normalizeNode(
     for (const [i, raw] of rawMarks.entries()) {
       const mark = normalizeMark(raw, `${path}.marks[${i}]`, ctx);
       if (!mark.ok) return mark;
+      // 同じ種類の装飾は 1 つだけ（リンクの中のリンクなど。エディタ（ProseMirror）も同じく断る）
+      if (marks.some((m) => m.type === mark.value.type)) {
+        return notAllowed("INVALID_STRUCTURE", `${path}.marks[${i}]`);
+      }
       marks.push(mark.value);
     }
     if (marks.length > 0) node.marks = Object.freeze(marks);
@@ -368,14 +372,14 @@ function isPlainObject(value: unknown): value is Json {
 }
 
 /**
- * リンク先は http / https だけ。ブラウザと同じ規則（WHATWG URL）で読むので、
- * `JAVASCRIPT:` や前後の空白・途中のタブで見た目をごまかしたものも同じように判定できる
+ * リンク先は `http://` か `https://` で始まるものだけ（設計書 §5.2）。始まりの文字で判定したうえで、URL として読めるかも確かめる。
+ * `https:/my/settings` や `https:evil.com` は URL としては読めても、ブラウザでは自サイトへの相対リンクになるので断る
  */
 function isHttpUrl(value: unknown): boolean {
-  if (typeof value !== "string") return false;
+  if (typeof value !== "string" || !/^https?:\/\//i.test(value)) return false;
   try {
-    const { protocol } = new URL(value);
-    return protocol === "http:" || protocol === "https:";
+    new URL(value);
+    return true;
   } catch {
     return false;
   }

@@ -87,6 +87,24 @@ describe("ProjectStory", () => {
       ["data: のリンク", link("data:text/html,<script>alert(1)</script>"), "INVALID_LINK_HREF"],
       ["相対 URL のリンク", link("/my/projects"), "INVALID_LINK_HREF"],
       [
+        "// の無い https（ブラウザでは相対リンク）",
+        link("https:/my/settings"),
+        "INVALID_LINK_HREF",
+      ],
+      ["// の無い https（ホスト名だけ）", link("https:evil.com"), "INVALID_LINK_HREF"],
+      [
+        "リンクの中のリンク（同じ種類の装飾が 2 つ）",
+        doc(
+          p(
+            text("x", [
+              { type: "link", attrs: { href: "https://a.jp" } },
+              { type: "link", attrs: { href: "https://b.jp" } },
+            ])
+          )
+        ),
+        "INVALID_STRUCTURE",
+      ],
+      [
         "リンクの target 属性",
         doc(p(text("x", [{ type: "link", attrs: { href: "https://a.jp", target: "_blank" } }]))),
         "UNSUPPORTED_ATTRIBUTE",
@@ -105,6 +123,21 @@ describe("ProjectStory", () => {
         "UNSUPPORTED_NODE",
       ],
       ["h1", doc(h(1, "大見出し")), "INVALID_ATTRIBUTE_VALUE"],
+      [
+        "文字列の見出しの level",
+        doc(h("2" as unknown as number, "見出し")),
+        "INVALID_ATTRIBUTE_VALUE",
+      ],
+      ...[-1, 1.5, "3"].map((start): [string, unknown, string] => [
+        `番号付きリストの start（${JSON.stringify(start)}）`,
+        doc({ type: "orderedList", attrs: { start }, content: [li(p(text("a")))] }),
+        "INVALID_ATTRIBUTE_VALUE",
+      ]),
+      [
+        "知らない属性（値が null でも断る。Tiptap の番号付きリストの既定の type）",
+        doc({ type: "orderedList", attrs: { start: 1, type: null }, content: [] }),
+        "UNSUPPORTED_ATTRIBUTE",
+      ],
       [
         "両端そろえ",
         doc({ type: "paragraph", attrs: { textAlign: "justify" } }),
@@ -130,6 +163,22 @@ describe("ProjectStory", () => {
         "INVALID_STRUCTURE",
       ],
       ["知らないキー（html）", doc({ type: "paragraph", html: "<b>a</b>" }), "INVALID_STRUCTURE"],
+      [
+        "要素の __proto__ キー",
+        JSON.parse('{"type":"doc","content":[{"type":"paragraph","__proto__":{"x":1}}]}'),
+        "INVALID_STRUCTURE",
+      ],
+      [
+        "属性の __proto__ キー",
+        JSON.parse('{"type":"doc","content":[{"type":"paragraph","attrs":{"__proto__":{}}}]}'),
+        "UNSUPPORTED_ATTRIBUTE",
+      ],
+      [
+        "子を持てない要素（画像）の content",
+        doc({ ...img(`${STORAGE}/a.png`), content: [] }),
+        "INVALID_STRUCTURE",
+      ],
+      ["文字以外の要素の text", doc({ type: "paragraph", text: "a" }), "INVALID_STRUCTURE"],
       ["空の文字", doc(p(text(""))), "INVALID_STRUCTURE"],
       ["文書でない最上位（段落）", p(text("a")), "INVALID_STRUCTURE"],
       ["オブジェクトでない値（文字列）", "<p>a</p>", "INVALID_STRUCTURE"],
@@ -152,10 +201,12 @@ describe("ProjectStory", () => {
       });
     });
 
-    it("入れ子が深すぎる文書はエラー", () => {
-      let list: unknown = ul(li(p(text("a"))));
-      for (let i = 0; i < PROJECT_STORY_LIMITS.depth; i += 1) list = ul(li(list));
-      const result = create(doc(list));
+    it("入れ子が深すぎる文書はエラー（リストは 8 段まで通り、9 段で断る）", () => {
+      // 文書 > (リスト > 項目) × n > 段落 > 文字 なので、文字の深さは 2n + 3
+      const nested = (n: number): unknown => (n === 0 ? p(text("a")) : ul(li(nested(n - 1))));
+      expect(2 * 8 + 3).toBeLessThanOrEqual(PROJECT_STORY_LIMITS.depth);
+      expect(create(doc(nested(8))).ok).toBe(true);
+      const result = create(doc(nested(9)));
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).toMatchObject({ reason: "TOO_DEEP" });
     });
@@ -208,14 +259,14 @@ describe("ProjectStory", () => {
 
   describe("fromPlainText", () => {
     it("1 行を 1 段落にし、空の行は段落の区切りとして捨てる", () => {
-      const result = ProjectStory.fromPlainText("一行目\r\n二行目\n\n \n　字下げ\n");
+      const result = ProjectStory.fromPlainText("一行目\r\n二行目\n\n \n\u3000字下げ\n");
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.toJSON()).toEqual(
           doc(
             { type: "paragraph", content: [{ type: "text", text: "一行目" }] },
             { type: "paragraph", content: [{ type: "text", text: "二行目" }] },
-            { type: "paragraph", content: [{ type: "text", text: "　字下げ" }] }
+            { type: "paragraph", content: [{ type: "text", text: "\u3000字下げ" }] }
           )
         );
       }
@@ -245,12 +296,14 @@ describe("ProjectStory", () => {
     it("見出しだけ・空白だけの文書は未入力", () => {
       expect(filled(doc())).toBe(false);
       expect(filled(doc(...headings))).toBe(false);
-      expect(filled(doc(...headings, p(text(" 　")), p(), ul(li(p()))))).toBe(false);
+      expect(filled(doc(...headings, p(text(" \u3000")), p(), ul(li(p()))))).toBe(false);
+      expect(filled(doc(...headings, ul(li(h(3, "リストの中の見出し")))))).toBe(false);
     });
 
     it.each([
       ["段落の文字", p(text("畑を耕したい"))],
       ["リストの中の文字", ul(li(p(text("毎週土曜"))))],
+      ["リストの中の画像", ul(li(img(`${STORAGE}/a.png`)))],
       ["画像", img(`${STORAGE}/a.png`)],
       ["動画", yt("dQw4w9WgXcQ")],
     ])("見出しのほかに%sがあれば入力済み", (_, block) => {
