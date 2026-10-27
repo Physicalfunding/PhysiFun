@@ -3,7 +3,7 @@
 > 作成: 2026-10-17 / 状態: P0〜P4 完了、P5・P6 実装中
 > 2026-10-17 改訂: main の変更（`.docs/` → `docs/` 再配置、Prisma 撤去、Vitest 統一、`packages/server-shared` 追加）に合わせて更新
 > 2026-10-26 改訂: P5（クラウドで🟡まで開発する）を追加し、4 章の許可リストを🟡・🔴に分けた（#327）
-> 2026-10-28 改訂: P6（クラウドで止めるものを Docker が要る作業とガード・CI に絞る）を追加し、3 章の原則 3 と 4 章を書き直した（#341）
+> 2026-10-28 改訂: P6（クラウドで止めるものを Docker が要る作業とガード・CI に絞る・Codex のレビュー）を追加し、3 章の原則 3 と 4 章を書き直した（#341）
 > 対象: `.claude/`（skills・agents・workflows・hooks・settings）、ESLint、CI のうち AI 開発に関わる部分
 
 ---
@@ -85,6 +85,7 @@ apps/*/public/*
 | 文脈 | `CLAUDE.md` | ✅ | ✅ | 前提・禁止事項・自律範囲の案内 |
 | 手順 | skills（`dev` / `cloud-dev` / `issue` / `split-issue` / `add-usecase` / `cloud-plan`） | ✅（`dev`） | ✅（`cloud-dev`） | 定型作業の手順。Issue の開発はローカルで `dev`、クラウドで `cloud-dev` |
 | 専門レビュー | agents ＋ `full-review` workflow | ✅ | ✅ | 機械で判定できない観点（ビジネスロジックの置き場など） |
+| 別の AI のレビュー | Codex CLI（`codex review`）。`dev` の手順 13b・`cloud-dev` の手順 12 | ✅（CLI があれば） | ✅（CLI と API キーがあれば） | 同じモデルどうしの見落としを減らす。使えなければ飛ばし、Claude のレビューだけで進める |
 | 書き込み直後 | PostToolUse hook `lint-on-edit` | ✅ | ✅ | 書いたファイルに ESLint・Prettier |
 | 書き込み直前 | PreToolUse hook `cloud-scope-guard` ＋ git hook | 何もしない | ✅ | 🔴（許可リストの「常に拒否」）への書き込み・commit・push を拒否 |
 | 終了時 | Stop hook `verify-on-stop` | ✅ | ✅ | `bun run check` が通るまで完了させない |
@@ -105,7 +106,7 @@ apps/*/public/*
 | P3 ルールを CI に移す | P2 |
 | P4 自律ループの強化 | P2・P3 |
 | P5 クラウドで🟡まで開発する | P1・P4 |
-| P6 クラウドで止めるものを絞る | P5 |
+| P6 クラウドで止めるものを絞る・Codex のレビュー | P5 |
 
 ### P0：土台・すぐ効く改善
 
@@ -233,7 +234,7 @@ apps/*/public/*
 
 **変更内容**
 
-1. **`.claude/cloud-allowlist`** — 🟡として `apps/*/src/*`・`packages/*/src/*` を許可し、その中の認証・DB クライアント・cron・セキュリティ関連を「常に拒否」で🔴に戻す（4 章）。DB スキーマ（`atlas/`）・依存（`package.json`）・実行環境（`next.config.ts`・`vercel.json`）は許可リストに書かないので🔴のまま。
+1. **`.claude/cloud-allowlist`** — 🟡として `apps/*/src/*`・`packages/*/src/*` を許可し、その中の認証・DB クライアント・cron・セキュリティ関連を「常に拒否」で🔴に戻す（4 章）。DB スキーマ（`atlas/`）・依存（`package.json`）・実行環境（`next.config.ts`・`vercel.json`）は許可リストに書かないので🔴のまま。※P6 で、認証・DB クライアント・依存・実行環境も🟡にした。
 2. **`cloud-dev` skill** — クラウド専用の開発フロー。Issue → 区分の判定（`blocked_files` で変更予定のパスを機械的に判定）→ 質問と実装計画をまとめて出して**ここだけユーザーの OK を待つ**（変更がすべて🟢なら待たない。P1 と同じ）→ 実装 → 検証 → 受け入れ要件の確認 → `full-review` → push と REST での PR 作成 → PR の見張り（CI の失敗を直す）→ 独立レビューと指摘対応（「修正する」だけ直し、「見送る」「要確認」は PR コメント）。🔴が含まれれば `cloud-plan` に切り替える。PR body テンプレートなど `dev` と共通の参考情報は `dev` skill を参照する。
 3. **`dev` skill をローカル専用に** — 「実行環境による分岐」の節と REST での PR 作成を外し、クラウドでは `cloud-dev` を使うと書く。
 4. **`cloud-plan` skill の対象を🔴だけに**、`split-issue` skill の注意書きを「🟢・🟡は `cloud-dev`、🔴は `cloud-plan`」にする。
@@ -251,9 +252,10 @@ apps/*/public/*
 - 実際のクラウドセッションで、🟡の小さな Issue を `/cloud-dev` で PR まで進められる（結果はここに追記する。P1 と同じやり方）
 - 🔴のファイルの編集・commit・push は引き続き拒否される
 
-### P6：クラウドで止めるものを絞る（#341）
+### P6：クラウドで止めるものを絞る・Codex のレビュー（#341）
 
 **動機**：P5 のあとも、🔴の多くは「ローカルなら画面の前で確かめられる」が理由だった。でも確認の手順（実装計画の OK・`full-review`・独立レビュー・マージ前の確認）はクラウドでも同じで、分ける理由にならない。#301 S-2 では、テスト用の依存と `vitest.config.ts` を変えるだけで、クラウドから進められなくなった。クラウドで技術的にできないのは Docker が要る作業だけ。ガードと CI だけは、クラウドの Claude が自分で外せないように残す。
+あわせて、独立レビューに Claude とは別の AI（Codex）を足す。以前は Codex プラグインの `/codex:review` を Claude のレビューと並行で動かしていた（Tunely の `dev` skill に残っている）が、今のハーネスには無かった（#258 で git 管理外の `.claude/` を消したときに失った可能性がある）。
 
 **変更内容**
 
@@ -261,11 +263,23 @@ apps/*/public/*
 2. **🟢の定義** — `*.md` のうち `CLAUDE.md` と `.claude/` の下（skills・agents）は🟡にする。Claude の動き方を変えるので、実装計画の OK を挟む。
 3. **skills・`CLAUDE.md`** — `cloud-dev`・`cloud-plan`・`split-issue` の🔴の説明を新しい範囲に合わせる。`cloud-dev` に「依存を足すときは `bun.lock` も一緒にコミットする」を書く。
 4. **hook のテスト** — 以前は🔴だったもの（`package.json`・`bun.lock`・`vitest.config.ts`・`next.config.ts`・`auth.ts`・`CLAUDE.md`・`.claude/skills/` など）が許可され、新しい🔴（`.claude/hooks/` の下の `__tests__/` を含む）が拒否されるケースにする。
+5. **Codex のレビュー** — `dev` の手順 13 で、Claude のレビュー（Agent）と並行に `codex review --base origin/main` をバックグラウンドで動かし、結果を PR にコメントで残す。手順 15 の分類の表に、どちらのレビューの指摘かを書く。`cloud-dev` の手順 12 も同じで、Codex CLI と API キーが無ければ飛ばす。
+   - プラグインの `/codex:review` ではなく CLI を直接呼ぶ。プラグインは同じ組み込みのレビューを包んだもので、`~/.claude` にしか無くクラウドでは使えない。CLI ならローカルとクラウドで手順を 1 つにできる（原則 4）
+   - 使えたかどうかは終了コードで判定する。`codex login status` が通っても、CLI が古くて `~/.codex/config.toml` のモデルに対応しておらず失敗することがある（0.145.0 で起きた。0.164.0 で解消）
+   - `--base` と指示文（PROMPT）は一緒に渡せない。ローカルでは `~/.codex/AGENTS.md` の影響で日本語で返るが、クラウドでは英語で返ることがある
+
+**クラウドで Codex を動かすための環境の設定（repo の外。ユーザーが行う）**
+
+- API キー: 環境の設定の Network secrets か環境変数に `OPENAI_API_KEY` を入れる（`cloud-dev` が `codex login --with-api-key` でログインする）
+- ネットワーク: `api.openai.com` への接続を許可する（既定では中継に断られる）
+- CLI: 環境のセットアップスクリプトで `npm install -g @openai/codex` を入れる（npm にはつながる）
 
 **完了条件**
 
 - hook のテストで、新しい範囲の許可・拒否が期待どおり
 - 実際のクラウドセッションで、依存か設定を変える小さな Issue を `/cloud-dev` で PR まで進められる（結果はここに追記する）
+- ローカルの `/dev` で、Codex のレビューが PR にコメントで残る。Codex を使えない環境では飛ばして Claude のレビューだけで進む
+- 上の環境の設定をしたクラウドセッションで、`cloud-dev` が Codex のレビューを PR にコメントで残す（結果はここに追記する）
 
 ---
 

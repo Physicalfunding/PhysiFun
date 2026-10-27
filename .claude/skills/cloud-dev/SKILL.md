@@ -147,9 +147,18 @@ PR のアクティビティを購読し（`subscribe_pr_activity`）、CI の失
 
 ### 12. 独立レビューと指摘への対応
 
-1. `dev` skill の手順 13 と同じく、Agent tool でレビューをバックグラウンドで起動する（PR 番号と Issue 番号を渡し、実装者のコンテキストは引き継がない。受け入れ要件も別の目で確かめさせる）
+1. `dev` skill の手順 13 と同じく、Claude と Codex のレビューをバックグラウンドで並行に起動する
+   - Claude（`dev` の 13a）: Agent tool で起動する（PR 番号と Issue 番号を渡し、実装者のコンテキストは引き継がない。受け入れ要件も別の目で確かめさせる）
+   - Codex（`dev` の 13b）: Codex CLI と API キーがあるときだけ動かす。先に次で確かめ、何か出たら飛ばす
+
+     ```bash
+     command -v codex >/dev/null || echo "Codex CLI が無い"
+     codex login status >/dev/null 2>&1 || { [[ -n "${OPENAI_API_KEY:-}" ]] && printenv OPENAI_API_KEY | codex login --with-api-key >/dev/null; } || echo "Codex にログインできない（OPENAI_API_KEY が無い）"
+     ```
+
+     出力のファイルは `/tmp/cloud-dev-{番号}-codex.md`・`.log` にする。実行して失敗したとき（`api.openai.com` につながらない、など）も飛ばす。飛ばしたことと理由は、手順 3 の PR コメントに書く。クラウドの環境の設定は `docs/guides/ai-harness.md` の P6
 2. 完了したら `dev` skill の手順 14 のコマンド（REST）で PR のコメント・レビューを取得する
-3. 各指摘を `dev` skill の手順 15 の表（修正する / 見送る / 要確認）で分類する。分類の合意は待たない
+3. 各指摘を `dev` skill の手順 15 の表（修正する / 見送る / 要確認。どちらのレビューの指摘かも書く）で分類する。分類の合意は待たない
    - **修正する** → 直して手順 7 を通し、`fix: レビュー指摘対応` でコミットして push する
    - **見送る**・**要確認** → 理由（要確認は判断してほしい点）を PR にコメントで残す
 

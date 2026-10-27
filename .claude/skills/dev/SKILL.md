@@ -196,7 +196,11 @@ gh pr create --title "タイトル" --body "body" --base main
 
 PR URL を伝える。
 
-### 13. レビューを自動発火
+### 13. レビューを自動発火（Claude と Codex を並行で）
+
+2 つのレビューを、同じメッセージでバックグラウンドに起動する。Claude とは別の AI（Codex）にも見せて、同じモデルどうしの見落としを減らす。
+
+#### 13a. Claude のレビュー
 
 Agent tool を使ってレビューを別エージェントとしてバックグラウンドで起動する。
 PR 番号と Issue 番号を渡す。実装者のコンテキストは引き継がない（独立した視点でレビューさせるため）。
@@ -210,9 +214,27 @@ Agent({
 })
 ```
 
+#### 13b. Codex のレビュー
+
+Codex CLI の `codex review` で、`origin/main` との差分をレビューさせる。まず `codex` があるかを確かめ、あれば 2 行目を Bash の `run_in_background: true` で起動する。最終のレビューは stdout、途中経過は stderr に出る。
+
+```bash
+command -v codex >/dev/null || echo "Codex CLI が無い"
+git fetch -q origin main && codex review --base origin/main > /tmp/dev-{PR番号}-codex.md 2> /tmp/dev-{PR番号}-codex.log
+```
+
+- Codex CLI が無いときは、そう伝えて Claude のレビューだけで進める（入れるなら `npm install -g @openai/codex` と `codex login`）
+- 終了コードが 0 でないとき（ログインしていない、CLI が古くて設定のモデルに対応していない、など）も、`.log` の末尾から理由を伝えて Claude のレビューだけで進める
+- 終わったら、結果を PR にコメントで残す（手順 14 で Claude の指摘と一緒に取得できるように）。出力のパスは絶対パスなので、repo ルートを削る
+
+  ```bash
+  { echo "## Codex のレビュー（\`codex review --base origin/main\`）"; echo; sed "s|$(git rev-parse --show-toplevel)/||g" /tmp/dev-{PR番号}-codex.md; } > /tmp/dev-{PR番号}-codex-comment.md
+  gh api repos/Physicalfunding/PhysiFun/issues/{PR番号}/comments -F body=@/tmp/dev-{PR番号}-codex-comment.md --jq .html_url
+  ```
+
 ### 14. レビュー結果の取得
 
-レビュー完了通知を受けたら、PR コメントを取得する（`gh pr view --comments` は手順 1 と同じ理由でエラーになるため、REST を使う）：
+両方のレビュー（Codex を飛ばしたときは Claude だけ）の完了通知を受けたら、PR コメントを取得する（`gh pr view --comments` は手順 1 と同じ理由でエラーになるため、REST を使う）：
 
 ```bash
 gh api repos/Physicalfunding/PhysiFun/issues/{PR番号}/comments --jq '.[] | .user.login + ": " + .body'                              # 会話のコメント
@@ -222,7 +244,7 @@ gh api repos/Physicalfunding/PhysiFun/pulls/{PR番号}/comments --jq '.[] | "\(.
 
 ### 15. 指摘の吟味
 
-取得したレビュー結果の各指摘を以下の基準で分類する：
+取得したレビュー結果（Claude と Codex）の各指摘を以下の基準で分類する。表には、どちらのレビューの指摘か（Claude / Codex / 両方）も書く。同じ指摘は 1 行にまとめる。Codex の指摘が英語なら、表では日本語にする：
 
 | 分類 | 基準 | アクション |
 |---|---|---|
