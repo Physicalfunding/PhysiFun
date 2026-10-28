@@ -15,6 +15,7 @@ import {
 import type { AddSchedulePort } from "../ports/AddSchedulePort";
 import type { CreateRecruitmentPort } from "../ports/CreateRecruitmentPort";
 import type { DeleteRecruitmentPort } from "../ports/DeleteRecruitmentPort";
+import type { ListRecruitmentsPort } from "../ports/ListRecruitmentsPort";
 import type { RemoveSchedulePort } from "../ports/RemoveSchedulePort";
 import type { UpdateRecruitmentPort } from "../ports/UpdateRecruitmentPort";
 import type { UpdateSchedulePort } from "../ports/UpdateSchedulePort";
@@ -86,10 +87,11 @@ export function createRecruitment(
 // ==================== インメモリ実装 ====================
 
 /**
- * 6 本のユースケースの port をまとめて満たすインメモリ実装。書き込みは呼び出しを記録するだけ。
+ * 募集のユースケースの port をまとめて満たすインメモリ実装。書き込みは呼び出しを記録するだけ。
  */
 export class InMemoryRecruitmentPort
   implements
+    ListRecruitmentsPort,
     CreateRecruitmentPort,
     UpdateRecruitmentPort,
     DeleteRecruitmentPort,
@@ -118,6 +120,10 @@ export class InMemoryRecruitmentPort
 
   async findById(id: SupportRecruitmentId): Promise<SupportRecruitment | null> {
     return this.recruitments.find((r) => r.id.equals(id)) ?? null;
+  }
+
+  async findByProjectId(id: ProjectId): Promise<SupportRecruitment[]> {
+    return this.recruitments.filter((r) => r.projectId.equals(id));
   }
 
   async create(recruitment: SupportRecruitment): Promise<void> {

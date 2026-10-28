@@ -200,6 +200,17 @@ export type { ForceUnpublishProjectPort } from "./project/ports/ForceUnpublishPr
 // ProjectOwnerPort（募集の port で共通）
 export type { ProjectOwnerPort } from "./recruitment/ports/ProjectOwnerPort";
 
+// ListRecruitmentsUseCase（#218）
+export {
+  ListRecruitmentsUseCase,
+  type ListRecruitmentsInput,
+  type ListRecruitmentsOutput,
+  type ListRecruitmentsError,
+  type RecruitmentDTO,
+  type RecruitmentScheduleDTO,
+} from "./recruitment/ListRecruitmentsUseCase";
+export type { ListRecruitmentsPort } from "./recruitment/ports/ListRecruitmentsPort";
+
 // CreateRecruitmentUseCase
 export {
   CreateRecruitmentUseCase,

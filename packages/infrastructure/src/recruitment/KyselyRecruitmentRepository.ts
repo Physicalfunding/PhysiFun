@@ -19,7 +19,7 @@ import { reconstructRecruitment, reconstructRecruitmentSchedule } from "./recons
  * Kysely ベースの SupportRecruitment 集約のリポジトリ
  *
  * domain の `RecruitmentRepository` と、所有者チェック用の `ProjectOwnerPort` を実装する
- * （募集のユースケース 6 本の port を、これ 1 つで満たす）。
+ * （募集のユースケースの port を、これ 1 つですべて満たす）。
  *
  * ## 開催日（`recruitment_schedules.date`）
  * `date` 型は、pg の既定の変換だと Node のタイムゾーンの 0 時の `Date` になり、タイムゾーンで日付がずれる。
