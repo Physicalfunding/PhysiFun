@@ -1074,9 +1074,9 @@
         },
         {
           "name": "story",
-          "type": "text",
+          "type": "jsonb",
           "nullable": true,
-          "comment": "本文（Markdown。最大 10000 文字。公開申請に必須）。ドメインでは body"
+          "comment": "本文（ストーリー）。見たまま編集のエディタの文書データ（JSON）で、許可した要素・装飾・属性だけを持つ。上限（表示される文字の数・画像・動画・大きさ）はドメインの PROJECT_STORY_LIMITS。公開申請に必須（見出し以外の文字か、画像か動画が要る）。ドメインでは body（値オブジェクト ProjectStory）"
         },
         {
           "name": "leaderIntro",
