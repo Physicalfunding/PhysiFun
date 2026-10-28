@@ -40,7 +40,7 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
 
   const fetchRecruitments = useCallback(async () => {
     try {
-      const res = await fetch(`/api/my/projects/${projectId}/recruitments`);
+      const res = await fetch(`/api/my/projects/${encodeURIComponent(projectId)}/recruitments`);
       const json = await res.json();
       if (!res.ok) {
         setError(json.error?.message || "募集の取得に失敗しました");
@@ -104,13 +104,13 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
     const result =
       formTarget.mode === "create"
         ? await mutate(
-            `/api/my/projects/${projectId}/recruitments`,
+            `/api/my/projects/${encodeURIComponent(projectId)}/recruitments`,
             "POST",
             "募集を作成しました",
             values
           )
         : await mutate(
-            `/api/my/recruitments/${formTarget.recruitment.id}`,
+            `/api/my/recruitments/${encodeURIComponent(formTarget.recruitment.id)}`,
             "PATCH",
             "募集を更新しました",
             values
@@ -123,7 +123,11 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
-    await mutate(`/api/my/recruitments/${deleteTarget.id}`, "DELETE", "募集を削除しました");
+    await mutate(
+      `/api/my/recruitments/${encodeURIComponent(deleteTarget.id)}`,
+      "DELETE",
+      "募集を削除しました"
+    );
     setIsDeleting(false);
     setDeleteTarget(null);
   };

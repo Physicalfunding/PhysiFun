@@ -3,6 +3,7 @@ import {
   AddScheduleUseCase,
   CreateRecruitmentUseCase,
   DeleteRecruitmentUseCase,
+  ListRecruitmentsUseCase,
   RemoveScheduleUseCase,
   UpdateRecruitmentUseCase,
   UpdateScheduleUseCase,
@@ -442,7 +443,7 @@ describe("KyselyRecruitmentRepository integration", () => {
   });
 
   describe("ユースケースとつなぐ（A-2 の port をすべて満たす）", () => {
-    it("募集の作成から削除まで、6 本のユースケースが通る", async () => {
+    it("募集の作成から削除まで、募集のユースケースがすべて通る", async () => {
       const { leaderId, projectId } = await seedProject();
       const accountId = leaderId;
 
@@ -497,6 +498,19 @@ describe("KyselyRecruitmentRepository integration", () => {
       expect(afterUpdate.schedules.map((s) => [s.date.toString(), s.approvalMode])).toEqual([
         ["2099-01-11", "MANUAL"],
       ]);
+
+      const listed = unwrap(
+        await new ListRecruitmentsUseCase(repository).execute({
+          accountId,
+          projectId: projectId.toString(),
+        })
+      );
+      expect(
+        listed.recruitments.map((r) => [
+          r.title,
+          r.schedules.map((s) => [s.date, s.startTime, s.endTime, s.approvalMode]),
+        ])
+      ).toEqual([["畑の草刈りと収穫", [["2099-01-11", "10:00", "15:00", "MANUAL"]]]]);
 
       unwrap(
         await new RemoveScheduleUseCase(repository).execute({
