@@ -224,7 +224,7 @@ PhysiFun/
 └── docs/                        # ドキュメント（docs/README.md が地図）
 ```
 
-`<context>` は `account` / `admin-account` / `leader-application` / `project` / `outbox`（application・infrastructure のみ）。`recruitment` は domain・application まで（infrastructure は #217 で追加予定）。
+`<context>` は `account` / `admin-account` / `leader-application` / `project` / `recruitment` / `outbox`（application・infrastructure のみ）。
 
 > 💡 infrastructure の実装は Kysely 実装も含めてすべて `@physifun/infrastructure` から import する（#256 でサブバレルを統合）。クライアントコンポーネントからは型だけを import する（値を import すると pg / Kysely がクライアントのバンドルに入る）。
 
@@ -437,7 +437,7 @@ flowchart TB
 
 **初回リリース → 一般公開の移行**は**ランタイムフィーチャーフラグではなくコード変更リリース**で行う方針（`docs/product.md` 参照）。
 
-> 💡 `SupportRecruitment` / `RecruitmentSchedule` は **application 層まで**実装済みで、インフラ層・UI はまだ無い（#212）。`SupportTicket` は schema（`atlas/schema.sql`）のみ。詳細は `02_domain-model.md` §8、`03_data-model.md` §1 参照。
+> 💡 `SupportRecruitment` / `RecruitmentSchedule` は **インフラ層まで**実装済みで、API・UI はまだ無い（#212）。`SupportTicket` は schema（`atlas/schema.sql`）のみ。詳細は `02_domain-model.md` §8、`03_data-model.md` §1 参照。
 
 ---
 
@@ -470,3 +470,4 @@ flowchart TB
 |---|---|---|
 | 2026-05-09 | 初稿作成（初回リリース実装時点のシステム俯瞰、インフラ図・monorepo・レイヤー・Cron・環境変数分離・将来展望） | 設計チーム |
 | 2026-10-16 | ドキュメント棚卸し：旧 `.docs/tech.md` / `structure.md` を吸収（技術スタック・ディレクトリ構成・レイヤー責務）、Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一 | 設計チーム |
+| 2026-10-28 | サポート募集のインフラ層の実装（#217）を反映（`recruitment` の context と実装状況） | 設計チーム |

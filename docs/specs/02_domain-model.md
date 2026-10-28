@@ -26,7 +26,7 @@ PhysiFun のドメイン（`packages/domain/`）と、それを動かすユー�
 | `LeaderApplication` | リーダー応募と運営の審査 | `leader-application/` | ✅ |
 | `Account` | 一般ユーザー（サポーター / リーダー） | `account/`（値オブジェクトのみ） | ⚠️ 最小構成（§5） |
 | `AdminAccount` | 運営アカウント | `admin-account/` | ✅ |
-| `SupportRecruitment`（＋`RecruitmentSchedule`） | サポート募集と日程 | `recruitment/` | 🚧 ドメインと application まで（§8） |
+| `SupportRecruitment`（＋`RecruitmentSchedule`） | サポート募集と日程 | `recruitment/` | 🚧 ドメイン・application・インフラまで（§8） |
 
 ```mermaid
 classDiagram
@@ -107,7 +107,7 @@ classDiagram
 | infrastructure | application の Port を Kysely で実装し、集約・審査履歴・Outbox を **1 つのトランザクション** で書く | `KyselyProjectCommandAdapter` |
 
 - **保存は、ユースケースごとの Port を通す**（`packages/application/src/*/ports/`）。例: `ApproveProjectPublicationPort`
-- ⚠️ domain の `repositories/` にあるインターフェースのうち、実装されて使われているのは `AdminAccountRepository` だけ。`ProjectRepository` / `ProjectReviewFeedbackRepository` / `LeaderApplicationRepository` は定義だけで、どこからも使われていない（§10）。`RecruitmentRepository` は、application の port がここから `Pick` して使う（§8.4。実装は #217）
+- ⚠️ domain の `repositories/` にあるインターフェースのうち、実装があるのは `AdminAccountRepository` と `RecruitmentRepository` だけ。`ProjectRepository` / `ProjectReviewFeedbackRepository` / `LeaderApplicationRepository` は定義だけで、どこからも使われていない（§10）。`RecruitmentRepository` は、application の port がここから `Pick` して使う（§8.4。実装は infrastructure の `KyselyRecruitmentRepository`）
 - 運営アカウントの操作（作成・無効化・有効化）には application のユースケースが無い。`apps/admin` の Route Handler が、エンティティとリポジトリを直接使う
 
 ---
@@ -390,7 +390,7 @@ stateDiagram-v2
 
 - 定義: `packages/domain/src/recruitment/entities/SupportRecruitment.ts`（ルート）/ `RecruitmentSchedule.ts`（子）。上限は `SUPPORT_RECRUITMENT_LIMITS` / `CAPACITY_PER_HOUR_LIMITS`
 - 列の意味: [`docs/db/viewpoint-recruitment.md`](../db/viewpoint-recruitment.md)
-- 実装状況: ドメイン（#215）と application（#216）まで。インフラ（#217）・UI（#218 / #219）はこれから
+- 実装状況: ドメイン（#215）・application（#216）・インフラ（#217。`KyselyRecruitmentRepository`）まで。UI（#218 / #219）はこれから
 - **募集の種類**: `ACTIVITY`（活動参加）だけ。スキル・モノ募集は enum の追加を含めて別に設計する（#291）
 - `Project` からは参照しない（募集側が `projectId` を持つ）
 
@@ -424,6 +424,7 @@ classDiagram
 - **保存は日程 1 件ずつ**（`RecruitmentRepository` の `addSchedule` / `updateSchedule` / `removeSchedule`）。集約をまるごと保存すると、同じ募集に別々の日程を同時に追加したとき、後から保存した側が、先に追加された日程を「消された」と見なして消してしまう（更新の取りこぼし）
 - **同じ日付を同時に追加したとき**: どちらもルートの検証を通ってしまうので、DB の unique（`supportRecruitmentId` + `date`）が止め、リポジトリが `ScheduleDateConflictError` を投げる
 - **リポジトリ**: `RecruitmentRepository`（domain）。application の port は、ここから必要なメソッドを `Pick` して組む（§10 の「使われていないリポジトリ」を増やさないため）
+- **同時に削除されたとき**: 募集を読んでから保存するまでの間に、募集・日程・プロジェクトが別のリクエストで消されることがある。リポジトリは例外にせず、何もしないで終える（更新・削除が 0 行だったとき、消えた募集への日程の追加・消えたプロジェクトへの募集の作成で外部キー違反になったとき）。どちらも「保存した直後に消された」のと同じ結果になるので、ユースケースは成功を返してよい（#217）
 - `SupportTicket`（サポーターの申し込み）は別の集約にする予定（サポーターが起点で作成・取り消しするため）
 
 > 💡 2 つの別集約（日付の重複は DB の unique だけで守る）にする案もあった。日付のルールをドメインで持てる 1 集約を選び、保存だけを日程単位にした（#215）。
@@ -538,4 +539,5 @@ port はユースケースごとに、`RecruitmentRepository` から使うメソ
 | 2026-10-25 | サポート募集のドメイン層を実装（#215）。§8 を「未実装」から `SupportRecruitment` 集約の説明に書き換えた（集約の境界・日程単位の保存・不変条件・ユースケースに任せるルール） | 設計チーム |
 | 2026-10-26 | サポート募集のユースケースを実装（#216）。§8.4 を「#216 で決める」からユースケースが守るルールに書き換えた（公開状態は問わない・過去の日付には追加・変更できない・ユースケースの一覧） | 設計チーム |
 | 2026-10-27 | ストーリーの文書データの値オブジェクト `ProjectStory` を追加（#313）。§3.8 に許可するもの・上限の種類・文字だけの本文の変換・「入力済み」の判定を書いた（`Project` へのつなぎ込みは #315） | 設計チーム |
+| 2026-10-28 | サポート募集のインフラ層を実装（#217）。§8.2 に同時に削除されたときの扱いを足し、実装状況を更新した | 設計チーム |
 | 2026-10-28 | `Project.body` を `ProjectStory` にした（#315）。§3.8 に作る場所（ユースケース）・DB からの復元（検査しない）を、§3.2 に公開申請の本文の判定を書いた | 設計チーム |

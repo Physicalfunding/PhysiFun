@@ -13,6 +13,9 @@ import type { SupportRecruitmentId } from "../value-objects/SupportRecruitmentId
  * 日程のメソッドには、ルートのメソッドが返した日程を渡す。実装は日程の ID と `supportRecruitmentId` の
  * 両方で行を絞り、別の募集の日程を書き換え・削除しないようにする。
  *
+ * 読んでから保存するまでの間に、募集・日程・プロジェクトが別のリクエストで消されていたら、
+ * 書き込みのメソッドは例外にせず何もしない（「保存した直後に消された」のと同じ結果になるため。#217）。
+ *
  * application 層の port は、ここから必要なメソッドを `Pick` して組む（`02_domain-model.md` §8）。
  */
 export interface RecruitmentRepository {
@@ -22,29 +25,29 @@ export interface RecruitmentRepository {
   /** プロジェクトの募集を日程ごと取得する（作成日時の古い順）。 */
   findByProjectId(projectId: ProjectId): Promise<SupportRecruitment[]>;
 
-  /** 新しい募集を、持っている日程ごと保存する。 */
+  /** 新しい募集を、持っている日程ごと保存する。プロジェクトが消えていたら何もしない。 */
   create(recruitment: SupportRecruitment): Promise<void>;
 
-  /** 募集自身の項目（タイトル・説明・updatedAt）を更新する。日程は書かない。 */
+  /** 募集自身の項目（タイトル・説明・updatedAt）を更新する。日程は書かない。募集が消えていたら何もしない。 */
   update(recruitment: SupportRecruitment): Promise<void>;
 
-  /** 募集を削除する。日程も一緒に消える（DB の Cascade）。 */
+  /** 募集を削除する。日程も一緒に消える（DB の Cascade）。募集が消えていたら何もしない。 */
   delete(id: SupportRecruitmentId): Promise<void>;
 
   /**
-   * 日程を 1 件追加する。
+   * 日程を 1 件追加する。募集が消えていたら何もしない。
    *
    * @throws ScheduleDateConflictError 同じ募集に同じ日付の日程がすでにある（同時に追加されたとき）
    */
   addSchedule(schedule: RecruitmentSchedule): Promise<void>;
 
   /**
-   * 日程を 1 件更新する。
+   * 日程を 1 件更新する。日程が消えていたら何もしない。
    *
    * @throws ScheduleDateConflictError 変更後の日付の日程が、同じ募集にすでにある（同時に変更されたとき）
    */
   updateSchedule(schedule: RecruitmentSchedule): Promise<void>;
 
-  /** 日程を 1 件削除する。 */
+  /** 日程を 1 件削除する。日程が消えていたら何もしない。 */
   removeSchedule(schedule: RecruitmentSchedule): Promise<void>;
 }

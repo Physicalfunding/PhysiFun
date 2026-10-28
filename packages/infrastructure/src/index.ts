@@ -86,6 +86,9 @@ export type { DB as KyselyDB } from "./database/kysely/types";
 export { KyselyProjectQueryService } from "./project/KyselyProjectQueryService";
 export { KyselyProjectCommandAdapter } from "./project/KyselyProjectCommandAdapter";
 
+// recruitment ドメイン（#217）
+export { KyselyRecruitmentRepository } from "./recruitment/KyselyRecruitmentRepository";
+
 // leader-application ドメイン（#222）
 export { KyselyLeaderApplicationQueryService } from "./leader-application/KyselyLeaderApplicationQueryService";
 export {
