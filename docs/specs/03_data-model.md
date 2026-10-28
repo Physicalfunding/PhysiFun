@@ -36,9 +36,10 @@
 - `admin_accounts` への参照はすべて **Restrict**（監査履歴を物理削除から守る。運営アカウントは論理無効化のみ）
 - `admin_verification_tokens` は NextAuth の Magic Link 用トークン置き場で、FK を持たない
 
-**サポート募集まわりの注意（インフラ層は未実装。#217 で実装するときに見直す前提）:**
+**サポート募集まわりの注意:**
 
 - `recruitment_schedules.date` は `date` 型（JST のカレンダー日）。`startTime` / `endTime` は `"HH:MM"` 形式の文字列（JST）
+- `date` 型は、pg の既定の変換だと Node のタイムゾーンの 0 時の `Date` になり、日付がずれる。読むときは `to_char("date", 'YYYY-MM-DD')` で文字列にし、書くときも `"YYYY-MM-DD"` の文字列で渡す（`KyselyRecruitmentRepository`。#217）
 - `(supportRecruitmentId, date)` に unique 制約（1 募集 × 1 日 = 1 スケジュール）
 
 ---
@@ -54,7 +55,7 @@
 | `admin_accounts` | `AdminAccount` 集約 | |
 | `admin_sessions` / `admin_verification_tokens` | なし | NextAuth が管理 |
 | `admin_audit_logs` | なし | 運営アプリから直接書き込む |
-| `support_recruitments` / `recruitment_schedules` | `SupportRecruitment` 集約（子に `RecruitmentSchedule`） | `02_domain-model.md` §8。インフラ層は未実装（#217） |
+| `support_recruitments` / `recruitment_schedules` | `SupportRecruitment` 集約（子に `RecruitmentSchedule`） | `02_domain-model.md` §8。読み書きは `KyselyRecruitmentRepository` |
 | `support_tickets` | なし | 未実装（一般公開） |
 | `*_outbox_messages` | なし | infrastructure 層の Outbox |
 
@@ -69,7 +70,7 @@
 | `leader_applications.prefectureCode` + `municipality` | `ProjectDraft.location`（`ProjectLocation`） |
 | `recruitment_schedules.startTime` + `endTime` | `RecruitmentSchedule.timeRange`（`TimeRange`） |
 
-変換は `packages/infrastructure/src/project/reconstructProject.ts`（読み込み）と `KyselyProjectCommandAdapter.ts`（書き込み）で行う。
+変換は `packages/infrastructure/src/project/reconstructProject.ts`（読み込み）と `KyselyProjectCommandAdapter.ts`（書き込み）、募集は `src/recruitment/reconstructRecruitment.ts` と `KyselyRecruitmentRepository.ts` で行う。
 
 ---
 
@@ -196,3 +197,4 @@ stateDiagram-v2
 | 2026-10-16 | ドキュメント棚卸し：Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一、サポート募集の位置づけ（初回リリースでリーダー側を実装予定）を修正 | 設計チーム |
 | 2026-10-16 | 正本を `atlas/schema.sql` に変更（#228 / #229）。命名規則・型方針を実際の SQL 型に合わせて修正 | 設計チーム |
 | 2026-10-17 | 手書きの ER 図・列一覧・enum 一覧を、tbls の生成物（`docs/db/`）に置き換え（#261）。本書は設計の意図に絞った。実装とのズレ（モデル数、存在しないマイグレーション名、書き込まれていない reviewedBy 系の列）を修正 | 設計チーム |
+| 2026-10-28 | サポート募集のインフラ層の実装（#217）を反映。`date` 型の読み書きの仕方を書いた | 設計チーム |
