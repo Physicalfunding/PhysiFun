@@ -21,10 +21,6 @@ const OWNER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000001";
 const OTHER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000002";
 const PROJECT_ID_STR = "00000000-0000-4000-b000-000000000001";
 
-/** 本文の画像に使ってよい URL（自サイトの Storage の代わり） */
-const STORAGE = "https://abc.supabase.co/storage/v1/object/public/project-images";
-const isAllowedImageUrl = (url: string) => url.startsWith(`${STORAGE}/`);
-
 /** 文字（装飾つき）の段落だけの文書データ */
 function storyDoc(...inlines: unknown[]) {
   return { type: "doc", content: [{ type: "paragraph", content: inlines }] };
@@ -106,7 +102,7 @@ describe("UpdateProjectDraftUseCase", () => {
 
   beforeEach(() => {
     port = new InMemoryUpdateProjectDraftPort();
-    useCase = new UpdateProjectDraftUseCase(port, isAllowedImageUrl);
+    useCase = new UpdateProjectDraftUseCase(port);
   });
 
   // ---- ハッピーパス ----
@@ -374,7 +370,7 @@ describe("UpdateProjectDraftUseCase", () => {
 
   // ---- body（本文の文書データ） ----
 
-  it("許可した装飾と自サイトの画像だけの本文は、検査を通って保存される", async () => {
+  it("許可した要素と装飾だけの本文は、検査を通って保存される", async () => {
     port.projects.push(createTestProject());
     const body = {
       type: "doc",
@@ -390,7 +386,7 @@ describe("UpdateProjectDraftUseCase", () => {
             },
           ],
         },
-        { type: "image", attrs: { src: `${STORAGE}/a.png`, alt: "写真" } },
+        { type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } },
       ],
     };
 
@@ -419,6 +415,20 @@ describe("UpdateProjectDraftUseCase", () => {
       {
         type: "doc",
         content: [{ type: "image", attrs: { src: "https://evil.example.com/a.png" } }],
+      },
+      "INVALID_IMAGE_SRC",
+    ],
+    [
+      // 画像の置き場所の決まりは画像のアップロード（#319）で決める。それまでは Supabase の画像も断る
+      "Supabase Storage の画像",
+      {
+        type: "doc",
+        content: [
+          {
+            type: "image",
+            attrs: { src: "https://abc.supabase.co/storage/v1/object/public/project-images/a.png" },
+          },
+        ],
       },
       "INVALID_IMAGE_SRC",
     ],

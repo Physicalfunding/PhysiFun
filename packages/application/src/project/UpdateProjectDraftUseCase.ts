@@ -102,13 +102,7 @@ export interface UpdateProjectDraftInput {
  * 7. 永続化
  */
 export class UpdateProjectDraftUseCase {
-  /**
-   * @param isAllowedImageUrl 本文の画像に使ってよい URL か（自サイトの Storage だけ）。判定が環境変数で変わるため外から受け取る
-   */
-  constructor(
-    private readonly port: UpdateProjectDraftPort,
-    private readonly isAllowedImageUrl: (url: string) => boolean
-  ) {}
+  constructor(private readonly port: UpdateProjectDraftPort) {}
 
   async execute(
     input: UpdateProjectDraftInput
@@ -211,15 +205,15 @@ export class UpdateProjectDraftUseCase {
       phase = input.phase as ProjectPhase;
     }
 
-    // body（本文）。許可していない要素・装飾・属性が 1 つでもあれば保存しない（設計書 §6.1）
+    // body（本文）。許可していない要素・装飾・属性が 1 つでもあれば保存しない（設計書 §6.1）。
+    // 画像は、置き場所の決まりを画像のアップロード（#319）で決めるまで、すべて断る
+    // （*.supabase.co を広く許すと、他人の Storage の画像で閲覧者を追跡できてしまうため）
     let body: ProjectStory | null | undefined;
     if (input.body !== undefined) {
       if (input.body === null) {
         body = null;
       } else {
-        const storyResult = ProjectStory.create(input.body, {
-          isAllowedImageUrl: this.isAllowedImageUrl,
-        });
+        const storyResult = ProjectStory.create(input.body, { isAllowedImageUrl: () => false });
         if (!storyResult.ok) {
           return err({ type: "INVALID_STORY", storyError: storyResult.error });
         }

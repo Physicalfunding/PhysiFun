@@ -216,7 +216,7 @@ stateDiagram-v2
 
 `Project.body` はこの値オブジェクト（または `null`）で、DB の `projects.story`（jsonb）にそのまま入る（#315）。
 
-- **作るのはユースケース**: `UpdateProjectDraftUseCase` は受け取った JSON を `create` で検査し、通らなければ `INVALID_STORY` で保存しない。`ApproveLeaderApplicationUseCase` は応募時のストーリー（文字だけ）を `fromPlainText` で段落にする。`Project` は検査済みのものを受け取るだけ（`SnsLinks` などと同じ）
+- **作るのはユースケース**: `UpdateProjectDraftUseCase` は受け取った JSON を `create` で検査し、通らなければ `INVALID_STORY` で保存しない（画像は、置き場所の決まりを画像アップロード API（#319）で決めるまで、すべて断る。`04_security-design.md` §6.3）。`ApproveLeaderApplicationUseCase` は応募時のストーリー（文字だけ）を `fromPlainText` で段落にする。`Project` は検査済みのものを受け取るだけ（`SnsLinks` などと同じ）
 - **DB から戻すときは検査しない**（`reconstruct`）: 保存時に検査済みのため。画像の URL の判定は環境変数で変わるので、読むたびに検査すると、判定が変わったときに本文を開けなくなる。表示する側（`ProjectStoryView`）でも許可したものだけを描く
 
 - **形**: エディタ（Tiptap / ProseMirror）の JSON と同じ `{ type, attrs?, content?, marks?, text? }`。domain には外部ライブラリを入れないので、Tiptap には頼らずただの JSON として検査する

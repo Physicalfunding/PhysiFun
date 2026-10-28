@@ -15,6 +15,7 @@ import { db } from "../../src/database/kysely/client";
  * ほかのテストと DB を分けるため、同じ PostgreSQL の中に使い捨てのデータベースを作る
  * （`INFRA_TEST_DATABASE_URL` を使うときは、そのユーザーに CREATEDB の権限が要る）。
  */
+// projects を変えるマイグレーションをこの前に足したときは、BEFORE_VERSION と INSERT を見直す
 const BEFORE_VERSION = "20261017085602";
 const DATABASE = "story_migration_test";
 
@@ -54,14 +55,21 @@ describe("本文を文書データに変えるマイグレーション（#315）
     await db.destroy();
   });
 
-  it("文字だけの本文が fromPlainText と同じ文書データになり、NULL は NULL のまま", async () => {
+  it("文字だけの本文が fromPlainText と同じ文書データになり、NULL と文書データの行はそのまま", async () => {
     if (!client) throw new Error("client is not connected");
     const ownerId = randomUUID();
     await client.query(
       `INSERT INTO accounts (id, email, "displayName", status, "updatedAt") VALUES ($1, $2, $3, 'ACTIVE', now())`,
       [ownerId, "story-migration@example.com", "移行テスト"]
     );
-    for (const [title, story] of [...Object.entries(STORIES), ["null", null]]) {
+    // 新しいコードがマイグレーションより先に動くと、text の列に文書データ（JSON）が書かれる
+    const alreadyDoc = fromPlainText("先に保存された本文");
+    const rows: [string, string | null][] = [
+      ...Object.entries(STORIES),
+      ["null", null],
+      ["alreadyDoc", JSON.stringify(alreadyDoc)],
+    ];
+    for (const [title, story] of rows) {
       await client.query(
         `INSERT INTO projects (id, "ownerAccountId", title, story, "updatedAt") VALUES ($1, $2, $3, $4, now())`,
         [randomUUID(), ownerId, title, story]
@@ -70,14 +78,15 @@ describe("本文を文書データに変えるマイグレーション（#315）
 
     migrate(url);
 
-    const { rows } = await client.query<{ title: string; story: unknown }>(
+    const migrated = await client.query<{ title: string; story: unknown }>(
       `SELECT title, story FROM projects`
     );
-    const stories = Object.fromEntries(rows.map((row) => [row.title, row.story]));
+    const stories = Object.fromEntries(migrated.rows.map((row) => [row.title, row.story]));
     for (const [title, text] of Object.entries(STORIES)) {
       expect(stories[title], title).toEqual(fromPlainText(text));
     }
     expect(stories.null).toBeNull();
+    expect(stories.alreadyDoc).toEqual(alreadyDoc);
     // 期待する形も 1 つは書いておく（fromPlainText の変更で両方が一緒にずれても気づけるように）
     expect(stories.lines).toEqual({
       type: "doc",

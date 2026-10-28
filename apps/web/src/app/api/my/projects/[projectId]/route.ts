@@ -12,7 +12,6 @@ import {
   errorResponse,
   internalErrorResponse,
 } from "@physifun/server-shared";
-import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { projectFormSchema } from "@/lib/validations/projectFormSchema";
 
 /**
@@ -118,7 +117,7 @@ export async function PATCH(
 
     // UseCase 入力に変換
     const adapter = getProjectCommandAdapter();
-    const useCase = new UpdateProjectDraftUseCase(adapter, isAllowedImageUrl);
+    const useCase = new UpdateProjectDraftUseCase(adapter);
 
     const result = await useCase.execute({
       projectId,

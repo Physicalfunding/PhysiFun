@@ -13,12 +13,12 @@ import {
 } from "@physifun/domain";
 
 /**
- * Prisma の Project 行データからドメインエンティティを復元する共通ヘルパー
+ * projects の行データからドメインエンティティを復元する共通ヘルパー
  *
  * フィールドマッピング:
- * - Prisma `story` → Domain `body`（jsonb の文書データ → ProjectStory。保存時に検査済みなので検査しない）
- * - Prisma `leaderIntro` → Domain `leaderIntroduction`
- * - Prisma `status` → Domain `publishStatus`
+ * - DB `story` → Domain `body`（jsonb の文書データ → ProjectStory。保存時に検査済みなので検査しない）
+ * - DB `leaderIntro` → Domain `leaderIntroduction`
+ * - DB `status` → Domain `publishStatus`
  */
 export function reconstructProject(row: {
   id: string;

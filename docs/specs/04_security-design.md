@@ -254,7 +254,7 @@ flowchart TD
 - **知らない要素は描かない**（中身ごと）。知らない装飾は無視して文字だけ出す。見出しは h2 / h3 だけ
 - **属性は決まったものだけを読む**。配置（`left` / `center` / `right`）は決まったクラスに置き換え、`style` には値を流し込まない
 - **リンク**は `http://` か `https://` で始まり、URL として読めるものだけを `<a>` にする（合わなければ文字だけ出す）。`target="_blank" rel="noopener noreferrer nofollow"` を付ける
-- **画像**は `@physifun/ui-shared` の `isAllowedImageUrl` に合うものだけを描く。今の範囲は Supabase Storage（1 階層の `<ラベル>.supabase.co` と、`NEXT_PUBLIC_SUPABASE_URL` のホスト。パスは問わない）とモック用の `images.unsplash.com/photo-*` で、詳しくはその関数のコメントを参照。自分のバケットの決まったフォルダだけに絞るかは、画像アップロード API（#319）で決める
+- **画像**は `@physifun/ui-shared` の `isAllowedImageUrl` に合うものだけを描く。今の範囲は Supabase Storage（1 階層の `<ラベル>.supabase.co` と、`NEXT_PUBLIC_SUPABASE_URL` のホスト。パスは問わない）とモック用の `images.unsplash.com/photo-*` で、詳しくはその関数のコメントを参照。自分のバケットの決まったフォルダだけに絞るかは、画像アップロード API（#319）で決める。それまでは、保存するときに本文の画像をすべて断る（`UpdateProjectDraftUseCase`。#315）。`isAllowedImageUrl` は 1 階層の `*.supabase.co` をどれでも通すので、そのまま保存を許すと、他人の Storage に置いた画像で閲覧者を追跡できてしまうため
 - **YouTube** は動画 ID だけを保存し、表示するときに埋め込みの URL を組み立てる。埋め込みの表示と CSP の `frame-src` への `https://www.youtube-nocookie.com` の追加は #321 で行う（それまでは描かない）
 
 ---
@@ -434,3 +434,4 @@ flowchart TD
 | 2026-05-09 | 初稿作成（認証・認可・データ保護・脅威モデル・セキュリティヘッダー・運用） | 設計チーム |
 | 2026-10-16 | ドキュメント棚卸し：Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一、サポート募集の位置づけ（初回リリースでリーダー側を実装予定）を修正 | 設計チーム |
 | 2026-10-28 | §6.3 に本文（ストーリー）の表示と XSS 対策を追加し、§6.1 の XSS の行から参照（#314） | 設計チーム |
+| 2026-10-28 | §6.3 に、画像アップロード API（#319）までは本文の画像を保存時に断ることを追記（#315） | 設計チーム |
