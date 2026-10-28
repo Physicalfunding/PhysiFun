@@ -89,6 +89,21 @@ describe("KyselyRecruitmentRepository integration", () => {
 
       expect(found).toBeNull();
     });
+
+    it("日程の保存に失敗したら、募集も保存しない（1 つのトランザクションで書く）", async () => {
+      const { projectId } = await seedProject();
+      // ルートの検証を通さずに、同じ日付の日程を 2 つ持たせる（2 つ目の INSERT が unique 違反になる）
+      const base = newRecruitment(projectId);
+      const recruitment = withSchedules(base, [
+        newSchedule(base.id, "2099-01-10"),
+        newSchedule(base.id, "2099-01-10"),
+      ]);
+
+      await expect(repository.create(recruitment)).rejects.toThrow();
+
+      expect(await repository.findById(recruitment.id)).toBeNull();
+      expect(await countSchedules(recruitment.id)).toBe(0);
+    });
   });
 
   describe("findByProjectId", () => {
@@ -354,6 +369,17 @@ describe("KyselyRecruitmentRepository integration", () => {
       expect(await countSchedules(recruitment.id)).toBe(0);
     });
 
+    it("プロジェクト以外の外部キー違反は、例外のまま投げる（バグを隠さない）", async () => {
+      const { projectId } = await seedProject();
+      // ルートを通さずに、無い募集の日程を持たせる
+      const base = newRecruitment(projectId);
+      const recruitment = withSchedules(base, [newSchedule(MISSING_RECRUITMENT_ID, "2099-01-10")]);
+
+      await expect(repository.create(recruitment)).rejects.toThrow();
+
+      expect(await repository.findById(recruitment.id)).toBeNull();
+    });
+
     it("消えたプロジェクトへの create は、外部キー違反を例外にせず何もしない", async () => {
       const { projectId } = await seedProject();
       const recruitment = newRecruitment(projectId);
@@ -554,6 +580,37 @@ function addScheduleTo(
       approvalMode: options?.approvalMode ?? ApprovalMode.AUTO,
     })
   );
+}
+
+/** ルートを通さずに日程を作る（ルートの検証をすり抜けた入力の確認用） */
+function newSchedule(
+  supportRecruitmentId: SupportRecruitmentId,
+  date: string
+): RecruitmentSchedule {
+  return RecruitmentSchedule.create({
+    supportRecruitmentId,
+    date: scheduleDate(date),
+    timeRange: timeRange("10:00", "15:00"),
+    capacityPerHour: capacity(5),
+    approvalMode: ApprovalMode.AUTO,
+  });
+}
+
+/** 募集の日程を、ルートの検証を通さずに差し替える */
+function withSchedules(
+  recruitment: SupportRecruitment,
+  schedules: RecruitmentSchedule[]
+): SupportRecruitment {
+  return SupportRecruitment.reconstruct({
+    id: recruitment.id,
+    projectId: recruitment.projectId,
+    type: recruitment.type,
+    title: recruitment.title,
+    description: recruitment.description,
+    schedules,
+    createdAt: recruitment.createdAt,
+    updatedAt: recruitment.updatedAt,
+  });
 }
 
 /** ルートを通さずに、募集 ID や日付を差し替えた日程を作る（別の募集の日程に触らないことの確認用） */

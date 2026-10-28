@@ -31,6 +31,7 @@ import { reconstructRecruitment, reconstructRecruitmentSchedule } from "./recons
  * そのときは例外にせず、何もせずに終える。どちらも「書いた直後に消された」のと同じ結果になるため。
  * - 更新・削除が 0 行だった
  * - 消えた募集への日程の追加・消えたプロジェクトへの募集の作成で、外部キー違反（`23503`）になった
+ *   （外部キー違反は制約の名前で絞る。ほかの外部キー違反は、バグを隠さないよう例外のまま投げる）
  */
 export class KyselyRecruitmentRepository implements RecruitmentRepository, ProjectOwnerPort {
   async findProjectOwner(projectId: ProjectId): Promise<AccountId | null> {
@@ -88,7 +89,7 @@ export class KyselyRecruitmentRepository implements RecruitmentRepository, Proje
       });
     } catch (e) {
       // プロジェクトが同時に削除された（クラスの説明の「同時に削除されたとき」）
-      if (isForeignKeyViolationError(e)) return;
+      if (isForeignKeyViolationOf(e, "support_recruitments_projectId_fkey")) return;
       throw e;
     }
   }
@@ -116,7 +117,7 @@ export class KyselyRecruitmentRepository implements RecruitmentRepository, Proje
       // 同じ募集に同じ日付の日程が同時に追加された（unique: supportRecruitmentId + date）
       if (isUniqueConstraintError(e)) throw new ScheduleDateConflictError(schedule.date.toString());
       // 募集が同時に削除された（クラスの説明の「同時に削除されたとき」）
-      if (isForeignKeyViolationError(e)) return;
+      if (isForeignKeyViolationOf(e, "recruitment_schedules_supportRecruitmentId_fkey")) return;
       throw e;
     }
   }
@@ -217,7 +218,9 @@ function toScheduleUpdate(s: RecruitmentSchedule): Updateable<RecruitmentSchedul
   };
 }
 
-/** 外部キー違反（SQLSTATE `23503`）か */
-function isForeignKeyViolationError(error: unknown): boolean {
-  return error instanceof DatabaseError && error.code === "23503";
+/** 外部キー違反（SQLSTATE `23503`）で、違反した制約が `constraint` か */
+function isForeignKeyViolationOf(error: unknown, constraint: string): boolean {
+  return (
+    error instanceof DatabaseError && error.code === "23503" && error.constraint === constraint
+  );
 }
