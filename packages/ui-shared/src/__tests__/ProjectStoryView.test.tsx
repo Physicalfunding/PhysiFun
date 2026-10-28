@@ -145,6 +145,12 @@ describe("ProjectStoryView", () => {
       expect(html).toMatch(/<p class="[^"]*"><br\/><\/p><\/div>$/);
     });
 
+    it("連続した空白・行頭の空白を詰めずに残す（whitespace-pre-wrap）", () => {
+      const html = render(doc(paragraph(text("  字下げ  と  空白"))));
+      expect(html).toMatch(/^<div class="[^"]*whitespace-pre-wrap[^"]*">/);
+      expect(html).toContain('<p class="mb-2.5 md:mb-3">  字下げ  と  空白</p>');
+    });
+
     it("空の文書は何も描かない", () => {
       expect(render({ type: "doc" })).toMatch(/^<div class="[^"]*"><\/div>$/);
     });

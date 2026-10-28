@@ -30,6 +30,9 @@ const STORIES: Record<string, string> = {
   whitespaceLines: ["前の行", ...WHITESPACE, WHITESPACE.join(""), "後の行"].join("\n"),
   specialChars: '"引用" と \\ と <script>alert(1)</script>',
   blankOnly: "\n\n",
+  // 文書データに見える文字も、ただの文字として段落にする（検査を通っていない文書を入れないため）
+  jsonLike:
+    '{"type":"doc","content":[{"type":"image","attrs":{"src":"https://evil.example.com/a.png"}}]}',
 };
 
 describe("本文を文書データに変えるマイグレーション（#315）", () => {
@@ -55,21 +58,14 @@ describe("本文を文書データに変えるマイグレーション（#315）
     await db.destroy();
   });
 
-  it("文字だけの本文が fromPlainText と同じ文書データになり、NULL と文書データの行はそのまま", async () => {
+  it("文字だけの本文が fromPlainText と同じ文書データになり、NULL は NULL のまま", async () => {
     if (!client) throw new Error("client is not connected");
     const ownerId = randomUUID();
     await client.query(
       `INSERT INTO accounts (id, email, "displayName", status, "updatedAt") VALUES ($1, $2, $3, 'ACTIVE', now())`,
       [ownerId, "story-migration@example.com", "移行テスト"]
     );
-    // 新しいコードがマイグレーションより先に動くと、text の列に文書データ（JSON）が書かれる
-    const alreadyDoc = fromPlainText("先に保存された本文");
-    const rows: [string, string | null][] = [
-      ...Object.entries(STORIES),
-      ["null", null],
-      ["alreadyDoc", JSON.stringify(alreadyDoc)],
-    ];
-    for (const [title, story] of rows) {
+    for (const [title, story] of [...Object.entries(STORIES), ["null", null]]) {
       await client.query(
         `INSERT INTO projects (id, "ownerAccountId", title, story, "updatedAt") VALUES ($1, $2, $3, $4, now())`,
         [randomUUID(), ownerId, title, story]
@@ -86,7 +82,6 @@ describe("本文を文書データに変えるマイグレーション（#315）
       expect(stories[title], title).toEqual(fromPlainText(text));
     }
     expect(stories.null).toBeNull();
-    expect(stories.alreadyDoc).toEqual(alreadyDoc);
     // 期待する形も 1 つは書いておく（fromPlainText の変更で両方が一緒にずれても気づけるように）
     expect(stories.lines).toEqual({
       type: "doc",

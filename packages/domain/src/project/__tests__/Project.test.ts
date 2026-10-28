@@ -266,9 +266,11 @@ describe("Project", () => {
 
       const result = project.requestPublish();
       expect(result.ok).toBe(false);
-      if (!result.ok && result.error.type === "PUBLICATION_REQUIREMENTS_NOT_MET") {
-        expect(result.error.missingFields).toEqual(["body"]);
-      }
+      if (result.ok) return;
+      expect(result.error).toEqual({
+        type: "PUBLICATION_REQUIREMENTS_NOT_MET",
+        missingFields: ["body"],
+      });
       expect(project.publishStatus).toBe(PublishStatus.DRAFT);
     });
 

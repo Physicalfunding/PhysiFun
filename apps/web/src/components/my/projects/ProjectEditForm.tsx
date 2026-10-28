@@ -35,7 +35,8 @@ const CATEGORY_OPTIONS = CATEGORY_MASTER.map((c) => ({
 }));
 
 // 本文のつなぎ（#315）。S-5（#317）のエディタが入るまで、本文は Textarea の文字で持ち、
-// 送るときに文書データ（1 行を 1 段落）に変える。読み込むときは段落の文字を改行でつなぐ。S-5 で消す
+// 書き換えたときだけ文書データ（1 行を 1 段落）に変えて送る（リストなどを文字に戻すと消えるため）。
+// 読み込むときは段落の文字を改行でつなぐ。S-5 で消す
 const editFormSchema = projectFormSchema.extend({
   body: z
     .string()
@@ -70,7 +71,7 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm<EditFormValues>({
     resolver: zodResolver(editFormSchema),
   });
@@ -113,21 +114,26 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
   }, [projectId]);
 
   const onSubmit = async (values: EditFormValues) => {
-    let body: ProjectStoryDocument | null = null;
-    if (values.body?.trim()) {
-      const story = ProjectStory.fromPlainText(values.body);
-      if (!story.ok) {
-        showToast("本文が長すぎます", "error");
-        return;
+    const { body: text, ...others } = values;
+    // undefined なら body を送らない（今の本文がそのまま残る）
+    let body: ProjectStoryDocument | null | undefined;
+    if (dirtyFields.body) {
+      body = null;
+      if (text?.trim()) {
+        const story = ProjectStory.fromPlainText(text);
+        if (!story.ok) {
+          showToast("本文が長すぎます", "error");
+          return;
+        }
+        body = story.value.toJSON();
       }
-      body = story.value.toJSON();
     }
     setIsSaving(true);
     try {
       const res = await fetch(`/api/my/projects/${projectId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, body }),
+        body: JSON.stringify({ ...others, body }),
       });
       if (!res.ok) {
         const json = await res.json();

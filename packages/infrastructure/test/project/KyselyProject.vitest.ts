@@ -437,6 +437,10 @@ describe("Kysely Project 実装 integration", () => {
         status: "ACTIVE",
       });
       // 公開申請に必要な項目をすべて埋めた DRAFT
+      const story = {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "本文" }] }],
+      };
       const row = await insertRow("projects", {
         ownerAccountId: leader.id,
         title: "公開フロー確認",
@@ -446,10 +450,7 @@ describe("Kysely Project 実装 integration", () => {
         category: "FOOD",
         prefectureCode: "13",
         summary: "概要",
-        story: {
-          type: "doc",
-          content: [{ type: "paragraph", content: [{ type: "text", text: "本文" }] }],
-        },
+        story,
         leaderIntro: "自己紹介",
       });
 
@@ -489,6 +490,7 @@ describe("Kysely Project 実装 integration", () => {
       expect(publicDetail).not.toBeNull();
       expect(publicDetail!.slug).toBe(row.id);
       expect(publicDetail!.title).toBe("公開フロー確認");
+      expect(publicDetail!.body).toEqual(story);
 
       // 4. 自主非公開: 日時はクリア、slug は残る。公開ページからは見えなくなる
       const unpublishing = await reload(row.id);

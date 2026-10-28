@@ -3,7 +3,8 @@
 --    1 行を 1 段落にし、空白だけの行は段落の区切りとして捨てる。空白の文字は JavaScript の trim() と同じものを並べている
 --    （[[:space:]] はロケールで変わるため使わない。全角スペースも空白）。
 --    同じ結果になることは test/project/StoryDocumentMigration.vitest.ts で確かめている。
---    すでに文書データの行（新しいコードがこのマイグレーションより先に動いて書いたもの）は変えない。
+--    新しいコードが本文を書く前に流す（新しいコードは文書データを text の列に JSON の文字列として書くので、それも段落に包まれる）。
+--    文字で始まりを見て文書データの行を飛ばす方法は採らない（旧コードは同じ始まりの普通の文字も保存でき、検査を通らない文書が入るため）。
 UPDATE "projects" SET "story" = jsonb_build_object(
   'type', 'doc',
   'content', COALESCE((
@@ -15,7 +16,7 @@ UPDATE "projects" SET "story" = jsonb_build_object(
     WHERE "line" ~ '[^ \t\v\f\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]'
   ), '[]'::jsonb)
 )::text
-WHERE "story" IS NOT NULL AND "story" NOT LIKE '{"type":"doc"%';
+WHERE "story" IS NOT NULL;
 -- 2. 型を jsonb に変える
 ALTER TABLE "projects" ALTER COLUMN "story" TYPE jsonb USING "story"::jsonb;
 -- Set comment to column: "story" on table: "projects"
