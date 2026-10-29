@@ -66,6 +66,15 @@ describe("ProjectHomePanel", () => {
     expect(html).toContain('href="https://x.com/foo"');
   });
 
+  it("https 以外の SNS の URL はリンクにしない（SafeSnsLink の守りが効いている）", () => {
+    const html = render({
+      snsLinks: { x: "javascript:alert(1)", instagram: null, facebook: null, website: null },
+    });
+    expect(html).not.toContain("<a ");
+    expect(html).not.toContain("javascript:");
+    expect(html).toContain("表示できない URL 形式です");
+  });
+
   it("リーダー紹介が空のときはアカウントの bio を出し、両方あれば紹介文だけを出す", () => {
     expect(render({ leaderIntroduction: null })).toContain("アカウントの bio");
     expect(render()).not.toContain("アカウントの bio");
