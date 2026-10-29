@@ -10,8 +10,10 @@ import {
   type PublishStatus,
   type ProjectPhase,
 } from "@physifun/domain";
-import { ProjectStoryView, isAllowedImageUrl } from "@physifun/ui-shared";
+import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { Button, Card, CardContent, LoadingSpinner, ConfirmModal } from "@/components/common";
+import { ProjectHomePanel } from "@/components/project/ProjectHomePanel";
+import { ProjectPublicTabs } from "@/components/project/ProjectPublicTabs";
 import { useToast } from "@/components/common/Toast";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { ProjectStatusBadge } from "./ProjectStatusBadge";
@@ -49,26 +51,29 @@ interface ProjectDetailDTO {
     note: string | null;
     reviewedAt: string;
   } | null;
+  leader: {
+    displayName: string;
+    bio: string | null;
+  };
 }
 
 interface ProjectDetailProps {
   projectId: string;
 }
 
-const TABS = [
-  { key: "home", label: "ホーム" },
-  { key: "support", label: "サポート募集" },
-  { key: "report", label: "活動報告" },
-  { key: "supporters", label: "サポーター" },
-] as const;
-
-type TabKey = (typeof TABS)[number]["key"];
+/** 未実装タブ向けの「準備中」パネル */
+const placeholderPanel = (
+  <Card>
+    <CardContent className="py-12 text-center">
+      <p className="text-gray-500">準備中</p>
+    </CardContent>
+  </Card>
+);
 
 export function ProjectDetail({ projectId }: ProjectDetailProps) {
   const [project, setProject] = useState<ProjectDetailDTO | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("home");
   const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false);
   const [isUnpublishConfirmOpen, setIsUnpublishConfirmOpen] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
@@ -225,6 +230,12 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
                 </p>
               )}
               {locationText && <p className="text-sm text-gray-500 mt-1">{locationText}</p>}
+              {/* 概要はタイトルの下の短い紹介文として出す（公開ページと同じ。設計書 §5.6） */}
+              {project.summary && (
+                <p className="mt-2 border-l-4 border-orange-500 pl-3 text-sm text-gray-600 whitespace-pre-wrap">
+                  {project.summary}
+                </p>
+              )}
             </div>
           </div>
 
@@ -302,69 +313,19 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
         </Card>
       )}
 
-      {/* タブ */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-0 -mb-px">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.key
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* タブコンテンツ */}
-      {activeTab === "home" && (
-        <div className="space-y-6">
-          {project.summary && (
-            <Card>
-              <CardContent>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">概要</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.summary}</p>
-              </CardContent>
-            </Card>
-          )}
-          {project.body && (
-            <Card>
-              <CardContent>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">プロジェクト詳細</h3>
-                <ProjectStoryView story={project.body} />
-              </CardContent>
-            </Card>
-          )}
-          {project.leaderIntroduction && (
-            <Card>
-              <CardContent>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">リーダー紹介</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                  {project.leaderIntroduction}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-          {project.activityPlan && (
-            <Card>
-              <CardContent>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">活動計画</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.activityPlan}</p>
-              </CardContent>
-            </Card>
-          )}
-          {!project.summary &&
-            !project.body &&
-            !project.leaderIntroduction &&
-            !project.activityPlan && (
+      {/* タブ（公開ページと同じ部品。「ホーム」の中身も公開ページと共有して、読む人と同じ見え方を確かめられるようにする） */}
+      <ProjectPublicTabs
+        home={
+          <ProjectHomePanel
+            body={project.body}
+            leaderIntroduction={project.leaderIntroduction}
+            leader={project.leader}
+            snsLinks={project.snsLinks}
+            activityPlan={project.activityPlan}
+            emptyState={
               <Card>
                 <CardContent className="py-8 text-center">
-                  <p className="text-gray-500">まだコンテンツがありません</p>
+                  <p className="text-gray-500">まだストーリーがありません</p>
                   {status === "DRAFT" && (
                     <Button
                       variant="outline"
@@ -377,40 +338,29 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
                   )}
                 </CardContent>
               </Card>
-            )}
-        </div>
-      )}
-      {activeTab === "support" && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-gray-500">
-              サポーターに参加してほしい活動を、募集として登録できます
-            </p>
-            <Link
-              href={`/my/projects/${projectId}/recruitments`}
-              data-testid="manage-recruitments-link"
-            >
-              <Button variant="primary" size="sm" className="mt-3">
-                募集を管理する
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      )}
-      {activeTab === "report" && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-gray-500">準備中</p>
-          </CardContent>
-        </Card>
-      )}
-      {activeTab === "supporters" && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-gray-500">準備中</p>
-          </CardContent>
-        </Card>
-      )}
+            }
+          />
+        }
+        support={
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-gray-500">
+                サポーターに参加してほしい活動を、募集として登録できます
+              </p>
+              <Link
+                href={`/my/projects/${projectId}/recruitments`}
+                data-testid="manage-recruitments-link"
+              >
+                <Button variant="primary" size="sm" className="mt-3">
+                  募集を管理する
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        }
+        report={placeholderPanel}
+        supporters={placeholderPanel}
+      />
 
       {/* 確認モーダル */}
       <ConfirmModal
