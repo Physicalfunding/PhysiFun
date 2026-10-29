@@ -66,8 +66,9 @@ interface Props {
 }
 
 /**
- * ProjectPublicView のタブ切り替え UI を担う Client Component。
- * 親 (Server Component) が完成済みの各タブコンテンツ ReactNode を props で渡す。
+ * プロジェクトページのタブ切り替え UI を担う Client Component。
+ * 公開ページ（ProjectPublicView: Server Component）とマイページ（ProjectDetail: Client Component）で共有する。
+ * 親が完成済みの各タブコンテンツ ReactNode を props で渡す。
  *
  * WAI-ARIA Tab Panel パターンに準拠:
  * - 左右矢印キーでタブ移動 (循環)
@@ -167,7 +168,6 @@ export function ProjectPublicTabs({ home, support, report, supporters }: Props) 
           id={`tabpanel-${tab.key}`}
           role="tabpanel"
           aria-labelledby={`tab-${tab.key}`}
-          className={tab.key === "home" ? "space-y-6" : undefined}
           hidden={activeTab !== tab.key}
         >
           {panels[tab.key]}

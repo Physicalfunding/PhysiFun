@@ -19,7 +19,7 @@ interface Props {
   leader: { displayName: string; bio: string | null };
   snsLinks: Record<string, string | null> | null;
   activityPlan: string | null;
-  /** 本文が無いときに左の列へ出す内容（マイページの「まだコンテンツがありません」など） */
+  /** 本文が無いときに左の列へ出す内容（マイページの「まだストーリーがありません」など）。省略すると左の列は空 */
   emptyState?: ReactNode;
 }
 
