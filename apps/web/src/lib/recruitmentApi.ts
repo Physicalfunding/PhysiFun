@@ -44,8 +44,9 @@ export function recruitmentErrorResponse(error: RecruitmentApiError): NextRespon
       return validationErrorResponse("無効な募集IDです");
     case "INVALID_SCHEDULE_ID":
       return validationErrorResponse("無効な日程IDです");
-    // 日程の項目は Route Handler の Zod でほぼ止まる。ここに来るのは、時刻を片方だけ変えて前後が逆になったときなど
     case "DOMAIN_ERROR":
+    // 日程の項目は Route Handler の Zod でほぼ止まる。ここに来るのは、実在しない日付（2 月 30 日など）や、
+    // 時刻を片方だけ変えて前後が逆になったときなど
     case "INVALID_SCHEDULE_DATE":
     case "INVALID_TIME_RANGE":
     case "INVALID_CAPACITY_PER_HOUR":

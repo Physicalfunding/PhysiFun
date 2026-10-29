@@ -46,7 +46,11 @@ export async function PATCH(
       accountId: userId,
       recruitmentId,
       scheduleId,
-      ...parsed.data,
+      date: parsed.data.date,
+      startTime: parsed.data.startTime,
+      endTime: parsed.data.endTime,
+      capacityPerHour: parsed.data.capacityPerHour,
+      approvalMode: parsed.data.approvalMode,
     });
 
     if (!result.ok) {

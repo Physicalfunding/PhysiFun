@@ -89,7 +89,7 @@ class FakeRecruitmentPort implements RecruitmentPort {
   async delete(id: SupportRecruitmentId) {
     this.recruitments = this.recruitments.filter((r) => !r.id.equals(id));
   }
-  // 日程は、ユースケースがルート（findById で返した recruitments の要素）のメソッドで
+  // 日程は、ユースケースが集約ルート（findById で返した recruitments の要素）のメソッドで
   // 追加・変更・削除した時点で反映されているので、ここでは何もしない
   async addSchedule() {}
   async updateSchedule() {}

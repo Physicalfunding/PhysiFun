@@ -40,7 +40,11 @@ export async function POST(
     const result = await useCase.execute({
       accountId: userId,
       recruitmentId,
-      ...parsed.data,
+      date: parsed.data.date,
+      startTime: parsed.data.startTime,
+      endTime: parsed.data.endTime,
+      capacityPerHour: parsed.data.capacityPerHour,
+      approvalMode: parsed.data.approvalMode,
     });
 
     if (!result.ok) {
