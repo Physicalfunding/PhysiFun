@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+import { Button } from "@/components/common";
 
 const TABS = [
   { key: "home", label: "ホーム" },
@@ -10,6 +19,33 @@ const TABS = [
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
+
+/**
+ * タブの中身からタブを切り替えるための Context。
+ * 親の Server Component から関数は渡せないので、パネルの中に置く Client 部品（SelectTabButton）が
+ * ここから `selectTab` を受け取る。ProjectPublicTabs の外では null（ボタンは何もしない）。
+ */
+const ProjectTabsContext = createContext<{ selectTab: (tab: TabKey) => void } | null>(null);
+
+/**
+ * 押すと指定したタブに切り替えるボタン（例: 「ホーム」タブの「サポート募集を見る」）。
+ * ProjectPublicTabs のパネルの中で使う。切り替えたあとは、そのタブのボタンにフォーカスを移す
+ * （ページの下の方で押しても、切り替わったタブが見える位置に戻るように）。
+ */
+export function SelectTabButton({ tab, children }: { tab: TabKey; children: ReactNode }) {
+  const tabs = useContext(ProjectTabsContext);
+  return (
+    <Button
+      type="button"
+      variant="primary"
+      size="lg"
+      fullWidth
+      onClick={() => tabs?.selectTab(tab)}
+    >
+      {children}
+    </Button>
+  );
+}
 
 /**
  * ProjectPublicTabs の Props.
@@ -59,6 +95,11 @@ export function ProjectPublicTabs({ home, support, report, supporters }: Props) 
     supporters,
   };
 
+  const selectTab = (tab: TabKey) => {
+    shouldFocusRef.current = true;
+    setActiveTab(tab);
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
     let nextIndex: number | null = null;
     if (event.key === "ArrowRight") {
@@ -79,10 +120,15 @@ export function ProjectPublicTabs({ home, support, report, supporters }: Props) 
   };
 
   return (
-    <>
+    <ProjectTabsContext.Provider value={{ selectTab }}>
       {/* タブ */}
       <div className="border-b border-gray-200">
-        <nav className="flex gap-0 -mb-px" role="tablist" aria-label="プロジェクト情報">
+        {/* スマホ幅（375px）で 4 つのタブが折り返さないよう、余白を詰めて 1 行に収める。収まらない幅ではタブの中だけ横に流す */}
+        <nav
+          className="flex gap-0 -mb-px overflow-x-auto"
+          role="tablist"
+          aria-label="プロジェクト情報"
+        >
           {/*
             TODO: 現状は全タブパネルを `hidden` 属性でトグルしているため、初期レンダリング時に
             全タブの DOM が生成される。将来パネル内容が重くなった場合は、条件レンダリング
@@ -102,7 +148,7 @@ export function ProjectPublicTabs({ home, support, report, supporters }: Props) 
               tabIndex={activeTab === tab.key ? 0 : -1}
               onClick={() => setActiveTab(tab.key)}
               onKeyDown={(e) => handleKeyDown(e, index)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-2 text-sm font-medium border-b-2 transition-colors sm:px-4 ${
                 activeTab === tab.key
                   ? "border-orange-500 text-orange-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -127,6 +173,6 @@ export function ProjectPublicTabs({ home, support, report, supporters }: Props) 
           {panels[tab.key]}
         </div>
       ))}
-    </>
+    </ProjectTabsContext.Provider>
   );
 }
