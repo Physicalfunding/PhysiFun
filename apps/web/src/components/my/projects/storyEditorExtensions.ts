@@ -44,15 +44,18 @@ const StoryLink = Link.extend({
 });
 
 /**
- * 番号付きリスト。Tiptap の既定では `start` のほかに `type`（番号の種類）を JSON に入れるので、`start` だけにする
+ * 番号付きリスト。Tiptap の既定では `start` のほかに `type`（番号の種類）を JSON に入れるので、`start` だけにする。
+ * 貼り付けた `<ol start="abc">` や `start="-3"` は、domain が断る値（NaN・負数）になり画面からは直しようがないので、1 にする
  */
 const StoryOrderedList = OrderedList.extend({
   addAttributes() {
     return {
       start: {
         default: 1,
-        parseHTML: (element) =>
-          element.hasAttribute("start") ? parseInt(element.getAttribute("start") || "", 10) : 1,
+        parseHTML: (element) => {
+          const start = parseInt(element.getAttribute("start") ?? "", 10);
+          return Number.isSafeInteger(start) && start >= 0 ? start : 1;
+        },
       },
     };
   },

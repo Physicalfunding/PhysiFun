@@ -3,7 +3,12 @@
 import { useId, useState } from "react";
 import type { Editor, JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
-import { PROJECT_STORY_LIMITS, type StoryTextAlign } from "@physifun/domain";
+import {
+  PROJECT_STORY_LIMITS,
+  type ProjectStoryDocument,
+  type StoryTextAlign,
+} from "@physifun/domain";
+import { ProjectStoryView } from "@physifun/ui-shared";
 import { Button, Input, Modal } from "@/components/common";
 import { canEditStory, isStoryLinkUrl, storyEditorExtensions } from "./storyEditorExtensions";
 
@@ -43,17 +48,23 @@ const CONTENT_CLASS = [
  */
 export function StoryEditor({ label, helperText, value, onChange }: StoryEditorProps) {
   const labelId = useId();
+  const helperId = `${labelId}-helper`;
+  const countId = `${labelId}-count`;
   // 最初の本文だけで決まる（以後はエディタが本文を持つ）
   const [editable] = useState(() => canEditStory(value));
   const editor = useEditor({
     extensions: storyEditorExtensions,
     content: editable ? value : null,
     editable,
+    // クライアントで本文を取得してから描くので SSR されない。未指定だと Tiptap が Next.js と判定して
+    // 最初の描画でエディタを null にする（ツールバーが 1 フレーム出ない）うえ、開発時に毎回警告を出す
+    immediatelyRender: true,
     editorProps: {
       attributes: {
         role: "textbox",
         "aria-multiline": "true",
         "aria-labelledby": labelId,
+        "aria-describedby": helperText ? `${helperId} ${countId}` : countId,
         class: "min-h-[280px] px-3 py-2 outline-none",
       },
     },
@@ -66,19 +77,34 @@ export function StoryEditor({ label, helperText, value, onChange }: StoryEditorP
       <p id={labelId} className="mb-1 block text-sm font-medium text-gray-700">
         {label}
       </p>
-      {helperText && <p className="mb-2 text-sm text-gray-500">{helperText}</p>}
+      {helperText && (
+        <p id={helperId} className="mb-2 text-sm text-gray-500">
+          {helperText}
+        </p>
+      )}
       {editable ? (
         <>
           <div className="rounded-md border border-gray-300 bg-white shadow-sm focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500">
             {editor && <Toolbar editor={editor} />}
             <EditorContent editor={editor} className={CONTENT_CLASS} />
           </div>
-          {editor && <TextCount editor={editor} />}
+          {editor && <TextCount editor={editor} id={countId} />}
         </>
       ) : (
-        <p role="alert" className="rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
-          このストーリーには、この画面ではまだ編集できない内容が含まれています。内容を守るため、ここでは編集できません（保存してもストーリーは今のまま残ります）。
-        </p>
+        <>
+          <p
+            role="status"
+            className="mb-3 rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-800"
+          >
+            このストーリーには、この画面ではまだ編集できない内容が含まれています。内容を守るため、ここでは編集できません（保存してもストーリーは今のまま残ります）。
+          </p>
+          {/* 中身は見られるように、表示部品で読み取り専用で描く。読み込んだ本文は保存時に検査済みの文書データ */}
+          {value && (
+            <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+              <ProjectStoryView story={value as ProjectStoryDocument} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -136,6 +162,12 @@ function Toolbar({ editor }: { editor: Editor }) {
   const removeLink = () => {
     editor.chain().focus().extendMarkRange("link").unsetLink().run();
     setLinkDialog(null);
+  };
+
+  // キャンセル（Escape・閉じる・背景）で閉じたときも、フォーカスをエディタに戻す（共通の Modal は復元しない）
+  const closeLinkDialog = () => {
+    setLinkDialog(null);
+    editor.commands.focus();
   };
 
   const setAlign = (align: StoryTextAlign) => {
@@ -225,12 +257,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         リンク
       </ToolbarButton>
 
-      <Modal
-        isOpen={linkDialog !== null}
-        onClose={() => setLinkDialog(null)}
-        title="リンク"
-        size="sm"
-      >
+      <Modal isOpen={linkDialog !== null} onClose={closeLinkDialog} title="リンク" size="sm">
         <Input
           label="リンク先の URL"
           type="url"
@@ -264,12 +291,13 @@ function Toolbar({ editor }: { editor: Editor }) {
 
 function ToolbarButton({
   label,
-  active = false,
+  active,
   disabled = false,
   onClick,
   children,
 }: {
   label: string;
+  /** 切り替えのボタンだけ渡す（動作のボタンには aria-pressed を付けない） */
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -313,14 +341,18 @@ function AlignIcon({ align }: { align: StoryTextAlign }) {
   );
 }
 
-function TextCount({ editor }: { editor: Editor }) {
+function TextCount({ editor, id }: { editor: Editor; id: string }) {
   const length = useEditorState({
     editor,
     selector: ({ editor: e }) => e.state.doc.textContent.length,
   });
   const over = length > PROJECT_STORY_LIMITS.textLength;
   return (
-    <p className={`mt-1 text-right text-xs ${over ? "text-red-600" : "text-gray-500"}`}>
+    <p
+      id={id}
+      aria-live="polite"
+      className={`mt-1 text-right text-xs ${over ? "text-red-600" : "text-gray-500"}`}
+    >
       {length.toLocaleString()} / {PROJECT_STORY_LIMITS.textLength.toLocaleString()} 文字
     </p>
   );

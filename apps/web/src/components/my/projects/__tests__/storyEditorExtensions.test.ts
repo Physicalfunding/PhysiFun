@@ -50,6 +50,20 @@ describe("storyEditorExtensions", () => {
     expect(Object.keys(schema.nodes.orderedList.spec.attrs ?? {})).toEqual(["start"]);
   });
 
+  it("貼り付けた <ol> の start は、domain が断る値（数字でない・負数）なら 1 にする", () => {
+    // parseDOM の規則に、最小限の要素のふりをしたオブジェクトを渡す（start だけを読む）
+    const rule = schema.nodes.orderedList.spec.parseDOM?.[0];
+    const parse = (start: string | null) =>
+      rule && "getAttrs" in rule && typeof rule.getAttrs === "function"
+        ? rule.getAttrs({ getAttribute: () => start } as unknown as HTMLElement)
+        : undefined;
+    expect(parse("3")).toEqual({ start: 3 });
+    expect(parse("0")).toEqual({ start: 0 });
+    expect(parse(null)).toEqual({ start: 1 });
+    expect(parse("abc")).toEqual({ start: 1 });
+    expect(parse("-3")).toEqual({ start: 1 });
+  });
+
   it("配置は段落と見出しだけに付き、left / center / right だけ（両端そろえは無い）", () => {
     expect(schema.nodes.paragraph.spec.attrs).toHaveProperty("textAlign");
     expect(schema.nodes.heading.spec.attrs).toHaveProperty("textAlign");
