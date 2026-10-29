@@ -70,11 +70,22 @@ export function RecruitmentCard({
                       {APPROVAL_MODE_LABELS[schedule.approvalMode]}
                     </span>
                   </div>
+                  {/* 募集の「編集」「削除」と区別できるように、読み上げ用の名前に日付を入れる */}
                   <div className="flex flex-shrink-0 gap-2">
-                    <Button variant="outline" size="sm" onClick={() => onEditSchedule(schedule)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-label={`${formatScheduleDate(schedule.date)}の日程を編集`}
+                      onClick={() => onEditSchedule(schedule)}
+                    >
                       編集
                     </Button>
-                    <Button variant="danger" size="sm" onClick={() => onDeleteSchedule(schedule)}>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      aria-label={`${formatScheduleDate(schedule.date)}の日程を削除`}
+                      onClick={() => onDeleteSchedule(schedule)}
+                    >
                       削除
                     </Button>
                   </div>

@@ -277,9 +277,12 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
         />
       )}
 
+      {/* 削除中は閉じない（isDeleting は募集と日程の削除で共有している） */}
       <ConfirmModal
         isOpen={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => {
+          if (!isDeleting) setDeleteTarget(null);
+        }}
         onConfirm={handleDelete}
         title="募集を削除"
         message={`「${deleteTarget?.title ?? ""}」を削除しますか？日程も一緒に削除され、元に戻せません。`}
@@ -312,7 +315,9 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
 
       <ConfirmModal
         isOpen={scheduleDeleteTarget !== null}
-        onClose={() => setScheduleDeleteTarget(null)}
+        onClose={() => {
+          if (!isDeleting) setScheduleDeleteTarget(null);
+        }}
         onConfirm={handleScheduleDelete}
         title="日程を削除"
         message={

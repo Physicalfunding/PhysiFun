@@ -437,7 +437,7 @@ flowchart TB
 
 **初回リリース → 一般公開の移行**は**ランタイムフィーチャーフラグではなくコード変更リリース**で行う方針（`docs/product.md` 参照）。
 
-> 💡 `SupportRecruitment` / `RecruitmentSchedule` は **インフラ層まで**実装済み。リーダー向けの API・画面で、募集と日程を一覧・作成・編集・削除できる（#218）。公開ページへの表示はまだ無い（#219）。`SupportTicket` は schema（`atlas/schema.sql`）のみ。詳細は `02_domain-model.md` §8、`03_data-model.md` §1 参照。
+> 💡 `SupportRecruitment` / `RecruitmentSchedule` は、ドメインからリーダー向けの **API・画面まで**実装済み（募集と日程の一覧・作成・編集・削除。#218）。公開ページへの表示はまだ無い（#219）。`SupportTicket` は schema（`atlas/schema.sql`）のみ。詳細は `02_domain-model.md` §8、`03_data-model.md` §1 参照。
 
 ---
 

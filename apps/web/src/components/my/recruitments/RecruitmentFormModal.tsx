@@ -38,8 +38,13 @@ export function RecruitmentFormModal({
     defaultValues: defaultValues ?? { title: "", description: "" },
   });
 
+  // 送信中は閉じない（閉じて別のモーダルを開くと、送信が終わった時点でそちらが閉じてしまう）
+  const handleClose = () => {
+    if (!isSubmitting) onClose();
+  };
+
   return (
-    <Modal isOpen onClose={onClose} title={heading} size="lg">
+    <Modal isOpen onClose={handleClose} title={heading} size="lg">
       {/* ブラウザ標準の入力チェック（required）を止め、Zod のメッセージを項目の下に出す */}
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         <Input
