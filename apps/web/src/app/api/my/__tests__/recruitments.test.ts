@@ -381,6 +381,18 @@ describe("募集・日程 API", () => {
       expect(json.error.fields.endTime).toEqual(["終了時刻は開始時刻より後にしてください"]);
     });
 
+    it("時刻の形式が誤っていれば、その項目のエラーだけを返す（前後のエラーは付けない）", async () => {
+      const response = await POST_SCHEDULE(
+        jsonRequest("POST", { ...scheduleBody, startTime: "9:00", endTime: "10:00" }),
+        recruitmentParams()
+      );
+
+      expect(response.status).toBe(400);
+      const json = await response.json();
+      expect(json.error.fields.startTime).toEqual(["開始時刻を選んでください"]);
+      expect(json.error.fields.endTime).toBeUndefined();
+    });
+
     it.each([
       ["分が 00 でない時刻", { startTime: "09:30" }],
       ["24:00", { endTime: "24:00" }],
@@ -421,6 +433,43 @@ describe("募集・日程 API", () => {
       expect(schedule.approvalMode).toBe("MANUAL");
       expect(schedule.date.toString()).toBe(SCHEDULE_DATE);
       expect(schedule.timeRange.start).toBe("10:00");
+    });
+
+    it("別の日程と同じ日付に変えるなら 409 で、日程は変わらない", async () => {
+      await POST_SCHEDULE(jsonRequest("POST", scheduleBody), recruitmentParams());
+
+      const response = await PATCH_SCHEDULE(
+        jsonRequest("PATCH", { date: scheduleBody.date }),
+        scheduleParams()
+      );
+
+      expect(response.status).toBe(409);
+      expect(existingSchedule().date.toString()).toBe(SCHEDULE_DATE);
+    });
+
+    it("過去の日付に変えるなら 422", async () => {
+      const response = await PATCH_SCHEDULE(
+        jsonRequest("PATCH", { date: "2000-01-01" }),
+        scheduleParams()
+      );
+
+      expect(response.status).toBe(422);
+      expect(existingSchedule().date.toString()).toBe(SCHEDULE_DATE);
+    });
+
+    it("定員が範囲の外なら 400", async () => {
+      const response = await PATCH_SCHEDULE(
+        jsonRequest("PATCH", { capacityPerHour: 0 }),
+        scheduleParams()
+      );
+
+      expect(response.status).toBe(400);
+      expect(existingSchedule().capacityPerHour.value).toBe(5);
+    });
+
+    it("JSON として読めない本文は 400", async () => {
+      const response = await PATCH_SCHEDULE(jsonRequest("PATCH", "{"), scheduleParams());
+      expect(response.status).toBe(400);
     });
 
     it("時刻を片方だけ変えて、開始より前の終了になるなら 400", async () => {
@@ -477,6 +526,19 @@ describe("募集・日程 API", () => {
         scheduleParams(RECRUITMENT_ID, MISSING_ID)
       );
       expect(response.status).toBe(404);
+    });
+
+    it("別の募集の日程を指定すると 404 で、その日程は残る", async () => {
+      port.recruitments.push(createRecruitment(OTHER_RECRUITMENT_ID, OTHER_PROJECT_ID));
+      const otherSchedule = existingSchedule(OTHER_RECRUITMENT_ID);
+
+      const response = await DELETE_SCHEDULE(
+        new Request("http://localhost/api"),
+        scheduleParams(RECRUITMENT_ID, otherSchedule.id.toString())
+      );
+
+      expect(response.status).toBe(404);
+      expect(existingSchedule(OTHER_RECRUITMENT_ID).id.equals(otherSchedule.id)).toBe(true);
     });
   });
 });

@@ -25,9 +25,11 @@ const scheduleFields = z.object({
 /**
  * 終了が開始より後か（どちらも "HH:00" なので、文字列の大小で比べられる）。
  * 片方しか無いときは、ユースケースが今の値と合わせて確かめる。
+ * 形式が誤っているときは、その項目のエラーだけを出すために比べない（Zod v3 は regex の失敗のあとも refine を実行する）。
  */
 function endsAfterStart(value: { startTime?: string; endTime?: string }): boolean {
   if (value.startTime === undefined || value.endTime === undefined) return true;
+  if (!HOUR_REGEX.test(value.startTime) || !HOUR_REGEX.test(value.endTime)) return true;
   return value.endTime > value.startTime;
 }
 
