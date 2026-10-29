@@ -88,8 +88,10 @@ export class KyselyProjectQueryService
   ): Promise<ProjectDetailDTO | null> {
     const row = await db
       .selectFrom("projects")
-      .selectAll()
-      .where("id", "=", projectId)
+      .innerJoin("accounts", "accounts.id", "projects.ownerAccountId")
+      .selectAll("projects")
+      .select(["accounts.displayName as leaderDisplayName", "accounts.bio as leaderBio"])
+      .where("projects.id", "=", projectId)
       .executeTakeFirst();
 
     if (!row) return null;
@@ -125,7 +127,8 @@ export class KyselyProjectQueryService
       category: row.category,
       prefectureCode: row.prefectureCode,
       municipality: row.municipality,
-      snsLinks: row.snsLinks as ProjectDetailDTO["snsLinks"],
+      // 公開ページ向け（findPublishedBySlug）と同じく jsonb をランタイムで検証し、4 キーに正規化する
+      snsLinks: parseSnsLinks(row.snsLinks) ?? EMPTY_SNS_LINKS,
       status: row.status,
       phase: row.phase,
       activityPlan: row.activityPlan,
@@ -133,6 +136,10 @@ export class KyselyProjectQueryService
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       latestFeedback,
+      leader: {
+        displayName: row.leaderDisplayName,
+        bio: row.leaderBio,
+      },
     };
   }
 
@@ -359,6 +366,9 @@ export class KyselyProjectQueryService
 }
 
 // ==================== ヘルパー ====================
+
+/** snsLinks 列が NULL や想定外の構造だったときに返す空の値（オーナー向け DTO は非 null） */
+const EMPTY_SNS_LINKS = { x: null, instagram: null, facebook: null, website: null } as const;
 
 /**
  * Prisma の Json? フィールドを snsLinks DTO にランタイム変換する。

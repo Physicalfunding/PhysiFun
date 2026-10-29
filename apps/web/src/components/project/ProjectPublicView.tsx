@@ -3,19 +3,13 @@ import type { ProjectPublicDetailDTO } from "@physifun/application";
 import { PREFECTURE_MASTER, type ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
-import { ProjectStoryView, SafeSnsLink, isAllowedImageUrl } from "@physifun/ui-shared";
+import { isAllowedImageUrl } from "@physifun/ui-shared";
+import { ProjectHomePanel } from "./ProjectHomePanel";
 import { ProjectPublicTabs } from "./ProjectPublicTabs";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
   PREFECTURE_MASTER.map((p) => [p.code, p.name])
 );
-
-const SNS_LABEL: Record<string, string> = {
-  x: "X (Twitter)",
-  instagram: "Instagram",
-  facebook: "Facebook",
-  website: "ウェブサイト",
-};
 
 /**
  * 未実装タブ向けの「準備中」プレースホルダパネル。
@@ -49,79 +43,18 @@ export function ProjectPublicView({ project }: Props) {
   }
   const locationText = locationParts.join(" ");
 
-  const snsEntries = project.snsLinks
-    ? Object.entries(project.snsLinks).filter(
-        (entry): entry is [string, string] => entry[1] != null && entry[1] !== ""
-      )
-    : [];
-
   const homePanel = (
-    <>
-      {project.body && (
-        <Card>
-          <CardContent>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">プロジェクト詳細</h3>
-            <ProjectStoryView story={project.body} />
-          </CardContent>
-        </Card>
-      )}
-
-      {project.activityPlan && (
-        <Card>
-          <CardContent>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">活動計画</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {project.activityPlan}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* リーダー紹介 */}
-      <Card>
-        <CardContent>
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">リーダー紹介</h3>
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 font-bold text-sm">
-              {project.leader.displayName.charAt(0) || "?"}
-            </div>
-            <div className="flex-1">
-              <p className="font-medium text-gray-900">{project.leader.displayName}</p>
-              {project.leaderIntroduction && (
-                <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">
-                  {project.leaderIntroduction}
-                </p>
-              )}
-              {project.leader.bio && !project.leaderIntroduction && (
-                <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">
-                  {project.leader.bio}
-                </p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* SNS リンク — defense-in-depth: SafeSnsLink 内部で javascript: 等を遮断 */}
-      {snsEntries.length > 0 && (
-        <Card>
-          <CardContent>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">SNS / ウェブサイト</h3>
-            <ul className="space-y-2">
-              {snsEntries.map(([key, url]) => (
-                <li key={key}>
-                  <SafeSnsLink label={SNS_LABEL[key] || key} url={url} variant="listItem" />
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-    </>
+    <ProjectHomePanel
+      body={project.body}
+      leaderIntroduction={project.leaderIntroduction}
+      leader={project.leader}
+      snsLinks={project.snsLinks}
+      activityPlan={project.activityPlan}
+    />
   );
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+    <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
       {/* ヘッダーセクション */}
       <div>
         {/* カバー画像 — Supabase Storage ホスト allowlist + SSRF 防御（Issue #120） */}
@@ -131,7 +64,7 @@ export function ProjectPublicView({ project }: Props) {
               src={project.coverImageUrl}
               alt={project.title}
               fill
-              sizes="(min-width: 768px) 768px, 100vw"
+              sizes="(min-width: 1024px) 1024px, 100vw"
               className="object-cover"
               priority
             />
@@ -163,7 +96,12 @@ export function ProjectPublicView({ project }: Props) {
             {locationText && <span className="text-sm text-gray-500">{locationText}</span>}
           </div>
           <h1 className="text-2xl font-bold text-gray-900">{project.title}</h1>
-          {project.summary && <p className="mt-2 text-gray-600">{project.summary}</p>}
+          {/* 概要はタイトルの下の短い紹介文として、左に線を付けて目立たせる（設計書 §5.6） */}
+          {project.summary && (
+            <p className="mt-2 border-l-4 border-orange-600 pl-3 text-gray-600 whitespace-pre-wrap break-words">
+              {project.summary}
+            </p>
+          )}
         </div>
       </div>
 

@@ -62,6 +62,14 @@ export interface ProjectDetailDTO {
     readonly note: string | null;
     readonly reviewedAt: Date;
   } | null;
+  /**
+   * リーダー（オーナー）の表示用の情報。マイページの「ホーム」タブを公開ページと同じ見た目にするために使う（#316）。
+   * 公開ページ向け DTO（`ProjectPublicDetailDTO.leader`）と同じ形にして、表示部品を共有できるようにしている
+   */
+  readonly leader: {
+    readonly displayName: string;
+    readonly bio: string | null;
+  };
 }
 
 // ==================== 公開ページ向け DTO ====================
