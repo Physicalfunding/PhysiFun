@@ -422,7 +422,7 @@ flowchart TB
         I3[プロジェクト作成・編集・公開申請]
         I4[公開プロジェクトページ<br/>4タブ中ホームのみ]
         I5[運営審査 admin]
-        I6[サポート募集の作成<br/>リーダー側・実装中 #218]
+        I6[サポート募集の作成・日程管理<br/>リーダー側 #218]
     end
 
     subgraph Public["一般公開（未着手）"]
@@ -437,7 +437,7 @@ flowchart TB
 
 **初回リリース → 一般公開の移行**は**ランタイムフィーチャーフラグではなくコード変更リリース**で行う方針（`docs/product.md` 参照）。
 
-> 💡 `SupportRecruitment` / `RecruitmentSchedule` は **インフラ層まで**実装済み。リーダー向けの API・画面は、募集の一覧・作成・編集・削除まで（#218。日程はこれから）。公開ページへの表示はまだ無い（#219）。`SupportTicket` は schema（`atlas/schema.sql`）のみ。詳細は `02_domain-model.md` §8、`03_data-model.md` §1 参照。
+> 💡 `SupportRecruitment` / `RecruitmentSchedule` は、ドメインからリーダー向けの **API・画面まで**実装済み（募集と日程の一覧・作成・編集・削除。#218）。公開ページへの表示はまだ無い（#219）。`SupportTicket` は schema（`atlas/schema.sql`）のみ。詳細は `02_domain-model.md` §8、`03_data-model.md` §1 参照。
 
 ---
 

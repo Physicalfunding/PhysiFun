@@ -1,15 +1,38 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { RecruitmentDTO } from "@physifun/application";
+import type { RecruitmentDTO, RecruitmentScheduleDTO } from "@physifun/application";
 import { Button, Card, CardContent, ConfirmModal, LoadingSpinner } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
 import type { RecruitmentFormValues } from "@/lib/validations/recruitmentSchema";
+import type { ScheduleFormValues } from "@/lib/validations/scheduleSchema";
 import { RecruitmentCard } from "./RecruitmentCard";
 import { RecruitmentFormModal } from "./RecruitmentFormModal";
+import { ScheduleFormModal } from "./ScheduleFormModal";
+import { formatScheduleDate, todayInJst } from "./scheduleFormat";
 
 /** 作成・編集モーダルの対象 */
 type FormTarget = { mode: "create" } | { mode: "edit"; recruitment: RecruitmentDTO };
+
+/**
+ * 日程の追加・編集モーダルの対象
+ *
+ * `minDate` は日付の入力で選べる最も早い日。開いた時点の JST の今日にする。
+ * 過去の日程を編集するときは、その日付も選べるようにする（日付を変えなければ過去の日程も編集できる）。
+ */
+type ScheduleFormTarget = { recruitmentId: string; minDate: string } & (
+  | { mode: "create" }
+  | { mode: "edit"; schedule: RecruitmentScheduleDTO }
+);
+
+/** 日程の削除の確認の対象 */
+type ScheduleDeleteTarget = { recruitmentId: string; schedule: RecruitmentScheduleDTO };
+
+/** 日程の API の URL */
+function schedulesUrl(recruitmentId: string, scheduleId?: string): string {
+  const base = `/api/my/recruitments/${encodeURIComponent(recruitmentId)}/schedules`;
+  return scheduleId ? `${base}/${encodeURIComponent(scheduleId)}` : base;
+}
 
 /**
  * 書き込みの結果
@@ -25,9 +48,9 @@ interface RecruitmentManagerProps {
 }
 
 /**
- * プロジェクトのサポート募集の管理（一覧・作成・編集・削除）
+ * プロジェクトのサポート募集の管理（募集と日程の一覧・作成・編集・削除）
  *
- * 書き込みのたびに一覧を取り直す。同時に消された募集は、取り直した一覧から消えるだけにする。
+ * 書き込みのたびに一覧を取り直す。同時に消された募集・日程は、取り直した一覧から消えるだけにする。
  */
 export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
   const [recruitments, setRecruitments] = useState<RecruitmentDTO[] | null>(null);
@@ -35,6 +58,10 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
   const [error, setError] = useState<string | null>(null);
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RecruitmentDTO | null>(null);
+  const [scheduleFormTarget, setScheduleFormTarget] = useState<ScheduleFormTarget | null>(null);
+  const [scheduleDeleteTarget, setScheduleDeleteTarget] = useState<ScheduleDeleteTarget | null>(
+    null
+  );
   const [isDeleting, setIsDeleting] = useState(false);
   const { showToast } = useToast();
 
@@ -132,6 +159,53 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
     setDeleteTarget(null);
   };
 
+  const openScheduleForm = (recruitmentId: string, schedule?: RecruitmentScheduleDTO) => {
+    const today = todayInJst();
+    setScheduleFormTarget(
+      schedule
+        ? {
+            mode: "edit",
+            recruitmentId,
+            schedule,
+            minDate: schedule.date < today ? schedule.date : today,
+          }
+        : { mode: "create", recruitmentId, minDate: today }
+    );
+  };
+
+  const handleScheduleFormSubmit = async (values: ScheduleFormValues) => {
+    if (!scheduleFormTarget) return;
+    const result =
+      scheduleFormTarget.mode === "create"
+        ? await mutate(
+            schedulesUrl(scheduleFormTarget.recruitmentId),
+            "POST",
+            "日程を追加しました",
+            values
+          )
+        : await mutate(
+            schedulesUrl(scheduleFormTarget.recruitmentId, scheduleFormTarget.schedule.id),
+            "PATCH",
+            "日程を更新しました",
+            values
+          );
+    if (result !== "failed") {
+      setScheduleFormTarget(null);
+    }
+  };
+
+  const handleScheduleDelete = async () => {
+    if (!scheduleDeleteTarget) return;
+    setIsDeleting(true);
+    await mutate(
+      schedulesUrl(scheduleDeleteTarget.recruitmentId, scheduleDeleteTarget.schedule.id),
+      "DELETE",
+      "日程を削除しました"
+    );
+    setIsDeleting(false);
+    setScheduleDeleteTarget(null);
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-[300px] items-center justify-center">
@@ -152,7 +226,7 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-600">
-          サポーターに参加してほしい活動を、募集として登録します。公開中のプロジェクトでも、審査なしで作成・編集できます。
+          サポーターに参加してほしい活動を募集として登録し、募集ごとに日程（日付・時間帯・定員）を追加します。公開中のプロジェクトでも、審査なしで作成・編集できます。
         </p>
         <Button
           variant="primary"
@@ -177,6 +251,11 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
             recruitment={recruitment}
             onEdit={() => setFormTarget({ mode: "edit", recruitment })}
             onDelete={() => setDeleteTarget(recruitment)}
+            onAddSchedule={() => openScheduleForm(recruitment.id)}
+            onEditSchedule={(schedule) => openScheduleForm(recruitment.id, schedule)}
+            onDeleteSchedule={(schedule) =>
+              setScheduleDeleteTarget({ recruitmentId: recruitment.id, schedule })
+            }
           />
         ))
       )}
@@ -198,12 +277,54 @@ export function RecruitmentManager({ projectId }: RecruitmentManagerProps) {
         />
       )}
 
+      {/* 削除中は閉じない（isDeleting は募集と日程の削除で共有している） */}
       <ConfirmModal
         isOpen={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => {
+          if (!isDeleting) setDeleteTarget(null);
+        }}
         onConfirm={handleDelete}
         title="募集を削除"
         message={`「${deleteTarget?.title ?? ""}」を削除しますか？日程も一緒に削除され、元に戻せません。`}
+        confirmLabel="削除する"
+        cancelLabel="キャンセル"
+        variant="danger"
+        isLoading={isDeleting}
+      />
+
+      {scheduleFormTarget && (
+        <ScheduleFormModal
+          heading={scheduleFormTarget.mode === "create" ? "日程を追加" : "日程を編集"}
+          submitLabel={scheduleFormTarget.mode === "create" ? "追加する" : "保存する"}
+          defaultValues={
+            scheduleFormTarget.mode === "edit"
+              ? {
+                  date: scheduleFormTarget.schedule.date,
+                  startTime: scheduleFormTarget.schedule.startTime,
+                  endTime: scheduleFormTarget.schedule.endTime,
+                  capacityPerHour: scheduleFormTarget.schedule.capacityPerHour,
+                  approvalMode: scheduleFormTarget.schedule.approvalMode,
+                }
+              : undefined
+          }
+          minDate={scheduleFormTarget.minDate}
+          onClose={() => setScheduleFormTarget(null)}
+          onSubmit={handleScheduleFormSubmit}
+        />
+      )}
+
+      <ConfirmModal
+        isOpen={scheduleDeleteTarget !== null}
+        onClose={() => {
+          if (!isDeleting) setScheduleDeleteTarget(null);
+        }}
+        onConfirm={handleScheduleDelete}
+        title="日程を削除"
+        message={
+          scheduleDeleteTarget
+            ? `${formatScheduleDate(scheduleDeleteTarget.schedule.date)} ${scheduleDeleteTarget.schedule.startTime}〜${scheduleDeleteTarget.schedule.endTime} の日程を削除しますか？元に戻せません。`
+            : ""
+        }
         confirmLabel="削除する"
         cancelLabel="キャンセル"
         variant="danger"
