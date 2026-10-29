@@ -160,6 +160,7 @@ describe("Kysely Project 実装 integration", () => {
       const owner = await insertRow("accounts", {
         email: "owner@example.com",
         displayName: "オーナー",
+        bio: "オーナーの自己紹介",
         status: "ACTIVE",
         roles: ["LEADER"],
         passwordHash: "dummy",
@@ -176,6 +177,8 @@ describe("Kysely Project 実装 integration", () => {
       expect(detail).not.toBeNull();
       expect(detail!.title).toBe("snsLinks 確認");
       expect(detail!.snsLinks.x).toBe("https://x.com/foo");
+      // リーダーの表示名と bio を accounts から join して返す（#316）
+      expect(detail!.leader).toEqual({ displayName: "オーナー", bio: "オーナーの自己紹介" });
 
       // 別アカウントからは取得不可
       const other = await queryService.findProjectDetailForOwner(project.id, randomUUID());
