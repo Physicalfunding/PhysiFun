@@ -390,7 +390,7 @@ stateDiagram-v2
 
 - 定義: `packages/domain/src/recruitment/entities/SupportRecruitment.ts`（ルート）/ `RecruitmentSchedule.ts`（子）。上限は `SUPPORT_RECRUITMENT_LIMITS` / `CAPACITY_PER_HOUR_LIMITS`
 - 列の意味: [`docs/db/viewpoint-recruitment.md`](../db/viewpoint-recruitment.md)
-- 実装状況: ドメイン（#215）・application（#216）・インフラ（#217。`KyselyRecruitmentRepository`）まで。リーダー向けの API・画面は募集の一覧・作成・編集・削除まで（#218。日程はこれから）。公開ページへの表示（#219）はこれから
+- 実装状況: ドメイン（#215）・application（#216）・インフラ（#217。`KyselyRecruitmentRepository`）まで。リーダー向けの API・画面で、募集と日程を一覧・作成・編集・削除できる（#218）。公開ページへの表示（#219）はこれから
 - **募集の種類**: `ACTIVITY`（活動参加）だけ。スキル・モノ募集は enum の追加を含めて別に設計する（#291）
 - `Project` からは参照しない（募集側が `projectId` を持つ）
 

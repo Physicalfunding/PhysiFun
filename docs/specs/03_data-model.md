@@ -23,7 +23,7 @@
 |---|---|---|---|
 | アカウントと応募 | `accounts` / `leader_applications` | ✅ | [viewpoint-account](../db/viewpoint-account.md) |
 | プロジェクトと公開審査 | `projects` / `project_review_feedbacks` | ✅ | [viewpoint-project](../db/viewpoint-project.md) |
-| サポート募集 | `support_recruitments` / `recruitment_schedules` / `support_tickets` | 🚧 `support_recruitments` / `recruitment_schedules` はインフラ層まで。リーダー向けの画面は募集まで（#218。日程はこれから）。`support_tickets`（サポーターの申請）は一般公開 | [viewpoint-recruitment](../db/viewpoint-recruitment.md) |
+| サポート募集 | `support_recruitments` / `recruitment_schedules` / `support_tickets` | 🚧 `support_recruitments` / `recruitment_schedules` はインフラ層まで。リーダー向けの画面で募集と日程を管理できる（#218）。`support_tickets`（サポーターの申請）は一般公開 | [viewpoint-recruitment](../db/viewpoint-recruitment.md) |
 | 運営の認証と監査 | `admin_accounts` / `admin_sessions` / `admin_audit_logs` / `admin_verification_tokens` | ✅ | [viewpoint-admin](../db/viewpoint-admin.md) |
 | Outbox（非同期メール送信） | `leader_application_outbox_messages` / `project_outbox_messages` | ✅ | [viewpoint-outbox](../db/viewpoint-outbox.md) |
 
