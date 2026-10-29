@@ -257,6 +257,8 @@ flowchart TD
 - **画像**は `@physifun/ui-shared` の `isAllowedImageUrl` に合うものだけを描く。今の範囲は Supabase Storage（1 階層の `<ラベル>.supabase.co` と、`NEXT_PUBLIC_SUPABASE_URL` のホスト。パスは問わない）とモック用の `images.unsplash.com/photo-*` で、詳しくはその関数のコメントを参照。自分のバケットの決まったフォルダだけに絞るかは、画像アップロード API（#319）で決める。それまでは、保存するときに本文の画像をすべて断る（`UpdateProjectDraftUseCase`。#315）。`isAllowedImageUrl` は 1 階層の `*.supabase.co` をどれでも通すので、そのまま保存を許すと、他人の Storage に置いた画像で閲覧者を追跡できてしまうため
 - **YouTube** は動画 ID だけを保存し、表示するときに埋め込みの URL を組み立てる。埋め込みの表示と CSP の `frame-src` への `https://www.youtube-nocookie.com` の追加は #321 で行う（それまでは描かない）
 
+編集画面のエディタ（Tiptap。`apps/web/src/components/my/projects/storyEditorExtensions.ts`、#317）も、許可した要素・装飾・属性だけを出すように絞っている（h1・下線・文字色は出せず、リンクは `http://` か `https://` だけ。Tiptap が既定で文書データに足す `target`・`rel`・`class`・`title`・`type` は外す）。ただしこれは使いやすさのための絞り込みで、守りの本体は上の表の保存時の検査と表示の決まり。
+
 ---
 
 ## 7. ボット・スパム対策

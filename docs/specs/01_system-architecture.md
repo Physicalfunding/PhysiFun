@@ -81,6 +81,7 @@ flowchart TB
 | フレームワーク | Next.js 16（App Router）/ React 19 / TypeScript 5 | — |
 | スタイリング | Tailwind CSS 4 | — |
 | フォーム・バリデーション | React Hook Form + Zod | Zod スキーマはサーバー側でも再検証 |
+| 見たまま編集 | Tiptap 3（web のみ） | プロジェクトの本文（ストーリー）のエディタ（#317）。拡張の組み合わせは `apps/web/src/components/my/projects/storyEditorExtensions.ts`。保存する文書データは domain の `ProjectStory` で検査する（`04_security-design.md` §6.3） |
 | 認証（web） | NextAuth.js v4 Credentials Provider | JWT セッション、email + password |
 | 認証（admin） | NextAuth.js v4 EmailProvider（Magic Link） | Database セッション（TTL 1h）、`AdminAccount` 独立アグリゲート |
 | DB | PostgreSQL（Supabase） | web / admin で同一インスタンスを共有。`DATABASE_URL` は Transaction Pooler（pgBouncer）の URL |
