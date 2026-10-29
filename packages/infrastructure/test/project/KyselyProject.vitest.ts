@@ -176,6 +176,8 @@ describe("Kysely Project 実装 integration", () => {
       expect(detail).not.toBeNull();
       expect(detail!.title).toBe("snsLinks 確認");
       expect(detail!.snsLinks.x).toBe("https://x.com/foo");
+      // リーダーの表示名と bio を accounts から join して返す（#316。bio は未設定なら null）
+      expect(detail!.leader).toEqual({ displayName: "オーナー", bio: null });
 
       // 別アカウントからは取得不可
       const other = await queryService.findProjectDetailForOwner(project.id, randomUUID());

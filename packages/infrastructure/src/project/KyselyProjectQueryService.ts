@@ -88,8 +88,10 @@ export class KyselyProjectQueryService
   ): Promise<ProjectDetailDTO | null> {
     const row = await db
       .selectFrom("projects")
-      .selectAll()
-      .where("id", "=", projectId)
+      .innerJoin("accounts", "accounts.id", "projects.ownerAccountId")
+      .selectAll("projects")
+      .select(["accounts.displayName as leaderDisplayName", "accounts.bio as leaderBio"])
+      .where("projects.id", "=", projectId)
       .executeTakeFirst();
 
     if (!row) return null;
@@ -133,6 +135,10 @@ export class KyselyProjectQueryService
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       latestFeedback,
+      leader: {
+        displayName: row.leaderDisplayName,
+        bio: row.leaderBio,
+      },
     };
   }
 
