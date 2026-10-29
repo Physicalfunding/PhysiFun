@@ -1,28 +1,36 @@
 import type { NextResponse } from "next/server";
 import type { ZodError } from "zod";
 import type {
+  AddScheduleError,
   CreateRecruitmentError,
   DeleteRecruitmentError,
   ListRecruitmentsError,
+  RemoveScheduleError,
   UpdateRecruitmentError,
+  UpdateScheduleError,
 } from "@physifun/application";
 import {
+  conflictResponse,
   forbiddenResponse,
   notFoundResponse,
+  unprocessableEntityResponse,
   validationErrorResponse,
 } from "@physifun/server-shared";
 
 /**
- * 募集 API のユースケースが返すエラー
+ * 募集・日程 API のユースケースが返すエラー
  */
 export type RecruitmentApiError =
   | ListRecruitmentsError
   | CreateRecruitmentError
   | UpdateRecruitmentError
-  | DeleteRecruitmentError;
+  | DeleteRecruitmentError
+  | AddScheduleError
+  | UpdateScheduleError
+  | RemoveScheduleError;
 
 /**
- * 募集のユースケースのエラーを HTTP レスポンスに変える（募集 API の Route Handler で共通）
+ * 募集・日程のユースケースのエラーを HTTP レスポンスに変える（募集・日程 API の Route Handler で共通）
  *
  * エラーの型はユースケースどうしでほとんど同じなので、1 か所で変換する。
  */
@@ -34,12 +42,25 @@ export function recruitmentErrorResponse(error: RecruitmentApiError): NextRespon
       return validationErrorResponse("無効なプロジェクトIDです");
     case "INVALID_RECRUITMENT_ID":
       return validationErrorResponse("無効な募集IDです");
+    case "INVALID_SCHEDULE_ID":
+      return validationErrorResponse("無効な日程IDです");
+    // 日程の項目は Route Handler の Zod でほぼ止まる。ここに来るのは、時刻を片方だけ変えて前後が逆になったときなど
     case "DOMAIN_ERROR":
+    case "INVALID_SCHEDULE_DATE":
+    case "INVALID_TIME_RANGE":
+    case "INVALID_CAPACITY_PER_HOUR":
+    case "INVALID_APPROVAL_MODE":
       return validationErrorResponse("入力内容を確認してください");
+    case "SCHEDULE_DATE_IN_PAST":
+      return unprocessableEntityResponse("過去の日付には設定できません");
+    case "DUPLICATE_SCHEDULE_DATE":
+      return conflictResponse("この日付の日程はすでにあります");
     case "PROJECT_NOT_FOUND":
       return notFoundResponse("プロジェクト");
     case "RECRUITMENT_NOT_FOUND":
       return notFoundResponse("募集");
+    case "SCHEDULE_NOT_FOUND":
+      return notFoundResponse("日程");
     case "NOT_OWNER":
       return forbiddenResponse("このプロジェクトの募集を操作する権限がありません");
   }
