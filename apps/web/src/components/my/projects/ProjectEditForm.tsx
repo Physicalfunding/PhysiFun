@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import type { z } from "zod";
 import {
   CATEGORY_MASTER,
   PREFECTURE_MASTER,
-  PROJECT_STORY_LIMITS,
   ProjectStory,
   type ProjectStoryDocument,
+  type ProjectStoryError,
 } from "@physifun/domain";
 import {
   Button,
@@ -23,6 +23,7 @@ import {
 } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
 import { projectFormSchema } from "@/lib/validations/projectFormSchema";
+import { StoryEditor } from "./StoryEditor";
 
 const PREFECTURE_OPTIONS = PREFECTURE_MASTER.map((p) => ({
   value: p.code,
@@ -34,26 +35,24 @@ const CATEGORY_OPTIONS = CATEGORY_MASTER.map((c) => ({
   label: c.label,
 }));
 
-// 本文のつなぎ（#315）。S-5（#317）のエディタが入るまで、本文は Textarea の文字で持ち、
-// 書き換えたときだけ文書データ（1 行を 1 段落）に変えて送る（リストなどを文字に戻すと消えるため）。
-// 読み込むときは段落の文字を改行でつなぐ。S-5 で消す
-const editFormSchema = projectFormSchema.extend({
-  body: z
-    .string()
-    .max(PROJECT_STORY_LIMITS.textLength, `本文は${PROJECT_STORY_LIMITS.textLength}文字以内です`)
-    .nullable()
-    .optional(),
-});
-type EditFormValues = z.infer<typeof editFormSchema>;
+type EditFormValues = z.infer<typeof projectFormSchema>;
 
-function storyToText(story: ProjectStoryDocument | null): string {
-  return (story?.content ?? [])
-    .flatMap((block) =>
-      block.type === "paragraph" || block.type === "heading"
-        ? [(block.content ?? []).map((i) => (i.type === "text" ? i.text : "\n")).join("")]
-        : []
-    )
-    .join("\n");
+/**
+ * ストーリーの検査（`ProjectStory.create`）に通らなかったときに見せる文言
+ */
+function storyErrorMessage(error: ProjectStoryError): string {
+  switch (error.type) {
+    case "STORY_TOO_LONG":
+      return `ストーリーは${error.maxLength}文字以内です（今は${error.actualLength}文字）`;
+    case "STORY_TOO_LARGE":
+      return "ストーリーが大きすぎます。内容を減らしてください";
+    case "STORY_TOO_MANY_IMAGES":
+      return `ストーリーに入れられる画像は${error.maxCount}枚までです`;
+    case "STORY_TOO_MANY_VIDEOS":
+      return `ストーリーに入れられる動画は${error.maxCount}本までです`;
+    case "STORY_NOT_ALLOWED":
+      return "ストーリーに使えない内容が含まれています";
+  }
 }
 
 interface ProjectEditFormProps {
@@ -69,11 +68,12 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, dirtyFields },
   } = useForm<EditFormValues>({
-    resolver: zodResolver(editFormSchema),
+    resolver: zodResolver(projectFormSchema),
   });
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
         reset({
           title: data.title || "",
           summary: data.summary || "",
-          body: storyToText(data.body),
+          body: data.body ?? null,
           leaderIntroduction: data.leaderIntroduction || "",
           activityPlan: data.activityPlan || "",
           coverImageUrl: data.coverImageUrl || "",
@@ -114,15 +114,17 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
   }, [projectId]);
 
   const onSubmit = async (values: EditFormValues) => {
-    const { body: text, ...others } = values;
-    // undefined なら body を送らない（今の本文がそのまま残る）
+    const { body: edited, ...others } = values;
+    // 本文（ストーリー）は書き換えたときだけ送る（undefined なら今の本文がそのまま残る）
     let body: ProjectStoryDocument | null | undefined;
     if (dirtyFields.body) {
       body = null;
-      if (text?.trim()) {
-        const story = ProjectStory.fromPlainText(text);
+      if (edited) {
+        // 送る前にここでも検査して、長すぎ・使えない内容をその場で知らせる（サーバーでも同じ検査をする）。
+        // 画像は S-8（#320）で入れられるようになるまで、サーバーと同じくすべて断る
+        const story = ProjectStory.create(edited, { isAllowedImageUrl: () => false });
         if (!story.ok) {
-          showToast("本文が長すぎます", "error");
+          showToast(storyErrorMessage(story.error), "error");
           return;
         }
         body = story.value.toJSON();
@@ -187,11 +189,17 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
               error={errors.summary?.message}
               {...register("summary")}
             />
-            <Textarea
-              label="プロジェクト詳細"
-              rows={10}
-              error={errors.body?.message}
-              {...register("body")}
+            <Controller
+              name="body"
+              control={control}
+              render={({ field }) => (
+                <StoryEditor
+                  label="ストーリー"
+                  helperText="見出しごとに書いていきましょう。画像や動画を入れると、読む人に伝わりやすくなります。"
+                  value={field.value ?? null}
+                  onChange={field.onChange}
+                />
+              )}
             />
             <Textarea
               label="リーダー紹介"
