@@ -5,7 +5,7 @@ import type { Editor, JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { PROJECT_STORY_LIMITS, type StoryTextAlign } from "@physifun/domain";
 import { Button, Input, Modal } from "@/components/common";
-import { isStoryLinkUrl, storyEditorExtensions } from "./storyEditorExtensions";
+import { canEditStory, isStoryLinkUrl, storyEditorExtensions } from "./storyEditorExtensions";
 
 interface StoryEditorProps {
   label: string;
@@ -38,12 +38,17 @@ const CONTENT_CLASS = [
  *   スマホでは折り返す。画像は S-8（#320）、動画は S-9（#321）で足す
  * - リンクはダイアログで URL を入れる。`http://` か `https://` で始まるものだけ受け付ける
  * - 文字数は domain と同じく、画面に表示される文字（文字ノードの文字）だけを数える
+ * - このエディタにまだ無い要素（YouTube など）を含む本文は、空で開いて保存で消してしまわないよう、
+ *   編集できない状態で開く（`onChange` が起きないので、保存しても本文は送られず今のまま残る）
  */
 export function StoryEditor({ label, helperText, value, onChange }: StoryEditorProps) {
   const labelId = useId();
+  // 最初の本文だけで決まる（以後はエディタが本文を持つ）
+  const [editable] = useState(() => canEditStory(value));
   const editor = useEditor({
     extensions: storyEditorExtensions,
-    content: value,
+    content: editable ? value : null,
+    editable,
     editorProps: {
       attributes: {
         role: "textbox",
@@ -62,11 +67,19 @@ export function StoryEditor({ label, helperText, value, onChange }: StoryEditorP
         {label}
       </p>
       {helperText && <p className="mb-2 text-sm text-gray-500">{helperText}</p>}
-      <div className="rounded-md border border-gray-300 bg-white shadow-sm focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500">
-        {editor && <Toolbar editor={editor} />}
-        <EditorContent editor={editor} className={CONTENT_CLASS} />
-      </div>
-      {editor && <TextCount editor={editor} />}
+      {editable ? (
+        <>
+          <div className="rounded-md border border-gray-300 bg-white shadow-sm focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500">
+            {editor && <Toolbar editor={editor} />}
+            <EditorContent editor={editor} className={CONTENT_CLASS} />
+          </div>
+          {editor && <TextCount editor={editor} />}
+        </>
+      ) : (
+        <p role="alert" className="rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+          このストーリーには、この画面ではまだ編集できない内容が含まれています。内容を守るため、ここでは編集できません（保存してもストーリーは今のまま残ります）。
+        </p>
+      )}
     </div>
   );
 }

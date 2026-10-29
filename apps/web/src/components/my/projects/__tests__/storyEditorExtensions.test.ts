@@ -2,7 +2,7 @@ import { getSchema } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { ProjectStory } from "@physifun/domain";
 import { describe, expect, it } from "vitest";
-import { isStoryLinkUrl, storyEditorExtensions } from "../storyEditorExtensions";
+import { canEditStory, isStoryLinkUrl, storyEditorExtensions } from "../storyEditorExtensions";
 
 /**
  * Issue #317: ストーリーのエディタの拡張の組み合わせのテスト。
@@ -164,6 +164,68 @@ describe("storyEditorExtensions", () => {
         reason: "UNSUPPORTED_ATTRIBUTE",
       });
     }
+  });
+});
+
+describe("canEditStory", () => {
+  it("本文が無いとき・許可した要素だけの本文は編集できる", () => {
+    expect(canEditStory(null)).toBe(true);
+    expect(
+      canEditStory({
+        type: "doc",
+        content: [
+          { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "見出し" }] },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "項目" }] }],
+              },
+            ],
+          },
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: "a",
+                marks: [{ type: "link", attrs: { href: "https://example.com" } }],
+              },
+            ],
+          },
+        ],
+      })
+    ).toBe(true);
+  });
+
+  it("domain は許すがこのエディタにまだ無い要素（YouTube・画像）を含む本文は編集できない（空で開いて消さないため）", () => {
+    expect(
+      canEditStory({
+        type: "doc",
+        content: [{ type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } }],
+      })
+    ).toBe(false);
+    expect(
+      canEditStory({
+        type: "doc",
+        content: [{ type: "image", attrs: { src: "https://abc.supabase.co/a.png" } }],
+      })
+    ).toBe(false);
+  });
+
+  it("置けない場所にある要素（リストの直下の段落）も編集できない", () => {
+    expect(
+      canEditStory({
+        type: "doc",
+        content: [
+          {
+            type: "bulletList",
+            content: [{ type: "paragraph", content: [{ type: "text", text: "a" }] }],
+          },
+        ],
+      })
+    ).toBe(false);
   });
 });
 

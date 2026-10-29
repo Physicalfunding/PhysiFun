@@ -1,4 +1,4 @@
-import type { Extensions } from "@tiptap/core";
+import { type Extensions, type JSONContent, getSchema } from "@tiptap/core";
 import Link from "@tiptap/extension-link";
 import { OrderedList } from "@tiptap/extension-list";
 import TextAlign from "@tiptap/extension-text-align";
@@ -88,3 +88,22 @@ export const storyEditorExtensions: Extensions = [
   StoryOrderedList,
   TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
 ];
+
+const storyEditorSchema = getSchema(storyEditorExtensions);
+
+/**
+ * 読み込んだ本文を、このエディタで編集できるか（要素・装飾がすべてこのエディタのスキーマにあるか）。
+ *
+ * domain の `ProjectStory` が許す要素のうち、画像（S-8 / #320）と YouTube（S-9 / #321）はまだこのエディタに無い。
+ * Tiptap は読めない本文を黙って空にして開くので、そのまま保存すると本文が消える。
+ * そうならないように、読めない本文は編集できない状態で開く（`StoryEditor`）
+ */
+export function canEditStory(value: JSONContent | null): boolean {
+  if (value === null) return true;
+  try {
+    storyEditorSchema.nodeFromJSON(value).check();
+    return true;
+  } catch {
+    return false;
+  }
+}
