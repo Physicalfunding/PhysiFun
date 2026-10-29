@@ -5,7 +5,7 @@ import { getPrefectureName, type ReviewAction } from "@physifun/domain";
 import { ProjectPublishStatusBadge } from "@/components/ProjectPublishStatusBadge";
 import { ProjectPhaseBadge } from "@/components/ProjectPhaseBadge";
 import { ProjectReviewActions } from "@/components/ProjectReviewActions";
-import { SafeSnsLink, isAllowedImageUrl } from "@physifun/ui-shared";
+import { ProjectStoryView, SafeSnsLink, isAllowedImageUrl } from "@physifun/ui-shared";
 import { getAuthenticatedAdminId } from "@/lib/api/auth";
 import { getCategoryLabel } from "@/lib/category";
 import { getProjectQueryService } from "@/lib/di/queryServices";
@@ -120,7 +120,9 @@ export default async function AdminProjectDetailPage({
           </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">本文</dt>
-            <dd className="mt-1 whitespace-pre-wrap text-gray-900">{detail.body ?? "-"}</dd>
+            <dd className="mt-1 text-gray-900">
+              {detail.body ? <ProjectStoryView story={detail.body} /> : "-"}
+            </dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">リーダー紹介</dt>

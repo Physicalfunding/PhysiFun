@@ -15,11 +15,17 @@ const httpsUrl = z
  *
  * DRAFT 保存時は title のみ必須。
  * フィールド文字数上限は domain の LIMITS に合わせている。
+ * 本文（body）は文書データ（エディタの JSON）で、ここでは大枠だけを見る。中身はドメインの ProjectStory で検査する
  */
 export const projectFormSchema = z.object({
   title: z.string().min(1, "タイトルは必須です").max(100, "タイトルは100文字以内です"),
   summary: z.string().max(300, "概要は300文字以内です").nullable().optional(),
-  body: z.string().max(10000, "本文は10000文字以内です").nullable().optional(),
+  // 知らないキーも取り除かずにドメインの検査に渡す（取り除くと、許可していないものを黙って捨てることになる）
+  body: z
+    .object({ type: z.literal("doc") })
+    .passthrough()
+    .nullable()
+    .optional(),
   leaderIntroduction: z.string().max(2000, "リーダー紹介は2000文字以内です").nullable().optional(),
   activityPlan: z.string().max(1000, "活動計画は1000文字以内です").nullable().optional(),
   coverImageUrl: httpsUrl.nullable().optional().or(z.literal("")),
@@ -47,5 +53,3 @@ export const projectFormSchema = z.object({
     })
     .optional(),
 });
-
-export type ProjectFormValues = z.infer<typeof projectFormSchema>;

@@ -1,4 +1,9 @@
-import type { PublishStatus, ProjectPhase, ReviewAction } from "@physifun/domain";
+import type {
+  ProjectPhase,
+  ProjectStoryDocument,
+  PublishStatus,
+  ReviewAction,
+} from "@physifun/domain";
 
 /**
  * 運営（admin）向けプロジェクトクエリポート
@@ -62,7 +67,8 @@ export interface ProjectAdminDetail {
   readonly id: string;
   readonly title: string;
   readonly summary: string | null;
-  readonly body: string | null;
+  /** 本文（ストーリー）の文書データ */
+  readonly body: ProjectStoryDocument | null;
   readonly leaderIntroduction: string | null;
   readonly coverImageUrl: string | null;
   readonly category: string | null;

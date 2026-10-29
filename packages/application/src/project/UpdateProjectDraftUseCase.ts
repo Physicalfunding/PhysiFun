@@ -9,6 +9,8 @@ import {
   type SnsLinksError,
   ProjectPhase,
   PublishStatus,
+  ProjectStory,
+  type ProjectStoryError,
   type ProjectUpdateError,
   isProjectCategory,
 } from "@physifun/domain";
@@ -56,6 +58,7 @@ export type UpdateProjectDraftError =
   | { readonly type: "INVALID_CATEGORY"; readonly value: string }
   | { readonly type: "INVALID_LOCATION"; readonly issues: string[] }
   | { readonly type: "INVALID_SNS_LINKS"; readonly issues: string[] }
+  | { readonly type: "INVALID_STORY"; readonly storyError: ProjectStoryError }
   | { readonly type: "INVALID_PHASE"; readonly value: string };
 
 // ==================== 入力 DTO ====================
@@ -72,7 +75,8 @@ export interface UpdateProjectDraftInput {
   readonly location?: { prefectureCode: string; municipality?: string | null } | null;
   readonly phase?: string;
   readonly summary?: string | null;
-  readonly body?: string | null;
+  /** 本文の文書データ（エディタの JSON）。中身は `ProjectStory` で検査する。null で空にする */
+  readonly body?: unknown;
   readonly leaderIntroduction?: string | null;
   readonly activityPlan?: string | null;
   readonly snsLinks?: {
@@ -92,7 +96,7 @@ export interface UpdateProjectDraftInput {
  * 1. プロジェクトの存在チェック
  * 2. AccountId 生成 + オーナー権限チェック
  * 3. PUBLISHED 状態の編集禁止チェック
- * 4. 入力値オブジェクトの構築（category, location, snsLinks, phase）
+ * 4. 入力値オブジェクトの構築（category, location, snsLinks, phase, body）
  * 5. ドメインエンティティの update() 呼び出し
  * 6. PENDING_REVIEW → DRAFT の自動取下げ検知
  * 7. 永続化
@@ -201,6 +205,22 @@ export class UpdateProjectDraftUseCase {
       phase = input.phase as ProjectPhase;
     }
 
+    // body（本文）。許可していない要素・装飾・属性が 1 つでもあれば保存しない（設計書 §6.1）。
+    // 画像は、置き場所の決まりを画像のアップロード（#319）で決めるまで、すべて断る
+    // （*.supabase.co を広く許すと、他人の Storage の画像で閲覧者を追跡できてしまうため）
+    let body: ProjectStory | null | undefined;
+    if (input.body !== undefined) {
+      if (input.body === null) {
+        body = null;
+      } else {
+        const storyResult = ProjectStory.create(input.body, { isAllowedImageUrl: () => false });
+        if (!storyResult.ok) {
+          return err({ type: "INVALID_STORY", storyError: storyResult.error });
+        }
+        body = storyResult.value;
+      }
+    }
+
     // 6. ドメインエンティティの update() 呼び出し
     const updateResult = project.update({
       title: input.title,
@@ -209,7 +229,7 @@ export class UpdateProjectDraftUseCase {
       location,
       phase,
       summary: input.summary,
-      body: input.body,
+      body,
       leaderIntroduction: input.leaderIntroduction,
       activityPlan: input.activityPlan,
       snsLinks,

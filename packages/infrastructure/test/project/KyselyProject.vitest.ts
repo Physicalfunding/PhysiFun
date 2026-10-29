@@ -313,6 +313,100 @@ describe("Kysely Project 実装 integration", () => {
     });
   });
 
+  describe("本文（ストーリー）の文書データの往復（#315）", () => {
+    /** 見出し・装飾・リンク・入れ子のリスト・画像・動画を含む文書 */
+    const richStory = {
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 2, textAlign: "center" },
+          content: [{ type: "text", text: "実現したいこと" }],
+        },
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "太字", marks: [{ type: "bold" }] },
+            { type: "hardBreak" },
+            {
+              type: "text",
+              text: "リンク",
+              marks: [{ type: "link", attrs: { href: 'https://example.com/?q="x"' } }],
+            },
+          ],
+        },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                { type: "paragraph", content: [{ type: "text", text: "項目" }] },
+                {
+                  type: "orderedList",
+                  attrs: { start: 3 },
+                  content: [
+                    {
+                      type: "listItem",
+                      content: [{ type: "paragraph", content: [{ type: "text", text: "入れ子" }] }],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { type: "image", attrs: { src: "https://abc.supabase.co/a.png", alt: "写真" } },
+        { type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } },
+      ],
+    };
+
+    it("保存した文書データが、集約・オーナー向け・運営向けの読み込みでそのまま返る", async () => {
+      const owner = await insertRow("accounts", {
+        email: "story@example.com",
+        displayName: "ストーリー",
+        status: "ACTIVE",
+        roles: ["LEADER"],
+        passwordHash: "dummy",
+      });
+      const project = reconstructProject({
+        id: randomUUID(),
+        ownerAccountId: owner.id,
+        title: "文書データの往復",
+        coverImageUrl: null,
+        category: null,
+        prefectureCode: null,
+        municipality: null,
+        phase: "VISION",
+        status: "DRAFT",
+        summary: null,
+        story: richStory,
+        leaderIntro: null,
+        snsLinks: {},
+        activityPlan: null,
+        slug: null,
+        publishRequestedAt: null,
+        publishedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // INSERT
+      await commandAdapter.countAndSaveProject({ project, accountId: owner.id, maxCount: 3 });
+      const id = project.id.toString();
+      expect((await commandAdapter.findProjectById(id))?.body?.toJSON()).toEqual(richStory);
+      expect((await queryService.findProjectDetailForOwner(id, owner.id))?.body).toEqual(richStory);
+      expect((await queryService.findDetailForAdmin(id))?.body).toEqual(richStory);
+
+      // UPDATE（本文を空にする）
+      const loaded = await commandAdapter.findProjectById(id);
+      if (!loaded) throw new Error("project not found");
+      expect(loaded.update({ body: null }).ok).toBe(true);
+      await commandAdapter.saveProjectWithOptionalFeedback({ project: loaded });
+      expect((await commandAdapter.findProjectById(id))?.body).toBeNull();
+    });
+  });
+
   describe("公開フロー（申請 → 承認 → 公開ページ → 非公開化）の永続化（#262）", () => {
     /** projects 行の slug / 日時を直接読む */
     function loadPublicationColumns(projectId: string) {
@@ -343,6 +437,10 @@ describe("Kysely Project 実装 integration", () => {
         status: "ACTIVE",
       });
       // 公開申請に必要な項目をすべて埋めた DRAFT
+      const story = {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "本文" }] }],
+      };
       const row = await insertRow("projects", {
         ownerAccountId: leader.id,
         title: "公開フロー確認",
@@ -352,7 +450,7 @@ describe("Kysely Project 実装 integration", () => {
         category: "FOOD",
         prefectureCode: "13",
         summary: "概要",
-        story: "本文",
+        story,
         leaderIntro: "自己紹介",
       });
 
@@ -392,6 +490,7 @@ describe("Kysely Project 実装 integration", () => {
       expect(publicDetail).not.toBeNull();
       expect(publicDetail!.slug).toBe(row.id);
       expect(publicDetail!.title).toBe("公開フロー確認");
+      expect(publicDetail!.body).toEqual(story);
 
       // 4. 自主非公開: 日時はクリア、slug は残る。公開ページからは見えなくなる
       const unpublishing = await reload(row.id);

@@ -221,7 +221,7 @@ bun run db:migrate:status
 
 ```sql
 COMMENT ON TABLE "projects" IS 'リーダーが立ち上げるプロジェクト。公開審査（DRAFT → PENDING_REVIEW → PUBLISHED）を持つ。…';
-COMMENT ON COLUMN "projects"."story" IS '本文（Markdown。最大 10000 文字。公開申請に必須）。ドメインでは body';
+COMMENT ON COLUMN "projects"."leaderIntro" IS 'リーダー紹介（最大 2000 文字。公開申請に必須）。ドメインでは leaderIntroduction';
 ```
 
 - 書く内容: 業務上の意味、値の形式・上限・単位、NULL の意味、enum の各値の意味、ドメインでの呼び名（列名と違う場合）

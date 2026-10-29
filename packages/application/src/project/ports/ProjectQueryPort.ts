@@ -1,3 +1,5 @@
+import type { ProjectStoryDocument } from "@physifun/domain";
+
 /**
  * プロジェクト一覧・詳細の読み取り専用クエリポート
  *
@@ -35,7 +37,8 @@ export interface ProjectDetailDTO {
   readonly id: string;
   readonly title: string;
   readonly summary: string | null;
-  readonly body: string | null;
+  /** 本文（ストーリー）の文書データ */
+  readonly body: ProjectStoryDocument | null;
   readonly leaderIntroduction: string | null;
   readonly coverImageUrl: string | null;
   readonly category: string | null;
@@ -73,7 +76,8 @@ export interface ProjectPublicDetailDTO {
   readonly slug: string;
   readonly title: string;
   readonly summary: string | null;
-  readonly body: string | null;
+  /** 本文（ストーリー）の文書データ */
+  readonly body: ProjectStoryDocument | null;
   readonly leaderIntroduction: string | null;
   readonly coverImageUrl: string | null;
   readonly category: string | null;

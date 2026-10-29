@@ -1,4 +1,9 @@
-import type { PublishStatus, ProjectPhase, ReviewAction } from "@physifun/domain";
+import type {
+  ProjectPhase,
+  ProjectStoryDocument,
+  PublishStatus,
+  ReviewAction,
+} from "@physifun/domain";
 import type {
   ProjectQueryPort,
   PublicProjectQueryPort,
@@ -114,7 +119,7 @@ export class KyselyProjectQueryService
       id: row.id,
       title: row.title,
       summary: row.summary,
-      body: row.story,
+      body: row.story as ProjectStoryDocument | null,
       leaderIntroduction: row.leaderIntro,
       coverImageUrl: row.coverImageUrl,
       category: row.category,
@@ -257,7 +262,7 @@ export class KyselyProjectQueryService
       id: row.id,
       title: row.title,
       summary: row.summary,
-      body: row.story,
+      body: row.story as ProjectStoryDocument | null,
       leaderIntroduction: row.leaderIntro,
       coverImageUrl: row.coverImageUrl,
       category: row.category,
@@ -335,7 +340,7 @@ export class KyselyProjectQueryService
       slug: row.slug,
       title: row.title,
       summary: row.summary,
-      body: row.story,
+      body: row.story as ProjectStoryDocument | null,
       leaderIntroduction: row.leaderIntro,
       coverImageUrl: row.coverImageUrl,
       category: row.category,

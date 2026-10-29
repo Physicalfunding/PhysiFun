@@ -21,6 +21,11 @@ const OWNER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000001";
 const OTHER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000002";
 const PROJECT_ID_STR = "00000000-0000-4000-b000-000000000001";
 
+/** 文字（装飾つき）の段落だけの文書データ */
+function storyDoc(...inlines: unknown[]) {
+  return { type: "doc", content: [{ type: "paragraph", content: inlines }] };
+}
+
 function createOwnerAccountId(): AccountId {
   const r = AccountId.from(OWNER_ACCOUNT_ID_STR);
   if (!r.ok) throw new Error("AccountId creation failed");
@@ -361,5 +366,113 @@ describe("UpdateProjectDraftUseCase", () => {
     expect(result.error.type).toBe("INVALID_PHASE");
     if (result.error.type !== "INVALID_PHASE") return;
     expect(result.error.value).toBe("INVALID_VALUE");
+  });
+
+  // ---- body（本文の文書データ） ----
+
+  it("許可した要素と装飾だけの本文は、検査を通って保存される", async () => {
+    port.projects.push(createTestProject());
+    const body = {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "見出し" }] },
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "リンク",
+              marks: [{ type: "link", attrs: { href: "https://example.com" } }],
+            },
+          ],
+        },
+        { type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } },
+      ],
+    };
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      accountId: OWNER_ACCOUNT_ID_STR,
+      body,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(port.savedProjects[0].body?.toJSON()).toEqual(body);
+  });
+
+  it.each([
+    [
+      "javascript: のリンク",
+      storyDoc({
+        type: "text",
+        text: "押して",
+        marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }],
+      }),
+      "INVALID_LINK_HREF",
+    ],
+    [
+      "外部ホストの画像",
+      {
+        type: "doc",
+        content: [{ type: "image", attrs: { src: "https://evil.example.com/a.png" } }],
+      },
+      "INVALID_IMAGE_SRC",
+    ],
+    [
+      // 画像の置き場所の決まりは画像のアップロード（#319）で決める。それまでは Supabase の画像も断る
+      "Supabase Storage の画像",
+      {
+        type: "doc",
+        content: [
+          {
+            type: "image",
+            attrs: { src: "https://abc.supabase.co/storage/v1/object/public/project-images/a.png" },
+          },
+        ],
+      },
+      "INVALID_IMAGE_SRC",
+    ],
+    [
+      "許可していない装飾（文字色）",
+      storyDoc({ type: "text", text: "赤", marks: [{ type: "textStyle" }] }),
+      "UNSUPPORTED_MARK",
+    ],
+  ])("%sを含む本文は INVALID_STORY で、保存されない", async (_, body, reason) => {
+    port.projects.push(createTestProject());
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      accountId: OWNER_ACCOUNT_ID_STR,
+      title: "一緒に送ったタイトル",
+      body,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toMatchObject({
+      type: "INVALID_STORY",
+      storyError: { type: "STORY_NOT_ALLOWED", reason },
+    });
+    expect(port.savedProjects).toHaveLength(0);
+    // 一緒に送った他の項目も変わらない
+    expect(port.projects[0].title).toBe("テストプロジェクト");
+  });
+
+  it("body に null を渡すと本文が空になる", async () => {
+    port.projects.push(createTestProject());
+    await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      accountId: OWNER_ACCOUNT_ID_STR,
+      body: storyDoc({ type: "text", text: "本文" }),
+    });
+
+    const result = await useCase.execute({
+      projectId: PROJECT_ID_STR,
+      accountId: OWNER_ACCOUNT_ID_STR,
+      body: null,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(port.savedProjects[1].body).toBeNull();
   });
 });

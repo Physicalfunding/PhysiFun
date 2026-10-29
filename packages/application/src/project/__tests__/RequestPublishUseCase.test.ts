@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { AccountId, Project, ProjectLocation, ProjectPhase, SnsLinks } from "@physifun/domain";
+import {
+  AccountId,
+  Project,
+  ProjectLocation,
+  ProjectPhase,
+  SnsLinks,
+  ProjectStory,
+} from "@physifun/domain";
 import { RequestPublishUseCase } from "../RequestPublishUseCase";
 import type {
   RequestPublishPort,
@@ -7,6 +14,13 @@ import type {
 } from "../ports/RequestPublishPort";
 
 // ==================== テストヘルパー ====================
+
+/** 文字だけの本文（1 段落） */
+function storyOf(text: string): ProjectStory {
+  const r = ProjectStory.fromPlainText(text);
+  if (!r.ok) throw new Error("ProjectStory creation failed");
+  return r.value;
+}
 
 // 有効な UUID v4
 const ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000001";
@@ -35,7 +49,7 @@ function createFullDraft(ownerAccountId: AccountId, title = "古民家再生プ�
     location: validLocation(),
     phase: ProjectPhase.VISION,
     summary: "築100年の古民家を再生する",
-    body: "# 想い\n古民家に込められた歴史を次世代に繋ぎたい",
+    body: storyOf("想い\n古民家に込められた歴史を次世代に繋ぎたい"),
     leaderIntroduction: "リーダーの紹介文",
     snsLinks: emptySns(),
   });

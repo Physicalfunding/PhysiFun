@@ -7,15 +7,15 @@ import { type Result, err, ok } from "../../shared/result";
 import type { ProjectStateError, ProjectUpdateError } from "../errors/ProjectError";
 import { ProjectId } from "../value-objects/ProjectId";
 import { ProjectPhase } from "../value-objects/ProjectPhase";
+import type { ProjectStory } from "../value-objects/ProjectStory";
 import { PublishStatus } from "../value-objects/PublishStatus";
 
 /**
- * フィールド文字数上限（プロジェクト.md 仮値）
+ * フィールド文字数上限（プロジェクト.md 仮値）。本文（body）の上限は `PROJECT_STORY_LIMITS`
  */
 const LIMITS = {
   title: 100,
   summary: 300,
-  body: 10000,
   leaderIntroduction: 2000,
   activityPlan: 1000,
 } as const;
@@ -41,6 +41,7 @@ type PublicationRequiredField =
  * - DRAFT 保存時は title のみ必須、公開申請時に追加の必須項目チェック
  * - 件数上限（合計 10 件 / PUBLISHED 3 件）は UseCase 側で検証
  * - activityPlan は公開時にも任意（公開必須項目に含まない）
+ * - body（本文）は検査済みの値オブジェクト `ProjectStory` で受け取る（作るのは UseCase。`SnsLinks` などと同じ）
  * - 公開 URL の slug は初回承認時に id（UUID）で発行し、非公開化しても残す（再公開で同じ URL）
  * - publishRequestedAt / publishedAt は DRAFT に戻るときにクリアする
  */
@@ -55,7 +56,7 @@ export class Project {
     private _phase: ProjectPhase,
     private _publishStatus: PublishStatus,
     private _summary: string | null,
-    private _body: string | null,
+    private _body: ProjectStory | null,
     private _leaderIntroduction: string | null,
     private _snsLinks: SnsLinks,
     private _activityPlan: string | null,
@@ -122,7 +123,8 @@ export class Project {
    * を持つ Project を生成するためのファクトリ。
    *
    * - title は必須（trim/長さチェック）
-   * - summary/body/leaderIntroduction/activityPlan は任意。trim 後の長さ上限を検証
+   * - summary/leaderIntroduction/activityPlan は任意。trim 後の長さ上限を検証
+   * - body は任意。検査済みの ProjectStory を受け取る
    * - publishStatus は DRAFT 固定（公開時必須項目チェックは走らない）
    */
   static createForLeaderApproval(input: {
@@ -134,7 +136,7 @@ export class Project {
     location: ProjectLocation | null;
     phase: ProjectPhase;
     summary: string | null;
-    body: string | null;
+    body: ProjectStory | null;
     leaderIntroduction: string | null;
     snsLinks: SnsLinks;
     activityPlan: string | null;
@@ -159,9 +161,6 @@ export class Project {
       "SUMMARY_TOO_LONG"
     );
     if (!summary.ok) return summary;
-
-    const body = validateNullableTextStandalone(input.body, LIMITS.body, "BODY_TOO_LONG");
-    if (!body.ok) return body;
 
     const intro = validateNullableTextStandalone(
       input.leaderIntroduction,
@@ -188,7 +187,7 @@ export class Project {
         input.phase,
         PublishStatus.DRAFT,
         summary.value,
-        body.value,
+        input.body,
         intro.value,
         input.snsLinks,
         plan.value,
@@ -214,7 +213,7 @@ export class Project {
     phase: ProjectPhase;
     publishStatus: PublishStatus;
     summary: string | null;
-    body: string | null;
+    body: ProjectStory | null;
     leaderIntroduction: string | null;
     snsLinks: SnsLinks;
     activityPlan: string | null;
@@ -275,7 +274,7 @@ export class Project {
   get summary(): string | null {
     return this._summary;
   }
-  get body(): string | null {
+  get body(): ProjectStory | null {
     return this._body;
   }
   get leaderIntroduction(): string | null {
@@ -320,7 +319,7 @@ export class Project {
     location?: ProjectLocation | null;
     phase?: ProjectPhase;
     summary?: string | null;
-    body?: string | null;
+    body?: ProjectStory | null;
     leaderIntroduction?: string | null;
     activityPlan?: string | null;
     snsLinks?: SnsLinks;
@@ -350,9 +349,6 @@ export class Project {
       this._summary
     );
     if (!newSummary.ok) return newSummary;
-
-    const newBody = this.validateNullableText(input.body, LIMITS.body, "BODY_TOO_LONG", this._body);
-    if (!newBody.ok) return newBody;
 
     const newIntro = this.validateNullableText(
       input.leaderIntroduction,
@@ -386,6 +382,7 @@ export class Project {
     const newLocation = input.location !== undefined ? input.location : this._location;
     const newPhase = input.phase !== undefined ? input.phase : this._phase;
     const newSnsLinks = input.snsLinks !== undefined ? input.snsLinks : this._snsLinks;
+    const newBody = input.body !== undefined ? input.body : this._body;
 
     // PUBLISHED 状態なら公開必須項目の維持を検証
     if (this._publishStatus === PublishStatus.PUBLISHED) {
@@ -394,7 +391,7 @@ export class Project {
         category: newCategory,
         location: newLocation,
         summary: newSummary.value,
-        body: newBody.value,
+        body: newBody,
         leaderIntroduction: newIntro.value,
       });
       if (missing.length > 0) {
@@ -406,7 +403,7 @@ export class Project {
 
     this._title = newTitle;
     this._summary = newSummary.value;
-    this._body = newBody.value;
+    this._body = newBody;
     this._leaderIntroduction = newIntro.value;
     this._activityPlan = newPlan.value;
     this._coverImageUrl = newCoverImageUrl;
@@ -586,7 +583,7 @@ function getMissingPublicationFieldsFrom(fields: {
   category: unknown;
   location: unknown;
   summary: string | null;
-  body: string | null;
+  body: ProjectStory | null;
   leaderIntroduction: string | null;
 }): PublicationRequiredField[] {
   const missing: PublicationRequiredField[] = [];
@@ -594,7 +591,8 @@ function getMissingPublicationFieldsFrom(fields: {
   if (!fields.category) missing.push("category");
   if (!fields.location) missing.push("location");
   if (!fields.summary) missing.push("summary");
-  if (!fields.body) missing.push("body");
+  // 見出しの型だけの本文は未入力として扱う（設計書 §5.5）
+  if (!fields.body?.isFilled()) missing.push("body");
   if (!fields.leaderIntroduction) missing.push("leaderIntroduction");
   return missing;
 }

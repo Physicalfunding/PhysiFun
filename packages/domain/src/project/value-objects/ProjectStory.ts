@@ -219,6 +219,15 @@ export class ProjectStory {
   }
 
   /**
+   * 永続化層からの復元。保存するときに `create` で検査済みなので、`Project.reconstruct` と同じく検査しない。
+   * 画像の URL の判定は環境変数で変わるため、読むときに検査し直すと、判定が変わったときに本文を開けなくなる
+   * （表示する側でも許可したものだけを描く）
+   */
+  static reconstruct(document: ProjectStoryDocument): ProjectStory {
+    return new ProjectStory(document);
+  }
+
+  /**
    * 公開申請のときの「入力済み」の判定（設計書 §5.5）。
    * 見出し以外に空白でない文字があるか、画像か動画が 1 つ以上あれば入力済み。見出しの型だけなら未入力
    */

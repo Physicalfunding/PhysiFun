@@ -33,8 +33,7 @@ function createTestProjectDraft(overrides?: { activityContent?: string | null })
   const draft = ProjectDraft.create({
     projectTitle: "テストプロジェクト",
     projectSummary: "テストプロジェクトの概要です。これはテスト用のサマリーです。",
-    projectStory:
-      "テストプロジェクトのストーリーです。これはテスト用のストーリーで、十分な長さが必要です。テストプロジェクトのストーリーです。",
+    projectStory: "テストプロジェクトのストーリーです。\n\n応募のときに書いた 2 段落目です。",
     projectCategory: "EVENT",
     location: location.value,
     activityContent:
@@ -240,7 +239,13 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(project.ownerAccountId.toString()).toBe(ACCOUNT_ID_STR);
     expect(project.title).toBe("テストプロジェクト");
     expect(project.summary).toBe("テストプロジェクトの概要です。これはテスト用のサマリーです。");
-    expect(project.body).toContain("テストプロジェクトのストーリー");
+    // 応募時のストーリーは、1 行を 1 段落にした文書データになる（空の行は段落の区切り）
+    expect(project.body?.toJSON()).toEqual({
+      type: "doc",
+      content: ["テストプロジェクトのストーリーです。", "応募のときに書いた 2 段落目です。"].map(
+        (text) => ({ type: "paragraph", content: [{ type: "text", text }] })
+      ),
+    });
     expect(project.category).toBe("EVENT");
     expect(project.location?.prefectureCode).toBe("13");
     expect(project.location?.municipality).toBe("渋谷区");

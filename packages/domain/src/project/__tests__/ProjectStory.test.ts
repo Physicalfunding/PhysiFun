@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { PROJECT_STORY_LIMITS, ProjectStory } from "../value-objects/ProjectStory";
+import {
+  PROJECT_STORY_LIMITS,
+  ProjectStory,
+  type ProjectStoryDocument,
+} from "../value-objects/ProjectStory";
 
 const STORAGE = "https://abc.supabase.co/storage/v1/object/public/project-images";
 const isAllowedImageUrl = (url: string) => url.startsWith(`${STORAGE}/`);
@@ -282,6 +286,13 @@ describe("ProjectStory", () => {
       const result = ProjectStory.fromPlainText("a".repeat(10001));
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).toMatchObject({ type: "STORY_TOO_LONG" });
+    });
+  });
+
+  describe("reconstruct", () => {
+    it("DB から戻した文書を検査せずにそのまま持つ（画像の判定が変わっても開ける）", () => {
+      const stored = doc(img("https://old-host.example.com/a.png"));
+      expect(ProjectStory.reconstruct(stored as ProjectStoryDocument).toJSON()).toBe(stored);
     });
   });
 

@@ -22,11 +22,12 @@ import { isAllowedImageUrl } from "./isAllowedImageUrl";
  *
  * 見た目は docs-repository `docs/mvp/202604_claude_design/project-page/decided/` の見本に合わせる。
  * 色（orange）は見本の仮の色。admin でも使うため、web にだけある physifun-red ではなく Tailwind の標準色にしている。
- * リンクの文字は、白地とのコントラストが WCAG AA（4.5:1）に届くよう orange-700 にする
+ * リンクの文字は、白地とのコントラストが WCAG AA（4.5:1）に届くよう orange-700 にする。
+ * 連続した空白・行頭の空白は詰めずに残す（whitespace-pre-wrap。エディタでの見え方と、文字だけの本文の頃の表示に合わせる）
  */
 export function ProjectStoryView({ story }: { story: ProjectStoryDocument }) {
   return (
-    <div className="break-words text-sm leading-[1.7] text-gray-800 md:text-[15px] md:leading-[1.9]">
+    <div className="whitespace-pre-wrap break-words text-sm leading-[1.7] text-gray-800 md:text-[15px] md:leading-[1.9]">
       {/* story も型どおりとは限らない（null でも止まらないように） */}
       <Blocks blocks={story?.content} />
     </div>

@@ -5,6 +5,7 @@ import { SnsLinks } from "../../shared/value-objects/SnsLinks";
 import { Project } from "../entities/Project";
 import { ProjectId } from "../value-objects/ProjectId";
 import { ProjectPhase } from "../value-objects/ProjectPhase";
+import { ProjectStory } from "../value-objects/ProjectStory";
 import { PublishStatus } from "../value-objects/PublishStatus";
 
 function emptySns(): SnsLinks {
@@ -15,6 +16,13 @@ function emptySns(): SnsLinks {
 
 function validLocation(): ProjectLocation {
   const r = ProjectLocation.create({ prefectureCode: "13" });
+  if (!r.ok) throw new Error("fixture broken");
+  return r.value;
+}
+
+/** 文字だけの本文（1 行を 1 段落） */
+function story(text: string): ProjectStory {
+  const r = ProjectStory.fromPlainText(text);
   if (!r.ok) throw new Error("fixture broken");
   return r.value;
 }
@@ -37,7 +45,7 @@ function createFullDraft(): Project {
     location: validLocation(),
     phase: ProjectPhase.VISION,
     summary: "築100年の古民家を再生する",
-    body: "# 想い\n古民家に込められた歴史を次世代に繋ぎたい",
+    body: story("想い\n古民家に込められた歴史を次世代に繋ぎたい"),
     leaderIntroduction: "リーダーの紹介文",
     snsLinks: emptySns(),
   });
@@ -123,7 +131,7 @@ describe("Project", () => {
         location: validLocation(),
         phase: ProjectPhase.PLANNING,
         summary: "概要",
-        body: "本文",
+        body: story("本文"),
         leaderIntroduction: "紹介",
         activityPlan: "活動計画",
         snsLinks: emptySns(),
@@ -230,6 +238,40 @@ describe("Project", () => {
           expect(result.error.missingFields).toContain("leaderIntroduction");
         }
       }
+    });
+
+    it("本文が見出しだけ（見出しの型だけ）なら、本文は未入力として通らない", () => {
+      const project = createFullDraft();
+      const headingsOnly = ProjectStory.create(
+        {
+          type: "doc",
+          content: [
+            {
+              type: "heading",
+              attrs: { level: 2 },
+              content: [{ type: "text", text: "このプロジェクトで実現したいこと" }],
+            },
+            {
+              type: "heading",
+              attrs: { level: 2 },
+              content: [{ type: "text", text: "立ち上げの背景" }],
+            },
+            { type: "paragraph" },
+          ],
+        },
+        { isAllowedImageUrl: () => false }
+      );
+      if (!headingsOnly.ok) throw new Error("fixture broken");
+      project.update({ body: headingsOnly.value });
+
+      const result = project.requestPublish();
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error).toEqual({
+        type: "PUBLICATION_REQUIREMENTS_NOT_MET",
+        missingFields: ["body"],
+      });
+      expect(project.publishStatus).toBe(PublishStatus.DRAFT);
     });
 
     it("PENDING_REVIEW からは遷移エラー", () => {
@@ -392,7 +434,7 @@ describe("Project", () => {
         phase: ProjectPhase.EXECUTION,
         publishStatus: PublishStatus.PUBLISHED,
         summary: "概要",
-        body: "本文",
+        body: story("本文"),
         leaderIntroduction: "紹介",
         snsLinks: emptySns(),
         activityPlan: "計画",
@@ -447,7 +489,7 @@ describe("Project", () => {
         phase: ProjectPhase.ONGOING,
         publishStatus: PublishStatus.PENDING_REVIEW,
         summary: "概要",
-        body: "本文",
+        body: story("本文"),
         leaderIntroduction: "紹介",
         snsLinks: emptySns(),
         activityPlan: null,
@@ -523,7 +565,7 @@ describe("Project", () => {
         location: validLocation(),
         phase: ProjectPhase.PLANNING,
         summary: "応募内容由来のサマリー",
-        body: "応募内容由来の本文",
+        body: story("応募内容由来の本文"),
         leaderIntroduction: null,
         snsLinks: emptySns(),
         activityPlan: "応募内容由来の活動計画",
@@ -533,13 +575,14 @@ describe("Project", () => {
     }
 
     it("有効な入力で DRAFT の Project を生成する", () => {
-      const result = Project.createForLeaderApproval(baseInput());
+      const input = baseInput();
+      const result = Project.createForLeaderApproval(input);
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.value.publishStatus).toBe(PublishStatus.DRAFT);
       expect(result.value.title).toBe("承認時に作成された Project");
       expect(result.value.summary).toBe("応募内容由来のサマリー");
-      expect(result.value.body).toBe("応募内容由来の本文");
+      expect(result.value.body).toBe(input.body);
       expect(result.value.activityPlan).toBe("応募内容由来の活動計画");
       expect(result.value.phase).toBe(ProjectPhase.PLANNING);
     });
@@ -555,13 +598,6 @@ describe("Project", () => {
       const result = Project.createForLeaderApproval({ ...baseInput(), title: tooLong });
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error.type).toBe("TITLE_TOO_LONG");
-    });
-
-    it("body が 10000 文字超なら BODY_TOO_LONG", () => {
-      const tooLong = "あ".repeat(10001);
-      const result = Project.createForLeaderApproval({ ...baseInput(), body: tooLong });
-      expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.error.type).toBe("BODY_TOO_LONG");
     });
 
     it("title 前後の空白はトリムされる", () => {

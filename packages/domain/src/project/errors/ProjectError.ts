@@ -49,11 +49,6 @@ export type ProjectUpdateError =
       readonly actualLength: number;
     }
   | {
-      readonly type: "BODY_TOO_LONG";
-      readonly maxLength: number;
-      readonly actualLength: number;
-    }
-  | {
       readonly type: "LEADER_INTRODUCTION_TOO_LONG";
       readonly maxLength: number;
       readonly actualLength: number;

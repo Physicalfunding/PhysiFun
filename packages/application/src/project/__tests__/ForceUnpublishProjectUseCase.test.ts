@@ -9,6 +9,7 @@ import {
   PublishStatus,
   ReviewAction,
   SnsLinks,
+  ProjectStory,
 } from "@physifun/domain";
 import {
   ForceUnpublishProjectUseCase,
@@ -19,6 +20,13 @@ import type { AdminReviewer } from "../../shared/AdminReviewer";
 import type { CreateProjectOutboxMessageParams } from "../ports/RequestPublishPort";
 
 // ==================== テストヘルパー ====================
+
+/** 文字だけの本文（1 段落） */
+function storyOf(text: string): ProjectStory {
+  const r = ProjectStory.fromPlainText(text);
+  if (!r.ok) throw new Error("ProjectStory creation failed");
+  return r.value;
+}
 
 const OWNER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000001";
 const REVIEWER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000099";
@@ -64,7 +72,7 @@ function createProjectWithStatus(publishStatus: PublishStatus): Project {
     phase: ProjectPhase.VISION,
     publishStatus,
     summary: "築100年の古民家を再生する",
-    body: "想いを綴った本文",
+    body: storyOf("想いを綴った本文"),
     leaderIntroduction: "リーダー紹介",
     snsLinks: createEmptySnsLinks(),
     activityPlan: null,

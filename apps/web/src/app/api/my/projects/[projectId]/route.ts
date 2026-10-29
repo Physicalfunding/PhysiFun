@@ -73,6 +73,10 @@ function handleUpdateError(error: UpdateProjectDraftError) {
       return validationErrorResponse("無効なフェーズです", {
         phase: [`無効な値: ${error.value}`],
       });
+    case "INVALID_STORY":
+      return validationErrorResponse("本文に使えない内容が含まれているか、長すぎます", {
+        body: [JSON.stringify(error.storyError)],
+      });
   }
 }
 

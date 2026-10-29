@@ -6,17 +6,19 @@ import {
   PublishStatus,
   ProjectLocation,
   SnsLinks,
+  ProjectStory,
   type ProjectCategory,
+  type ProjectStoryDocument,
   isProjectCategory,
 } from "@physifun/domain";
 
 /**
- * Prisma の Project 行データからドメインエンティティを復元する共通ヘルパー
+ * projects の行データからドメインエンティティを復元する共通ヘルパー
  *
  * フィールドマッピング:
- * - Prisma `story` → Domain `body`
- * - Prisma `leaderIntro` → Domain `leaderIntroduction`
- * - Prisma `status` → Domain `publishStatus`
+ * - DB `story` → Domain `body`（jsonb の文書データ → ProjectStory。保存時に検査済みなので検査しない）
+ * - DB `leaderIntro` → Domain `leaderIntroduction`
+ * - DB `status` → Domain `publishStatus`
  */
 export function reconstructProject(row: {
   id: string;
@@ -29,7 +31,7 @@ export function reconstructProject(row: {
   phase: string;
   status: string;
   summary: string | null;
-  story: string | null;
+  story: unknown;
   leaderIntro: string | null;
   snsLinks: unknown;
   activityPlan: string | null;
@@ -87,7 +89,7 @@ export function reconstructProject(row: {
     phase: row.phase as ProjectPhase,
     publishStatus: row.status as PublishStatus,
     summary: row.summary,
-    body: row.story,
+    body: row.story === null ? null : ProjectStory.reconstruct(row.story as ProjectStoryDocument),
     leaderIntroduction: row.leaderIntro,
     snsLinks: snsResult.value,
     activityPlan: row.activityPlan,

@@ -170,7 +170,7 @@ function toProjectInsert(p: Project): Insertable<Projects> {
     slug: p.slug,
     title: p.title,
     summary: p.summary,
-    story: p.body,
+    story: (p.body?.toJSON() ?? null) as Json | null,
     leaderIntro: p.leaderIntroduction,
     coverImageUrl: p.coverImageUrl,
     category: p.category,

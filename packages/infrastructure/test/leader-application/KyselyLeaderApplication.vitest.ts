@@ -441,7 +441,12 @@ describe("Kysely LeaderApplication 実装 integration", () => {
       phase: "PLANNING",
       status: "DRAFT",
       summary: "プロジェクト概要",
-      story: "プロジェクトストーリー",
+      story: {
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "プロジェクトストーリー" }] },
+        ],
+      },
       leaderIntro: null,
       snsLinks: {},
       activityPlan: "活動内容の説明",
