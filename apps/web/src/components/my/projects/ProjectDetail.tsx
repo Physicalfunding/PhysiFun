@@ -383,7 +383,17 @@ export function ProjectDetail({ projectId }: ProjectDetailProps) {
       {activeTab === "support" && (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-gray-500">準備中</p>
+            <p className="text-gray-500">
+              サポーターに参加してほしい活動を、募集として登録できます
+            </p>
+            <Link
+              href={`/my/projects/${projectId}/recruitments`}
+              data-testid="manage-recruitments-link"
+            >
+              <Button variant="primary" size="sm" className="mt-3">
+                募集を管理する
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       )}

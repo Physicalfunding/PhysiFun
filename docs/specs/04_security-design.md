@@ -275,6 +275,7 @@ flowchart TD
 | `POST /api/my/projects` | 10 回 / 10 分 / user |
 | `PATCH /api/my/projects/:id` | 30 回 / 1 分 / user |
 | `POST /api/my/projects/:id/{request-publish, withdraw, unpublish}` | 合算 10 回 / 1 分 / user |
+| サポート募集・日程の作成 / 更新 / 削除（`POST /api/my/projects/:id/recruitments`・`PATCH` / `DELETE /api/my/recruitments/:id` など） | 合算 30 回 / 1 分 / user |
 | Admin Magic Link 送信 | 5 回 / 15 分 / email |
 
 | `/api/admin/*`（更新系） | 60 回 / 1 分 / adminAccountId |

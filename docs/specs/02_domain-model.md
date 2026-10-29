@@ -390,7 +390,7 @@ stateDiagram-v2
 
 - 定義: `packages/domain/src/recruitment/entities/SupportRecruitment.ts`（ルート）/ `RecruitmentSchedule.ts`（子）。上限は `SUPPORT_RECRUITMENT_LIMITS` / `CAPACITY_PER_HOUR_LIMITS`
 - 列の意味: [`docs/db/viewpoint-recruitment.md`](../db/viewpoint-recruitment.md)
-- 実装状況: ドメイン（#215）・application（#216）・インフラ（#217。`KyselyRecruitmentRepository`）まで。UI（#218 / #219）はこれから
+- 実装状況: ドメイン（#215）・application（#216）・インフラ（#217。`KyselyRecruitmentRepository`）まで。リーダー向けの API・画面は募集の一覧・作成・編集・削除まで（#218。日程はこれから）。公開ページへの表示（#219）はこれから
 - **募集の種類**: `ACTIVITY`（活動参加）だけ。スキル・モノ募集は enum の追加を含めて別に設計する（#291）
 - `Project` からは参照しない（募集側が `projectId` を持つ）
 
@@ -452,14 +452,15 @@ classDiagram
 
 | ルール | 場所 | 補足 |
 |---|---|---|
-| 操作できるのはプロジェクトの所有者だけ | 6 本すべて（`NOT_OWNER`） | 作成はプロジェクトの、それ以外は募集が属するプロジェクトの `ownerAccountId` と比べる（`ProjectOwnerPort.findProjectOwner`・`findOwnedRecruitment`） |
-| プロジェクトの公開状態は問わない | 6 本すべて | 公開中（PUBLISHED）でも募集・日程を作成・編集・削除できる。リーダーが空いた日を日程に足していく運用のため（`Project` の公開中は編集不可（§3.6）とは扱いが違う）。⚠️ 公開後に書いた募集のタイトル・説明は、運営の審査を通らずに公開ページに出る |
+| 操作できるのはプロジェクトの所有者だけ | すべて（`NOT_OWNER`） | 一覧・作成はプロジェクトの、それ以外は募集が属するプロジェクトの `ownerAccountId` と比べる（`ProjectOwnerPort.findProjectOwner`・`findOwnedRecruitment`） |
+| プロジェクトの公開状態は問わない | すべて | 公開中（PUBLISHED）でも募集・日程を作成・編集・削除できる。リーダーが空いた日を日程に足していく運用のため（`Project` の公開中は編集不可（§3.6）とは扱いが違う）。⚠️ 公開後に書いた募集のタイトル・説明は、運営の審査を通らずに公開ページに出る |
 | JST の今日より前の日付には追加・変更できない | `AddScheduleUseCase` / `UpdateScheduleUseCase`（`SCHEDULE_DATE_IN_PAST`） | 今日は可。日付を変えない編集（今と同じ日付が送られてきた場合を含む）と削除は、過去の日程でもできる。「今日」が要るので、ドメインでは見ない |
 | 日程は必ずルートのメソッドで作る・変える | 日程の 3 本 | `addSchedule` / `updateSchedule` / `removeSchedule` の戻り値をリポジトリに渡す。`RecruitmentSchedule.create()` / `withChanges()` は TypeScript の都合で public だが、直接呼んでリポジトリに渡すと、日付の重複チェックが飛ばされる |
 | 同時実行での日付の重複は `DUPLICATE_SCHEDULE_DATE` に変える | `AddScheduleUseCase` / `UpdateScheduleUseCase` | リポジトリが投げる `ScheduleDateConflictError` を catch して `Result` にする（例外をユースケースの外に漏らさない。前例: `CreateProjectDraftUseCase` の `ProjectLimitExceededError`） |
 
 | ユースケース | 操作 | 保存（`RecruitmentRepository`） |
 |---|---|---|
+| `ListRecruitmentsUseCase` | プロジェクトの募集を日程ごと一覧する（リーダーの管理画面用。#218） | `findByProjectId`（読むだけ） |
 | `CreateRecruitmentUseCase` | 募集を作る（種類は `ACTIVITY` で固定。日程はまだ無い） | `create` |
 | `UpdateRecruitmentUseCase` | タイトル・説明を変える | `update` |
 | `DeleteRecruitmentUseCase` | 募集を消す（日程も消える） | `delete` |

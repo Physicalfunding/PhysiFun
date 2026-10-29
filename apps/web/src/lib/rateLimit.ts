@@ -12,6 +12,8 @@ export type { RateLimitResult };
  * - `projectStatusTransition`: 公開申請 / 取下げ / 非公開化 用 (10 req / min / user)
  * - `leaderApplicationSubmit`: `POST /api/leader-applications` 用 (3 req / 1 hour / IP)
  *   未認証の公開エンドポイントなので key は IP アドレス（Issue #200 / B-6）。
+ * - `manageRecruitment`: サポート募集・日程の作成 / 更新 / 削除 用 (30 req / min / user)。
+ *   募集と日程の書き込み API の合算（#218）。
  *
  * NOTE (Issue #108): `projectStatusTransition` は Issue #108 原文の
  * 「Status transitions: 10 req / min / user」に従い、
@@ -23,7 +25,8 @@ export type RateLimitAction =
   | "createProject"
   | "updateProject"
   | "projectStatusTransition"
-  | "leaderApplicationSubmit";
+  | "leaderApplicationSubmit"
+  | "manageRecruitment";
 
 /**
  * レート制限の設定 (上限回数とウィンドウ長)。
@@ -58,6 +61,10 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitAction, RateLimitConfig> = {
   leaderApplicationSubmit: {
     limit: 3,
     windowMs: 60 * 60 * 1000, // 1 時間 (Issue #200 / B-6, 同一 IP からの連続応募抑止)
+  },
+  manageRecruitment: {
+    limit: 30,
+    windowMs: 60 * 1000, // 1 分 (募集・日程の書き込み API 合算, #218)
   },
 };
 
