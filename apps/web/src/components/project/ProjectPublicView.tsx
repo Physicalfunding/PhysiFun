@@ -98,7 +98,7 @@ export function ProjectPublicView({ project }: Props) {
           <h1 className="text-2xl font-bold text-gray-900">{project.title}</h1>
           {/* 概要はタイトルの下の短い紹介文として、左に線を付けて目立たせる（設計書 §5.6） */}
           {project.summary && (
-            <p className="mt-2 border-l-4 border-orange-500 pl-3 text-gray-600 whitespace-pre-wrap">
+            <p className="mt-2 border-l-4 border-orange-600 pl-3 text-gray-600 whitespace-pre-wrap break-words">
               {project.summary}
             </p>
           )}
