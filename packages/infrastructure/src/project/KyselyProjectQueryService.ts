@@ -411,7 +411,8 @@ export class KyselyProjectQueryService
         "in",
         recruitments.map((r) => r.id)
       )
-      .orderBy("date", "asc")
+      // 別名 "date"（文字列）ではなく列そのもので並べる
+      .orderBy(sql.ref("recruitment_schedules.date"), "asc")
       .execute();
 
     const schedulesByRecruitmentId = new Map<string, RecruitmentScheduleDTO[]>();

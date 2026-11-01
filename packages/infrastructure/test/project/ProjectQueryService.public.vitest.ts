@@ -21,7 +21,7 @@ describe("KyselyProjectQueryService (public) integration", () => {
   });
 
   describe("findPublishedRecruitmentsBySlug", () => {
-    it("公開中プロジェクトの募集を作成順に、日程を日付順に返す（date は YYYY-MM-DD の文字列）", async () => {
+    it("公開中プロジェクトの募集を作成順に、日程を募集ごとに日付順で返す（date は YYYY-MM-DD の文字列）", async () => {
       const { projectId, slug } = await seedProject("PUBLISHED");
       const later = await insertRow("support_recruitments", {
         projectId,
@@ -54,6 +54,15 @@ describe("KyselyProjectQueryService (public) integration", () => {
           capacityPerHour: 5,
           approvalMode: "AUTO",
         },
+        // 別の募集の日程（募集ごとに振り分けられることの確認用。日付は earlier の 2 件の間）
+        {
+          supportRecruitmentId: later.id,
+          date: "2099-01-11",
+          startTime: "09:00",
+          endTime: "12:00",
+          capacityPerHour: 1,
+          approvalMode: "AUTO",
+        },
       ]);
 
       const result = await service.findPublishedRecruitmentsBySlug(slug);
@@ -80,7 +89,8 @@ describe("KyselyProjectQueryService (public) integration", () => {
           approvalMode: "MANUAL",
         }),
       ]);
-      expect(result[1]).toMatchObject({ id: later.id, schedules: [] });
+      expect(result[1].id).toBe(later.id);
+      expect(result[1].schedules.map((s) => s.date)).toEqual(["2099-01-11"]);
     });
 
     it("他のプロジェクトの募集は混ざらない", async () => {
