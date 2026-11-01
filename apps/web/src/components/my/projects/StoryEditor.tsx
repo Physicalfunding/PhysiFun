@@ -10,7 +10,13 @@ import {
 } from "@physifun/domain";
 import { ProjectStoryView } from "@physifun/ui-shared";
 import { Button, Input, Modal } from "@/components/common";
-import { canEditStory, isStoryLinkUrl, storyEditorExtensions } from "./storyEditorExtensions";
+import {
+  STORY_HINT_ATTRIBUTE,
+  STORY_HINT_CLASS,
+  canEditStory,
+  isStoryLinkUrl,
+  storyEditorExtensions,
+} from "./storyEditorExtensions";
 
 interface StoryEditorProps {
   label: string;
@@ -33,6 +39,9 @@ const CONTENT_CLASS = [
   "[&_ul]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-2.5 [&_ol]:list-decimal [&_ol]:pl-6",
   "[&_li>p]:mb-0 [&_li>ul]:mb-0 [&_li>ol]:mb-0",
   "[&_a]:text-orange-700 [&_a]:underline [&_strong]:font-bold",
+  // 見出しの型の下のヒント（`storyEditorExtensions` の decoration）。空の段落の中に薄い字で出し、
+  // 高さを取らない（float + h-0）ので、書き始めるとそのまま文字に置き換わる
+  `[&_.${STORY_HINT_CLASS}::before]:content-[attr(${STORY_HINT_ATTRIBUTE})] [&_.${STORY_HINT_CLASS}::before]:pointer-events-none [&_.${STORY_HINT_CLASS}::before]:float-left [&_.${STORY_HINT_CLASS}::before]:h-0 [&_.${STORY_HINT_CLASS}::before]:text-gray-400`,
 ].join(" ");
 
 /**
@@ -45,6 +54,8 @@ const CONTENT_CLASS = [
  * - 文字数は domain と同じく、画面に表示される文字（文字ノードの文字）だけを数える
  * - このエディタにまだ無い要素（YouTube など）を含む本文は、空で開いて保存で消してしまわないよう、
  *   編集できない状態で開く（`onChange` が起きないので、保存しても本文は送られず今のまま残る）
+ * - 見出しの型の下には書き方のヒントを薄い字で出す（`storyEditorExtensions`。保存しない）。
+ *   「プレビュー」で、保存前の内容を公開ページと同じ部品（`ProjectStoryView`）で確かめられる（#318、設計書 §5.4）
  */
 export function StoryEditor({ label, helperText, value, onChange }: StoryEditorProps) {
   const labelId = useId();
@@ -88,7 +99,10 @@ export function StoryEditor({ label, helperText, value, onChange }: StoryEditorP
             {editor && <Toolbar editor={editor} />}
             <EditorContent editor={editor} className={CONTENT_CLASS} />
           </div>
-          {editor && <TextCount editor={editor} id={countId} />}
+          <div className="mt-1 flex items-center justify-between gap-3">
+            {editor && <PreviewButton editor={editor} />}
+            {editor && <TextCount editor={editor} id={countId} />}
+          </div>
         </>
       ) : (
         <>
@@ -341,6 +355,48 @@ function AlignIcon({ align }: { align: StoryTextAlign }) {
   );
 }
 
+/**
+ * 保存前の内容を、公開ページと同じ表示部品で見せる。開いた時点の文書データを写して出す
+ * （検査は保存するときに `ProjectStory.create` で行う。表示部品は許可したものだけを描くので、そのまま渡してよい）
+ */
+function PreviewButton({ editor }: { editor: Editor }) {
+  const [preview, setPreview] = useState<ProjectStoryDocument | null>(null);
+  const close = () => {
+    setPreview(null);
+    editor.commands.focus();
+  };
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setPreview(editor.getJSON() as ProjectStoryDocument)}
+      >
+        プレビュー
+      </Button>
+      <Modal isOpen={preview !== null} onClose={close} title="ストーリーのプレビュー" size="2xl">
+        <div className="max-h-[70vh] overflow-y-auto">
+          {preview && !isBlank(preview) ? (
+            <ProjectStoryView story={preview} />
+          ) : (
+            <p className="py-6 text-center text-sm text-gray-500">まだ何も書かれていません</p>
+          )}
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+/**
+ * 空の段落しかない（何も書いていない）文書か
+ */
+function isBlank(doc: ProjectStoryDocument): boolean {
+  return (doc.content ?? []).every(
+    (block) => block.type === "paragraph" && (block.content?.length ?? 0) === 0
+  );
+}
+
 function TextCount({ editor, id }: { editor: Editor; id: string }) {
   const length = useEditorState({
     editor,
@@ -351,7 +407,7 @@ function TextCount({ editor, id }: { editor: Editor; id: string }) {
     <p
       id={id}
       aria-live="polite"
-      className={`mt-1 text-right text-xs ${over ? "text-red-600" : "text-gray-500"}`}
+      className={`ml-auto text-right text-xs ${over ? "text-red-600" : "text-gray-500"}`}
     >
       {length.toLocaleString()} / {PROJECT_STORY_LIMITS.textLength.toLocaleString()} 文字
     </p>

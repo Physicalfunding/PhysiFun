@@ -216,7 +216,7 @@ stateDiagram-v2
 
 `Project.body` はこの値オブジェクト（または `null`）で、DB の `projects.story`（jsonb）にそのまま入る（#315）。
 
-- **作るのはユースケース**: `UpdateProjectDraftUseCase` は受け取った JSON を `create` で検査し、通らなければ `INVALID_STORY` で保存しない（画像は、置き場所の決まりを画像アップロード API（#319）で決めるまで、すべて断る。`04_security-design.md` §6.3）。`ApproveLeaderApplicationUseCase` は応募時のストーリー（文字だけ）を `fromPlainText` で段落にする。`Project` は検査済みのものを受け取るだけ（`SnsLinks` などと同じ）
+- **作るのはユースケース**: `UpdateProjectDraftUseCase` は受け取った JSON を `create` で検査し、通らなければ `INVALID_STORY` で保存しない（画像は、置き場所の決まりを画像アップロード API（#319）で決めるまで、すべて断る。`04_security-design.md` §6.3）。`ApproveLeaderApplicationUseCase` は応募時のストーリー（文字だけ）を `fromTemplate` で見出しの型に入れる。`Project` は検査済みのものを受け取るだけ（`SnsLinks` などと同じ）。例外は `Project.createDraft` で、本文に見出しの型（`fromTemplate()`）を自分で入れる
 - **DB から戻すときは検査しない**（`reconstruct`）: 保存時に検査済みのため。画像の URL の判定は環境変数で変わるので、読むたびに検査すると、判定が変わったときに本文を開けなくなる。表示する側（`ProjectStoryView`）でも許可したものだけを描く
 
 - **形**: エディタ（Tiptap / ProseMirror）の JSON と同じ `{ type, attrs?, content?, marks?, text? }`。domain には外部ライブラリを入れないので、Tiptap には頼らずただの JSON として検査する
@@ -232,7 +232,8 @@ stateDiagram-v2
 - **画像の URL の判定は外から渡す**（`create(json, { isAllowedImageUrl })`）。判定（`@physifun/ui-shared` の `isAllowedImageUrl`）が環境変数で変わるため、domain に環境変数を持ち込まない
 - **上限**（値は `PROJECT_STORY_LIMITS`）: 表示される文字の数・画像の枚数・動画の本数・JSON 全体の大きさ・入れ子の深さ。文字は画面に表示されるものだけを数える（文字ノードの文字。リンク先・画像の情報は数えない）
 - 検査を通った文書は作り直して持つ。値が `null` の属性と空の `marks` は「指定なし」として省く
-- **文字だけの本文から作る**（`fromPlainText`）: 1 行を 1 段落にし、空の行は段落の区切りとして捨てる（応募時のストーリーの変換に使う。今ある本文は同じ変換をマイグレーション `20261027233716_story_document.sql` で行った）
+- **文字だけの本文から作る**（`fromPlainText`）: 1 行を 1 段落にし、空の行は段落の区切りとして捨てる（今ある本文はこの変換をマイグレーション `20261027233716_story_document.sql` で行った）
+- **見出しの型から作る**（`fromTemplate(plainText?)`。#318、設計書 §5.4）: `PROJECT_STORY_TEMPLATE_HEADINGS` の 4 つの見出し（h2。「このプロジェクトで実現したいこと」「立ち上げの背景」「一緒にやってほしいこと」「活動の様子」）を、それぞれ空の段落を 1 つ添えて並べる。文字だけのストーリーを渡すと `fromPlainText` と同じく段落にして最初の見出しの下に入れる（応募の承認で使う）。型を入れるのは**作るときだけ**（`Project.createDraft`・応募の承認）で、すでに中身がある本文は書き換えない。見出しの下に出す書き方のヒントはエディタ（web）の decoration で、文書データには入らない
 - **公開申請の「入力済み」**（`isFilled()`）: 見出し以外に空白でない文字があるか、画像か動画が 1 つ以上あれば入力済み。見出しの型だけが入った本文は未入力（設計書 §5.5）
 
 ---
@@ -542,3 +543,4 @@ port はユースケースごとに、`RecruitmentRepository` から使うメソ
 | 2026-10-27 | ストーリーの文書データの値オブジェクト `ProjectStory` を追加（#313）。§3.8 に許可するもの・上限の種類・文字だけの本文の変換・「入力済み」の判定を書いた（`Project` へのつなぎ込みは #315） | 設計チーム |
 | 2026-10-28 | サポート募集のインフラ層を実装（#217）。§8.2 に同時に削除されたときの扱いを足し、実装状況を更新した | 設計チーム |
 | 2026-10-28 | `Project.body` を `ProjectStory` にした（#315）。§3.8 に作る場所（ユースケース）・DB からの復元（検査しない）を、§3.2 に公開申請の本文の判定を書いた | 設計チーム |
+| 2026-11-01 | 見出しの型 `ProjectStory.fromTemplate` と `PROJECT_STORY_TEMPLATE_HEADINGS` を追加し、`createDraft` と応募の承認で本文に入れるようにした（#318）。§3.8 に型の中身・入れるのは作るときだけ・ヒントは保存しないことを書いた | 設計チーム |
