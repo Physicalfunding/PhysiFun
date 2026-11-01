@@ -70,12 +70,19 @@ describe("Project", () => {
       expect(project.location).toBeNull();
       expect(project.phase).toBe(ProjectPhase.VISION);
       expect(project.summary).toBeNull();
-      expect(project.body).toBeNull();
       expect(project.leaderIntroduction).toBeNull();
       expect(project.activityPlan).toBeNull();
       expect(project.slug).toBeNull();
       expect(project.publishRequestedAt).toBeNull();
       expect(project.publishedAt).toBeNull();
+    });
+
+    it("本文には見出しの型が入る（見出しだけなので未入力のまま）", () => {
+      const project = unwrapDraft();
+      const template = ProjectStory.fromTemplate();
+      if (!template.ok) throw new Error("fixture broken");
+      expect(project.body?.toJSON()).toEqual(template.value.toJSON());
+      expect(project.body?.isFilled()).toBe(false);
     });
 
     it("title の前後空白はトリムされる", () => {

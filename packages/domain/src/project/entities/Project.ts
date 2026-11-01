@@ -7,7 +7,7 @@ import { type Result, err, ok } from "../../shared/result";
 import type { ProjectStateError, ProjectUpdateError } from "../errors/ProjectError";
 import { ProjectId } from "../value-objects/ProjectId";
 import { ProjectPhase } from "../value-objects/ProjectPhase";
-import type { ProjectStory } from "../value-objects/ProjectStory";
+import { ProjectStory } from "../value-objects/ProjectStory";
 import { PublishStatus } from "../value-objects/PublishStatus";
 
 /**
@@ -37,6 +37,7 @@ type PublicationRequiredField =
  * リーダーが作成・管理する体験プロジェクト。
  *
  * - `PublishStatus` 3 値（DRAFT / PENDING_REVIEW / PUBLISHED）の状態遷移を管理
+ * - 新規作成時（createDraft）の本文は見出しの型（`ProjectStory.fromTemplate`）。作るときだけで、update では入れない
  * - `ProjectPhase` は純粋なラベル（遷移バリデーションなし）
  * - DRAFT 保存時は title のみ必須、公開申請時に追加の必須項目チェック
  * - 件数上限（合計 10 件 / PUBLISHED 3 件）は UseCase 側で検証
@@ -71,6 +72,7 @@ export class Project {
    * 新規 DRAFT プロジェクトを作成する。
    *
    * title は必須（空文字・空白のみ・100文字超はエラー）。
+   * 本文（body）には見出しの型を入れる（設計書 §5.4。リーダーが見出しごとに書き始められるように）。
    */
   static createDraft(input: {
     ownerAccountId: AccountId;
@@ -102,7 +104,7 @@ export class Project {
         ProjectPhase.VISION,
         PublishStatus.DRAFT,
         null,
-        null,
+        createTemplateStory(),
         null,
         input.snsLinks ?? createEmptySnsLinks(),
         null,
@@ -595,6 +597,15 @@ function getMissingPublicationFieldsFrom(fields: {
   if (!fields.body?.isFilled()) missing.push("body");
   if (!fields.leaderIntroduction) missing.push("leaderIntroduction");
   return missing;
+}
+
+/**
+ * 見出しの型だけの本文。定数から作るので失敗しない
+ */
+function createTemplateStory(): ProjectStory {
+  const r = ProjectStory.fromTemplate();
+  if (!r.ok) throw new Error("unreachable: template ProjectStory must succeed");
+  return r.value;
 }
 
 function createEmptySnsLinks(): SnsLinks {

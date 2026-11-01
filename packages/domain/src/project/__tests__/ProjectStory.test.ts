@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   PROJECT_STORY_LIMITS,
+  PROJECT_STORY_TEMPLATE_HEADINGS,
   ProjectStory,
   type ProjectStoryDocument,
 } from "../value-objects/ProjectStory";
@@ -286,6 +287,71 @@ describe("ProjectStory", () => {
       const result = ProjectStory.fromPlainText("a".repeat(10001));
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.error).toMatchObject({ type: "STORY_TOO_LONG" });
+    });
+  });
+
+  describe("fromTemplate", () => {
+    const heading = (value: string) => ({
+      type: "heading",
+      attrs: { level: 2 },
+      content: [{ type: "text", text: value }],
+    });
+    const paragraph = (value: string) => ({
+      type: "paragraph",
+      content: [{ type: "text", text: value }],
+    });
+
+    it("4 つの見出し（h2）と、それぞれの下の空の段落でできた本文になる", () => {
+      const result = ProjectStory.fromTemplate();
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(PROJECT_STORY_TEMPLATE_HEADINGS).toEqual([
+        "このプロジェクトで実現したいこと",
+        "立ち上げの背景",
+        "一緒にやってほしいこと",
+        "活動の様子",
+      ]);
+      expect(result.value.toJSON()).toEqual(
+        doc(
+          heading("このプロジェクトで実現したいこと"),
+          { type: "paragraph" },
+          heading("立ち上げの背景"),
+          { type: "paragraph" },
+          heading("一緒にやってほしいこと"),
+          { type: "paragraph" },
+          heading("活動の様子"),
+          { type: "paragraph" }
+        )
+      );
+      // 見出しの型だけでは未入力
+      expect(result.value.isFilled()).toBe(false);
+    });
+
+    it("文字だけのストーリーを渡すと、1 行 1 段落にして「このプロジェクトで実現したいこと」の下に入れる", () => {
+      const result = ProjectStory.fromTemplate("応募のストーリー\n\n2 段落目");
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.value.toJSON()).toEqual(
+        doc(
+          heading("このプロジェクトで実現したいこと"),
+          paragraph("応募のストーリー"),
+          paragraph("2 段落目"),
+          heading("立ち上げの背景"),
+          { type: "paragraph" },
+          heading("一緒にやってほしいこと"),
+          { type: "paragraph" },
+          heading("活動の様子"),
+          { type: "paragraph" }
+        )
+      );
+      expect(result.value.isFilled()).toBe(true);
+    });
+
+    it("空白だけのストーリーは、見出しの型だけと同じになる", () => {
+      const result = ProjectStory.fromTemplate(" \n\n");
+      const template = ProjectStory.fromTemplate();
+      expect(result.ok && template.ok).toBe(true);
+      if (result.ok && template.ok) expect(result.value.toJSON()).toEqual(template.value.toJSON());
     });
   });
 

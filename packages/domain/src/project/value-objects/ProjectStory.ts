@@ -15,6 +15,17 @@ const LIMITS = {
   depth: 20,
 } as const;
 
+/**
+ * 見出しの型（設計書 §5.4）。新しいプロジェクトの本文に最初から入れる見出し。
+ * 自己紹介はリーダー紹介の欄が別にあるので入れない
+ */
+export const PROJECT_STORY_TEMPLATE_HEADINGS = [
+  "このプロジェクトで実現したいこと",
+  "立ち上げの背景",
+  "一緒にやってほしいこと",
+  "活動の様子",
+] as const;
+
 export type StoryTextAlign = "left" | "center" | "right";
 
 export type StoryMark =
@@ -210,11 +221,28 @@ export class ProjectStory {
    * 文字だけの本文から作る（設計書 §7）。1 行を 1 段落にし、空の行は段落の区切りとして捨てる
    */
   static fromPlainText(text: string): Result<ProjectStory, ProjectStoryError> {
-    const content = text
-      .split(/\r\n|\r|\n/)
-      .filter((line) => line.trim().length > 0)
-      .map((line) => ({ type: "paragraph", content: [{ type: "text", text: line }] }));
     // 文字だけの本文に画像は無いので、画像の判定はすべて断るものを渡す
+    return ProjectStory.create(
+      { type: "doc", content: paragraphsOf(text) },
+      { isAllowedImageUrl: () => false }
+    );
+  }
+
+  /**
+   * 見出しの型（`PROJECT_STORY_TEMPLATE_HEADINGS`）から作る（設計書 §5.4）。新しいプロジェクトを作るときだけ使い、
+   * すでに中身がある本文は書き換えない。
+   *
+   * - 各見出しの下に空の段落を 1 つ置く（リーダーがそこに書き始める。エディタはここに書き方のヒントを出す）
+   * - 文字だけのストーリー（応募時の `projectStory`）を渡すと、`fromPlainText` と同じく 1 行を 1 段落にして、
+   *   最初の見出し「このプロジェクトで実現したいこと」の下に入れる
+   * - 見出しの型だけの本文は `isFilled()` で未入力になる（公開申請はできない）
+   */
+  static fromTemplate(plainText = ""): Result<ProjectStory, ProjectStoryError> {
+    const story = paragraphsOf(plainText);
+    const content = PROJECT_STORY_TEMPLATE_HEADINGS.flatMap((heading, i) => [
+      { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: heading }] },
+      ...(i === 0 && story.length > 0 ? story : [{ type: "paragraph" }]),
+    ]);
     return ProjectStory.create({ type: "doc", content }, { isAllowedImageUrl: () => false });
   }
 
@@ -238,6 +266,16 @@ export class ProjectStory {
   toJSON(): ProjectStoryDocument {
     return this.document;
   }
+}
+
+/**
+ * 文字だけの本文を段落にする。1 行を 1 段落にし、空の行は段落の区切りとして捨てる
+ */
+function paragraphsOf(text: string): Json[] {
+  return text
+    .split(/\r\n|\r|\n/)
+    .filter((line) => line.trim().length > 0)
+    .map((line) => ({ type: "paragraph", content: [{ type: "text", text: line }] }));
 }
 
 function hasContent(blocks: readonly StoryBlock[]): boolean {

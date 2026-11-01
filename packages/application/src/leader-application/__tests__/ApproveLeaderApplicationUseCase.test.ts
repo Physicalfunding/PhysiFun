@@ -239,12 +239,26 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(project.ownerAccountId.toString()).toBe(ACCOUNT_ID_STR);
     expect(project.title).toBe("テストプロジェクト");
     expect(project.summary).toBe("テストプロジェクトの概要です。これはテスト用のサマリーです。");
-    // 応募時のストーリーは、1 行を 1 段落にした文書データになる（空の行は段落の区切り）
+    // 応募時のストーリーは 1 行を 1 段落にして（空の行は段落の区切り）、見出しの型の最初の見出しの下に入る
+    const h2 = (text: string) => ({
+      type: "heading",
+      attrs: { level: 2 },
+      content: [{ type: "text", text }],
+    });
+    const p = (text: string) => ({ type: "paragraph", content: [{ type: "text", text }] });
     expect(project.body?.toJSON()).toEqual({
       type: "doc",
-      content: ["テストプロジェクトのストーリーです。", "応募のときに書いた 2 段落目です。"].map(
-        (text) => ({ type: "paragraph", content: [{ type: "text", text }] })
-      ),
+      content: [
+        h2("このプロジェクトで実現したいこと"),
+        p("テストプロジェクトのストーリーです。"),
+        p("応募のときに書いた 2 段落目です。"),
+        h2("立ち上げの背景"),
+        { type: "paragraph" },
+        h2("一緒にやってほしいこと"),
+        { type: "paragraph" },
+        h2("活動の様子"),
+        { type: "paragraph" },
+      ],
     });
     expect(project.category).toBe("EVENT");
     expect(project.location?.prefectureCode).toBe("13");
