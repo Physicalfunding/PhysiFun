@@ -2,6 +2,9 @@ import { getSchema } from "@tiptap/core";
 import { PROJECT_STORY_TEMPLATE_HEADINGS, ProjectStory } from "@physifun/domain";
 import { describe, expect, it } from "vitest";
 import {
+  STORY_HINT_ATTRIBUTE,
+  STORY_HINT_CLASS,
+  STORY_HINT_MAX_LENGTH,
   STORY_TEMPLATE_HINTS,
   collectStoryHints,
   storyEditorExtensions,
@@ -32,10 +35,19 @@ function template() {
 }
 
 describe("collectStoryHints", () => {
-  it("見出しの型のすべてにヒントがある", () => {
+  it("見出しの型のすべてにヒントがあり、スマホでも 2 行に収まる長さ", () => {
     expect(Object.keys(STORY_TEMPLATE_HINTS).sort()).toEqual(
       [...PROJECT_STORY_TEMPLATE_HEADINGS].sort()
     );
+    for (const hint of Object.values(STORY_TEMPLATE_HINTS)) {
+      expect(hint.length).toBeLessThanOrEqual(STORY_HINT_MAX_LENGTH);
+    }
+  });
+
+  it("decoration が付けるクラスと属性は、StoryEditor の CSS がそのまま書いている名前と同じ", () => {
+    // Tailwind はソースを文字列として走査するので、CSS 側は変数で組めない。ここで名前のずれを止める
+    expect(STORY_HINT_CLASS).toBe("story-hint");
+    expect(STORY_HINT_ATTRIBUTE).toBe("data-hint");
   });
 
   it("見出しの型（domain の fromTemplate）を開くと、4 つの見出しの下の空の段落にそれぞれのヒントが付く", () => {

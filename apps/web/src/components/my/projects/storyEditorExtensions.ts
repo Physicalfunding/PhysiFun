@@ -73,13 +73,18 @@ export const STORY_TEMPLATE_HINTS: Readonly<
   Record<(typeof PROJECT_STORY_TEMPLATE_HEADINGS)[number], string>
 > = {
   このプロジェクトで実現したいこと: "どんな活動をして、何を実現したいのかを具体的に書きましょう。",
-  立ち上げの背景: "なぜこのプロジェクトを始めようと思ったのか、きっかけや課題を書きましょう。",
-  一緒にやってほしいこと:
-    "サポーターにどんなことを手伝ってほしいか、どんな人に来てほしいかを書きましょう。",
-  活動の様子: "これまでの活動や現場の様子を、写真や動画も使って伝えましょう。",
+  立ち上げの背景: "始めようと思ったきっかけや、感じている課題を書きましょう。",
+  一緒にやってほしいこと: "手伝ってほしいことや、来てほしい人を書きましょう。",
+  活動の様子: "これまでの活動や現場の様子を、写真や動画で伝えましょう。",
 };
 
-/** ヒントを出す段落に付けるクラスと属性。見た目は `StoryEditor` の CSS が付ける */
+/** ヒントの文の長さの上限。スマホ幅でも 2 行に収まるようにする（`StoryEditor` の CSS が段落の高さを 2 行分にしている） */
+export const STORY_HINT_MAX_LENGTH = 32;
+
+/**
+ * ヒントを出す段落に付けるクラスと属性。見た目は `StoryEditor` の CSS が付ける
+ * （CSS 側は Tailwind の走査のためクラス名をそのまま書いているので、この値を変えるときは一緒に直す）
+ */
 export const STORY_HINT_CLASS = "story-hint";
 export const STORY_HINT_ATTRIBUTE = "data-hint";
 

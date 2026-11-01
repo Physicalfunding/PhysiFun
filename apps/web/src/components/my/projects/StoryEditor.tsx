@@ -10,13 +10,7 @@ import {
 } from "@physifun/domain";
 import { ProjectStoryView } from "@physifun/ui-shared";
 import { Button, Input, Modal } from "@/components/common";
-import {
-  STORY_HINT_ATTRIBUTE,
-  STORY_HINT_CLASS,
-  canEditStory,
-  isStoryLinkUrl,
-  storyEditorExtensions,
-} from "./storyEditorExtensions";
+import { canEditStory, isStoryLinkUrl, storyEditorExtensions } from "./storyEditorExtensions";
 
 interface StoryEditorProps {
   label: string;
@@ -39,9 +33,12 @@ const CONTENT_CLASS = [
   "[&_ul]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-2.5 [&_ol]:list-decimal [&_ol]:pl-6",
   "[&_li>p]:mb-0 [&_li>ul]:mb-0 [&_li>ol]:mb-0",
   "[&_a]:text-orange-700 [&_a]:underline [&_strong]:font-bold",
-  // 見出しの型の下のヒント（`storyEditorExtensions` の decoration）。空の段落の中に薄い字で出し、
-  // 高さを取らない（float + h-0）ので、書き始めるとそのまま文字に置き換わる
-  `[&_.${STORY_HINT_CLASS}::before]:content-[attr(${STORY_HINT_ATTRIBUTE})] [&_.${STORY_HINT_CLASS}::before]:pointer-events-none [&_.${STORY_HINT_CLASS}::before]:float-left [&_.${STORY_HINT_CLASS}::before]:h-0 [&_.${STORY_HINT_CLASS}::before]:text-gray-400`,
+  // 見出しの型の下のヒント（`storyEditorExtensions` の decoration が付ける `.story-hint` と `data-hint`）。
+  // 空の段落の中に薄い字で出し、高さを取らない（float + h-0）ので、カーソルは行頭に残り、書き始めるとそのまま文字に置き換わる。
+  // Tailwind はソースを文字列として走査するので、クラスは変数で組まずにそのまま書く（組むと CSS が生成されない）
+  "[&_.story-hint::before]:content-[attr(data-hint)] [&_.story-hint::before]:pointer-events-none [&_.story-hint::before]:float-left [&_.story-hint::before]:h-0 [&_.story-hint::before]:text-gray-500",
+  // スマホではヒントが 2 行に折り返すので、次の見出しに重ならないよう段落の高さを 2 行分にしておく（ヒントは 2 行に収まる長さにしている）
+  "max-md:[&_.story-hint]:min-h-[2lh]",
 ].join(" ");
 
 /**
