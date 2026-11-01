@@ -1,9 +1,7 @@
 import type {
-  ApprovalMode,
   ProjectPhase,
   ProjectStoryDocument,
   PublishStatus,
-  RecruitmentType,
   ReviewAction,
 } from "@physifun/domain";
 import type {
@@ -424,14 +422,14 @@ export class KyselyProjectQueryService
         startTime: row.startTime,
         endTime: row.endTime,
         capacityPerHour: row.capacityPerHour,
-        approvalMode: row.approvalMode as ApprovalMode,
+        approvalMode: row.approvalMode,
       });
       schedulesByRecruitmentId.set(row.supportRecruitmentId, schedules);
     }
 
     return recruitments.map((r) => ({
       id: r.id,
-      type: r.type as RecruitmentType,
+      type: r.type,
       title: r.title,
       description: r.description,
       schedules: schedulesByRecruitmentId.get(r.id) ?? [],
