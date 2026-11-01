@@ -9,7 +9,7 @@ import {
 } from "@physifun/domain";
 import { Button, Input, Modal, Select } from "@/components/common";
 import { scheduleSchema, type ScheduleFormValues } from "@/lib/validations/scheduleSchema";
-import { APPROVAL_MODE_LABELS } from "./scheduleFormat";
+import { APPROVAL_MODE_LABELS } from "@/lib/scheduleFormat";
 
 /** "00:00"〜"23:00"（domain の TimeRange と同じく 1 時間刻み。"24:00" は無い） */
 const HOURS = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);

@@ -37,5 +37,8 @@ export default async function ProjectPublicPage({ params }: Props) {
     notFound();
   }
 
-  return <ProjectPublicView project={project} />;
+  // 公開中のサポート募集（「サポート募集」タブ）。クエリ側で PUBLISHED に絞るので、ここでは状態を見ない
+  const recruitments = await queryService.findPublishedRecruitmentsBySlug(slug);
+
+  return <ProjectPublicView project={project} recruitments={recruitments} />;
 }

@@ -9,7 +9,7 @@ import type { ScheduleFormValues } from "@/lib/validations/scheduleSchema";
 import { RecruitmentCard } from "./RecruitmentCard";
 import { RecruitmentFormModal } from "./RecruitmentFormModal";
 import { ScheduleFormModal } from "./ScheduleFormModal";
-import { formatScheduleDate, todayInJst } from "./scheduleFormat";
+import { formatScheduleDate, todayInJst } from "@/lib/scheduleFormat";
 
 /** 作成・編集モーダルの対象 */
 type FormTarget = { mode: "create" } | { mode: "edit"; recruitment: RecruitmentDTO };

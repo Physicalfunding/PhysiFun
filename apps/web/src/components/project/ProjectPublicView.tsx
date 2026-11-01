@@ -1,11 +1,12 @@
 import Image from "next/image";
-import type { ProjectPublicDetailDTO } from "@physifun/application";
+import type { ProjectPublicDetailDTO, RecruitmentDTO } from "@physifun/application";
 import { PREFECTURE_MASTER, type ProjectPhase } from "@physifun/domain";
 import { Card, CardContent } from "@/components/common";
 import { PROJECT_PHASE_LABEL, CATEGORY_LABEL } from "@/lib/project-labels";
 import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { ProjectHomePanel } from "./ProjectHomePanel";
 import { ProjectPublicTabs } from "./ProjectPublicTabs";
+import { ProjectSupportPanel } from "./ProjectSupportPanel";
 
 const PREFECTURE_MAP: Record<string, string> = Object.fromEntries(
   PREFECTURE_MASTER.map((p) => [p.code, p.name])
@@ -26,6 +27,8 @@ const placeholderPanel = (title: string) => (
 
 interface Props {
   project: ProjectPublicDetailDTO;
+  /** 公開中のサポート募集（「サポート募集」タブに表示だけする。申請は一般公開。#219） */
+  recruitments: readonly RecruitmentDTO[];
 }
 
 /**
@@ -33,7 +36,7 @@ interface Props {
  * データ整形と各タブの表示 JSX を生成し、タブ切り替え UI は子 Client Component
  * (ProjectPublicTabs) に委譲することでハイドレーションコストを抑える。
  */
-export function ProjectPublicView({ project }: Props) {
+export function ProjectPublicView({ project, recruitments }: Props) {
   const locationParts: string[] = [];
   if (project.prefectureCode && PREFECTURE_MAP[project.prefectureCode]) {
     locationParts.push(PREFECTURE_MAP[project.prefectureCode]);
@@ -107,7 +110,7 @@ export function ProjectPublicView({ project }: Props) {
 
       <ProjectPublicTabs
         home={homePanel}
-        support={placeholderPanel("サポート募集機能は今後公開予定です")}
+        support={<ProjectSupportPanel recruitments={recruitments} />}
         report={placeholderPanel("活動報告機能は今後公開予定です")}
         supporters={placeholderPanel("サポーター一覧は今後公開予定です")}
       />
