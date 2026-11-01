@@ -1,4 +1,5 @@
 import type { ProjectStoryDocument } from "@physifun/domain";
+import type { RecruitmentDTO } from "../../recruitment/ListRecruitmentsUseCase";
 
 /**
  * プロジェクト一覧・詳細の読み取り専用クエリポート
@@ -138,4 +139,13 @@ export interface PublicProjectQueryPort {
    * PUBLISHED 以外または存在しない場合は null を返す。
    */
   findPublishedBySlug(slug: string): Promise<ProjectPublicDetailDTO | null>;
+
+  /**
+   * slug で PUBLISHED プロジェクトのサポート募集を日程ごと取得する（公開ページの「サポート募集」タブ用。#219）。
+   *
+   * 募集は作成日時の古い順、日程は日付の古い順。
+   * PUBLISHED 以外または存在しないプロジェクトのときは空配列を返す（DRAFT / PENDING_REVIEW の募集は公開しない）。
+   * DTO はリーダー向け一覧（`ListRecruitmentsUseCase`）と同じ形で、オーナーの個人情報は含まない。
+   */
+  findPublishedRecruitmentsBySlug(slug: string): Promise<readonly RecruitmentDTO[]>;
 }
