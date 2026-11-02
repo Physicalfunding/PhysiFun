@@ -31,11 +31,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProjectPublicPage({ params }: Props) {
   const { slug } = await params;
-  const project = await getProject(slug);
+  // 公開中のサポート募集（「サポート募集」タブ）はプロジェクトと並行して取る。
+  // クエリ側で PUBLISHED に絞るので、プロジェクトが無い（notFound）ときも空配列になるだけ
+  const [project, recruitments] = await Promise.all([
+    getProject(slug),
+    queryService.findPublishedRecruitmentsBySlug(slug),
+  ]);
 
   if (!project) {
     notFound();
   }
 
-  return <ProjectPublicView project={project} />;
+  return <ProjectPublicView project={project} recruitments={recruitments} />;
 }

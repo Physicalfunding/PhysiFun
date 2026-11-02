@@ -2,7 +2,7 @@
 
 import type { RecruitmentDTO, RecruitmentScheduleDTO } from "@physifun/application";
 import { Button, Card, CardContent } from "@/components/common";
-import { APPROVAL_MODE_LABELS, formatScheduleDate } from "./scheduleFormat";
+import { APPROVAL_MODE_LABELS, formatScheduleDate } from "@/lib/scheduleFormat";
 
 interface RecruitmentCardProps {
   recruitment: RecruitmentDTO;

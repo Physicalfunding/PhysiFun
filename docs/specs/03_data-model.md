@@ -23,7 +23,7 @@
 |---|---|---|---|
 | アカウントと応募 | `accounts` / `leader_applications` | ✅ | [viewpoint-account](../db/viewpoint-account.md) |
 | プロジェクトと公開審査 | `projects` / `project_review_feedbacks` | ✅ | [viewpoint-project](../db/viewpoint-project.md) |
-| サポート募集 | `support_recruitments` / `recruitment_schedules` / `support_tickets` | 🚧 `support_recruitments` / `recruitment_schedules` はリーダー向けの API・画面まで（募集と日程の管理。#218）。公開ページへの表示は #219。`support_tickets`（サポーターの申請）は一般公開 | [viewpoint-recruitment](../db/viewpoint-recruitment.md) |
+| サポート募集 | `support_recruitments` / `recruitment_schedules` / `support_tickets` | 🚧 `support_recruitments` / `recruitment_schedules` はリーダー向けの API・画面（募集と日程の管理。#218）と、公開ページの「サポート募集」タブへの表示（`KyselyProjectQueryService.findPublishedRecruitmentsBySlug`。#219）まで。`support_tickets`（サポーターの申請）は一般公開 | [viewpoint-recruitment](../db/viewpoint-recruitment.md) |
 | 運営の認証と監査 | `admin_accounts` / `admin_sessions` / `admin_audit_logs` / `admin_verification_tokens` | ✅ | [viewpoint-admin](../db/viewpoint-admin.md) |
 | Outbox（非同期メール送信） | `leader_application_outbox_messages` / `project_outbox_messages` | ✅ | [viewpoint-outbox](../db/viewpoint-outbox.md) |
 
@@ -198,3 +198,4 @@ stateDiagram-v2
 | 2026-10-16 | 正本を `atlas/schema.sql` に変更（#228 / #229）。命名規則・型方針を実際の SQL 型に合わせて修正 | 設計チーム |
 | 2026-10-17 | 手書きの ER 図・列一覧・enum 一覧を、tbls の生成物（`docs/db/`）に置き換え（#261）。本書は設計の意図に絞った。実装とのズレ（モデル数、存在しないマイグレーション名、書き込まれていない reviewedBy 系の列）を修正 | 設計チーム |
 | 2026-10-28 | サポート募集のインフラ層の実装（#217）を反映。`date` 型の読み書きの仕方を書いた | 設計チーム |
+| 2026-11-01 | 公開ページへのサポート募集の表示（#219）を反映 | 設計チーム |

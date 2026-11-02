@@ -13,7 +13,10 @@ import type {
   AdminProjectQueryPort,
   ProjectAdminListResult,
   ProjectAdminDetail,
+  RecruitmentDTO,
+  RecruitmentScheduleDTO,
 } from "@physifun/application";
+import { sql } from "kysely";
 import { db } from "../database/kysely/client";
 
 // admin 向け DTO 型は application 層の AdminProjectQueryPort に定義（#231）。
@@ -362,6 +365,75 @@ export class KyselyProjectQueryService
         bio: row.leaderBio,
       },
     };
+  }
+
+  /**
+   * slug で PUBLISHED プロジェクトのサポート募集を日程ごと取得する（公開ページの「サポート募集」タブ用。#219）。
+   *
+   * - `projects` と join して `status: PUBLISHED` を条件に含めるので、DRAFT / PENDING_REVIEW の募集は返らない
+   * - 募集は作成日時の古い順、日程は日付の古い順（リーダー向け一覧 `ListRecruitmentsUseCase` と同じ）
+   * - `recruitment_schedules.date` は `to_char` で `"YYYY-MM-DD"` の文字列にして読む
+   *   （pg の既定の変換だと Node のタイムゾーンで日付がずれる。`KyselyRecruitmentRepository` / `03_data-model.md` 参照）
+   */
+  async findPublishedRecruitmentsBySlug(slug: string): Promise<readonly RecruitmentDTO[]> {
+    const recruitments = await db
+      .selectFrom("support_recruitments")
+      .innerJoin("projects", "projects.id", "support_recruitments.projectId")
+      .select([
+        "support_recruitments.id",
+        "support_recruitments.type",
+        "support_recruitments.title",
+        "support_recruitments.description",
+      ])
+      .where("projects.slug", "=", slug)
+      .where("projects.status", "=", "PUBLISHED")
+      .orderBy("support_recruitments.createdAt", "asc")
+      .orderBy("support_recruitments.id", "asc")
+      .execute();
+
+    if (recruitments.length === 0) return [];
+
+    const scheduleRows = await db
+      .selectFrom("recruitment_schedules")
+      .select([
+        "id",
+        "supportRecruitmentId",
+        sql<string>`to_char(${sql.ref("date")}, 'YYYY-MM-DD')`.as("date"),
+        "startTime",
+        "endTime",
+        "capacityPerHour",
+        "approvalMode",
+      ])
+      .where(
+        "supportRecruitmentId",
+        "in",
+        recruitments.map((r) => r.id)
+      )
+      // 別名 "date"（文字列）ではなく列そのもので並べる
+      .orderBy(sql.ref("recruitment_schedules.date"), "asc")
+      .execute();
+
+    const schedulesByRecruitmentId = new Map<string, RecruitmentScheduleDTO[]>();
+    for (const row of scheduleRows) {
+      const schedules = schedulesByRecruitmentId.get(row.supportRecruitmentId) ?? [];
+      schedules.push({
+        id: row.id,
+        date: row.date,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        capacityPerHour: row.capacityPerHour,
+        approvalMode: row.approvalMode,
+      });
+      schedulesByRecruitmentId.set(row.supportRecruitmentId, schedules);
+    }
+
+    return recruitments.map((r) => ({
+      id: r.id,
+      type: r.type,
+      title: r.title,
+      description: r.description,
+      schedules: schedulesByRecruitmentId.get(r.id) ?? [],
+    }));
   }
 }
 
