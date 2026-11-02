@@ -121,7 +121,6 @@ env-setup:
 	@echo "" >> .env
 	@echo "# Storage (Supabase Local)" >> .env
 	@echo "NEXT_PUBLIC_SUPABASE_URL=\"http://127.0.0.1:54321\"" >> .env
-	@echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$$(supabase status $(SUPABASE_WORKDIR) | grep 'Publishable' | awk '{print $$NF}')\"" >> .env
 	@echo "SUPABASE_SERVICE_ROLE_KEY=\"$$(supabase status $(SUPABASE_WORKDIR) | grep 'Secret' | awk '{print $$NF}')\"" >> .env
 	@echo "✅ .envファイルを生成しました"
 
