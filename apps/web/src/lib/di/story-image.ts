@@ -26,9 +26,15 @@ export function getUploadStoryImagePort(): UploadStoryImagePort {
 /**
  * 本文に入れてよい画像の URL か（UpdateProjectDraftUseCase 用）。
  * アップロード API が返す URL と同じ決まり（そのプロジェクトのストーリー用フォルダ配下 + `isAllowedImageUrl`）。
+ *
+ * 置き場所は、本文に画像があって判定が実際に要るときまで作らない。Supabase が未設定の本番では
+ * `createImageStorage()` がモックの本番ガードで例外になるので、先に作ると画像の無い更新まで 500 になるため。
  */
 export function getIsAllowedStoryImageUrl(): IsAllowedStoryImageUrl {
-  return createIsAllowedStoryImageUrl(createImageStorage(), isAllowedImageUrl);
+  return createIsAllowedStoryImageUrl(
+    { getPublicUrl: (path) => createImageStorage().getPublicUrl(path) },
+    isAllowedImageUrl
+  );
 }
 
 /** `@physifun/ui-shared` の画像 URL 許可リスト（UploadStoryImageUseCase に渡す） */
