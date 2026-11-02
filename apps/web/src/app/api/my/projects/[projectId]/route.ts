@@ -77,6 +77,8 @@ function handleUpdateError(error: UpdateProjectDraftError) {
         phase: [`無効な値: ${error.value}`],
       });
     case "INVALID_STORY":
+      // `fields.body[0]` の JSON は編集画面（`ProjectEditForm` の `storyErrorFromResponse`）が読んで、
+      // 送る前の検査と同じ文言にする。形を変えるときは一緒に直す
       return validationErrorResponse("本文に使えない内容が含まれているか、長すぎます", {
         body: [JSON.stringify(error.storyError)],
       });

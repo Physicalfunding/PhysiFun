@@ -1,14 +1,15 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Editor, JSONContent } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import {
   PROJECT_STORY_LIMITS,
   type ProjectStoryDocument,
   type StoryTextAlign,
 } from "@physifun/domain";
-import { ProjectStoryView } from "@physifun/ui-shared";
+import { ProjectStoryView, isAllowedImageUrl } from "@physifun/ui-shared";
 import { Button, Input, Modal } from "@/components/common";
 import {
   canEditStory,
@@ -375,6 +376,9 @@ function AlignIcon({ align }: { align: StoryTextAlign }) {
   );
 }
 
+const UPLOAD_URL_NOT_ALLOWED_MESSAGE =
+  "アップロードした画像の置き場所が使えない設定になっています。運営にお問い合わせください";
+
 interface ImageDialogState {
   readonly file: File;
   /** プレビュー用の object URL。閉じるときに解放する */
@@ -406,6 +410,19 @@ function ImageButton({
   const [dialog, setDialog] = useState<ImageDialogState | null>(null);
   const limitMessage = `画像は ${PROJECT_STORY_LIMITS.images} 枚までです`;
   const full = imageCount >= PROJECT_STORY_LIMITS.images;
+
+  // ダイアログを開いたまま画面を離れたときも、プレビュー用の object URL を解放する
+  // （いまの URL は ref に写しておき、アンマウントのときだけ解放する。閉じたときは `close` が解放する）
+  const previewUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    previewUrlRef.current = dialog?.previewUrl ?? null;
+  }, [dialog]);
+  useEffect(
+    () => () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    },
+    []
+  );
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -442,12 +459,22 @@ function ImageButton({
       fail(uploaded.error.message);
       return;
     }
+    // 貼り付け（`parseHTML`）と同じ基準を通し、エディタに入る src はすべて許可リストに合うものにする
+    // （API が返す URL は合うはずなので、ここで止まるのは置き場所の設定の誤り）
+    if (!isAllowedImageUrl(uploaded.value.url)) {
+      fail(UPLOAD_URL_NOT_ALLOWED_MESSAGE);
+      return;
+    }
     const alt = dialog.alt.trim();
-    editor
-      .chain()
-      .focus()
-      .insertContent({ type: "image", attrs: { src: uploaded.value.url, alt: alt || null } })
-      .run();
+    const image = { type: "image", attrs: { src: uploaded.value.url, alt: alt || null } };
+    // 画像などのノードを選んでいるとき（本文の先頭が画像だと、開いた直後の選択がそれになる）は、
+    // 選んでいるものを置き換えずにその直後に入れる
+    const { selection } = editor.state;
+    const chain = editor.chain().focus();
+    (selection instanceof NodeSelection
+      ? chain.insertContentAt(selection.to, image)
+      : chain.insertContent(image)
+    ).run();
     close();
   };
 

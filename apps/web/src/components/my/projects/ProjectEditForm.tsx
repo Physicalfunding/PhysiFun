@@ -60,13 +60,14 @@ function storyErrorMessage(error: ProjectStoryError): string {
   }
 }
 
-const STORY_ERROR_TYPES: readonly ProjectStoryError["type"][] = [
-  "STORY_TOO_LONG",
-  "STORY_TOO_LARGE",
-  "STORY_TOO_MANY_IMAGES",
-  "STORY_TOO_MANY_VIDEOS",
-  "STORY_NOT_ALLOWED",
-];
+/** `ProjectStoryError` の種別の一覧。domain に種別が増えると `satisfies` で型エラーになり、ここの足し忘れに気づける */
+const STORY_ERROR_TYPES = Object.keys({
+  STORY_TOO_LONG: true,
+  STORY_TOO_LARGE: true,
+  STORY_TOO_MANY_IMAGES: true,
+  STORY_TOO_MANY_VIDEOS: true,
+  STORY_NOT_ALLOWED: true,
+} satisfies Record<ProjectStoryError["type"], true>);
 
 /**
  * サーバーの保存 API が本文を断ったとき（`INVALID_STORY`）は、`error.fields.body[0]` に `ProjectStoryError` の JSON が入る。
@@ -79,7 +80,7 @@ function storyErrorFromResponse(json: unknown): string | null {
   try {
     const parsed: unknown = JSON.parse(raw);
     const type = (parsed as { type?: unknown } | null)?.type;
-    return typeof type === "string" && STORY_ERROR_TYPES.includes(type as ProjectStoryError["type"])
+    return typeof type === "string" && STORY_ERROR_TYPES.includes(type)
       ? storyErrorMessage(parsed as ProjectStoryError)
       : null;
   } catch {
