@@ -74,7 +74,6 @@ cp apps/web/.env.example apps/web/.env.local
 | `NEXTAUTH_SECRET` | NextAuth セッション署名鍵 | 任意の文字列（本番では `openssl rand -base64 32`） |
 | `NEXTAUTH_URL` | アプリの origin（CSRF 検証で使用） | `http://localhost:3000` |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase API URL（クライアント露出可） | `http://127.0.0.1:54321` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Publishable キー | `supabase status` の "Publishable key" |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Secret キー（サーバ専用） | `supabase status` の "Secret key" |
 | `SUPABASE_STORAGE_BUCKET` | プロジェクト画像用バケット名。**バケットはアプリが作らないので、環境ごとに先に作る**（下の「Storage バケット」） | `project-images`（既定） |
 | `ADMIN_EMAIL_LIST` | 運営宛通知メールの宛先（公開申請の通知など、先頭 1 件を使用） | カンマ区切り email |

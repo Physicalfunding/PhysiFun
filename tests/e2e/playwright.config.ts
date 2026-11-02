@@ -46,7 +46,6 @@ const webServerEnv = {
   TURNSTILE_SECRET_KEY: E2E_TURNSTILE_SECRET_KEY,
   // Supabase 関連はダミー値でも Phase 1 E2E は通る (Storage 不使用)
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://localhost:54321",
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "dummy-anon-key",
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "dummy-service-role-key",
   SUPABASE_STORAGE_BUCKET: process.env.SUPABASE_STORAGE_BUCKET ?? "project-images",
 };

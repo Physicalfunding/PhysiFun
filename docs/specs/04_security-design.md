@@ -177,6 +177,49 @@ if (project.ownerAccountId !== input.accountId) {
 
 > ⚠️ `timingSafeEqual` は **同一長**の Buffer のみで呼べる。長さ不一致は別 reason で先に弾く（`magicLinkHmac.ts:156`）。
 
+### 4.5 DB への経路（Supabase の Data API を使わない）
+
+アプリは DB に `DATABASE_URL`（`postgres` ロール。表の所有者）で Kysely から直接つなぐ。
+Supabase が DB の表を自動で HTTP API にする Data API（REST = PostgREST、GraphQL = pg_graphql）は使わない。
+
+| 項目 | 内容 |
+|---|---|
+| 表の権限 | `public` の表・シーケンス・関数に、`anon` / `authenticated` / `service_role` の権限を付けない。`postgres` が新しく作るものにも自動では付かない（`atlas/migrations/20261102053716_revoke_data_api_grants.sql`） |
+| RLS | 使わない。表の権限が無いので、Data API からは RLS に関係なく `42501 permission denied` になる |
+| Data API | ステージング・本番では止める（ダッシュボードの「Enable Data API」をオフ）。権限が何かの理由で戻ったときの 2 枚目の壁 |
+| Publishable キー（旧 anon キー） | アプリでは使わない。ブラウザから Supabase には直接つながない（CSP の `connect-src` も `'self'` だけ。§9） |
+| service role キー | サーバーで Storage にだけ使う。Storage の表は `storage` スキーマにあり、`public` の権限は使わない |
+
+> ⚠️ ローカルの Supabase（`supabase start`）は、`public` に作った表へ `anon` などの全権限を自動で付ける。
+> 上のマイグレーションを当てていないローカル DB では、公開されている既定の Publishable キーで全表を読み書きできる（#360 で確認）。
+> Data API から見せる表がどうしても必要になったら（例: #196 の Realtime の認可で読む表）、その表だけ GRANT し、RLS とポリシーも付ける。
+
+注意:
+
+- 自動で付かないのは、`postgres` が作るものだけ。`supabase_admin`（Supabase の管理用ロール）が `public` に作るものには、Supabase の既定で今も全権限が付く（`postgres` からは変えられない）。
+  表はマイグレーション（`postgres`）で作り、extension は `public` ではなく `extensions` スキーマに入れる
+- 関数を PUBLIC（全ロール）から実行できなくする既定は、`postgres` が作る関数すべてに効く（`public` 以外のスキーマも）。
+  RLS のポリシーや Realtime の認可から呼ぶ関数を作るときは、使うロールに `GRANT EXECUTE` を明示する
+
+ステージング・本番でマイグレーションを当てたあと、次の 2 つが 0 行になることを確かめる（`information_schema` の表は、ほかのロールが付けた権限が見えないことがあるので使わない）。
+
+```sql
+-- 表・ビューに 3 つのロールの権限が残っていないか
+SELECT c.relname, r.rolname
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role')) AS r(rolname)
+WHERE n.nspname = 'public' AND c.relkind IN ('r', 'v', 'm', 'p', 'f')
+  AND has_table_privilege(r.rolname, c.oid, 'SELECT, INSERT, UPDATE, DELETE');
+
+-- 関数を 3 つのロールが実行できないか
+SELECT p.oid::regprocedure, r.rolname
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role')) AS r(rolname)
+WHERE n.nspname = 'public' AND has_function_privilege(r.rolname, p.oid, 'EXECUTE');
+```
+
 ---
 
 ## 5. 多層防御の俯瞰
@@ -200,7 +243,7 @@ flowchart TD
 | **UseCase** | ビジネスルール / オーナーシップ / トランザクション境界 | `ownerAccountId !== accountId` の早期 return |
 | **Domain** | 不変条件 / 状態遷移 / 値オブジェクトの正規化 | `Project.requestPublish()` の必須項目チェック |
 | **Infrastructure** | Kysely による SQL injection 回避、TLS、env 読み込み | パラメタライズドクエリ（Kysely 標準） |
-| **Database** | 整合性制約 | unique / FK / `onDelete: Restrict`（監査保護） |
+| **Database** | 整合性制約 / Data API からの遮断 | unique / FK / `onDelete: Restrict`（監査保護） / `anon` などに表の権限を付けない（§4.5） |
 
 各層が独立に検証することで、**1 層の脆弱性が認証バイパスに直結しない**設計を維持する。
 
@@ -213,6 +256,7 @@ flowchart TD
 | 脅威 | 対策 | 残存リスク |
 |---|---|---|
 | **SQL Injection** | Kysely の parameterized query / Zod 入力検証 | なし（標準的） |
+| **Data API からの DB の読み書き** | `anon` / `authenticated` / `service_role` に `public` の表の権限を付けない（§4.5）＋ステージング・本番の Data API を止める | service role キーが漏れると、Storage と Supabase Auth の管理 API は使える（`public` の表には届かない） |
 | **XSS** | React の自動エスケープ / CSP `script-src 'self'` + `'unsafe-inline'`（暫定） / リーダーが書いた本文（ストーリー）は保存時の検査と表示部品で二重に守る（6.3） | `'unsafe-inline'` の暫定許可（Issue #109 follow-up） |
 | **CSRF** | NextAuth の SameSite=lax Cookie + proxy（旧 middleware）で状態変更リクエストの `Origin` / `Referer` を検証（`@physifun/server-shared` の `verifyCsrf`、web / admin 共通） | `NEXTAUTH_URL` の設定漏れ時は 403 に倒す（fail-safe） |
 | **Clickjacking** | `X-Frame-Options: DENY` + `frame-ancestors 'none'`（二重化） | なし |
@@ -438,3 +482,4 @@ flowchart TD
 | 2026-10-16 | ドキュメント棚卸し：Kysely 移行の反映、フェーズ用語を「初回リリース / 一般公開」に統一、サポート募集の位置づけ（初回リリースでリーダー側を実装予定）を修正 | 設計チーム |
 | 2026-10-28 | §6.3 に本文（ストーリー）の表示と XSS 対策を追加し、§6.1 の XSS の行から参照（#314） | 設計チーム |
 | 2026-10-28 | §6.3 に、画像アップロード API（#319）までは本文の画像を保存時に断ることを追記（#315） | 設計チーム |
+| 2026-11-02 | §4.5 に DB への経路（Data API を使わない・`anon` などに表の権限を付けない）を追加し、§5・§6.1 から参照（#360） | 設計チーム |

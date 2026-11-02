@@ -137,6 +137,14 @@ bun run db:kysely:codegen
 - スキーマは変えずに**データだけを直す**ときは、`atlas migrate new <名前> --dir file://atlas/migrations` で空のマイグレーションを作って SQL を書き、
   `atlas migrate hash --dir file://atlas/migrations` で `atlas.sum` を更新する。何度流しても結果が同じになる SQL にする
   （例: `20261017073537_backfill_project_publication.sql`、#262）
+- 権限（GRANT / REVOKE）と RLS も `schema.sql` に書けない（Atlas はログインしないと扱えない。`ENABLE ROW LEVEL SECURITY` は差分に出ず、
+  `REVOKE` はエラーになる）。上と同じ手順で手書きのマイグレーションにする。素の PostgreSQL（CI・dev DB）には Supabase のロール
+  （`anon` など）が無いので、`DO $$ ... IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') ... $$` のようにロールがあるときだけ実行する
+  （例: `20261102053716_revoke_data_api_grants.sql`、#360）
+- Supabase の `anon` / `authenticated` / `service_role` には、`public` の表の権限を付けない（`docs/specs/04_security-design.md` §4.5）。
+  マイグレーション（`postgres`）で作る表・関数には自動では付かないので、表を足すときに何もしなくてよい。どうしても Data API から見せる表が出てきたら、
+  その表だけ GRANT し、RLS も付ける。extension は `extensions` スキーマに入れる（`public` に入れると、`supabase_admin` の既定で `anon` などに権限が付く）。
+  関数を作るときは、使うロールに `GRANT EXECUTE` を明示する（`postgres` が作る関数は、どのスキーマでも PUBLIC から実行できない）
 - `id` と `updatedAt` には DB 側の DEFAULT が無い（アプリ側で値を渡す）。新しいテーブルも同じ方針にそろえる
 - テーブル・列を足したら、`schema.sql` に `COMMENT ON` で説明を書く。新しいテーブルは `.tbls.yml` の `viewpoints` のどこかに入れる。
   どちらも忘れると、CI の DB Docs ワークフローが失敗する（§6）
