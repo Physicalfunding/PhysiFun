@@ -10,9 +10,10 @@ PhysiFun のアプリケーション層（UseCase）。トランザクション�
 - `leader-application/` — 応募送信・承認・却下
 - `project/` — 作成・編集・公開申請・取り下げ・非公開化・運営審査
 - `outbox/` — 運営アプリ向けの Outbox 参照 Port
+- `recruitment/` — サポート募集と日程の作成・編集・削除・一覧（リーダーの所有者チェックつき）
 - `shared/` — 層をまたいで使う型
 
-> `recruitment/`（サポート募集）は未作成。#212 で追加予定。UseCase の追加手順は `.claude/skills/add-usecase/SKILL.md` を参照。
+> UseCase の追加手順は `.claude/skills/add-usecase/SKILL.md` を参照。
 
 ## 依存方針
 

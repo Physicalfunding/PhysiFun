@@ -553,7 +553,7 @@ export interface Projects {
 
 export interface RecruitmentSchedules {
   /**
-   * 承認モード（AUTO=申し込んだ時点で確定 / MANUAL=リーダーの承認で確定）
+   * 承認モード（AUTO=申し込んだ時点で確定 / MANUAL=リーダーの承認で確定）。既定値は、リーダーの画面の初期値と同じ MANUAL
    */
   approvalMode: Generated<Approvalmode>;
   /**

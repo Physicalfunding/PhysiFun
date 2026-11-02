@@ -428,7 +428,7 @@ CREATE TABLE "support_recruitments" (
 -- Create index "support_recruitments_projectId_idx" to table: "support_recruitments"
 CREATE INDEX "support_recruitments_projectId_idx" ON "support_recruitments" ("projectId");
 -- 説明（docs/db/・Supabase Studio・types.ts の JSDoc に反映される）
-COMMENT ON TABLE "support_recruitments" IS '【未実装 #212】サポート募集。プロジェクトに紐づく募集の単位。スキーマだけ存在し、コードはまだ無い';
+COMMENT ON TABLE "support_recruitments" IS 'サポート募集。プロジェクトに紐づく募集の単位';
 COMMENT ON COLUMN "support_recruitments"."id" IS 'サポート募集 ID';
 COMMENT ON COLUMN "support_recruitments"."projectId" IS '募集を出したプロジェクト';
 COMMENT ON COLUMN "support_recruitments"."type" IS '募集の種類（初回リリースは ACTIVITY のみ）';
@@ -444,7 +444,7 @@ CREATE TABLE "recruitment_schedules" (
   "startTime" text NOT NULL,
   "endTime" text NOT NULL,
   "capacityPerHour" integer NOT NULL,
-  "approvalMode" "ApprovalMode" NOT NULL DEFAULT 'AUTO',
+  "approvalMode" "ApprovalMode" NOT NULL DEFAULT 'MANUAL',
   "createdAt" timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" timestamp(3) NOT NULL,
   PRIMARY KEY ("id"),
@@ -455,14 +455,14 @@ CREATE INDEX "recruitment_schedules_date_idx" ON "recruitment_schedules" ("date"
 -- Create index "recruitment_schedules_supportRecruitmentId_date_key" to table: "recruitment_schedules"
 CREATE UNIQUE INDEX "recruitment_schedules_supportRecruitmentId_date_key" ON "recruitment_schedules" ("supportRecruitmentId", "date");
 -- 説明（docs/db/・Supabase Studio・types.ts の JSDoc に反映される）
-COMMENT ON TABLE "recruitment_schedules" IS '【未実装 #212】サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ';
+COMMENT ON TABLE "recruitment_schedules" IS 'サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ';
 COMMENT ON COLUMN "recruitment_schedules"."id" IS '日程 ID';
 COMMENT ON COLUMN "recruitment_schedules"."supportRecruitmentId" IS '日程が属するサポート募集';
 COMMENT ON COLUMN "recruitment_schedules"."date" IS '開催日（JST のカレンダー日）';
 COMMENT ON COLUMN "recruitment_schedules"."startTime" IS '受付時間帯の開始時刻（HH:MM 形式の JST）';
 COMMENT ON COLUMN "recruitment_schedules"."endTime" IS '受付時間帯の終了時刻（HH:MM 形式の JST）。過ぎると新規の申し込みを締め切る想定';
 COMMENT ON COLUMN "recruitment_schedules"."capacityPerHour" IS '1 時間ごとの定員（人数）。申し込みは先着順で、またがる全時間帯が定員内に収まる必要がある想定';
-COMMENT ON COLUMN "recruitment_schedules"."approvalMode" IS '承認モード（AUTO=申し込んだ時点で確定 / MANUAL=リーダーの承認で確定）';
+COMMENT ON COLUMN "recruitment_schedules"."approvalMode" IS '承認モード（AUTO=申し込んだ時点で確定 / MANUAL=リーダーの承認で確定）。既定値は、リーダーの画面の初期値と同じ MANUAL';
 COMMENT ON COLUMN "recruitment_schedules"."createdAt" IS '作成日時';
 COMMENT ON COLUMN "recruitment_schedules"."updatedAt" IS '更新日時（アプリ側で設定する）';
 -- Create "support_tickets" table
@@ -487,7 +487,7 @@ CREATE INDEX "support_tickets_status_idx" ON "support_tickets" ("status");
 -- Create index "support_tickets_supporterAccountId_idx" to table: "support_tickets"
 CREATE INDEX "support_tickets_supporterAccountId_idx" ON "support_tickets" ("supporterAccountId");
 -- 説明（docs/db/・Supabase Studio・types.ts の JSDoc に反映される）
-COMMENT ON TABLE "support_tickets" IS '【未実装 #212】サポートチケット。サポーターが日程の中の時間帯に参加を申し込んだ記録。チケットは提供する時間の単位を表す言葉で、購入や在庫は無い';
+COMMENT ON TABLE "support_tickets" IS '【未実装】サポートチケット。サポーターが日程の中の時間帯に参加を申し込んだ記録（一般公開で実装する）。チケットは提供する時間の単位を表す言葉で、購入や在庫は無い';
 COMMENT ON COLUMN "support_tickets"."id" IS 'サポートチケット ID';
 COMMENT ON COLUMN "support_tickets"."recruitmentScheduleId" IS '申し込んだ日程';
 COMMENT ON COLUMN "support_tickets"."supporterAccountId" IS '申し込んだサポーターのアカウント';

@@ -10,13 +10,13 @@
 
 ## 領域別のビュー
 
-| 名前                                                    | 説明                                                      |
-| ------------------------------------------------------- | --------------------------------------------------------- |
-| [アカウントと応募](viewpoint-account.md)                | 一般ユーザーのアカウントと、リーダー応募・運営による審査  |
-| [プロジェクトと公開審査](viewpoint-project.md)          | プロジェクト本体と、運営による公開審査の履歴              |
-| [サポート募集（未実装 #212）](viewpoint-recruitment.md) | スキーマだけ存在し、コードはまだ実装されていない          |
-| [運営の認証と監査](viewpoint-admin.md)                  | 運営アカウントの Magic Link 認証・セッション・操作ログ    |
-| [Outbox（非同期メール送信）](viewpoint-outbox.md)       | DB の更新と同じトランザクションで積む、送信待ちメッセージ |
+| 名前                                              | 説明                                                                                                            |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| [アカウントと応募](viewpoint-account.md)          | 一般ユーザーのアカウントと、リーダー応募・運営による審査                                                        |
+| [プロジェクトと公開審査](viewpoint-project.md)    | プロジェクト本体と、運営による公開審査の履歴                                                                    |
+| [サポート募集](viewpoint-recruitment.md)          | リーダーが作るサポート募集とその日程。サポーターの申し込み（support_tickets）だけは未実装で、一般公開で実装する |
+| [運営の認証と監査](viewpoint-admin.md)            | 運営アカウントの Magic Link 認証・セッション・操作ログ                                                          |
+| [Outbox（非同期メール送信）](viewpoint-outbox.md) | DB の更新と同じトランザクションで積む、送信待ちメッセージ                                                       |
 
 ## テーブル一覧
 
@@ -32,9 +32,9 @@
 | [public.leader_applications](public.leader_applications.md)                               | 28      | リーダー応募（リーダーになるための申請）と運営の審査結果。応募内容は送信時点のスナップショットで、承認時に作られる projects とは参照でつながらない。ドメインの LeaderApplication 集約（project 系の列は ProjectDraft、連絡先・募集情報の列は LeaderApplicationSnapshot に載る） | BASE TABLE |
 | [public.projects](public.projects.md)                                                     | 21      | リーダーが立ち上げるプロジェクト。公開審査（DRAFT → PENDING_REVIEW → PUBLISHED）を持つ。リーダー応募の承認時に、応募内容から下書きが作られる。ドメインの Project 集約                                                                                                           | BASE TABLE |
 | [public.project_review_feedbacks](public.project_review_feedbacks.md)                     | 7       | プロジェクトの公開審査の履歴（承認・差戻・強制非公開）。差戻が繰り返されても全件残る。ドメインの ProjectReviewFeedback（Project のサブエンティティ）                                                                                                                            | BASE TABLE |
-| [public.support_recruitments](public.support_recruitments.md)                             | 7       | 【未実装 #212】サポート募集。プロジェクトに紐づく募集の単位。スキーマだけ存在し、コードはまだ無い                                                                                                                                                                               | BASE TABLE |
-| [public.recruitment_schedules](public.recruitment_schedules.md)                           | 9       | 【未実装 #212】サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ                                                                                                                                                                       | BASE TABLE |
-| [public.support_tickets](public.support_tickets.md)                                       | 9       | 【未実装 #212】サポートチケット。サポーターが日程の中の時間帯に参加を申し込んだ記録。チケットは提供する時間の単位を表す言葉で、購入や在庫は無い                                                                                                                                 | BASE TABLE |
+| [public.support_recruitments](public.support_recruitments.md)                             | 7       | サポート募集。プロジェクトに紐づく募集の単位                                                                                                                                                                                                                                    | BASE TABLE |
+| [public.recruitment_schedules](public.recruitment_schedules.md)                           | 9       | サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ                                                                                                                                                                                      | BASE TABLE |
+| [public.support_tickets](public.support_tickets.md)                                       | 9       | 【未実装】サポートチケット。サポーターが日程の中の時間帯に参加を申し込んだ記録（一般公開で実装する）。チケットは提供する時間の単位を表す言葉で、購入や在庫は無い                                                                                                                | BASE TABLE |
 
 ## 列挙型
 
