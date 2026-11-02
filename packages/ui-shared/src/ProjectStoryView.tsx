@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import type {
-  ProjectStoryDocument,
-  StoryBlock,
-  StoryInline,
-  StoryListItem,
-  StoryMark,
+import {
+  type ProjectStoryDocument,
+  type StoryBlock,
+  type StoryInline,
+  type StoryListItem,
+  type StoryMark,
+  isYouTubeVideoId,
 } from "@physifun/domain";
-import { isYouTubeVideoId } from "@physifun/domain";
 import { isAllowedImageUrl } from "./isAllowedImageUrl";
 
 /**

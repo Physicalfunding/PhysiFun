@@ -117,6 +117,7 @@ const securityHeaders = [
       "camera=()",
       "display-capture=()",
       "encrypted-media=()",
+      // 審査画面のストーリーの YouTube の埋め込み（#321）も全画面にはしない（審査は内容の確認だけ。web は許可している）
       "fullscreen=()",
       "geolocation=()",
       "gyroscope=()",
