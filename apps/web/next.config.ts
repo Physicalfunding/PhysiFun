@@ -51,9 +51,9 @@ const remotePatterns = buildImageRemotePatterns({
  * - img-src は Supabase Storage / Unsplash / data URL を明示的に許可 (最小化)。
  * - connect-src はクライアントから直叩きする外部 API が無いので `'self'` 基本。
  * - Cloudflare Turnstile（応募フォームの CAPTCHA、#333）は script-src と frame-src で
- *   `https://challenges.cloudflare.com` を許可する。
- * - ストーリーの YouTube の埋め込み（#321）は frame-src で `https://www.youtube-nocookie.com` を許可する。connect-src は pre-clearance モードを
+ *   `https://challenges.cloudflare.com` を許可する。Turnstile の connect-src は pre-clearance モードを
  *   使わない限り不要（公式 CSP ガイド参照）。
+ * - ストーリーの YouTube の埋め込み（#321）は frame-src で `https://www.youtube-nocookie.com` を許可する。
  *   (Supabase はサーバー側 infrastructure 層からのみ `@supabase/supabase-js` を呼び、
  *    ブラウザ側では `createBrowserClient` 等を一切使用していないことを確認済み。
  *    もし将来的にブラウザから Supabase SDK を直接叩くようになったら、

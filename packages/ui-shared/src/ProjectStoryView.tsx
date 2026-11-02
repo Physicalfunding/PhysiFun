@@ -162,7 +162,9 @@ function Block({ block }: { block: StoryBlock }) {
             src={`${YOUTUBE_EMBED_BASE}${videoId}`}
             title="YouTube の動画"
             loading="lazy"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            // iframe に渡す機能。web / admin の Permissions-Policy（ヘッダー）で拒否している機能（picture-in-picture・
+            // encrypted-media・センサー）は、ここに書いても効かないので書かない。clipboard-write は共有リンクのコピー用
+            allow="clipboard-write"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
             className="h-full w-full border-0"

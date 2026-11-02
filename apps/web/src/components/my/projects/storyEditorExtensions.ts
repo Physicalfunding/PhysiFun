@@ -143,6 +143,9 @@ export function parseYouTubeVideoId(value: string): string | null {
       if (prefix) candidate = url.pathname.slice(prefix.length).split("/")[0] ?? null;
     }
   }
+  // プレイリストの埋め込み URL（`/embed/videoseries?list=...`）は、`videoseries` がちょうど 11 文字で ID の形に合ってしまう。
+  // 動画ではないので断る（保存すると再生できない枠になる）
+  if (candidate === "videoseries") return null;
   return isYouTubeVideoId(candidate) ? candidate : null;
 }
 
@@ -160,10 +163,12 @@ export const STORY_YOUTUBE_CLASS = "story-youtube";
  * - 属性は domain の `ProjectStory` が許す `videoId` だけ。Tiptap の公式の Youtube 拡張は `src`（URL）・`width`・`height`・
  *   `start` を文書データに入れるので使わず、自前の小さなノードにする
  * - 動画はツールバーの動画ボタンから、YouTube の URL を入れて足す（`parseYouTubeVideoId` で ID を取り出す）
- * - 貼り付けた HTML は、自分の描画（`div[data-youtube-video-id]`）と、YouTube の「共有 > 埋め込む」の `<iframe>` のうち
- *   src が YouTube の URL のものだけを読む。ほかの iframe は捨てる（リンク・画像と同じ考え方）
+ * - HTML（text/html の貼り付けや `setContent`）で来た要素は、自分の描画（`div[data-youtube-video-id]`）と、src が YouTube の URL の
+ *   `<iframe>` だけを読む。ほかの iframe は捨てる（リンク・画像と同じ守り）。YouTube の「共有 > 埋め込む」の欄からコピーした
+ *   `<iframe ...>` は text/plain なので文字として入る（動画にはならない。動画は動画ボタンから入れる）
  * - エディタの中では表示部品と同じ youtube-nocookie の iframe を描く（クリックは効かないようにして、枠をクリックすると
- *   ノードが選ばれ、Backspace で消せる。再生は「プレビュー」で確かめる）。見た目は `StoryEditor` の CSS が付ける
+ *   ノードが選ばれ、Backspace で消せる。再生は「プレビュー」で確かめる）。見た目は `StoryEditor` の CSS が付ける。
+ *   本物のプレイヤーを最大 5 本読み込む負荷は承知のうえ（サムネイル画像を出すには CSP の `img-src` を広げる必要がある）
  */
 const StoryYoutube = Node.create({
   name: "youtube",

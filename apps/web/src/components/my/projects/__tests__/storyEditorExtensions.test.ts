@@ -57,7 +57,7 @@ describe("storyEditorExtensions", () => {
     expect(schema.nodes.paragraph.contentMatch.matchType(youtube)).toBeNull();
   });
 
-  it("貼り付けた <iframe> は src が YouTube の URL のものだけ読み、ほかの iframe は捨てる（#321）", () => {
+  it("HTML で来た <iframe> は src が YouTube の URL のものだけ読み、ほかの iframe は捨てる（#321）", () => {
     const rules = schema.nodes.youtube.spec.parseDOM ?? [];
     const parse = (tag: string, attrs: Record<string, string | null>) => {
       const rule = rules.find((r) => "tag" in r && r.tag?.startsWith(tag));
@@ -506,6 +506,10 @@ describe("parseYouTubeVideoId", () => {
     ["動画の ID が無い", "https://www.youtube.com/watch"],
     ["動画の ID が短い", "https://www.youtube.com/watch?v=dQw4w9WgXc"],
     ["動画の ID に記号", "https://youtu.be/dQw4w9WgXc!"],
+    [
+      "プレイリストの埋め込み（videoseries）",
+      "https://www.youtube.com/embed/videoseries?list=PLabc",
+    ],
     ["動画 ID だけ", "dQw4w9WgXcQ"],
     ["https / http 以外", "javascript:alert(1)"],
     ["空", ""],
