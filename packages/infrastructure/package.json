@@ -22,6 +22,7 @@
   "dependencies": {
     "@physifun/application": "workspace:*",
     "@physifun/domain": "workspace:*",
+    "@supabase/supabase-js": "^2.89.0",
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
     "bcryptjs": "^3.0.3",

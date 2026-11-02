@@ -204,7 +204,6 @@ PhysiFun/
 │   │   ├── lib/
 │   │   │   ├── di/              # UseCase と infrastructure 実装を組み立てる DI ヘルパー
 │   │   │   └── validations/     # Zod スキーマ
-│   │   └── infrastructure/      # ⚠️ 例外: 画像アップロード（未接続）。packages/infrastructure へ移す予定
 │   └── admin/src/
 │       ├── app/                 # applications / projects / members / outbox / audit-logs / login / api
 │       ├── components/

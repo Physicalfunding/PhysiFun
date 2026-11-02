@@ -5,7 +5,6 @@ import nextTs from "eslint-config-next/typescript";
 // ラチェット例外: 境界ルール導入前からの違反。解消用 Issue（#284）で減らしていく。新規追加禁止
 const BOUNDARY_RATCHET = [
   "src/app/api/cron/cleanup-expired-accounts/route.ts",
-  "src/infrastructure/storage/ImageUploadService.ts",
   "src/lib/rateLimit.ts",
 ];
 

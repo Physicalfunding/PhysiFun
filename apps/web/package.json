@@ -18,7 +18,6 @@
     "@physifun/infrastructure": "workspace:*",
     "@physifun/server-shared": "workspace:*",
     "@physifun/ui-shared": "workspace:*",
-    "@supabase/supabase-js": "^2.89.0",
     "@tiptap/core": "3.32.1",
     "@tiptap/extension-link": "3.32.1",
     "@tiptap/extension-list": "3.32.1",

@@ -92,6 +92,7 @@ export type {
 // Shared
 export type { AccountRole } from "./shared/AccountRole";
 export type { AdminReviewer } from "./shared/AdminReviewer";
+export type { ImageStoragePort } from "./shared/ImageStoragePort";
 
 // UpdateProjectDraftUseCase
 export {
