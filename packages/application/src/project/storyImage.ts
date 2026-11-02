@@ -8,7 +8,10 @@ import type { ImageStoragePort } from "../shared/ImageStoragePort";
  * （`UpdateProjectDraftUseCase`）の両方がここを使い、決まりを 1 か所にする。
  */
 
-/** 1 枚の大きさの上限。Vercel の関数が受けられるリクエストは 4.5 MB までなので、少し余裕を残す */
+/**
+ * 1 枚の大きさの上限。Vercel の関数が受けられるリクエストは 4.5 MB までなので、少し余裕を残す
+ * （ホスティングを変えるときは見直す。設計書 §5.3）
+ */
 export const STORY_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
 
 /** 受け付ける形式と、保存するときの拡張子 */
@@ -58,12 +61,32 @@ export type IsAllowedStoryImageUrl = (url: string, projectId: ProjectId) => bool
  * `*.supabase.co` を広く許すと、他人の Storage の画像で閲覧者を追跡できてしまうので、
  * 自分の Storage の、そのプロジェクトのフォルダ配下だけを許す。`isAllowedImageUrl`（`@physifun/ui-shared`。
  * 環境変数で結果が変わるので外から受け取る）も重ねて、表示側の許可リストと食い違わないようにする。
+ *
+ * 比較は文字列のままではなく、URL として読んで正規化したもの（`..` や `%2e%2e` を解決したパス）で行い、
+ * クエリとフラグメントは許さない。文字列の前方一致だけだと `…/story/../../{他のID}/story/x.png` が通ってしまうため
  */
 export function createIsAllowedStoryImageUrl(
   storage: Pick<ImageStoragePort, "getPublicUrl">,
   isAllowedImageUrl: (url: string) => boolean
 ): IsAllowedStoryImageUrl {
-  return (url, projectId) =>
-    url.startsWith(`${storage.getPublicUrl(storyImageFolder(projectId))}/`) &&
-    isAllowedImageUrl(url);
+  return (url, projectId) => {
+    const folder = parseUrl(storage.getPublicUrl(storyImageFolder(projectId)));
+    const target = parseUrl(url);
+    if (!folder || !target) return false;
+    return (
+      target.origin === folder.origin &&
+      target.pathname.startsWith(`${folder.pathname}/`) &&
+      target.search === "" &&
+      target.hash === "" &&
+      isAllowedImageUrl(url)
+    );
+  };
+}
+
+function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
 }

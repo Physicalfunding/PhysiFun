@@ -50,6 +50,8 @@ function handleUpdateError(error: UpdateProjectDraftError) {
   switch (error.type) {
     case "INVALID_ACCOUNT_ID":
       return validationErrorResponse("無効なアカウントIDです");
+    case "INVALID_PROJECT_ID":
+      return validationErrorResponse("無効なプロジェクトIDです");
     case "PROJECT_NOT_FOUND":
       return notFoundResponse("プロジェクト");
     case "NOT_OWNER":

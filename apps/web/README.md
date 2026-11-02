@@ -76,7 +76,7 @@ cp apps/web/.env.example apps/web/.env.local
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase API URL（クライアント露出可） | `http://127.0.0.1:54321` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Publishable キー | `supabase status` の "Publishable key" |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Secret キー（サーバ専用） | `supabase status` の "Secret key" |
-| `SUPABASE_STORAGE_BUCKET` | プロジェクト画像用バケット名 | `project-images`（既定） |
+| `SUPABASE_STORAGE_BUCKET` | プロジェクト画像用バケット名。**バケットはアプリが作らないので、環境ごとに先に作る**（下の「Storage バケット」） | `project-images`（既定） |
 | `ADMIN_EMAIL_LIST` | 運営宛通知メールの宛先（公開申請の通知など、先頭 1 件を使用） | カンマ区切り email |
 | `RESEND_API_KEY` | アクティベーションメール等の送信 | Resend で発行した API キー |
 | `APP_URL` | メール本文のリンクに使う web の origin（末尾スラッシュなし） | `http://localhost:3000` |
@@ -89,6 +89,14 @@ cp apps/web/.env.example apps/web/.env.local
 `NEXTAUTH_URL` の表記ルール（末尾スラッシュ禁止 / デフォルトポート明示禁止 など）は `.env.example` のコメントを参照。
 
 > ⚠️ `apps/web/.env.local` の `NEXTAUTH_SECRET` は **`apps/admin` と必ず別値**にする。
+
+### Storage バケット
+
+ストーリーの画像（#319）は Supabase Storage の `SUPABASE_STORAGE_BUCKET`（既定 `project-images`）に置く。アプリはバケットを作らないので、ローカル・staging・本番それぞれで **1 回だけ** Supabase のダッシュボード（Storage → New bucket）か CLI で作る。
+
+- 名前: `project-images`、**Public bucket: ON**（画像は URL でそのまま表示する）
+- 二重防御として、Allowed MIME types を `image/jpeg, image/png, image/webp`、File size limit を `4 MB` にしておく（アプリ側の検査と同じ値。`packages/application/src/project/storyImage.ts`）
+- 無いままアップロードすると `Failed to upload image to 'project-images'` で 500 になる
 
 ---
 

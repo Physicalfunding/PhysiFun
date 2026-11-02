@@ -51,7 +51,7 @@ function handleError(error: UploadStoryImageError) {
 /**
  * POST /api/my/projects/[projectId]/story-images
  * ストーリーに入れる画像をアップロードする（multipart/form-data の `file`）。
- * 成功すると `{ url, path }` を返す。
+ * 成功すると `{ url }` を返す。
  */
 export async function POST(
   request: NextRequest,
@@ -82,7 +82,8 @@ export async function POST(
       });
     }
 
-    // 中身を読む前に、申告された大きさで明らかに大きいものは断る（中身の検査は UseCase が行う）
+    // 中身を読む前に、申告された大きさで明らかに大きいものは断る（上限の正は UseCase 側の
+    // `STORY_IMAGE_MAX_BYTES`。実際のバイト数の検査もそちらで行う）
     if (file.size > STORY_IMAGE_MAX_BYTES) {
       return payloadTooLargeResponse(`画像は 1 枚 ${MAX_MB} MB までです`);
     }
@@ -95,7 +96,8 @@ export async function POST(
       return handleError(result.error);
     }
 
-    return successResponse({ url: result.value.url, path: result.value.path }, 201);
+    // バケット内のパスはクライアントが使わないので返さない（置き場所の構造を見せない）
+    return successResponse({ url: result.value.url }, 201);
   } catch (error) {
     console.error("[api/my/projects/[projectId]/story-images] POST error:", error);
     return internalErrorResponse();

@@ -65,8 +65,23 @@ describe("createIsAllowedStoryImageUrl", () => {
     ["別のプロジェクトのフォルダ", `projects/${OTHER_PROJECT_ID_STR}/story/a.png`],
     ["同じプロジェクトでも別のフォルダ", `projects/${PROJECT_ID_STR}/cover/a.png`],
     ["フォルダ名が前方一致するだけ", `projects/${PROJECT_ID_STR}/story-old/a.png`],
+    [
+      "`..` で別のプロジェクトのフォルダに抜ける",
+      `projects/${PROJECT_ID_STR}/story/../../${OTHER_PROJECT_ID_STR}/story/a.png`,
+    ],
+    [
+      "`%2e%2e` で別のプロジェクトのフォルダに抜ける",
+      `projects/${PROJECT_ID_STR}/story/%2e%2e/%2e%2e/${OTHER_PROJECT_ID_STR}/story/a.png`,
+    ],
+    ["クエリ付き", `projects/${PROJECT_ID_STR}/story/a.png?x=1`],
+    ["フラグメント付き", `projects/${PROJECT_ID_STR}/story/a.png#x`],
+    ["フォルダそのもの（ファイル名が無い）", `projects/${PROJECT_ID_STR}/story`],
   ])("%sの画像は断る", (_, path) => {
     expect(isAllowed(storage.getPublicUrl(path), own)).toBe(false);
+  });
+
+  it("URL として読めないものは断る", () => {
+    expect(isAllowed("not a url", own)).toBe(false);
   });
 
   it("フォルダが合っていても isAllowedImageUrl が断れば断る", () => {

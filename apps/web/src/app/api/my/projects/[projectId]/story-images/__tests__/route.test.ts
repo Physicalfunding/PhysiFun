@@ -84,8 +84,8 @@ describe("POST /api/my/projects/[projectId]/story-images", () => {
     expect(response.status).toBe(201);
     const body = await response.json();
     expect(uploaded).toHaveLength(1);
-    expect(body.data.url).toBe(`${PUBLIC_URL_BASE}/${uploaded[0].path}`);
-    expect(body.data.path).toMatch(new RegExp(`^projects/${PROJECT_ID}/story/.+\\.png$`));
+    expect(body.data).toEqual({ url: `${PUBLIC_URL_BASE}/${uploaded[0].path}` });
+    expect(uploaded[0].path).toMatch(new RegExp(`^projects/${PROJECT_ID}/story/.+\\.png$`));
   });
 
   it("ログインしていないと 401", async () => {

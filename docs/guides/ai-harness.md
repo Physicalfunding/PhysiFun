@@ -188,7 +188,7 @@ apps/*/public/*
 
 ### P3：ルールを CI に移す
 
-**現状**：packages/ には ESLint が無い。既存の違反として、admin の Route Handler・コンポーネント約 12 ファイルが `lib/di/` を経由せず `@physifun/infrastructure` を直接 import している。web の `src/infrastructure/storage/ImageUploadService.ts` が apps 内で Supabase SDK を直接使っている。
+**現状**：packages/ には ESLint が無い。既存の違反として、admin の Route Handler・コンポーネント約 12 ファイルが `lib/di/` を経由せず `@physifun/infrastructure` を直接 import している。web の `src/infrastructure/storage/ImageUploadService.ts` が apps 内で Supabase SDK を直接使っている（#319 で `packages/infrastructure/src/storage/` に移して解消）。
 
 **変更内容**
 
