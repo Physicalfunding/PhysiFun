@@ -299,7 +299,7 @@ flowchart TD
 - **属性は決まったものだけを読む**。配置（`left` / `center` / `right`）は決まったクラスに置き換え、`style` には値を流し込まない
 - **リンク**は `http://` か `https://` で始まり、URL として読めるものだけを `<a>` にする（合わなければ文字だけ出す）。`target="_blank" rel="noopener noreferrer nofollow"` を付ける
 - **画像**は `@physifun/ui-shared` の `isAllowedImageUrl` に合うものだけを描く。今の範囲は Supabase Storage（1 階層の `<ラベル>.supabase.co` と、`NEXT_PUBLIC_SUPABASE_URL` のホスト。パスは問わない）とモック用の `images.unsplash.com/photo-*` で、詳しくはその関数のコメントを参照。保存するときはさらに絞り、自分の Storage の、そのプロジェクトのストーリー用フォルダ（`projects/{projectId}/story/`）配下の URL だけを許す（`createIsAllowedStoryImageUrl`。`UpdateProjectDraftUseCase` が使う。#319）。URL として読んで正規化したパスで比べ、クエリとフラグメントは許さない。`isAllowedImageUrl` は 1 階層の `*.supabase.co` をどれでも通すので、そのまま保存を許すと、他人の Storage に置いた画像で閲覧者を追跡できてしまうため。画像のアップロード API（`POST /api/my/projects/[projectId]/story-images`）は、ログイン・所有者・回数制限を確かめ、形式はファイル名でなく中身の先頭バイトで判定し（JPEG / PNG / WebP）、1 枚 4 MB までを受けて、推測できないファイル名（UUID）でそのフォルダに置く
-- **YouTube** は動画 ID だけを保存し、表示するときに埋め込みの URL を組み立てる。埋め込みの表示と CSP の `frame-src` への `https://www.youtube-nocookie.com` の追加は #321 で行う（それまでは描かない）
+- **YouTube** は動画 ID だけを保存し（`isYouTubeVideoId`。英数字と `-` `_` の 11 文字）、表示するときに `https://www.youtube-nocookie.com/embed/{ID}` を組み立てて iframe で描く（#321）。形に合わない ID は描かない。iframe のホストは web / admin の CSP の `frame-src` で許可している（§9.1）。エディタは YouTube の URL（`youtube.com/watch?v=`・`youtu.be/`・`shorts/`・`embed/`・`live/`）から ID を取り出し、それ以外の URL は断る
 
 編集画面のエディタ（Tiptap。`apps/web/src/components/my/projects/storyEditorExtensions.ts`、#317）も、許可した要素・装飾・属性だけを出すように絞っている（h1・下線・文字色は出せず、リンクは `http://` か `https://` だけ。Tiptap が既定で文書データに足す `target`・`rel`・`class`・`title`・`type` は外す。画像の属性は `src`・`alt` だけで、貼り付けた `<img>` は `isAllowedImageUrl` に合う URL のものだけ読む）。画像はエディタの画像ボタンから選び、ブラウザで長い辺を縮めて（`PROJECT_STORY_LIMITS.imageLongEdge`）からアップロード API に送る（#320）。ただしこれは使いやすさのための絞り込みで、守りの本体は上の表の保存時の検査と表示の決まり。
 
@@ -394,7 +394,7 @@ flowchart TD
 | `X-Frame-Options` | `DENY` | clickjacking 対策（CSP `frame-ancestors 'none'` と二重化） |
 | `X-Content-Type-Options` | `nosniff` | MIME sniffing 阻止 |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | URL 漏洩防止 |
-| `Permissions-Policy` | accelerometer / autoplay / camera / 等を `()` | 不要な Web Platform Feature の無効化 |
+| `Permissions-Policy` | accelerometer / autoplay / camera / 等を `()`。web の `fullscreen` は `(self "https://www.youtube-nocookie.com")`（YouTube の埋め込みの全画面、#321） | 不要な Web Platform Feature の無効化 |
 
 ### 9.1 CSP の主なディレクティブ（web）
 
@@ -406,10 +406,10 @@ flowchart TD
 | `img-src` | `'self' data: blob: https://*.supabase.co https://images.unsplash.com` |
 | `style-src` | `'self' 'unsafe-inline'` |
 | `script-src` | `'self' 'unsafe-inline' https://challenges.cloudflare.com`（本番。Turnstile の api.js を許可（#333）。Issue #109 follow-up で nonce 化予定） |
-| `frame-src` | `'self' https://challenges.cloudflare.com`（Turnstile のウィジェット iframe、#333） |
+| `frame-src` | `'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com`（Turnstile のウィジェット iframe（#333）と、ストーリーの YouTube の埋め込み（#321）。admin は `'self' https://www.youtube-nocookie.com`） |
 | `connect-src` | `'self'` |
 
-詳細は `apps/web/next.config.ts` の `buildContentSecurityPolicy()` を参照。
+詳細は `apps/web/next.config.ts` の `buildContentSecurityPolicy()` を参照。`frame-src` の値は web / admin とも `src/__tests__/next.config.test.ts` で固定している（ほかのホストを足すときはテストも直す）。
 
 ### 9.2 admin 側の追加設定
 

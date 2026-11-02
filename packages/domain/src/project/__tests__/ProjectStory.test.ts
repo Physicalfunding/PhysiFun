@@ -4,6 +4,7 @@ import {
   PROJECT_STORY_TEMPLATE_HEADINGS,
   ProjectStory,
   type ProjectStoryDocument,
+  isYouTubeVideoId,
 } from "../value-objects/ProjectStory";
 
 const STORAGE = "https://abc.supabase.co/storage/v1/object/public/project-images";
@@ -386,5 +387,18 @@ describe("ProjectStory", () => {
     ])("見出しのほかに%sがあれば入力済み", (_, block) => {
       expect(filled(doc(...headings, block))).toBe(true);
     });
+  });
+});
+
+describe("isYouTubeVideoId", () => {
+  it("英数字と - _ の 11 文字だけを動画 ID とする", () => {
+    expect(isYouTubeVideoId("dQw4w9WgXcQ")).toBe(true);
+    expect(isYouTubeVideoId("a-b_c-d_e-f")).toBe(true);
+    expect(isYouTubeVideoId("dQw4w9WgXc")).toBe(false);
+    expect(isYouTubeVideoId("dQw4w9WgXcQQ")).toBe(false);
+    expect(isYouTubeVideoId("dQw4w9WgXc!")).toBe(false);
+    expect(isYouTubeVideoId("https://youtu.be/dQw4w9WgXcQ")).toBe(false);
+    expect(isYouTubeVideoId(null)).toBe(false);
+    expect(isYouTubeVideoId(12345678901)).toBe(false);
   });
 });

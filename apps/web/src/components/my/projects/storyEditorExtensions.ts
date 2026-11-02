@@ -13,7 +13,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { Plugin } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
-import { PROJECT_STORY_TEMPLATE_HEADINGS } from "@physifun/domain";
+import { PROJECT_STORY_TEMPLATE_HEADINGS, isYouTubeVideoId } from "@physifun/domain";
 import { isAllowedImageUrl } from "@physifun/ui-shared";
 
 /**
@@ -113,12 +113,131 @@ const StoryImage = Node.create({
 });
 
 /**
+ * YouTube の動画の URL から動画 ID を取り出す（#321、設計書 §5.2）。YouTube の URL でなければ null。
+ *
+ * 受け付ける形（`www.`・`m.`・`music.` はあってもなくてもよい）:
+ * - `youtube.com/watch?v={ID}`
+ * - `youtu.be/{ID}`
+ * - `youtube.com/shorts/{ID}`・`/embed/{ID}`・`/live/{ID}`・`/v/{ID}`
+ * - `youtube-nocookie.com/embed/{ID}`
+ *
+ * 取り出した ID は domain と同じ基準（`isYouTubeVideoId`）で確かめる
+ */
+export function parseYouTubeVideoId(value: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  const host = url.hostname.toLowerCase().replace(/^(www|m|music)\./, "");
+  let candidate: string | null = null;
+  if (host === "youtu.be") {
+    candidate = url.pathname.split("/")[1] ?? null;
+  } else if (host === "youtube.com" || host === "youtube-nocookie.com") {
+    if (url.pathname === "/watch") {
+      candidate = url.searchParams.get("v");
+    } else {
+      const prefix = YOUTUBE_PATH_PREFIXES.find((p) => url.pathname.startsWith(p));
+      if (prefix) candidate = url.pathname.slice(prefix.length).split("/")[0] ?? null;
+    }
+  }
+  // プレイリストの埋め込み URL（`/embed/videoseries?list=...`）は、`videoseries` がちょうど 11 文字で ID の形に合ってしまう。
+  // 動画ではないので断る（保存すると再生できない枠になる）
+  if (candidate === "videoseries") return null;
+  return isYouTubeVideoId(candidate) ? candidate : null;
+}
+
+const YOUTUBE_PATH_PREFIXES = ["/shorts/", "/embed/", "/live/", "/v/"];
+
+/**
+ * エディタの中で YouTube の枠に付けるクラス。見た目は `StoryEditor` の CSS が付ける
+ * （CSS 側は Tailwind の走査のためクラス名をそのまま書いているので、この値を変えるときは一緒に直す）
+ */
+export const STORY_YOUTUBE_CLASS = "story-youtube";
+
+/**
+ * YouTube（#321、設計書 §5.2）。画像と同じく文書の直下かリストの項目の中に置くブロック（atom）。
+ *
+ * - 属性は domain の `ProjectStory` が許す `videoId` だけ。Tiptap の公式の Youtube 拡張は `src`（URL）・`width`・`height`・
+ *   `start` を文書データに入れるので使わず、自前の小さなノードにする
+ * - 動画はツールバーの動画ボタンから、YouTube の URL を入れて足す（`parseYouTubeVideoId` で ID を取り出す）
+ * - HTML（text/html の貼り付けや `setContent`）で来た要素は、自分の描画（`div[data-youtube-video-id]`）と、src が YouTube の URL の
+ *   `<iframe>` だけを読む。ほかの iframe は捨てる（リンク・画像と同じ守り）。YouTube の「共有 > 埋め込む」の欄からコピーした
+ *   `<iframe ...>` は text/plain なので文字として入る（動画にはならない。動画は動画ボタンから入れる）
+ * - エディタの中では表示部品と同じ youtube-nocookie の iframe を描く（クリックは効かないようにして、枠をクリックすると
+ *   ノードが選ばれ、Backspace で消せる。再生は「プレビュー」で確かめる）。見た目は `StoryEditor` の CSS が付ける。
+ *   本物のプレイヤーを最大 5 本読み込む負荷は承知のうえ（サムネイル画像を出すには CSP の `img-src` を広げる必要がある）
+ */
+const StoryYoutube = Node.create({
+  name: "youtube",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes() {
+    return {
+      // 自分で `data-youtube-video-id` として描くので、Tiptap の既定の属性の描画（`videoid="..."`）は止める
+      videoId: { default: null, rendered: false },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: "div[data-youtube-video-id]",
+        getAttrs: (element) => {
+          const videoId = element.getAttribute("data-youtube-video-id");
+          return isYouTubeVideoId(videoId) ? { videoId } : false;
+        },
+      },
+      {
+        tag: "iframe[src]",
+        getAttrs: (element) => {
+          const videoId = parseYouTubeVideoId(element.getAttribute("src") ?? "");
+          return videoId ? { videoId } : false;
+        },
+      },
+    ];
+  },
+  renderHTML({ node }) {
+    const videoId: unknown = node.attrs.videoId;
+    // 形に合わない ID（属性なしで作られたノードなど）は iframe を出さない
+    if (!isYouTubeVideoId(videoId)) return ["div", { class: STORY_YOUTUBE_CLASS }];
+    return [
+      "div",
+      { "data-youtube-video-id": videoId, class: STORY_YOUTUBE_CLASS },
+      [
+        "iframe",
+        {
+          src: `https://www.youtube-nocookie.com/embed/${videoId}`,
+          title: "YouTube の動画",
+          loading: "lazy",
+          // エディタの中では操作しない（クリックで枠を選べるように）。タブ移動の対象からも外す
+          tabindex: "-1",
+        },
+      ],
+    ];
+  },
+});
+
+/**
  * 本文に入っている画像の枚数。上限（`PROJECT_STORY_LIMITS.images`）に達したら画像ボタンを使えなくするために数える
  */
 export function countStoryImages(doc: ProseMirrorNode): number {
+  return countNodes(doc, StoryImage.name);
+}
+
+/**
+ * 本文に入っている動画の本数。上限（`PROJECT_STORY_LIMITS.videos`）に達したら動画ボタンを使えなくするために数える
+ */
+export function countStoryVideos(doc: ProseMirrorNode): number {
+  return countNodes(doc, StoryYoutube.name);
+}
+
+function countNodes(doc: ProseMirrorNode, name: string): number {
   let count = 0;
   doc.descendants((node) => {
-    if (node.type.name === StoryImage.name) count += 1;
+    if (node.type.name === name) count += 1;
   });
   return count;
 }
@@ -217,7 +336,7 @@ const StoryTemplateHints = Extension.create({
  * ただし守りの本体は保存時の `ProjectStory` の検査で、ここは「使えないものをそもそも出さない」ための絞り込み。
  *
  * - 要素: 段落・見出し（h2 / h3。h1 はページのタイトルが使うので、貼り付けても段落になる）・文字・改行・
- *   箇条書き・番号付きリスト・項目・画像（`StoryImage`）。YouTube は S-9（#321）で足す
+ *   箇条書き・番号付きリスト・項目・画像（`StoryImage`）・YouTube（`StoryYoutube`）
  * - 装飾: 太字・斜体・取り消し線・リンク。下線・コード・引用・区切り線・文字色は入れない
  * - 配置: 段落と見出しに `left` / `center` / `right`。指定なし（null）は domain が省く
  * - 文書の最後に空の段落を足す拡張（trailingNode）は、保存する JSON に空の段落が残るので入れない
@@ -241,16 +360,17 @@ export const storyEditorExtensions: Extensions = [
   StoryOrderedList,
   TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
   StoryImage,
+  StoryYoutube,
   StoryTemplateHints,
 ];
 
 const storyEditorSchema = getSchema(storyEditorExtensions);
 
 /**
- * 読み込んだ本文を、このエディタで編集できるか（要素・装飾がすべてこのエディタのスキーマにあるか）。
+ * 読み込んだ本文を、このエディタで編集できるか（要素・装飾がすべてこのエディタのスキーマにあり、置ける場所にあるか）。
  *
- * domain の `ProjectStory` が許す要素のうち、YouTube（S-9 / #321）はまだこのエディタに無い。
- * Tiptap は読めない本文を黙って空にして開くので、そのまま保存すると本文が消える。
+ * いまは domain の `ProjectStory` が許す要素をすべてこのエディタが持つが、Tiptap は読めない本文を黙って空にして開くので、
+ * そのまま保存すると本文が消える。domain に要素を足してエディタが追いつく前の本文や、型どおりでない本文が来ても
  * そうならないように、読めない本文は編集できない状態で開く（`StoryEditor`）
  */
 export function canEditStory(value: JSONContent | null): boolean {

@@ -110,6 +110,14 @@ const INLINES = ["text", "hardBreak"];
 
 const YOUTUBE_VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 
+/**
+ * YouTube の動画 ID の形（英数字と `-` `_` の 11 文字）か（設計書 §6.1）。
+ * 表示部品（`ProjectStoryView`）とエディタ（web）も、同じ基準で判定するためにこれを使う
+ */
+export function isYouTubeVideoId(value: unknown): value is string {
+  return typeof value === "string" && YOUTUBE_VIDEO_ID.test(value);
+}
+
 const textAlign = optional((v) => v === "left" || v === "center" || v === "right");
 
 /**
@@ -147,10 +155,7 @@ const NODE_RULES: Readonly<
   youtube: {
     children: null,
     attrs: {
-      videoId: required(
-        "INVALID_YOUTUBE_ID",
-        (v) => typeof v === "string" && YOUTUBE_VIDEO_ID.test(v)
-      ),
+      videoId: required("INVALID_YOUTUBE_ID", (v) => isYouTubeVideoId(v)),
     },
   },
 };

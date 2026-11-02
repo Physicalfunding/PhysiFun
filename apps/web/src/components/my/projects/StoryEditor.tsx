@@ -14,7 +14,9 @@ import { Button, Input, Modal } from "@/components/common";
 import {
   canEditStory,
   countStoryImages,
+  countStoryVideos,
   isStoryLinkUrl,
+  parseYouTubeVideoId,
   storyEditorExtensions,
 } from "./storyEditorExtensions";
 import { prepareStoryImage, storyImageErrorMessage } from "./storyImageFile";
@@ -46,6 +48,11 @@ const CONTENT_CLASS = [
   // 画像（#320）。表示部品と同じ見た目にし、選んでいるとき（ProseMirror が `ProseMirror-selectednode` を付ける）は枠を出す
   "[&_img]:mx-auto [&_img]:my-2.5 [&_img]:block [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md",
   "[&_img.ProseMirror-selectednode]:ring-2 [&_img.ProseMirror-selectednode]:ring-orange-500 [&_img.ProseMirror-selectednode]:ring-offset-2",
+  // YouTube（#321）。表示部品と同じ 16:9 の枠に youtube-nocookie の iframe を描く（`storyEditorExtensions` の `.story-youtube`）。
+  // iframe はクリックが効かないようにして（pointer-events-none）、枠をクリックするとノードが選ばれるようにする
+  "[&_.story-youtube]:my-2.5 [&_.story-youtube]:aspect-video [&_.story-youtube]:w-full [&_.story-youtube]:overflow-hidden [&_.story-youtube]:rounded-md",
+  "[&_.story-youtube_iframe]:pointer-events-none [&_.story-youtube_iframe]:h-full [&_.story-youtube_iframe]:w-full [&_.story-youtube_iframe]:border-0",
+  "[&_.story-youtube.ProseMirror-selectednode]:ring-2 [&_.story-youtube.ProseMirror-selectednode]:ring-orange-500 [&_.story-youtube.ProseMirror-selectednode]:ring-offset-2",
   // 見出しの型の下のヒント（`storyEditorExtensions` の decoration が付ける `.story-hint` と `data-hint`）。
   // 空の段落の中に薄い字で出し、高さを取らない（float + h-0）ので、カーソルは行頭に残り、書き始めるとそのまま文字に置き換わる。
   // Tailwind はソースを文字列として走査するので、クラスは変数で組まずにそのまま書く（組むと CSS が生成されない）
@@ -58,13 +65,14 @@ const CONTENT_CLASS = [
  * ストーリー（本文）の見たまま編集エディタ（#317、設計書 §5.4）。
  *
  * - 使える要素・装飾は `storyEditorExtensions` で domain の `ProjectStory` が許可するものに絞っている
- * - ツールバーは、元に戻す・見出し・小見出し・太字・斜体・取り消し線・配置・箇条書き・番号付き・リンク・画像。
- *   スマホでは折り返す。動画は S-9（#321）で足す
+ * - ツールバーは、元に戻す・見出し・小見出し・太字・斜体・取り消し線・配置・箇条書き・番号付き・リンク・画像・動画。
+ *   スマホでは折り返す。画像と動画のボタンは目立たせる（設計書 §5.4）
  * - 画像はボタンから選び、ブラウザで縮小してアップロード API（#319）に送ってから本文に入れる（`ImageButton`）
+ * - 動画はボタンのダイアログに YouTube の URL を入れると、動画 ID を取り出して本文に入れる（`VideoButton`、#321）
  * - リンクはダイアログで URL を入れる。`http://` か `https://` で始まるものだけ受け付ける
  * - 文字数は domain と同じく、画面に表示される文字（文字ノードの文字）だけを数える
- * - このエディタにまだ無い要素（YouTube など）を含む本文は、空で開いて保存で消してしまわないよう、
- *   編集できない状態で開く（`onChange` が起きないので、保存しても本文は送られず今のまま残る）
+ * - このエディタで読めない本文（domain に要素を足してエディタが追いつく前のものなど）は、空で開いて保存で消して
+ *   しまわないよう、編集できない状態で開く（`onChange` が起きないので、保存しても本文は送られず今のまま残る）
  * - 見出しの型の下には書き方のヒントを薄い字で出す（`storyEditorExtensions`。保存しない）。
  *   「プレビュー」で、保存前の内容を公開ページと同じ部品（`ProjectStoryView`）で確かめられる（#318、設計書 §5.4）
  */
@@ -148,6 +156,7 @@ function Toolbar({ editor, projectId }: { editor: Editor; projectId: string }) {
     selector: ({ editor: e }) => ({
       canUndo: e.can().undo(),
       images: countStoryImages(e.state.doc),
+      videos: countStoryVideos(e.state.doc),
       heading2: e.isActive("heading", { level: 2 }),
       heading3: e.isActive("heading", { level: 3 }),
       bold: e.isActive("bold"),
@@ -284,6 +293,7 @@ function Toolbar({ editor, projectId }: { editor: Editor; projectId: string }) {
       </ToolbarButton>
       <Divider />
       <ImageButton editor={editor} projectId={projectId} imageCount={state.images} />
+      <VideoButton editor={editor} videoCount={state.videos} />
 
       <Modal isOpen={linkDialog !== null} onClose={closeLinkDialog} title="リンク" size="sm">
         <Input
@@ -472,15 +482,7 @@ function ImageButton({
       return;
     }
     const alt = dialog.alt.trim();
-    const image = { type: "image", attrs: { src: uploaded.value.url, alt: alt || null } };
-    // 画像などのノードを選んでいるとき（本文の先頭が画像だと、開いた直後の選択がそれになる）は、
-    // 選んでいるものを置き換えずにその直後に入れる
-    const { selection } = editor.state;
-    const chain = editor.chain().focus();
-    (selection instanceof NodeSelection
-      ? chain.insertContentAt(selection.to, image)
-      : chain.insertContent(image)
-    ).run();
+    insertBlock(editor, { type: "image", attrs: { src: uploaded.value.url, alt: alt || null } });
     close();
   };
 
@@ -562,6 +564,110 @@ function ImageButton({
         )}
       </Modal>
     </>
+  );
+}
+
+/**
+ * ブロック（画像・動画）をカーソルの位置に入れる。
+ * 画像などのノードを選んでいるとき（本文の先頭が画像だと、開いた直後の選択がそれになる）は、
+ * 選んでいるものを置き換えずにその直後に入れる
+ */
+function insertBlock(editor: Editor, block: JSONContent) {
+  const { selection } = editor.state;
+  const chain = editor.chain().focus();
+  (selection instanceof NodeSelection
+    ? chain.insertContentAt(selection.to, block)
+    : chain.insertContent(block)
+  ).run();
+}
+
+const VIDEO_URL_MESSAGE = "YouTube の動画の URL を入力してください";
+
+/**
+ * 動画ボタンとダイアログ（#321、設計書 §5.2・§5.4）。
+ *
+ * ダイアログに YouTube の URL を入れる → 動画 ID を取り出して（`parseYouTubeVideoId`）、YouTube ノードとしてカーソルの位置に入れる。
+ * - YouTube 以外の URL は断る（ダイアログの中にエラーを出す）
+ * - 上限（`PROJECT_STORY_LIMITS.videos`）に達したらボタンを使えなくする。貼り付けで超えた分は保存時の検査が止める
+ */
+function VideoButton({ editor, videoCount }: { editor: Editor; videoCount: number }) {
+  const [dialog, setDialog] = useState<{ url: string; error?: string } | null>(null);
+  const limitMessage = `動画は ${PROJECT_STORY_LIMITS.videos} 本までです`;
+  const full = videoCount >= PROJECT_STORY_LIMITS.videos;
+
+  const close = () => {
+    setDialog(null);
+    editor.commands.focus();
+  };
+
+  const insert = () => {
+    if (!dialog) return;
+    const videoId = parseYouTubeVideoId(dialog.url);
+    if (!videoId) {
+      setDialog({ url: dialog.url, error: VIDEO_URL_MESSAGE });
+      return;
+    }
+    // ダイアログを開いている間に貼り付けで増えていることがあるので、入れる直前にも数える
+    if (countStoryVideos(editor.state.doc) >= PROJECT_STORY_LIMITS.videos) {
+      setDialog({ url: dialog.url, error: limitMessage });
+      return;
+    }
+    insertBlock(editor, { type: "youtube", attrs: { videoId } });
+    close();
+  };
+
+  return (
+    <>
+      <ToolbarButton
+        label="動画"
+        title={full ? limitMessage : undefined}
+        accent
+        disabled={full}
+        onClick={() => setDialog({ url: "" })}
+      >
+        <VideoIcon /> 動画
+      </ToolbarButton>
+
+      <Modal isOpen={dialog !== null} onClose={close} title="動画を入れる" size="sm">
+        <Input
+          label="YouTube の動画の URL"
+          helperText="YouTube の「共有」からコピーした URL を貼り付けてください。入れられるのは YouTube の動画だけです"
+          type="url"
+          inputMode="url"
+          placeholder="https://www.youtube.com/watch?v=..."
+          autoFocus
+          value={dialog?.url ?? ""}
+          error={dialog?.error}
+          onChange={(e) => setDialog({ url: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !isComposingEnter(e)) {
+              e.preventDefault();
+              insert();
+            }
+          }}
+        />
+        <div className="mt-4 flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={close}>
+            キャンセル
+          </Button>
+          <Button type="button" variant="primary" onClick={insert}>
+            挿入
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+/**
+ * 動画のアイコン（枠と再生の三角）
+ */
+function VideoIcon() {
+  return (
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8.5 7l4.5 3-4.5 3V7z" fill="currentColor" />
+    </svg>
   );
 }
 
