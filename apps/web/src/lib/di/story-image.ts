@@ -1,5 +1,6 @@
 import {
   createIsAllowedStoryImageUrl,
+  type ImageStoragePort,
   type IsAllowedStoryImageUrl,
   type UploadStoryImagePort,
 } from "@physifun/application";
@@ -31,8 +32,9 @@ export function getUploadStoryImagePort(): UploadStoryImagePort {
  * `createImageStorage()` がモックの本番ガードで例外になるので、先に作ると画像の無い更新まで 500 になるため。
  */
 export function getIsAllowedStoryImageUrl(): IsAllowedStoryImageUrl {
+  let storage: ImageStoragePort | undefined;
   return createIsAllowedStoryImageUrl(
-    { getPublicUrl: (path) => createImageStorage().getPublicUrl(path) },
+    { getPublicUrl: (path) => (storage ??= createImageStorage()).getPublicUrl(path) },
     isAllowedImageUrl
   );
 }

@@ -82,8 +82,9 @@ export async function POST(
       });
     }
 
-    // 中身を読む前に、申告された大きさで明らかに大きいものは断る（上限の正は UseCase 側の
-    // `STORY_IMAGE_MAX_BYTES`。実際のバイト数の検査もそちらで行う）
+    // 大きすぎるものは、バイト列に写す前にここで断る（`formData()` の時点でリクエスト全体は読み終えているので、
+    // 受信量を減らす効果は無い。受信量の実質の上限は Vercel の 4.5 MB）。上限の正は UseCase 側の
+    // `STORY_IMAGE_MAX_BYTES` で、実際のバイト数の検査もそちらで行う
     if (file.size > STORY_IMAGE_MAX_BYTES) {
       return payloadTooLargeResponse(`画像は 1 枚 ${MAX_MB} MB までです`);
     }
