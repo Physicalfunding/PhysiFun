@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 import {
   canEditStory,
   countStoryImages,
+  countStoryVideos,
   isStoryLinkUrl,
+  parseYouTubeVideoId,
   storyEditorExtensions,
 } from "../storyEditorExtensions";
 
@@ -28,7 +30,7 @@ const li = (value: string) => ({
 });
 
 describe("storyEditorExtensions", () => {
-  it("出せる要素は domain が許可するもの（YouTube 以外）だけ", () => {
+  it("出せる要素は domain が許可するものだけ", () => {
     expect(Object.keys(schema.nodes).sort()).toEqual([
       "bulletList",
       "doc",
@@ -39,6 +41,90 @@ describe("storyEditorExtensions", () => {
       "orderedList",
       "paragraph",
       "text",
+      "youtube",
+    ]);
+  });
+
+  it("YouTube は文書の直下とリストの項目に置けるブロックで、中に文字を持たず、属性は videoId だけ（#321）", () => {
+    const youtube = schema.nodes.youtube;
+    expect(youtube.isBlock).toBe(true);
+    expect(youtube.isAtom).toBe(true);
+    expect(Object.keys(youtube.spec.attrs ?? {})).toEqual(["videoId"]);
+    expect(schema.nodes.doc.contentMatch.matchType(youtube)).not.toBeNull();
+    expect(
+      schema.nodes.listItem.contentMatch.matchType(schema.nodes.paragraph)?.matchType(youtube)
+    ).not.toBeNull();
+    expect(schema.nodes.paragraph.contentMatch.matchType(youtube)).toBeNull();
+  });
+
+  it("貼り付けた <iframe> は src が YouTube の URL のものだけ読み、ほかの iframe は捨てる（#321）", () => {
+    const rules = schema.nodes.youtube.spec.parseDOM ?? [];
+    const parse = (tag: string, attrs: Record<string, string | null>) => {
+      const rule = rules.find((r) => "tag" in r && r.tag?.startsWith(tag));
+      return rule && "getAttrs" in rule && typeof rule.getAttrs === "function"
+        ? rule.getAttrs({
+            getAttribute: (name: string) => attrs[name] ?? null,
+          } as unknown as HTMLElement)
+        : undefined;
+    };
+    expect(parse("iframe", { src: "https://www.youtube.com/embed/dQw4w9WgXcQ?si=abc" })).toEqual({
+      videoId: "dQw4w9WgXcQ",
+    });
+    expect(parse("iframe", { src: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" })).toEqual({
+      videoId: "dQw4w9WgXcQ",
+    });
+    expect(parse("iframe", { src: "https://evil.example.com/embed/dQw4w9WgXcQ" })).toBe(false);
+    expect(parse("iframe", { src: "javascript:alert(1)" })).toBe(false);
+    // 自分の描画（div[data-youtube-video-id]）も読む。形に合わない ID は捨てる
+    expect(parse("div", { "data-youtube-video-id": "dQw4w9WgXcQ" })).toEqual({
+      videoId: "dQw4w9WgXcQ",
+    });
+    expect(parse("div", { "data-youtube-video-id": "dQw4w9WgXcQ!" })).toBe(false);
+  });
+
+  it("エディタの中では youtube-nocookie の iframe を描き、ID が無ければ iframe を出さない（#321）", () => {
+    const render = (attrs: Record<string, unknown>) =>
+      schema.nodes.youtube.spec.toDOM?.(schema.nodes.youtube.create(attrs));
+    expect(render({ videoId: "dQw4w9WgXcQ" })).toEqual([
+      "div",
+      { "data-youtube-video-id": "dQw4w9WgXcQ", class: "story-youtube" },
+      [
+        "iframe",
+        expect.objectContaining({ src: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" }),
+      ],
+    ]);
+    expect(render({})).toEqual(["div", { class: "story-youtube" }]);
+  });
+
+  it("YouTube を含むエディタの JSON が ProjectStory の検査を通る（#321）", () => {
+    const json = schema
+      .nodeFromJSON({
+        type: "doc",
+        content: [
+          { type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [{ type: "youtube", attrs: { videoId: "a-b_c-d_e-f" } }],
+              },
+            ],
+          },
+        ],
+      })
+      .toJSON();
+    const result = create(json);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.toJSON().content).toEqual([
+      { type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } },
+      {
+        type: "bulletList",
+        content: [
+          { type: "listItem", content: [{ type: "youtube", attrs: { videoId: "a-b_c-d_e-f" } }] },
+        ],
+      },
     ]);
   });
 
@@ -294,13 +380,19 @@ describe("canEditStory", () => {
     ).toBe(true);
   });
 
-  it("domain は許すがこのエディタにまだ無い要素（YouTube）を含む本文は編集できない（空で開いて消さないため）", () => {
+  it("YouTube を含む本文は編集できる（#321）", () => {
     expect(
       canEditStory({
         type: "doc",
         content: [{ type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } }],
       })
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  it("このエディタに無い要素を含む本文は編集できない（空で開いて消さないため）", () => {
+    expect(canEditStory({ type: "doc", content: [{ type: "video", attrs: { src: "a" } }] })).toBe(
+      false
+    );
   });
 
   it("置けない場所にある要素（リストの直下の段落）も編集できない", () => {
@@ -361,5 +453,63 @@ describe("isStoryLinkUrl", () => {
     "",
   ])("%s は断る", (url) => {
     expect(isStoryLinkUrl(url)).toBe(false);
+  });
+});
+
+describe("countStoryVideos", () => {
+  const youtube = { type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } };
+  const doc = (content: unknown[]) => schema.nodeFromJSON({ type: "doc", content });
+
+  it("文書の直下とリストの項目の中の動画を数える（画像は数えない）", () => {
+    expect(countStoryVideos(doc([{ type: "paragraph" }]))).toBe(0);
+    expect(
+      countStoryVideos(
+        doc([
+          youtube,
+          { type: "image", attrs: { src: IMAGE_URL } },
+          { type: "bulletList", content: [{ type: "listItem", content: [youtube] }] },
+        ])
+      )
+    ).toBe(2);
+  });
+
+  it("上限は domain の PROJECT_STORY_LIMITS.videos（5 本）", () => {
+    expect(PROJECT_STORY_LIMITS.videos).toBe(5);
+  });
+});
+
+describe("parseYouTubeVideoId", () => {
+  it.each([
+    ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+    ["https://youtube.com/watch?v=dQw4w9WgXcQ&t=10s"],
+    ["https://m.youtube.com/watch?feature=share&v=dQw4w9WgXcQ"],
+    ["https://music.youtube.com/watch?v=dQw4w9WgXcQ"],
+    ["https://youtu.be/dQw4w9WgXcQ"],
+    ["https://youtu.be/dQw4w9WgXcQ?si=abc"],
+    ["https://www.youtube.com/shorts/dQw4w9WgXcQ"],
+    ["https://www.youtube.com/embed/dQw4w9WgXcQ?start=10"],
+    ["https://www.youtube.com/live/dQw4w9WgXcQ"],
+    ["https://www.youtube.com/v/dQw4w9WgXcQ"],
+    ["https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"],
+    ["http://www.youtube.com/watch?v=dQw4w9WgXcQ"],
+    ["  https://youtu.be/dQw4w9WgXcQ  "],
+    ["HTTPS://WWW.YOUTUBE.COM/watch?v=dQw4w9WgXcQ"],
+  ])("YouTube の URL %s から動画 ID を取り出す", (url) => {
+    expect(parseYouTubeVideoId(url)).toBe("dQw4w9WgXcQ");
+  });
+
+  it.each([
+    ["YouTube 以外のサイト", "https://vimeo.com/123456789"],
+    ["YouTube に似せたホスト", "https://www.youtube.com.evil.example/watch?v=dQw4w9WgXcQ"],
+    ["YouTube を含むだけのホスト", "https://notyoutube.com/watch?v=dQw4w9WgXcQ"],
+    ["チャンネルのページ", "https://www.youtube.com/@channel"],
+    ["動画の ID が無い", "https://www.youtube.com/watch"],
+    ["動画の ID が短い", "https://www.youtube.com/watch?v=dQw4w9WgXc"],
+    ["動画の ID に記号", "https://youtu.be/dQw4w9WgXc!"],
+    ["動画 ID だけ", "dQw4w9WgXcQ"],
+    ["https / http 以外", "javascript:alert(1)"],
+    ["空", ""],
+  ])("%s（%s）は断る", (_, url) => {
+    expect(parseYouTubeVideoId(url)).toBeNull();
   });
 });
