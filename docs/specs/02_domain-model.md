@@ -26,7 +26,7 @@ PhysiFun のドメイン（`packages/domain/`）と、それを動かすユー�
 | `LeaderApplication` | リーダー応募と運営の審査 | `leader-application/` | ✅ |
 | `Account` | 一般ユーザー（サポーター / リーダー） | `account/`（値オブジェクトのみ） | ⚠️ 最小構成（§5） |
 | `AdminAccount` | 運営アカウント | `admin-account/` | ✅ |
-| `SupportRecruitment`（＋`RecruitmentSchedule`） | サポート募集と日程 | `recruitment/` | 🚧 ドメイン・application・インフラまで（§8） |
+| `SupportRecruitment`（＋`RecruitmentSchedule`） | サポート募集と日程 | `recruitment/` | ✅ リーダー側まで。サポーターの申し込みは一般公開（§8） |
 
 ```mermaid
 classDiagram
@@ -391,7 +391,7 @@ stateDiagram-v2
 
 - 定義: `packages/domain/src/recruitment/entities/SupportRecruitment.ts`（ルート）/ `RecruitmentSchedule.ts`（子）。上限は `SUPPORT_RECRUITMENT_LIMITS` / `CAPACITY_PER_HOUR_LIMITS`
 - 列の意味: [`docs/db/viewpoint-recruitment.md`](../db/viewpoint-recruitment.md)
-- 実装状況: ドメイン（#215）・application（#216）・インフラ（#217。`KyselyRecruitmentRepository`）・リーダー向けの API・画面（#218。募集と日程の一覧・作成・編集・削除）まで。公開ページへの表示（#219）はこれから
+- 実装状況: ドメイン（#215）・application（#216）・インフラ（#217。`KyselyRecruitmentRepository`）・リーダー向けの API・画面（#218。募集と日程の一覧・作成・編集・削除）・公開ページへの表示（#219）まで実装済み。サポーターの申し込み（`SupportTicket`）は一般公開
 - **募集の種類**: `ACTIVITY`（活動参加）だけ。スキル・モノ募集は enum の追加を含めて別に設計する（#291）
 - `Project` からは参照しない（募集側が `projectId` を持つ）
 
@@ -544,3 +544,4 @@ port はユースケースごとに、`RecruitmentRepository` から使うメソ
 | 2026-10-28 | サポート募集のインフラ層を実装（#217）。§8.2 に同時に削除されたときの扱いを足し、実装状況を更新した | 設計チーム |
 | 2026-10-28 | `Project.body` を `ProjectStory` にした（#315）。§3.8 に作る場所（ユースケース）・DB からの復元（検査しない）を、§3.2 に公開申請の本文の判定を書いた | 設計チーム |
 | 2026-11-01 | 見出しの型 `ProjectStory.fromTemplate` と `PROJECT_STORY_TEMPLATE_HEADINGS` を追加し、`createDraft` と応募の承認で本文に入れるようにした（#318）。§3.8 に型の中身・入れるのは作るときだけ・ヒントは保存しないことを書いた | 設計チーム |
+| 2026-11-02 | サポート募集のリーダー側（#212。#215〜#219）がそろったので、§1・§8.1 の実装状況を「実装済み」にした | 設計チーム |
