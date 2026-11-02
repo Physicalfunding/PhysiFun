@@ -23,6 +23,7 @@ import {
 } from "@/components/common";
 import { useToast } from "@/components/common/Toast";
 import { projectFormSchema } from "@/lib/validations/projectFormSchema";
+import { isAllowedImageUrl } from "@physifun/ui-shared";
 import { StoryEditor } from "./StoryEditor";
 
 const PREFECTURE_OPTIONS = PREFECTURE_MASTER.map((p) => ({
@@ -51,6 +52,10 @@ function storyErrorMessage(error: ProjectStoryError): string {
     case "STORY_TOO_MANY_VIDEOS":
       return `ストーリーに入れられる動画は${error.maxCount}本までです`;
     case "STORY_NOT_ALLOWED":
+      // 他サイトの画像を貼り付けたときなど。画像はアップロード API（#319）でこのプロジェクトに置いたものだけ使える
+      if (error.reason === "INVALID_IMAGE_SRC") {
+        return "ストーリーに使えない画像が含まれています。画像はこのプロジェクトにアップロードしたものだけ使えます";
+      }
       return "ストーリーに使えない内容が含まれています";
   }
 }
@@ -121,9 +126,9 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
       body = null;
       if (edited) {
         // 送る前にここでも検査して、長すぎ・使えない内容をその場で知らせる（サーバーでも同じ検査をする）。
-        // 画像はエディタからまだ入れられないので、ここではすべて断る。S-8（#320）で、アップロード API（#319）が
-        // 返す URL を通すようにする（サーバーは #319 で、そのプロジェクトのストーリー用フォルダの画像を許している）
-        const story = ProjectStory.create(edited, { isAllowedImageUrl: () => false });
+        // 画像の URL は、表示部品と同じ許可リスト（`isAllowedImageUrl`）で見る。「そのプロジェクトのストーリー用
+        // フォルダ配下か」はサーバーだけが知っているので、そちらの検査（#319）に任せる
+        const story = ProjectStory.create(edited, { isAllowedImageUrl });
         if (!story.ok) {
           showToast(storyErrorMessage(story.error), "error");
           return;

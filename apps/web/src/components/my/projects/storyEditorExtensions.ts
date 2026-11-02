@@ -1,4 +1,11 @@
-import { Extension, type Extensions, type JSONContent, getSchema } from "@tiptap/core";
+import {
+  Extension,
+  type Extensions,
+  type JSONContent,
+  Node,
+  getSchema,
+  mergeAttributes,
+} from "@tiptap/core";
 import Link from "@tiptap/extension-link";
 import { OrderedList } from "@tiptap/extension-list";
 import TextAlign from "@tiptap/extension-text-align";
@@ -64,6 +71,55 @@ const StoryOrderedList = OrderedList.extend({
     };
   },
 });
+
+/**
+ * 画像（#320、設計書 §5.3・§5.7）。文書の直下かリストの項目の中に置くブロックで、中に文字は持たない（atom）。
+ *
+ * - 属性は domain の `ProjectStory` が許す `src`・`alt` だけ。Tiptap の公式の Image 拡張は `title`・`width`・`height` も
+ *   文書データに入れるので使わず、自前の小さなノードにする
+ * - 画像はツールバーの画像ボタンから入れる（ブラウザで縮小 → アップロード API（#319）が返す URL を `src` にする）
+ * - 貼り付けた HTML の `<img>` は、`https://` の URL のものだけ読む（`data:` などは捨てる）。他サイトの画像は
+ *   保存するときの検査（`isAllowedImageUrl` と、サーバーの「そのプロジェクトのフォルダ配下か」の判定）で断られる
+ * - エディタの中では `<img>` で描く。見た目は `StoryEditor` の CSS が付ける
+ */
+const StoryImage = Node.create({
+  name: "image",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes() {
+    return {
+      src: { default: null },
+      alt: { default: null },
+    };
+  },
+  parseHTML() {
+    return [
+      {
+        tag: "img[src]",
+        getAttrs: (element) => {
+          const src = element.getAttribute("src");
+          if (!src || !/^https:\/\//i.test(src)) return false;
+          return { src, alt: element.getAttribute("alt") };
+        },
+      },
+    ];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["img", mergeAttributes(HTMLAttributes, { loading: "lazy" })];
+  },
+});
+
+/**
+ * 本文に入っている画像の枚数。上限（`PROJECT_STORY_LIMITS.images`）に達したら画像ボタンを使えなくするために数える
+ */
+export function countStoryImages(doc: ProseMirrorNode): number {
+  let count = 0;
+  doc.descendants((node) => {
+    if (node.type.name === StoryImage.name) count += 1;
+  });
+  return count;
+}
 
 /**
  * 見出しの型（`PROJECT_STORY_TEMPLATE_HEADINGS`）の下に出す書き方のヒント（#318、設計書 §5.4）。
@@ -159,7 +215,7 @@ const StoryTemplateHints = Extension.create({
  * ただし守りの本体は保存時の `ProjectStory` の検査で、ここは「使えないものをそもそも出さない」ための絞り込み。
  *
  * - 要素: 段落・見出し（h2 / h3。h1 はページのタイトルが使うので、貼り付けても段落になる）・文字・改行・
- *   箇条書き・番号付きリスト・項目。画像は S-8（#320）、YouTube は S-9（#321）で足す
+ *   箇条書き・番号付きリスト・項目・画像（`StoryImage`）。YouTube は S-9（#321）で足す
  * - 装飾: 太字・斜体・取り消し線・リンク。下線・コード・引用・区切り線・文字色は入れない
  * - 配置: 段落と見出しに `left` / `center` / `right`。指定なし（null）は domain が省く
  * - 文書の最後に空の段落を足す拡張（trailingNode）は、保存する JSON に空の段落が残るので入れない
@@ -182,6 +238,7 @@ export const storyEditorExtensions: Extensions = [
   StoryLink,
   StoryOrderedList,
   TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
+  StoryImage,
   StoryTemplateHints,
 ];
 
@@ -190,7 +247,7 @@ const storyEditorSchema = getSchema(storyEditorExtensions);
 /**
  * 読み込んだ本文を、このエディタで編集できるか（要素・装飾がすべてこのエディタのスキーマにあるか）。
  *
- * domain の `ProjectStory` が許す要素のうち、画像（S-8 / #320）と YouTube（S-9 / #321）はまだこのエディタに無い。
+ * domain の `ProjectStory` が許す要素のうち、YouTube（S-9 / #321）はまだこのエディタに無い。
  * Tiptap は読めない本文を黙って空にして開くので、そのまま保存すると本文が消える。
  * そうならないように、読めない本文は編集できない状態で開く（`StoryEditor`）
  */
