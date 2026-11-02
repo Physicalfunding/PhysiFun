@@ -12,6 +12,8 @@
 -- - テーブル・列には必ず `COMMENT ON` で説明を書く（各テーブル定義の直後。#271）。説明は docs/db/・Supabase Studio・
 --   types.ts の JSDoc に反映される。付け忘れは CI の tbls lint（DB Docs ワークフロー）で失敗する。
 --   書く内容: 業務上の意味、値の形式・上限、NULL の意味、ドメインでの呼び名（列名と違う場合）、【未使用】【未実装】の印。
+-- - 権限（GRANT / REVOKE）と RLS はこのファイルに書けない（Atlas はログインしないと扱えない）。手書きのマイグレーションにする。
+--   Supabase の anon / authenticated / service_role には public の権限を付けない（20261102053716_revoke_data_api_grants.sql。#360）。
 -- =====================================================================
 
 -- Create enum type "AdminAccountStatus"
