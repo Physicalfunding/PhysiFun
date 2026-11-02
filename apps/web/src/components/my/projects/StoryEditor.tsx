@@ -1,18 +1,28 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Editor, JSONContent } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import {
   PROJECT_STORY_LIMITS,
   type ProjectStoryDocument,
   type StoryTextAlign,
 } from "@physifun/domain";
-import { ProjectStoryView } from "@physifun/ui-shared";
+import { ProjectStoryView, isAllowedImageUrl } from "@physifun/ui-shared";
 import { Button, Input, Modal } from "@/components/common";
-import { canEditStory, isStoryLinkUrl, storyEditorExtensions } from "./storyEditorExtensions";
+import {
+  canEditStory,
+  countStoryImages,
+  isStoryLinkUrl,
+  storyEditorExtensions,
+} from "./storyEditorExtensions";
+import { prepareStoryImage, storyImageErrorMessage } from "./storyImageFile";
+import { uploadStoryImage } from "./storyImageUpload";
 
 interface StoryEditorProps {
+  /** 画像のアップロード先（そのプロジェクトのストーリー用フォルダ。#319） */
+  projectId: string;
   label: string;
   /** 欄の上に出す案内文 */
   helperText?: string;
@@ -48,8 +58,9 @@ const CONTENT_CLASS = [
  * ストーリー（本文）の見たまま編集エディタ（#317、設計書 §5.4）。
  *
  * - 使える要素・装飾は `storyEditorExtensions` で domain の `ProjectStory` が許可するものに絞っている
- * - ツールバーは、元に戻す・見出し・小見出し・太字・斜体・取り消し線・配置・箇条書き・番号付き・リンク。
- *   スマホでは折り返す。画像は S-8（#320）、動画は S-9（#321）で足す
+ * - ツールバーは、元に戻す・見出し・小見出し・太字・斜体・取り消し線・配置・箇条書き・番号付き・リンク・画像。
+ *   スマホでは折り返す。動画は S-9（#321）で足す
+ * - 画像はボタンから選び、ブラウザで縮小してアップロード API（#319）に送ってから本文に入れる（`ImageButton`）
  * - リンクはダイアログで URL を入れる。`http://` か `https://` で始まるものだけ受け付ける
  * - 文字数は domain と同じく、画面に表示される文字（文字ノードの文字）だけを数える
  * - このエディタにまだ無い要素（YouTube など）を含む本文は、空で開いて保存で消してしまわないよう、
@@ -57,7 +68,7 @@ const CONTENT_CLASS = [
  * - 見出しの型の下には書き方のヒントを薄い字で出す（`storyEditorExtensions`。保存しない）。
  *   「プレビュー」で、保存前の内容を公開ページと同じ部品（`ProjectStoryView`）で確かめられる（#318、設計書 §5.4）
  */
-export function StoryEditor({ label, helperText, value, onChange }: StoryEditorProps) {
+export function StoryEditor({ projectId, label, helperText, value, onChange }: StoryEditorProps) {
   const labelId = useId();
   const helperId = `${labelId}-helper`;
   const countId = `${labelId}-count`;
@@ -96,7 +107,7 @@ export function StoryEditor({ label, helperText, value, onChange }: StoryEditorP
       {editable ? (
         <>
           <div className="rounded-md border border-gray-300 bg-white shadow-sm focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500">
-            {editor && <Toolbar editor={editor} />}
+            {editor && <Toolbar editor={editor} projectId={projectId} />}
             <EditorContent editor={editor} className={CONTENT_CLASS} />
           </div>
           <div className="mt-1 flex items-center justify-between gap-3">
@@ -131,11 +142,12 @@ const ALIGN_LABEL: Record<StoryTextAlign, string> = {
   right: "右寄せ",
 };
 
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({ editor, projectId }: { editor: Editor; projectId: string }) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
       canUndo: e.can().undo(),
+      images: countStoryImages(e.state.doc),
       heading2: e.isActive("heading", { level: 2 }),
       heading3: e.isActive("heading", { level: 3 }),
       bold: e.isActive("bold"),
@@ -270,6 +282,8 @@ function Toolbar({ editor }: { editor: Editor }) {
       <ToolbarButton label="リンク" active={state.link} onClick={openLinkDialog}>
         リンク
       </ToolbarButton>
+      <Divider />
+      <ImageButton editor={editor} projectId={projectId} imageCount={state.images} />
 
       <Modal isOpen={linkDialog !== null} onClose={closeLinkDialog} title="リンク" size="sm">
         <Input
@@ -282,7 +296,7 @@ function Toolbar({ editor }: { editor: Editor }) {
           error={linkDialog?.error}
           onChange={(e) => setLinkDialog({ href: e.target.value })}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && !isComposingEnter(e)) {
               e.preventDefault();
               applyLink();
             }
@@ -305,14 +319,20 @@ function Toolbar({ editor }: { editor: Editor }) {
 
 function ToolbarButton({
   label,
+  title,
   active,
+  accent = false,
   disabled = false,
   onClick,
   children,
 }: {
   label: string;
+  /** ツールチップに出す文。使えない理由などを出すときに渡す（無ければラベル） */
+  title?: string;
   /** 切り替えのボタンだけ渡す（動作のボタンには aria-pressed を付けない） */
   active?: boolean;
+  /** 目立たせる（画像・動画。設計書 §5.4） */
+  accent?: boolean;
   disabled?: boolean;
   onClick: () => void;
   children: React.ReactNode;
@@ -320,15 +340,19 @@ function ToolbarButton({
   return (
     <button
       type="button"
-      title={label}
+      title={title ?? label}
       aria-label={label}
       aria-pressed={active}
       disabled={disabled}
       // 押してもエディタからフォーカスが外れないようにする（選択範囲を保ち、スマホでキーボードが閉じないように）
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={`inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded px-2 text-sm whitespace-nowrap text-gray-700 hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-transparent ${
-        active ? "bg-orange-100 text-orange-800" : ""
+      className={`inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded px-2 text-sm whitespace-nowrap disabled:opacity-40 ${
+        accent
+          ? "bg-orange-600 font-medium text-white hover:bg-orange-700 disabled:hover:bg-orange-600"
+          : `text-gray-700 hover:bg-gray-200 disabled:hover:bg-transparent ${
+              active ? "bg-orange-100 text-orange-800" : ""
+            }`
       }`}
     >
       {children}
@@ -351,6 +375,213 @@ function AlignIcon({ align }: { align: StoryTextAlign }) {
       {width.map((w, i) => (
         <rect key={i} x={x[i]} y={4 + i * 5} width={w} height="2" rx="1" fill="currentColor" />
       ))}
+    </svg>
+  );
+}
+
+const UPLOAD_URL_NOT_ALLOWED_MESSAGE =
+  "アップロードした画像の置き場所が使えない設定になっています。運営にお問い合わせください";
+
+interface ImageDialogState {
+  readonly file: File;
+  /** プレビュー用の object URL。閉じるときに解放する */
+  readonly previewUrl: string;
+  readonly alt: string;
+  readonly uploading: boolean;
+  readonly error?: string;
+}
+
+/**
+ * 画像ボタンとダイアログ（#320、設計書 §5.3・§5.4）。
+ *
+ * ファイルを選ぶ → ダイアログでプレビューと代わりの文（alt）を確かめる → 「挿入」で、ブラウザで縮小（`prepareStoryImage`）して
+ * アップロード API（`uploadStoryImage`、#319）に送り、返った URL を画像ノードとしてカーソルの位置に入れる。
+ * - 上限（`PROJECT_STORY_LIMITS.images`）に達したらボタンを使えなくする。貼り付けで超えた分は保存時の検査が止める
+ * - 縮小できない形式・大きすぎる・アップロードの失敗は、ダイアログの中に分かる言葉で出す（閉じずに選び直せる）
+ * - 処理中はダイアログを閉じられない（閉じたあとに結果が返って状態がずれないように）
+ */
+function ImageButton({
+  editor,
+  projectId,
+  imageCount,
+}: {
+  editor: Editor;
+  projectId: string;
+  imageCount: number;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dialog, setDialog] = useState<ImageDialogState | null>(null);
+  const limitMessage = `画像は ${PROJECT_STORY_LIMITS.images} 枚までです`;
+  const full = imageCount >= PROJECT_STORY_LIMITS.images;
+
+  // ダイアログを開いたまま画面を離れたときも、プレビュー用の object URL を解放する
+  // （いまの URL は ref に写しておき、アンマウントのときだけ解放する。閉じたときは `close` が解放する）
+  const previewUrlRef = useRef<string | null>(null);
+  useEffect(() => {
+    previewUrlRef.current = dialog?.previewUrl ?? null;
+  }, [dialog]);
+  useEffect(
+    () => () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    },
+    []
+  );
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // 同じファイルをもう一度選べるように、選択を空に戻す
+    e.target.value = "";
+    if (!file) return;
+    setDialog({ file, previewUrl: URL.createObjectURL(file), alt: "", uploading: false });
+  };
+
+  const close = () => {
+    if (dialog) URL.revokeObjectURL(dialog.previewUrl);
+    setDialog(null);
+    editor.commands.focus();
+  };
+
+  const fail = (error: string) =>
+    setDialog((current) => (current ? { ...current, uploading: false, error } : null));
+
+  const insert = async () => {
+    if (!dialog || dialog.uploading) return;
+    // ダイアログを開いている間に貼り付けで増えていることがあるので、入れる直前にも数える
+    if (countStoryImages(editor.state.doc) >= PROJECT_STORY_LIMITS.images) {
+      fail(limitMessage);
+      return;
+    }
+    setDialog({ ...dialog, uploading: true, error: undefined });
+    const prepared = await prepareStoryImage(dialog.file);
+    // 待っている間に画面を離れていたら（エディタが破棄されていたら）何もしない
+    if (editor.isDestroyed) return;
+    if (!prepared.ok) {
+      fail(storyImageErrorMessage(prepared.error));
+      return;
+    }
+    const uploaded = await uploadStoryImage(projectId, prepared.value);
+    if (editor.isDestroyed) return;
+    if (!uploaded.ok) {
+      fail(uploaded.error.message);
+      return;
+    }
+    // 貼り付け（`parseHTML`）と同じ基準を通し、エディタに入る src はすべて許可リストに合うものにする
+    // （API が返す URL は合うはずなので、ここで止まるのは置き場所の設定の誤り）
+    if (!isAllowedImageUrl(uploaded.value.url)) {
+      fail(UPLOAD_URL_NOT_ALLOWED_MESSAGE);
+      return;
+    }
+    const alt = dialog.alt.trim();
+    const image = { type: "image", attrs: { src: uploaded.value.url, alt: alt || null } };
+    // 画像などのノードを選んでいるとき（本文の先頭が画像だと、開いた直後の選択がそれになる）は、
+    // 選んでいるものを置き換えずにその直後に入れる
+    const { selection } = editor.state;
+    const chain = editor.chain().focus();
+    (selection instanceof NodeSelection
+      ? chain.insertContentAt(selection.to, image)
+      : chain.insertContent(image)
+    ).run();
+    close();
+  };
+
+  return (
+    <>
+      <ToolbarButton
+        label="画像"
+        title={full ? limitMessage : undefined}
+        accent
+        disabled={full}
+        onClick={() => inputRef.current?.click()}
+      >
+        <ImageIcon /> 画像
+      </ToolbarButton>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={onFileChange}
+      />
+
+      <Modal
+        isOpen={dialog !== null}
+        onClose={dialog?.uploading ? () => {} : close}
+        showCloseButton={!dialog?.uploading}
+        title="画像を入れる"
+        size="md"
+      >
+        {dialog && (
+          <>
+            {/* 選んだファイルそのもの（縮小前）をそのまま見せる。CSP の img-src は blob: を許している。
+                blob: の URL は next/image では扱えないので <img> を使う */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={dialog.previewUrl}
+              alt=""
+              className="mx-auto mb-4 max-h-60 rounded-md object-contain"
+            />
+            <Input
+              label="画像の説明（代わりの文）"
+              helperText="画像が表示できないときや、読み上げのときに使われます。空でもかまいません"
+              placeholder="例: 田植えを手伝う参加者たち"
+              autoFocus
+              // 処理中は書き換えられないようにする。disabled だとフォーカスが外れて失敗したときに戻らないので readOnly
+              readOnly={dialog.uploading}
+              value={dialog.alt}
+              onChange={(e) =>
+                setDialog((current) => (current ? { ...current, alt: e.target.value } : null))
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !isComposingEnter(e)) {
+                  e.preventDefault();
+                  void insert();
+                }
+              }}
+            />
+            {dialog.error && (
+              <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                {dialog.error}
+              </p>
+            )}
+            <div className="mt-4 flex justify-end gap-3">
+              <Button type="button" variant="outline" disabled={dialog.uploading} onClick={close}>
+                キャンセル
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                isLoading={dialog.uploading}
+                onClick={() => void insert()}
+              >
+                {dialog.uploading ? "アップロード中..." : "挿入"}
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
+    </>
+  );
+}
+
+/**
+ * 日本語 IME の変換を確定する Enter か。確定の Enter で送ってしまわないよう、ダイアログの Enter 送信から除外する。
+ * Safari（iOS を含む）は確定の keydown が `isComposing: false`・`keyCode: 229` で届くので両方を見る
+ */
+function isComposingEnter(e: React.KeyboardEvent): boolean {
+  return e.nativeEvent.isComposing || e.keyCode === 229;
+}
+
+/**
+ * 画像のアイコン（枠と山と太陽）
+ */
+function ImageIcon() {
+  return (
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 20 20" fill="none">
+      <rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="7" cy="8" r="1.5" fill="currentColor" />
+      <path d="M3.5 15l4.5-4.5 3 3 2.5-2.5 3 3" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   );
 }

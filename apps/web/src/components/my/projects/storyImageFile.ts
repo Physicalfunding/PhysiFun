@@ -148,3 +148,17 @@ async function encode(
   );
   return blob && blob.type === plan.type ? blob : null;
 }
+
+/**
+ * 縮小のエラーを、利用者に見せる文言にする（受け入れ要件「読めない画像を選ぶと分かる言葉のエラー」）
+ */
+export function storyImageErrorMessage(error: PrepareStoryImageError): string {
+  switch (error.type) {
+    case "UNREADABLE":
+      return "この画像はブラウザで読めない形式です。JPEG・PNG・WebP の画像を選んでください";
+    case "TOO_LARGE":
+      return `画像が大きすぎます。縮小しても ${error.maxBytes / (1024 * 1024)} MB を超えるので、別の画像を選んでください`;
+    case "ENCODE_FAILED":
+      return "画像を縮小できませんでした。別の画像を選ぶか、ブラウザを変えてお試しください";
+  }
+}
