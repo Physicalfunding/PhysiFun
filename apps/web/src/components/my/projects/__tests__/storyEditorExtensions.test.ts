@@ -55,7 +55,7 @@ describe("storyEditorExtensions", () => {
     expect(schema.nodes.paragraph.contentMatch.matchType(image)).toBeNull();
   });
 
-  it("貼り付けた <img> は https の URL のものだけ読み、data: などは捨てる", () => {
+  it("貼り付けた <img> は許可リスト（自サイトの Storage）の URL のものだけ読み、他サイトや data: は捨てる", () => {
     const rule = schema.nodes.image.spec.parseDOM?.[0];
     const parse = (attrs: Record<string, string | null>) =>
       rule && "getAttrs" in rule && typeof rule.getAttrs === "function"
@@ -68,6 +68,7 @@ describe("storyEditorExtensions", () => {
       alt: "活動の様子",
     });
     expect(parse({ src: IMAGE_URL })).toEqual({ src: IMAGE_URL, alt: null });
+    expect(parse({ src: "https://example.com/a.png" })).toBe(false);
     expect(parse({ src: "data:image/png;base64,AAAA" })).toBe(false);
     expect(parse({ src: "http://example.com/a.png" })).toBe(false);
     expect(parse({ src: "javascript:alert(1)" })).toBe(false);

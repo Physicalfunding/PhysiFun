@@ -14,6 +14,7 @@ import { Plugin } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
 import { PROJECT_STORY_TEMPLATE_HEADINGS } from "@physifun/domain";
+import { isAllowedImageUrl } from "@physifun/ui-shared";
 
 /**
  * リンク先として受け付ける URL か（`http://` か `https://` で始まり、URL として読めるもの）。
@@ -78,8 +79,9 @@ const StoryOrderedList = OrderedList.extend({
  * - 属性は domain の `ProjectStory` が許す `src`・`alt` だけ。Tiptap の公式の Image 拡張は `title`・`width`・`height` も
  *   文書データに入れるので使わず、自前の小さなノードにする
  * - 画像はツールバーの画像ボタンから入れる（ブラウザで縮小 → アップロード API（#319）が返す URL を `src` にする）
- * - 貼り付けた HTML の `<img>` は、`https://` の URL のものだけ読む（`data:` などは捨てる）。他サイトの画像は
- *   保存するときの検査（`isAllowedImageUrl` と、サーバーの「そのプロジェクトのフォルダ配下か」の判定）で断られる
+ * - 貼り付けた HTML の `<img>` は、表示部品と同じ許可リスト（`isAllowedImageUrl`。自サイトの Storage のホストだけ）に
+ *   合う URL のものだけ読み、他サイトの画像や `data:` は捨てる（リンクの `isAllowedUri` と同じ考え方）。
+ *   「そのプロジェクトのフォルダ配下か」はサーバーだけが知っているので、保存するときの検査（#319）に任せる
  * - エディタの中では `<img>` で描く。見た目は `StoryEditor` の CSS が付ける
  */
 const StoryImage = Node.create({
@@ -99,7 +101,7 @@ const StoryImage = Node.create({
         tag: "img[src]",
         getAttrs: (element) => {
           const src = element.getAttribute("src");
-          if (!src || !/^https:\/\//i.test(src)) return false;
+          if (!src || !isAllowedImageUrl(src)) return false;
           return { src, alt: element.getAttribute("alt") };
         },
       },
