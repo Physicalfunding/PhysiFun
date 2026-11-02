@@ -2,27 +2,27 @@
 
 ## 説明
 
-【未実装 #212】サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ
+サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ
 
 ## カラム
 
-| 名前                 | 型                             | 既定値                 | NULL 可 | 参照元                                              | 参照先                                                        | 説明                                                                                         |
-| -------------------- | ------------------------------ | ---------------------- | ------- | --------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| id                   | text                           |                        | false   | [public.support_tickets](public.support_tickets.md) |                                                               | 日程 ID                                                                                      |
-| supportRecruitmentId | text                           |                        | false   |                                                     | [public.support_recruitments](public.support_recruitments.md) | 日程が属するサポート募集                                                                     |
-| date                 | date                           |                        | false   |                                                     |                                                               | 開催日（JST のカレンダー日）                                                                 |
-| startTime            | text                           |                        | false   |                                                     |                                                               | 受付時間帯の開始時刻（HH:MM 形式の JST）                                                     |
-| endTime              | text                           |                        | false   |                                                     |                                                               | 受付時間帯の終了時刻（HH:MM 形式の JST）。過ぎると新規の申し込みを締め切る想定               |
-| capacityPerHour      | integer                        |                        | false   |                                                     |                                                               | 1 時間ごとの定員（人数）。申し込みは先着順で、またがる全時間帯が定員内に収まる必要がある想定 |
-| approvalMode         | "ApprovalMode"                 | 'AUTO'::"ApprovalMode" | false   |                                                     |                                                               | 承認モード（AUTO=申し込んだ時点で確定 / MANUAL=リーダーの承認で確定）                        |
-| createdAt            | timestamp(3) without time zone | CURRENT_TIMESTAMP      | false   |                                                     |                                                               | 作成日時                                                                                     |
-| updatedAt            | timestamp(3) without time zone |                        | false   |                                                     |                                                               | 更新日時（アプリ側で設定する）                                                               |
+| 名前                 | 型                             | 既定値                   | NULL 可 | 参照元                                              | 参照先                                                        | 説明                                                                                                                 |
+| -------------------- | ------------------------------ | ------------------------ | ------- | --------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| id                   | text                           |                          | false   | [public.support_tickets](public.support_tickets.md) |                                                               | 日程 ID                                                                                                              |
+| supportRecruitmentId | text                           |                          | false   |                                                     | [public.support_recruitments](public.support_recruitments.md) | 日程が属するサポート募集                                                                                             |
+| date                 | date                           |                          | false   |                                                     |                                                               | 開催日（JST のカレンダー日）                                                                                         |
+| startTime            | text                           |                          | false   |                                                     |                                                               | 受付時間帯の開始時刻（HH:MM 形式の JST）                                                                             |
+| endTime              | text                           |                          | false   |                                                     |                                                               | 受付時間帯の終了時刻（HH:MM 形式の JST）。過ぎると新規の申し込みを締め切る想定                                       |
+| capacityPerHour      | integer                        |                          | false   |                                                     |                                                               | 1 時間ごとの定員（人数）。申し込みは先着順で、またがる全時間帯が定員内に収まる必要がある想定                         |
+| approvalMode         | "ApprovalMode"                 | 'MANUAL'::"ApprovalMode" | false   |                                                     |                                                               | 承認モード（AUTO=申し込んだ時点で確定 / MANUAL=リーダーの承認で確定）。既定値は、リーダーの画面の初期値と同じ MANUAL |
+| createdAt            | timestamp(3) without time zone | CURRENT_TIMESTAMP        | false   |                                                     |                                                               | 作成日時                                                                                                             |
+| updatedAt            | timestamp(3) without time zone |                          | false   |                                                     |                                                               | 更新日時（アプリ側で設定する）                                                                                       |
 
 ## 領域別のビュー
 
-| 名前                                                    | 定義                                             |
-| ------------------------------------------------------- | ------------------------------------------------ |
-| [サポート募集（未実装 #212）](viewpoint-recruitment.md) | スキーマだけ存在し、コードはまだ実装されていない |
+| 名前                                     | 定義                                                                                                            |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| [サポート募集](viewpoint-recruitment.md) | リーダーが作るサポート募集とその日程。サポーターの申し込み（support_tickets）だけは未実装で、一般公開で実装する |
 
 ## 制約
 

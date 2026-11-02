@@ -1,8 +1,8 @@
-# サポート募集（未実装 #212）
+# サポート募集
 
 ## 説明
 
-スキーマだけ存在し、コードはまだ実装されていない
+リーダーが作るサポート募集とその日程。サポーターの申し込み（support_tickets）だけは未実装で、一般公開で実装する
 
 ## テーブル一覧
 
@@ -10,9 +10,9 @@
 | --------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
 | [public.accounts](public.accounts.md)                           | 16      | 一般ユーザーのアカウント（サポーター・リーダー）。リーダー応募の送信時に作られ、メールのリンクからパスワードを設定すると有効になる                                    | BASE TABLE |
 | [public.projects](public.projects.md)                           | 21      | リーダーが立ち上げるプロジェクト。公開審査（DRAFT → PENDING_REVIEW → PUBLISHED）を持つ。リーダー応募の承認時に、応募内容から下書きが作られる。ドメインの Project 集約 | BASE TABLE |
-| [public.support_recruitments](public.support_recruitments.md)   | 7       | 【未実装 #212】サポート募集。プロジェクトに紐づく募集の単位。スキーマだけ存在し、コードはまだ無い                                                                     | BASE TABLE |
-| [public.recruitment_schedules](public.recruitment_schedules.md) | 9       | 【未実装 #212】サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ                                                             | BASE TABLE |
-| [public.support_tickets](public.support_tickets.md)             | 9       | 【未実装 #212】サポートチケット。サポーターが日程の中の時間帯に参加を申し込んだ記録。チケットは提供する時間の単位を表す言葉で、購入や在庫は無い                       | BASE TABLE |
+| [public.support_recruitments](public.support_recruitments.md)   | 7       | サポート募集。プロジェクトに紐づく募集の単位                                                                                                                          | BASE TABLE |
+| [public.recruitment_schedules](public.recruitment_schedules.md) | 9       | サポート募集の日程。1 募集につき 1 日 1 行で、その日の受付時間帯と、1 時間ごとの定員を持つ                                                                            | BASE TABLE |
+| [public.support_tickets](public.support_tickets.md)             | 9       | 【未実装】サポートチケット。サポーターが日程の中の時間帯に参加を申し込んだ記録（一般公開で実装する）。チケットは提供する時間の単位を表す言葉で、購入や在庫は無い      | BASE TABLE |
 
 ## ER 図
 
