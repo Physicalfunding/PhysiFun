@@ -6,6 +6,7 @@ import type {
   StoryListItem,
   StoryMark,
 } from "@physifun/domain";
+import { isYouTubeVideoId } from "@physifun/domain";
 import { isAllowedImageUrl } from "./isAllowedImageUrl";
 
 /**
@@ -19,6 +20,9 @@ import { isAllowedImageUrl } from "./isAllowedImageUrl";
  * - 属性は決まったものだけを読む。配置は決まったクラスに置き換え、`style` には流し込まない
  * - リンクは `http://` か `https://` で始まるものだけ。合わなければ文字だけ出す
  * - 画像は `isAllowedImageUrl` に合うものだけ
+ * - YouTube は動画 ID の形（`isYouTubeVideoId`）に合うものだけ。埋め込みの URL はここで組み立てる
+ *   （`https://www.youtube-nocookie.com/embed/{ID}`。保存するのは ID だけ。設計書 §5.2）。
+ *   iframe のホストは web / admin の CSP の `frame-src` で許可している（#321）
  *
  * 見た目は docs-repository `docs/mvp/202604_claude_design/project-page/decided/` の見本に合わせる。
  * 色（orange）は見本の仮の色。admin でも使うため、web にだけある physifun-red ではなく Tailwind の標準色にしている。
@@ -33,6 +37,12 @@ export function ProjectStoryView({ story }: { story: ProjectStoryDocument }) {
     </div>
   );
 }
+
+/**
+ * YouTube の埋め込みの URL の先頭。プライバシー強化モード（Cookie を使わない）のホストを使う（設計書 §5.2）。
+ * web / admin の CSP の `frame-src` に同じホストを書いている
+ */
+const YOUTUBE_EMBED_BASE = "https://www.youtube-nocookie.com/embed/";
 
 const ALIGN_CLASSES = { left: "text-left", center: "text-center", right: "text-right" } as const;
 
@@ -142,9 +152,24 @@ function Block({ block }: { block: StoryBlock }) {
         />
       );
     }
-    case "youtube":
-      // 埋め込みは S-9（#321）で CSP の frame-src と一緒に入れる
-      return null;
+    case "youtube": {
+      const videoId = block.attrs?.videoId;
+      if (!isYouTubeVideoId(videoId)) return null;
+      return (
+        // 16:9 の枠に入れて、スマホでも幅に収める。iframe の中身は YouTube が描く
+        <div className="my-2.5 aspect-video w-full overflow-hidden rounded-md md:my-3 md:rounded-lg">
+          <iframe
+            src={`${YOUTUBE_EMBED_BASE}${videoId}`}
+            title="YouTube の動画"
+            loading="lazy"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="h-full w-full border-0"
+          />
+        </div>
+      );
+    }
     default:
       return null;
   }

@@ -19,6 +19,7 @@ export {
   PROJECT_STORY_LIMITS,
   PROJECT_STORY_TEMPLATE_HEADINGS,
   ProjectStory,
+  isYouTubeVideoId,
   type ProjectStoryDocument,
   type StoryBlock,
   type StoryInline,

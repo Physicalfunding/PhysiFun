@@ -267,10 +267,34 @@ describe("ProjectStoryView", () => {
       expect(html).not.toContain("直下の段落");
     });
 
-    it("YouTube は S-9（#321）まで描かない", () => {
+    it("YouTube の動画 ID が形に合わなければ描かない（URL・12 文字・属性なし）", () => {
+      for (const attrs of [
+        { videoId: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" },
+        { videoId: "dQw4w9WgXcQQ" },
+        { videoId: 'a"><script>' },
+        {},
+        undefined,
+      ]) {
+        const html = render(doc({ type: "youtube", attrs }));
+        expect(html).not.toContain("<iframe");
+        expect(html).not.toContain("youtube");
+      }
+    });
+  });
+
+  describe("YouTube（#321）", () => {
+    it("動画 ID から youtube-nocookie の埋め込み URL を組み立てて iframe で描く", () => {
       const html = render(doc({ type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } }));
-      expect(html).not.toContain("<iframe");
-      expect(html).not.toContain("dQw4w9WgXcQ");
+      expect(html).toContain('src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"');
+      expect(html).toMatch(/<iframe [^>]*allowFullScreen=""/);
+      expect(html).toMatch(/<iframe [^>]*loading="lazy"/);
+      expect(html).toMatch(/<iframe [^>]*title="YouTube の動画"/);
+    });
+
+    it("16:9 の枠（aspect-video）に入れて、幅いっぱいに広げる", () => {
+      const html = render(doc({ type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } }));
+      expect(html).toMatch(/<div class="[^"]*aspect-video[^"]*w-full[^"]*"><iframe /);
+      expect(html).toMatch(/<iframe [^>]*class="[^"]*h-full w-full[^"]*"/);
     });
   });
 });

@@ -42,6 +42,8 @@ const remotePatterns = buildImageRemotePatterns({
  * - Next.js App Router が出すインラインスクリプトのため `'unsafe-inline'` は
  *   暫定的に維持。nonce 化で今後外す予定 (web 側と同じ TODO)。
  * - `frame-ancestors 'none'` + `X-Frame-Options: DENY` の二重化で埋め込み禁止。
+ * - 審査画面のストーリーの YouTube の埋め込み（#321）のため、`frame-src` で
+ *   `https://www.youtube-nocookie.com` だけを許可する。
  */
 function buildContentSecurityPolicy(): string {
   const directives: Record<string, string[]> = {
@@ -56,6 +58,10 @@ function buildContentSecurityPolicy(): string {
     "font-src": ["'self'", "data:"],
     "style-src": ["'self'", "'unsafe-inline'"],
     "script-src": ["'self'"],
+    // frame-src: 審査画面のストーリーに入った YouTube の埋め込み（`ProjectStoryView`、#321）を
+    // youtube-nocookie.com の iframe で描くため許可する。未指定だと default-src 'self' が効いて遮断される。
+    // ほかのホストの iframe はこれまでどおり遮断される。
+    "frame-src": ["'self'", "https://www.youtube-nocookie.com"],
     "connect-src": ["'self'"],
     "worker-src": ["'self'", "blob:"],
     "manifest-src": ["'self'"],
