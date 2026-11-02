@@ -1,4 +1,4 @@
-import type { ProjectId } from "@physifun/domain";
+import { PROJECT_STORY_LIMITS, type ProjectId } from "@physifun/domain";
 import type { ImageStoragePort } from "../shared/ImageStoragePort";
 
 /**
@@ -9,17 +9,17 @@ import type { ImageStoragePort } from "../shared/ImageStoragePort";
  */
 
 /**
- * 1 枚の大きさの上限。Vercel の関数が受けられるリクエストは 4.5 MB までなので、少し余裕を残す
- * （ホスティングを変えるときは見直す。設計書 §5.3）
+ * 1 枚の大きさの上限（設計書 §5.3）。web が動く Vercel の関数が受けられるリクエストは 4.5 MB までなので、少し余裕を残した値
+ * （ホスティングを変えるときは見直す）。値は domain の `PROJECT_STORY_LIMITS` に置き、ブラウザで縮小する側（web）と同じものを使う
  */
-export const STORY_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
+export const STORY_IMAGE_MAX_BYTES = PROJECT_STORY_LIMITS.imageBytes;
 
-/** 受け付ける形式と、保存するときの拡張子 */
+/** 受け付ける形式（domain の `PROJECT_STORY_LIMITS.imageTypes` と同じ）と、保存するときの拡張子 */
 export const STORY_IMAGE_FORMATS = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
-} as const;
+} as const satisfies Record<(typeof PROJECT_STORY_LIMITS.imageTypes)[number], string>;
 
 export type StoryImageMimeType = keyof typeof STORY_IMAGE_FORMATS;
 

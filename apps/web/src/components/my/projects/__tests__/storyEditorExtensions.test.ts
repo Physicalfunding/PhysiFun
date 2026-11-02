@@ -1,8 +1,13 @@
 import { getSchema } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
-import { ProjectStory } from "@physifun/domain";
+import { PROJECT_STORY_LIMITS, ProjectStory } from "@physifun/domain";
 import { describe, expect, it } from "vitest";
-import { canEditStory, isStoryLinkUrl, storyEditorExtensions } from "../storyEditorExtensions";
+import {
+  canEditStory,
+  countStoryImages,
+  isStoryLinkUrl,
+  storyEditorExtensions,
+} from "../storyEditorExtensions";
 
 /**
  * Issue #317: ストーリーのエディタの拡張の組み合わせのテスト。
@@ -12,7 +17,9 @@ import { canEditStory, isStoryLinkUrl, storyEditorExtensions } from "../storyEdi
  * `schema.nodeFromJSON(json).toJSON()` は、エディタの `getJSON()` と同じ形（既定の属性も含む）になる
  */
 const schema = getSchema(storyEditorExtensions);
-const create = (value: unknown) => ProjectStory.create(value, { isAllowedImageUrl: () => false });
+const IMAGE_URL = "https://abc.supabase.co/storage/v1/object/public/project-images/p/story/a.jpg";
+const create = (value: unknown) =>
+  ProjectStory.create(value, { isAllowedImageUrl: (url) => url === IMAGE_URL });
 
 const text = (value: string, marks?: unknown[]) => ({ type: "text", text: value, marks });
 const li = (value: string) => ({
@@ -21,16 +28,81 @@ const li = (value: string) => ({
 });
 
 describe("storyEditorExtensions", () => {
-  it("出せる要素は domain が許可するもの（画像・YouTube 以外）だけ", () => {
+  it("出せる要素は domain が許可するもの（YouTube 以外）だけ", () => {
     expect(Object.keys(schema.nodes).sort()).toEqual([
       "bulletList",
       "doc",
       "hardBreak",
       "heading",
+      "image",
       "listItem",
       "orderedList",
       "paragraph",
       "text",
+    ]);
+  });
+
+  it("画像は文書の直下とリストの項目に置けるブロックで、中に文字を持たず、属性は src と alt だけ", () => {
+    const image = schema.nodes.image;
+    expect(image.isBlock).toBe(true);
+    expect(image.isAtom).toBe(true);
+    expect(Object.keys(image.spec.attrs ?? {})).toEqual(["src", "alt"]);
+    expect(schema.nodes.doc.contentMatch.matchType(image)).not.toBeNull();
+    // リストの項目は「段落のあとにブロック」なので、段落の次に置ける
+    expect(
+      schema.nodes.listItem.contentMatch.matchType(schema.nodes.paragraph)?.matchType(image)
+    ).not.toBeNull();
+    expect(schema.nodes.paragraph.contentMatch.matchType(image)).toBeNull();
+  });
+
+  it("貼り付けた <img> は許可リスト（自サイトの Storage）の URL のものだけ読み、他サイトや data: は捨てる", () => {
+    const rule = schema.nodes.image.spec.parseDOM?.[0];
+    const parse = (attrs: Record<string, string | null>) =>
+      rule && "getAttrs" in rule && typeof rule.getAttrs === "function"
+        ? rule.getAttrs({
+            getAttribute: (name: string) => attrs[name] ?? null,
+          } as unknown as HTMLElement)
+        : undefined;
+    expect(parse({ src: IMAGE_URL, alt: "活動の様子" })).toEqual({
+      src: IMAGE_URL,
+      alt: "活動の様子",
+    });
+    expect(parse({ src: IMAGE_URL })).toEqual({ src: IMAGE_URL, alt: null });
+    expect(parse({ src: "https://example.com/a.png" })).toBe(false);
+    expect(parse({ src: "data:image/png;base64,AAAA" })).toBe(false);
+    expect(parse({ src: "http://example.com/a.png" })).toBe(false);
+    expect(parse({ src: "javascript:alert(1)" })).toBe(false);
+    expect(parse({ src: "" })).toBe(false);
+  });
+
+  it("画像を含むエディタの JSON が ProjectStory の検査を通り、alt が無い（null）ときは省かれる", () => {
+    const json = schema
+      .nodeFromJSON({
+        type: "doc",
+        content: [
+          { type: "image", attrs: { src: IMAGE_URL, alt: "活動の様子" } },
+          { type: "image", attrs: { src: IMAGE_URL } },
+          {
+            type: "bulletList",
+            content: [
+              { type: "listItem", content: [{ type: "image", attrs: { src: IMAGE_URL } }] },
+            ],
+          },
+        ],
+      })
+      .toJSON();
+    expect(json.content[1].attrs).toEqual({ src: IMAGE_URL, alt: null });
+
+    const result = create(json);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.toJSON().content).toEqual([
+      { type: "image", attrs: { src: IMAGE_URL, alt: "活動の様子" } },
+      { type: "image", attrs: { src: IMAGE_URL } },
+      {
+        type: "bulletList",
+        content: [{ type: "listItem", content: [{ type: "image", attrs: { src: IMAGE_URL } }] }],
+      },
     ]);
   });
 
@@ -213,17 +285,20 @@ describe("canEditStory", () => {
     ).toBe(true);
   });
 
-  it("domain は許すがこのエディタにまだ無い要素（YouTube・画像）を含む本文は編集できない（空で開いて消さないため）", () => {
-    expect(
-      canEditStory({
-        type: "doc",
-        content: [{ type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } }],
-      })
-    ).toBe(false);
+  it("画像を含む本文は編集できる（#320）", () => {
     expect(
       canEditStory({
         type: "doc",
         content: [{ type: "image", attrs: { src: "https://abc.supabase.co/a.png" } }],
+      })
+    ).toBe(true);
+  });
+
+  it("domain は許すがこのエディタにまだ無い要素（YouTube）を含む本文は編集できない（空で開いて消さないため）", () => {
+    expect(
+      canEditStory({
+        type: "doc",
+        content: [{ type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } }],
       })
     ).toBe(false);
   });
@@ -240,6 +315,29 @@ describe("canEditStory", () => {
         ],
       })
     ).toBe(false);
+  });
+});
+
+describe("countStoryImages", () => {
+  const image = { type: "image", attrs: { src: IMAGE_URL } };
+  const doc = (content: unknown[]) => schema.nodeFromJSON({ type: "doc", content });
+
+  it("文書の直下とリストの項目の中の画像を数える", () => {
+    expect(countStoryImages(doc([{ type: "paragraph" }]))).toBe(0);
+    expect(
+      countStoryImages(
+        doc([
+          image,
+          { type: "paragraph", content: [text("a")] },
+          { type: "bulletList", content: [{ type: "listItem", content: [image, image] }] },
+        ])
+      )
+    ).toBe(3);
+  });
+
+  it("上限と比べられる（PROJECT_STORY_LIMITS.images 枚でちょうど上限）", () => {
+    const full = doc(Array.from({ length: PROJECT_STORY_LIMITS.images }, () => image));
+    expect(countStoryImages(full)).toBe(PROJECT_STORY_LIMITS.images);
   });
 });
 

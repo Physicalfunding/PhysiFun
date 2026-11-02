@@ -33,6 +33,9 @@ const CONTENT_CLASS = [
   "[&_ul]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-2.5 [&_ol]:list-decimal [&_ol]:pl-6",
   "[&_li>p]:mb-0 [&_li>ul]:mb-0 [&_li>ol]:mb-0",
   "[&_a]:text-orange-700 [&_a]:underline [&_strong]:font-bold",
+  // 画像（#320）。表示部品と同じ見た目にし、選んでいるとき（ProseMirror が `ProseMirror-selectednode` を付ける）は枠を出す
+  "[&_img]:mx-auto [&_img]:my-2.5 [&_img]:block [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md",
+  "[&_img.ProseMirror-selectednode]:ring-2 [&_img.ProseMirror-selectednode]:ring-orange-500 [&_img.ProseMirror-selectednode]:ring-offset-2",
   // 見出しの型の下のヒント（`storyEditorExtensions` の decoration が付ける `.story-hint` と `data-hint`）。
   // 空の段落の中に薄い字で出し、高さを取らない（float + h-0）ので、カーソルは行頭に残り、書き始めるとそのまま文字に置き換わる。
   // Tailwind はソースを文字列として走査するので、クラスは変数で組まずにそのまま書く（組むと CSS が生成されない）
