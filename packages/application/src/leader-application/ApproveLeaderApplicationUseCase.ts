@@ -210,7 +210,7 @@ export class MaxProjectsReachedError extends Error {
  *   slug            → null（公開承認時に発行。#262）
  *   title           → projectTitle
  *   summary         → projectSummary
- *   story (body)    → projectStory（1 行を 1 段落にした文書データ。#315）
+ *   story (body)    → 見出しの型 + projectStory（1 行を 1 段落にして最初の見出しの下に。#315・#318）
  *   coverImageUrl   → null
  *   category        → projectCategory
  *   prefectureCode  → location.prefectureCode
@@ -243,8 +243,9 @@ function buildInitialProject(application: LeaderApplication, now: Date): Result<
   // コピーすれば Issue #192 の「TIME 含む場合のみマップ。それ以外は null」と等価になる。
   const activityPlan = draft.activityContent;
 
-  // 応募のストーリーは文字だけなので、1 行を 1 段落にした文書データにする（設計書 §7）
-  const storyResult = ProjectStory.fromPlainText(draft.projectStory);
+  // 応募のストーリーは文字だけなので 1 行を 1 段落にし（設計書 §7）、見出しの型の
+  // 「このプロジェクトで実現したいこと」の下に入れる（設計書 §5.4）
+  const storyResult = ProjectStory.fromTemplate(draft.projectStory);
   if (!storyResult.ok) {
     return err(`invalid project story: ${JSON.stringify(storyResult.error)}`);
   }

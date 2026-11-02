@@ -9,7 +9,7 @@ import type {
   CreateProjectDraftPort,
   AccountForProjectCreation,
 } from "../ports/CreateProjectDraftPort";
-import { Project, AccountId } from "@physifun/domain";
+import { Project, AccountId, PROJECT_STORY_TEMPLATE_HEADINGS } from "@physifun/domain";
 
 // ==================== テストヘルパー ====================
 
@@ -114,6 +114,19 @@ describe("CreateProjectDraftUseCase", () => {
     expect(saved.id.toString()).toBe(result.value.projectId);
     expect(saved.ownerAccountId.toString()).toBe(ACCOUNT_ID_STR);
     expect(saved.title).toBe("テストプロジェクト");
+  });
+
+  it("作ったプロジェクトの本文には 4 つの見出し（見出しの型）が入っている", async () => {
+    port.accounts.push(leaderAccount());
+
+    await useCase.execute({ accountId: ACCOUNT_ID_STR, title: "テストプロジェクト" });
+
+    const body = port.savedProjects[0].body?.toJSON();
+    const headings = (body?.content ?? [])
+      .filter((block) => block.type === "heading")
+      .map((block) => (block.content ?? []).map((i) => (i.type === "text" ? i.text : "")).join(""));
+    expect(headings).toEqual([...PROJECT_STORY_TEMPLATE_HEADINGS]);
+    expect(headings).toHaveLength(4);
   });
 
   // ---- エラーケース ----

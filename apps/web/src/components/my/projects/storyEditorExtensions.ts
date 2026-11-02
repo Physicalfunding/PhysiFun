@@ -1,8 +1,12 @@
-import { type Extensions, type JSONContent, getSchema } from "@tiptap/core";
+import { Extension, type Extensions, type JSONContent, getSchema } from "@tiptap/core";
 import Link from "@tiptap/extension-link";
 import { OrderedList } from "@tiptap/extension-list";
 import TextAlign from "@tiptap/extension-text-align";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { Plugin } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
+import { PROJECT_STORY_TEMPLATE_HEADINGS } from "@physifun/domain";
 
 /**
  * リンク先として受け付ける URL か（`http://` か `https://` で始まり、URL として読めるもの）。
@@ -62,6 +66,93 @@ const StoryOrderedList = OrderedList.extend({
 });
 
 /**
+ * 見出しの型（`PROJECT_STORY_TEMPLATE_HEADINGS`）の下に出す書き方のヒント（#318、設計書 §5.4）。
+ * 薄い字で出すだけで、保存する文書データには入れない
+ */
+export const STORY_TEMPLATE_HINTS: Readonly<
+  Record<(typeof PROJECT_STORY_TEMPLATE_HEADINGS)[number], string>
+> = {
+  このプロジェクトで実現したいこと: "どんな活動をして、何を実現したいのかを具体的に書きましょう。",
+  立ち上げの背景: "始めようと思ったきっかけや、感じている課題を書きましょう。",
+  一緒にやってほしいこと: "手伝ってほしいことや、来てほしい人を書きましょう。",
+  活動の様子: "これまでの活動や現場の様子を、写真や動画で伝えましょう。",
+};
+
+/** ヒントの文の長さの上限。スマホ幅でも 2 行に収まるようにする（`StoryEditor` の CSS が段落の高さを 2 行分にしている） */
+export const STORY_HINT_MAX_LENGTH = 32;
+
+/**
+ * ヒントを出す段落に付けるクラスと属性。見た目は `StoryEditor` の CSS が付ける
+ * （CSS 側は Tailwind の走査のためクラス名をそのまま書いているので、この値を変えるときは一緒に直す）
+ */
+export const STORY_HINT_CLASS = "story-hint";
+export const STORY_HINT_ATTRIBUTE = "data-hint";
+
+export interface StoryHint {
+  /** 段落の位置（文書の直下なので、文書の中の絶対位置） */
+  readonly pos: number;
+  readonly nodeSize: number;
+  readonly hint: string;
+}
+
+/**
+ * ヒントを出す場所を探す。文書の直下で「見出しの型の見出し → 空の段落」と並んでいるところの、空の段落にだけ出す。
+ * 段落に 1 文字でも書けばヒントは消え、見出しの文字を変えた（型の見出しでなくなった）ときも出さない
+ */
+export function collectStoryHints(doc: ProseMirrorNode): readonly StoryHint[] {
+  const hints: StoryHint[] = [];
+  let previous: ProseMirrorNode | null = null;
+  doc.forEach((node, pos) => {
+    if (
+      previous?.type.name === "heading" &&
+      node.type.name === "paragraph" &&
+      node.content.size === 0
+    ) {
+      const hint = hintFor(previous.textContent);
+      if (hint) hints.push({ pos, nodeSize: node.nodeSize, hint });
+    }
+    previous = node;
+  });
+  return hints;
+}
+
+function hintFor(heading: string): string | undefined {
+  return Object.hasOwn(STORY_TEMPLATE_HINTS, heading)
+    ? STORY_TEMPLATE_HINTS[heading as keyof typeof STORY_TEMPLATE_HINTS]
+    : undefined;
+}
+
+/**
+ * ヒントを ProseMirror の decoration で出す拡張。decoration は画面にだけ付くもので、文書データ（`getJSON()`）には入らない。
+ * 文書が変わるたびに文書全体から決め直す（見出しの文字を変えたときに、直下の段落のヒントも追って変わるように。
+ * 文書は最大でも 200 KB なので、毎回見ても軽い）
+ */
+const StoryTemplateHints = Extension.create({
+  name: "storyTemplateHints",
+  addProseMirrorPlugins() {
+    const { editor } = this;
+    return [
+      new Plugin({
+        props: {
+          decorations(state) {
+            if (!editor.isEditable) return DecorationSet.empty;
+            return DecorationSet.create(
+              state.doc,
+              collectStoryHints(state.doc).map(({ pos, nodeSize, hint }) =>
+                Decoration.node(pos, pos + nodeSize, {
+                  class: STORY_HINT_CLASS,
+                  [STORY_HINT_ATTRIBUTE]: hint,
+                })
+              )
+            );
+          },
+        },
+      }),
+    ];
+  },
+});
+
+/**
  * ストーリーのエディタ（Tiptap）の拡張の組み合わせ（#317、設計書 §5.2）。
  *
  * domain の `ProjectStory` が許可する要素・装飾・属性だけを出すように絞る（許可外のものは保存時に断られる）。
@@ -72,6 +163,7 @@ const StoryOrderedList = OrderedList.extend({
  * - 装飾: 太字・斜体・取り消し線・リンク。下線・コード・引用・区切り線・文字色は入れない
  * - 配置: 段落と見出しに `left` / `center` / `right`。指定なし（null）は domain が省く
  * - 文書の最後に空の段落を足す拡張（trailingNode）は、保存する JSON に空の段落が残るので入れない
+ * - 見出しの型の下のヒント（`StoryTemplateHints`）は decoration なので、スキーマも保存する JSON も変えない
  */
 export const storyEditorExtensions: Extensions = [
   StarterKit.configure({
@@ -90,6 +182,7 @@ export const storyEditorExtensions: Extensions = [
   StoryLink,
   StoryOrderedList,
   TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
+  StoryTemplateHints,
 ];
 
 const storyEditorSchema = getSchema(storyEditorExtensions);

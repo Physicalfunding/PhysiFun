@@ -17,6 +17,7 @@ export { ProjectPhase, PROJECT_PHASE_VALUES, isProjectPhase } from "./value-obje
 export { PROJECT_PHASE_LABELS } from "./value-objects/projectPhaseLabels";
 export {
   PROJECT_STORY_LIMITS,
+  PROJECT_STORY_TEMPLATE_HEADINGS,
   ProjectStory,
   type ProjectStoryDocument,
   type StoryBlock,
