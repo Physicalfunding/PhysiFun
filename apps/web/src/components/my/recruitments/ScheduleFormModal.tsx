@@ -33,6 +33,7 @@ const EMPTY_VALUES: ScheduleFormValues = {
   startTime: "10:00",
   endTime: "12:00",
   capacityPerHour: 1,
+  // 知らない人が自動で参加確定にならないよう、リーダーの承認を初期値にする（DB の既定値も MANUAL にそろえている）
   approvalMode: "MANUAL",
 };
 

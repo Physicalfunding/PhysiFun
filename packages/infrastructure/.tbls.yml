@@ -76,8 +76,8 @@ viewpoints:
       - accounts
       - admin_accounts
   - id: recruitment
-    name: "サポート募集（未実装 #212）"
-    desc: スキーマだけ存在し、コードはまだ実装されていない
+    name: サポート募集
+    desc: リーダーが作るサポート募集とその日程。サポーターの申し込み（support_tickets）だけは未実装で、一般公開で実装する
     tables:
       - support_recruitments
       - recruitment_schedules
