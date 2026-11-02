@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { UpdateProjectDraftUseCase, type UpdateProjectDraftError } from "@physifun/application";
 import { getProjectQueryService, getProjectCommandAdapter } from "@/lib/di/project";
+import { getIsAllowedStoryImageUrl } from "@/lib/di/story-image";
 import { getCurrentUserId } from "@/lib/session";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import {
@@ -117,7 +118,7 @@ export async function PATCH(
 
     // UseCase 入力に変換
     const adapter = getProjectCommandAdapter();
-    const useCase = new UpdateProjectDraftUseCase(adapter);
+    const useCase = new UpdateProjectDraftUseCase(adapter, getIsAllowedStoryImageUrl());
 
     const result = await useCase.execute({
       projectId,

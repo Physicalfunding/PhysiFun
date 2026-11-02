@@ -10,6 +10,7 @@ export type ApiErrorCode =
   | "FORBIDDEN" // 403
   | "NOT_FOUND" // 404
   | "CONFLICT" // 409
+  | "PAYLOAD_TOO_LARGE" // 413
   | "UNPROCESSABLE_ENTITY" // 422
   | "INTERNAL_ERROR"; // 500
 
@@ -117,6 +118,14 @@ export function notFoundResponse(resource: string): NextResponse {
  */
 export function conflictResponse(message: string): NextResponse {
   return errorResponse(message, "CONFLICT", 409);
+}
+
+/**
+ * 大きすぎるエラーレスポンス（413）
+ * アップロードされたファイルが上限を超えている場合に使用
+ */
+export function payloadTooLargeResponse(message: string): NextResponse {
+  return errorResponse(message, "PAYLOAD_TOO_LARGE", 413);
 }
 
 /**

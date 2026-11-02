@@ -195,5 +195,22 @@ describe("rateLimit", () => {
       const response = await enforceRateLimit(action, userId, now + config.limit);
       expect(response?.status).toBe(429);
     });
+
+    it("uploadStoryImage は 20 req/min/user で、他のアクションとは別に数える", async () => {
+      const userId = "user-upload";
+      const action = "uploadStoryImage" as const;
+      const config = RATE_LIMIT_CONFIGS[action];
+      const now = 1_700_000_000_000;
+
+      expect(config).toEqual({ limit: 20, windowMs: 60 * 1000 });
+      for (let i = 0; i < config.limit; i++) {
+        expect(await enforceRateLimit(action, userId, now + i)).toBeNull();
+      }
+      const response = await enforceRateLimit(action, userId, now + config.limit);
+      expect(response?.status).toBe(429);
+
+      // 画像を上げ切っても、本文の保存（updateProject）は止まらない
+      expect(await enforceRateLimit("updateProject", userId, now + config.limit)).toBeNull();
+    });
   });
 });
