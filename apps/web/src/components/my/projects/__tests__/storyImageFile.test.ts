@@ -75,8 +75,14 @@ describe("planStoryImageEncoding", () => {
 /**
  * ブラウザの最小限の偽物。`Image` はファイル名に `broken` を含むと読めない。
  * canvas の `toBlob` は、`encodedSizes` の先頭から順に、その大きさの Blob を返す
+ * （`blobType` を渡すと、頼まれた形式ではなくその形式の Blob を返す。ブラウザがその形式で書けないときの振る舞い）
  */
-function stubBrowser(options: { width: number; height: number; encodedSizes: number[] }) {
+function stubBrowser(options: {
+  width: number;
+  height: number;
+  encodedSizes: number[];
+  blobType?: string;
+}) {
   const calls: { type: string; quality: number | undefined }[] = [];
   const revoked: string[] = [];
   let currentFile: File | null = null;
@@ -105,7 +111,11 @@ function stubBrowser(options: { width: number; height: number; encodedSizes: num
       toBlob: (callback: (blob: Blob | null) => void, type: string, quality?: number) => {
         calls.push({ type, quality });
         const size = options.encodedSizes.shift();
-        callback(size === undefined ? null : new Blob([new Uint8Array(size)], { type }));
+        callback(
+          size === undefined
+            ? null
+            : new Blob([new Uint8Array(size)], { type: options.blobType ?? type })
+        );
       },
     }),
   });
@@ -160,6 +170,12 @@ describe("prepareStoryImage", () => {
 
   it("ブラウザが書き直せないとき（toBlob が null）は ENCODE_FAILED", async () => {
     stubBrowser({ width: 3000, height: 3000, encodedSizes: [] });
+    const result = await prepareStoryImage(new File([""], "big.jpg", { type: "image/jpeg" }));
+    expect(result).toEqual({ ok: false, error: { type: "ENCODE_FAILED" } });
+  });
+
+  it("ブラウザが頼んだ形式で書けず別の形式（PNG）で返してきたときも ENCODE_FAILED（形式の違う画像を送らない）", async () => {
+    stubBrowser({ width: 3000, height: 3000, encodedSizes: [1000], blobType: "image/png" });
     const result = await prepareStoryImage(new File([""], "big.jpg", { type: "image/jpeg" }));
     expect(result).toEqual({ ok: false, error: { type: "ENCODE_FAILED" } });
   });

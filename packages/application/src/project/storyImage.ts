@@ -9,7 +9,8 @@ import type { ImageStoragePort } from "../shared/ImageStoragePort";
  */
 
 /**
- * 1 枚の大きさの上限（設計書 §5.3）。値は domain の `PROJECT_STORY_LIMITS` に置き、ブラウザで縮小する側（web）と同じものを使う
+ * 1 枚の大きさの上限（設計書 §5.3）。web が動く Vercel の関数が受けられるリクエストは 4.5 MB までなので、少し余裕を残した値
+ * （ホスティングを変えるときは見直す）。値は domain の `PROJECT_STORY_LIMITS` に置き、ブラウザで縮小する側（web）と同じものを使う
  */
 export const STORY_IMAGE_MAX_BYTES = PROJECT_STORY_LIMITS.imageBytes;
 
