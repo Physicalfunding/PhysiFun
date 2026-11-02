@@ -296,7 +296,7 @@ function Toolbar({ editor, projectId }: { editor: Editor; projectId: string }) {
           error={linkDialog?.error}
           onChange={(e) => setLinkDialog({ href: e.target.value })}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === "Enter" && !isComposingEnter(e)) {
               e.preventDefault();
               applyLink();
             }
@@ -319,6 +319,7 @@ function Toolbar({ editor, projectId }: { editor: Editor; projectId: string }) {
 
 function ToolbarButton({
   label,
+  title,
   active,
   accent = false,
   disabled = false,
@@ -326,6 +327,8 @@ function ToolbarButton({
   children,
 }: {
   label: string;
+  /** ツールチップに出す文。使えない理由などを出すときに渡す（無ければラベル） */
+  title?: string;
   /** 切り替えのボタンだけ渡す（動作のボタンには aria-pressed を付けない） */
   active?: boolean;
   /** 目立たせる（画像・動画。設計書 §5.4） */
@@ -337,7 +340,7 @@ function ToolbarButton({
   return (
     <button
       type="button"
-      title={label}
+      title={title ?? label}
       aria-label={label}
       aria-pressed={active}
       disabled={disabled}
@@ -450,11 +453,14 @@ function ImageButton({
     }
     setDialog({ ...dialog, uploading: true, error: undefined });
     const prepared = await prepareStoryImage(dialog.file);
+    // 待っている間に画面を離れていたら（エディタが破棄されていたら）何もしない
+    if (editor.isDestroyed) return;
     if (!prepared.ok) {
       fail(storyImageErrorMessage(prepared.error));
       return;
     }
     const uploaded = await uploadStoryImage(projectId, prepared.value);
+    if (editor.isDestroyed) return;
     if (!uploaded.ok) {
       fail(uploaded.error.message);
       return;
@@ -481,7 +487,8 @@ function ImageButton({
   return (
     <>
       <ToolbarButton
-        label={full ? `画像（${limitMessage}）` : "画像"}
+        label="画像"
+        title={full ? limitMessage : undefined}
         accent
         disabled={full}
         onClick={() => inputRef.current?.click()}
@@ -501,6 +508,7 @@ function ImageButton({
       <Modal
         isOpen={dialog !== null}
         onClose={dialog?.uploading ? () => {} : close}
+        showCloseButton={!dialog?.uploading}
         title="画像を入れる"
         size="md"
       >
@@ -519,13 +527,14 @@ function ImageButton({
               helperText="画像が表示できないときや、読み上げのときに使われます。空でもかまいません"
               placeholder="例: 田植えを手伝う参加者たち"
               autoFocus
-              disabled={dialog.uploading}
+              // 処理中は書き換えられないようにする。disabled だとフォーカスが外れて失敗したときに戻らないので readOnly
+              readOnly={dialog.uploading}
               value={dialog.alt}
               onChange={(e) =>
                 setDialog((current) => (current ? { ...current, alt: e.target.value } : null))
               }
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && !isComposingEnter(e)) {
                   e.preventDefault();
                   void insert();
                 }
@@ -554,6 +563,14 @@ function ImageButton({
       </Modal>
     </>
   );
+}
+
+/**
+ * 日本語 IME の変換を確定する Enter か。確定の Enter で送ってしまわないよう、ダイアログの Enter 送信から除外する。
+ * Safari（iOS を含む）は確定の keydown が `isComposing: false`・`keyCode: 229` で届くので両方を見る
+ */
+function isComposingEnter(e: React.KeyboardEvent): boolean {
+  return e.nativeEvent.isComposing || e.keyCode === 229;
 }
 
 /**

@@ -155,7 +155,7 @@ async function encode(
 export function storyImageErrorMessage(error: PrepareStoryImageError): string {
   switch (error.type) {
     case "UNREADABLE":
-      return "この画像はブラウザで読めない形式です。JPEG か PNG の画像を選んでください";
+      return "この画像はブラウザで読めない形式です。JPEG・PNG・WebP の画像を選んでください";
     case "TOO_LARGE":
       return `画像が大きすぎます。縮小しても ${error.maxBytes / (1024 * 1024)} MB を超えるので、別の画像を選んでください`;
     case "ENCODE_FAILED":

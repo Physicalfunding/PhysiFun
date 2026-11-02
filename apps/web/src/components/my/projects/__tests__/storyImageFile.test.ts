@@ -185,7 +185,7 @@ describe("prepareStoryImage", () => {
 describe("storyImageErrorMessage", () => {
   it("読めない形式は、何を選べばよいかが分かる文言", () => {
     expect(storyImageErrorMessage({ type: "UNREADABLE" })).toBe(
-      "この画像はブラウザで読めない形式です。JPEG か PNG の画像を選んでください"
+      "この画像はブラウザで読めない形式です。JPEG・PNG・WebP の画像を選んでください"
     );
   });
 
