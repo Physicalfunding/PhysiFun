@@ -5,6 +5,7 @@ import {
   STORY_IMAGE_JPEG_QUALITY_RETRY,
   planStoryImageEncoding,
   prepareStoryImage,
+  storyImageErrorMessage,
 } from "../storyImageFile";
 
 /**
@@ -178,5 +179,21 @@ describe("prepareStoryImage", () => {
     stubBrowser({ width: 3000, height: 3000, encodedSizes: [1000], blobType: "image/png" });
     const result = await prepareStoryImage(new File([""], "big.jpg", { type: "image/jpeg" }));
     expect(result).toEqual({ ok: false, error: { type: "ENCODE_FAILED" } });
+  });
+});
+
+describe("storyImageErrorMessage", () => {
+  it("読めない形式は、何を選べばよいかが分かる文言", () => {
+    expect(storyImageErrorMessage({ type: "UNREADABLE" })).toBe(
+      "この画像はブラウザで読めない形式です。JPEG か PNG の画像を選んでください"
+    );
+  });
+
+  it("大きすぎるときは上限を MB で示す", () => {
+    expect(storyImageErrorMessage({ type: "TOO_LARGE", maxBytes: MAX })).toContain("4 MB");
+  });
+
+  it("書き直せないときは別の画像かブラウザを促す", () => {
+    expect(storyImageErrorMessage({ type: "ENCODE_FAILED" })).toContain("別の画像");
   });
 });

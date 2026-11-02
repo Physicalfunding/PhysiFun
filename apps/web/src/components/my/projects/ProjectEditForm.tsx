@@ -60,6 +60,38 @@ function storyErrorMessage(error: ProjectStoryError): string {
   }
 }
 
+const STORY_ERROR_TYPES: readonly ProjectStoryError["type"][] = [
+  "STORY_TOO_LONG",
+  "STORY_TOO_LARGE",
+  "STORY_TOO_MANY_IMAGES",
+  "STORY_TOO_MANY_VIDEOS",
+  "STORY_NOT_ALLOWED",
+];
+
+/**
+ * サーバーの保存 API が本文を断ったとき（`INVALID_STORY`）は、`error.fields.body[0]` に `ProjectStoryError` の JSON が入る。
+ * 読めれば送る前の検査と同じ文言にする（クライアントでは分からない「別のプロジェクトの画像」もここで分かる言葉になる）
+ */
+function storyErrorFromResponse(json: unknown): string | null {
+  const raw = (json as { error?: { fields?: { body?: unknown[] } } } | null)?.error?.fields
+    ?.body?.[0];
+  if (typeof raw !== "string") return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    const type = (parsed as { type?: unknown } | null)?.type;
+    return typeof type === "string" && STORY_ERROR_TYPES.includes(type as ProjectStoryError["type"])
+      ? storyErrorMessage(parsed as ProjectStoryError)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function readErrorMessage(json: unknown): string | null {
+  const message = (json as { error?: { message?: unknown } } | null)?.error?.message;
+  return typeof message === "string" && message ? message : null;
+}
+
 interface ProjectEditFormProps {
   projectId: string;
 }
@@ -144,8 +176,11 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
         body: JSON.stringify({ ...others, body }),
       });
       if (!res.ok) {
-        const json = await res.json();
-        showToast(json.error?.message || "保存に失敗しました", "error");
+        const json: unknown = await res.json();
+        showToast(
+          storyErrorFromResponse(json) ?? readErrorMessage(json) ?? "保存に失敗しました",
+          "error"
+        );
         return;
       }
       const json = await res.json();
@@ -200,6 +235,7 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
               control={control}
               render={({ field }) => (
                 <StoryEditor
+                  projectId={projectId}
                   label="ストーリー"
                   helperText="見出しごとに書いていきましょう。画像や動画を入れると、読む人に伝わりやすくなります。"
                   value={field.value ?? null}
