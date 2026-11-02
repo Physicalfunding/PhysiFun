@@ -184,7 +184,7 @@ Supabase が DB の表を自動で HTTP API にする Data API（REST = PostgRES
 
 | 項目 | 内容 |
 |---|---|
-| 表の権限 | `public` の表・シーケンス・関数に、`anon` / `authenticated` / `service_role` の権限を付けない。新しく作る表にも自動では付かない（`atlas/migrations/20261102053716_revoke_data_api_grants.sql`） |
+| 表の権限 | `public` の表・シーケンス・関数に、`anon` / `authenticated` / `service_role` の権限を付けない。`postgres` が新しく作るものにも自動では付かない（`atlas/migrations/20261102053716_revoke_data_api_grants.sql`） |
 | RLS | 使わない。表の権限が無いので、Data API からは RLS に関係なく `42501 permission denied` になる |
 | Data API | ステージング・本番では止める（ダッシュボードの「Enable Data API」をオフ）。権限が何かの理由で戻ったときの 2 枚目の壁 |
 | Publishable キー（旧 anon キー） | アプリでは使わない。ブラウザから Supabase には直接つながない（CSP の `connect-src` も `'self'` だけ。§9） |
@@ -193,6 +193,32 @@ Supabase が DB の表を自動で HTTP API にする Data API（REST = PostgRES
 > ⚠️ ローカルの Supabase（`supabase start`）は、`public` に作った表へ `anon` などの全権限を自動で付ける。
 > 上のマイグレーションを当てていないローカル DB では、公開されている既定の Publishable キーで全表を読み書きできる（#360 で確認）。
 > Data API から見せる表がどうしても必要になったら（例: #196 の Realtime の認可で読む表）、その表だけ GRANT し、RLS とポリシーも付ける。
+
+注意:
+
+- 自動で付かないのは、`postgres` が作るものだけ。`supabase_admin`（Supabase の管理用ロール）が `public` に作るものには、Supabase の既定で今も全権限が付く（`postgres` からは変えられない）。
+  表はマイグレーション（`postgres`）で作り、extension は `public` ではなく `extensions` スキーマに入れる
+- 関数を PUBLIC（全ロール）から実行できなくする既定は、`postgres` が作る関数すべてに効く（`public` 以外のスキーマも）。
+  RLS のポリシーや Realtime の認可から呼ぶ関数を作るときは、使うロールに `GRANT EXECUTE` を明示する
+
+ステージング・本番でマイグレーションを当てたあと、次の 2 つが 0 行になることを確かめる（`information_schema` の表は、ほかのロールが付けた権限が見えないことがあるので使わない）。
+
+```sql
+-- 表・ビューに 3 つのロールの権限が残っていないか
+SELECT c.relname, r.rolname
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role')) AS r(rolname)
+WHERE n.nspname = 'public' AND c.relkind IN ('r', 'v', 'm', 'p', 'f')
+  AND has_table_privilege(r.rolname, c.oid, 'SELECT, INSERT, UPDATE, DELETE');
+
+-- 関数を 3 つのロールが実行できないか
+SELECT p.oid::regprocedure, r.rolname
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role')) AS r(rolname)
+WHERE n.nspname = 'public' AND has_function_privilege(r.rolname, p.oid, 'EXECUTE');
+```
 
 ---
 
@@ -230,7 +256,7 @@ flowchart TD
 | 脅威 | 対策 | 残存リスク |
 |---|---|---|
 | **SQL Injection** | Kysely の parameterized query / Zod 入力検証 | なし（標準的） |
-| **Data API からの DB の読み書き** | `anon` / `authenticated` / `service_role` に `public` の表の権限を付けない（§4.5）＋ステージング・本番の Data API を止める | service role キーが漏れると Storage は操作できる（表には届かない） |
+| **Data API からの DB の読み書き** | `anon` / `authenticated` / `service_role` に `public` の表の権限を付けない（§4.5）＋ステージング・本番の Data API を止める | service role キーが漏れると、Storage と Supabase Auth の管理 API は使える（`public` の表には届かない） |
 | **XSS** | React の自動エスケープ / CSP `script-src 'self'` + `'unsafe-inline'`（暫定） / リーダーが書いた本文（ストーリー）は保存時の検査と表示部品で二重に守る（6.3） | `'unsafe-inline'` の暫定許可（Issue #109 follow-up） |
 | **CSRF** | NextAuth の SameSite=lax Cookie + proxy（旧 middleware）で状態変更リクエストの `Origin` / `Referer` を検証（`@physifun/server-shared` の `verifyCsrf`、web / admin 共通） | `NEXTAUTH_URL` の設定漏れ時は 403 に倒す（fail-safe） |
 | **Clickjacking** | `X-Frame-Options: DENY` + `frame-ancestors 'none'`（二重化） | なし |
