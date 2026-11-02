@@ -15,6 +15,7 @@ import {
   isProjectCategory,
 } from "@physifun/domain";
 import type { UpdateProjectDraftPort } from "./ports/UpdateProjectDraftPort";
+import type { IsAllowedStoryImageUrl } from "./storyImage";
 
 /**
  * SnsLinks の判別共用体エラーを UseCase の issues[] に変換する
@@ -102,7 +103,11 @@ export interface UpdateProjectDraftInput {
  * 7. 永続化
  */
 export class UpdateProjectDraftUseCase {
-  constructor(private readonly port: UpdateProjectDraftPort) {}
+  constructor(
+    private readonly port: UpdateProjectDraftPort,
+    /** 本文に入れてよい画像の URL か（`createIsAllowedStoryImageUrl` で組み立てる） */
+    private readonly isAllowedStoryImageUrl: IsAllowedStoryImageUrl
+  ) {}
 
   async execute(
     input: UpdateProjectDraftInput
@@ -206,14 +211,15 @@ export class UpdateProjectDraftUseCase {
     }
 
     // body（本文）。許可していない要素・装飾・属性が 1 つでもあれば保存しない（設計書 §6.1）。
-    // 画像は、置き場所の決まりを画像のアップロード（#319）で決めるまで、すべて断る
-    // （*.supabase.co を広く許すと、他人の Storage の画像で閲覧者を追跡できてしまうため）
+    // 画像は、このプロジェクトのストーリー用にアップロードしたもの（#319）だけを許す
     let body: ProjectStory | null | undefined;
     if (input.body !== undefined) {
       if (input.body === null) {
         body = null;
       } else {
-        const storyResult = ProjectStory.create(input.body, { isAllowedImageUrl: () => false });
+        const storyResult = ProjectStory.create(input.body, {
+          isAllowedImageUrl: (url) => this.isAllowedStoryImageUrl(url, projectIdResult.value),
+        });
         if (!storyResult.ok) {
           return err({ type: "INVALID_STORY", storyError: storyResult.error });
         }
