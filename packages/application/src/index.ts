@@ -92,6 +92,7 @@ export type {
 // Shared
 export type { AccountRole } from "./shared/AccountRole";
 export type { AdminReviewer } from "./shared/AdminReviewer";
+export type { ImageStoragePort } from "./shared/ImageStoragePort";
 
 // UpdateProjectDraftUseCase
 export {
@@ -103,6 +104,22 @@ export {
 
 // UpdateProjectDraftPort
 export type { UpdateProjectDraftPort } from "./project/ports/UpdateProjectDraftPort";
+
+// ストーリーの画像（#319）
+export {
+  UploadStoryImageUseCase,
+  type UploadStoryImageInput,
+  type UploadStoryImageOutput,
+  type UploadStoryImageError,
+} from "./project/UploadStoryImageUseCase";
+export type { UploadStoryImagePort } from "./project/ports/UploadStoryImagePort";
+export {
+  STORY_IMAGE_MAX_BYTES,
+  STORY_IMAGE_FORMATS,
+  createIsAllowedStoryImageUrl,
+  type IsAllowedStoryImageUrl,
+  type StoryImageMimeType,
+} from "./project/storyImage";
 
 // ProjectQueryPort
 export type {

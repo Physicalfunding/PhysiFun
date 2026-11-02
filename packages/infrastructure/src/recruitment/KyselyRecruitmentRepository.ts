@@ -1,5 +1,5 @@
 import {
-  AccountId,
+  type AccountId,
   type ProjectId,
   type RecruitmentRepository,
   type RecruitmentSchedule,
@@ -13,6 +13,7 @@ import { DatabaseError } from "pg";
 import { isUniqueConstraintError } from "../database/isUniqueConstraintError";
 import { db } from "../database/kysely/client";
 import type { RecruitmentSchedules, SupportRecruitments } from "../database/kysely/types";
+import { findProjectOwner } from "../project/kyselyProjectOwner";
 import { reconstructRecruitment, reconstructRecruitmentSchedule } from "./reconstructRecruitment";
 
 /**
@@ -35,16 +36,7 @@ import { reconstructRecruitment, reconstructRecruitmentSchedule } from "./recons
  */
 export class KyselyRecruitmentRepository implements RecruitmentRepository, ProjectOwnerPort {
   async findProjectOwner(projectId: ProjectId): Promise<AccountId | null> {
-    const row = await db
-      .selectFrom("projects")
-      .select("ownerAccountId")
-      .where("id", "=", projectId.toString())
-      .executeTakeFirst();
-    if (!row) return null;
-
-    const accountIdResult = AccountId.from(row.ownerAccountId);
-    if (!accountIdResult.ok) throw new Error(`Invalid AccountId: ${row.ownerAccountId}`);
-    return accountIdResult.value;
+    return findProjectOwner(projectId);
   }
 
   async findById(id: SupportRecruitmentId): Promise<SupportRecruitment | null> {

@@ -12,6 +12,8 @@ export type { RateLimitResult };
  * - `projectStatusTransition`: 公開申請 / 取下げ / 非公開化 用 (10 req / min / user)
  * - `leaderApplicationSubmit`: `POST /api/leader-applications` 用 (3 req / 1 hour / IP)
  *   未認証の公開エンドポイントなので key は IP アドレス（Issue #200 / B-6）。
+ * - `uploadStoryImage`: `POST /api/my/projects/[projectId]/story-images` 用 (20 req / min / user)
+ *   本文の画像は 20 枚までなので、1 分に 20 枚あれば足りる（Issue #319）。
  * - `manageRecruitment`: サポート募集・日程の作成 / 更新 / 削除 用 (30 req / min / user)。
  *   募集と日程の書き込み API の合算（#218）。
  *
@@ -26,7 +28,8 @@ export type RateLimitAction =
   | "updateProject"
   | "projectStatusTransition"
   | "leaderApplicationSubmit"
-  | "manageRecruitment";
+  | "manageRecruitment"
+  | "uploadStoryImage";
 
 /**
  * レート制限の設定 (上限回数とウィンドウ長)。
@@ -65,6 +68,10 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitAction, RateLimitConfig> = {
   manageRecruitment: {
     limit: 30,
     windowMs: 60 * 1000, // 1 分 (募集・日程の書き込み API 合算, #218)
+  },
+  uploadStoryImage: {
+    limit: 20,
+    windowMs: 60 * 1000, // 1 分 (Issue #319)
   },
 };
 

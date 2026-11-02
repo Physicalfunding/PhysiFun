@@ -121,7 +121,8 @@ export function ProjectEditForm({ projectId }: ProjectEditFormProps) {
       body = null;
       if (edited) {
         // 送る前にここでも検査して、長すぎ・使えない内容をその場で知らせる（サーバーでも同じ検査をする）。
-        // 画像は S-8（#320）で入れられるようになるまで、サーバーと同じくすべて断る
+        // 画像はエディタからまだ入れられないので、ここではすべて断る。S-8（#320）で、アップロード API（#319）が
+        // 返す URL を通すようにする（サーバーは #319 で、そのプロジェクトのストーリー用フォルダの画像を許している）
         const story = ProjectStory.create(edited, { isAllowedImageUrl: () => false });
         if (!story.ok) {
           showToast(storyErrorMessage(story.error), "error");

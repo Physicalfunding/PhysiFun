@@ -87,7 +87,7 @@ flowchart TB
 | DB | PostgreSQL（Supabase） | web / admin で同一インスタンスを共有。`DATABASE_URL` は Transaction Pooler（pgBouncer）の URL |
 | クエリ | Kysely（`pg` ドライバ） | DB 型（`types.ts`）は kysely-codegen で DB から生成 |
 | スキーマ・マイグレーション | Atlas（`atlas/schema.sql` + versioned migration） | 運用手順は `docs/guides/db-migration.md` |
-| ストレージ | Supabase Storage（`project-images`） | 画像アップロードは実装途中（UI 未接続） |
+| ストレージ | Supabase Storage（`project-images`） | ストーリー用の画像アップロード API あり（#319）。エディタからの挿入は #320 |
 | メール | Resend | Outbox 経由で送信 |
 | CAPTCHA | Cloudflare Turnstile | リーダー応募フォーム |
 | レート制限 | Upstash Redis（`@upstash/ratelimit`） | web / admin で共有。未設定時（ローカル / テスト）はメモリで数える（#202） |
@@ -204,7 +204,6 @@ PhysiFun/
 │   │   ├── lib/
 │   │   │   ├── di/              # UseCase と infrastructure 実装を組み立てる DI ヘルパー
 │   │   │   └── validations/     # Zod スキーマ
-│   │   └── infrastructure/      # ⚠️ 例外: 画像アップロード（未接続）。packages/infrastructure へ移す予定
 │   └── admin/src/
 │       ├── app/                 # applications / projects / members / outbox / audit-logs / login / api
 │       ├── components/

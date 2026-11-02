@@ -85,6 +85,10 @@ export { db as kyselyDb, kyselyPool } from "./database/kysely/client";
 export type { DB as KyselyDB } from "./database/kysely/types";
 export { KyselyProjectQueryService } from "./project/KyselyProjectQueryService";
 export { KyselyProjectCommandAdapter } from "./project/KyselyProjectCommandAdapter";
+export { findProjectOwner } from "./project/kyselyProjectOwner";
+
+// 画像の置き場所（Supabase Storage。#319 で apps/web から移設）
+export { SupabaseImageStorage, MockImageStorage, createImageStorage } from "./storage/ImageStorage";
 
 // recruitment ドメイン（#217）
 export { KyselyRecruitmentRepository } from "./recruitment/KyselyRecruitmentRepository";

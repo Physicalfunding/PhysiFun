@@ -21,6 +21,13 @@ const OWNER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000001";
 const OTHER_ACCOUNT_ID_STR = "00000000-0000-4000-a000-000000000002";
 const PROJECT_ID_STR = "00000000-0000-4000-b000-000000000001";
 
+/** 画像の置き場所（ストーリー用フォルダ配下だけを許す。`createIsAllowedStoryImageUrl` の代わり） */
+const STORAGE_BASE = "https://abc.supabase.co/storage/v1/object/public/project-images";
+const storyImageUrl = (projectId: string, file: string) =>
+  `${STORAGE_BASE}/projects/${projectId}/story/${file}`;
+const isAllowedStoryImageUrl = (url: string, projectId: ProjectId) =>
+  url.startsWith(`${STORAGE_BASE}/projects/${projectId.toString()}/story/`);
+
 /** 文字（装飾つき）の段落だけの文書データ */
 function storyDoc(...inlines: unknown[]) {
   return { type: "doc", content: [{ type: "paragraph", content: inlines }] };
@@ -102,7 +109,7 @@ describe("UpdateProjectDraftUseCase", () => {
 
   beforeEach(() => {
     port = new InMemoryUpdateProjectDraftPort();
-    useCase = new UpdateProjectDraftUseCase(port);
+    useCase = new UpdateProjectDraftUseCase(port, isAllowedStoryImageUrl);
   });
 
   // ---- ハッピーパス ----
@@ -387,6 +394,8 @@ describe("UpdateProjectDraftUseCase", () => {
           ],
         },
         { type: "youtube", attrs: { videoId: "dQw4w9WgXcQ" } },
+        // このプロジェクトのストーリー用にアップロードした画像（#319）
+        { type: "image", attrs: { src: storyImageUrl(PROJECT_ID_STR, "a.png"), alt: "畑" } },
       ],
     };
 
@@ -419,14 +428,14 @@ describe("UpdateProjectDraftUseCase", () => {
       "INVALID_IMAGE_SRC",
     ],
     [
-      // 画像の置き場所の決まりは画像のアップロード（#319）で決める。それまでは Supabase の画像も断る
-      "Supabase Storage の画像",
+      // 自分の Storage でも、このプロジェクトのストーリー用フォルダの外にある画像は断る（#319）
+      "別のプロジェクトのフォルダにある画像",
       {
         type: "doc",
         content: [
           {
             type: "image",
-            attrs: { src: "https://abc.supabase.co/storage/v1/object/public/project-images/a.png" },
+            attrs: { src: storyImageUrl("00000000-0000-4000-b000-000000000002", "a.png") },
           },
         ],
       },

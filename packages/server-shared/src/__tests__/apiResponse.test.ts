@@ -15,6 +15,7 @@ import {
   unauthorizedResponse,
   forbiddenResponse,
   conflictResponse,
+  payloadTooLargeResponse,
 } from "../apiResponse";
 
 describe("ApiResponse", () => {
@@ -74,6 +75,15 @@ describe("ApiResponse", () => {
     it("409ステータスで競合エラーを返す", () => {
       const response = conflictResponse("このメールアドレスは既に登録されています");
       expect(response.status).toBe(409);
+    });
+  });
+
+  describe("payloadTooLargeResponse", () => {
+    it("413ステータスで PAYLOAD_TOO_LARGE を返す", async () => {
+      const response = payloadTooLargeResponse("画像は 1 枚 4 MB までです");
+      expect(response.status).toBe(413);
+      const body = (await response.json()) as ApiResponse;
+      expect(body.error?.code).toBe("PAYLOAD_TOO_LARGE");
     });
   });
 });

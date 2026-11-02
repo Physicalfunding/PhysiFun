@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { UpdateProjectDraftUseCase, type UpdateProjectDraftError } from "@physifun/application";
 import { getProjectQueryService, getProjectCommandAdapter } from "@/lib/di/project";
+import { getIsAllowedStoryImageUrl } from "@/lib/di/story-image";
 import { getCurrentUserId } from "@/lib/session";
 import { enforceRateLimit } from "@/lib/rateLimit";
 import {
@@ -49,6 +50,8 @@ function handleUpdateError(error: UpdateProjectDraftError) {
   switch (error.type) {
     case "INVALID_ACCOUNT_ID":
       return validationErrorResponse("無効なアカウントIDです");
+    case "INVALID_PROJECT_ID":
+      return validationErrorResponse("無効なプロジェクトIDです");
     case "PROJECT_NOT_FOUND":
       return notFoundResponse("プロジェクト");
     case "NOT_OWNER":
@@ -117,7 +120,7 @@ export async function PATCH(
 
     // UseCase 入力に変換
     const adapter = getProjectCommandAdapter();
-    const useCase = new UpdateProjectDraftUseCase(adapter);
+    const useCase = new UpdateProjectDraftUseCase(adapter, getIsAllowedStoryImageUrl());
 
     const result = await useCase.execute({
       projectId,
