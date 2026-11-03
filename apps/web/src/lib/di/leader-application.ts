@@ -1,10 +1,14 @@
 import type {
   CaptchaVerifierPort,
   IpRateLimitPort,
+  MyLeaderApplicationQueryPort,
   SubmitLeaderApplicationPort,
 } from "@physifun/application";
 import { err, ok } from "@physifun/domain";
-import { KyselySubmitLeaderApplicationAdapter } from "@physifun/infrastructure";
+import {
+  KyselyLeaderApplicationQueryService,
+  KyselySubmitLeaderApplicationAdapter,
+} from "@physifun/infrastructure";
 import { createTurnstileCaptchaVerifier } from "@/lib/captcha";
 import { consumeRateLimit } from "@/lib/rateLimit";
 
@@ -14,6 +18,13 @@ import { consumeRateLimit } from "@/lib/rateLimit";
  */
 export function getSubmitLeaderApplicationPort(): SubmitLeaderApplicationPort {
   return new KyselySubmitLeaderApplicationAdapter();
+}
+
+/**
+ * 本人の応募の状態を読むクエリ（#373）。応募状況の画面と `/my/*` の振り分けで使う。
+ */
+export function getMyLeaderApplicationQueryService(): MyLeaderApplicationQueryPort {
+  return new KyselyLeaderApplicationQueryService();
 }
 
 /**
