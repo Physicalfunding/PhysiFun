@@ -91,7 +91,7 @@ cp apps/web/.env.example apps/web/.env.local
 
 ### Storage バケット
 
-ストーリーの画像（#319）は Supabase Storage の `SUPABASE_STORAGE_BUCKET`（既定 `project-images`）に置く。アプリはバケットを作らないので、ローカル・staging・本番それぞれで **1 回だけ** Supabase のダッシュボード（Storage → New bucket）か CLI で作る。
+ストーリーの画像（#319）は Supabase Storage の `SUPABASE_STORAGE_BUCKET`（既定 `project-images`）に置く。アプリはバケットを作らない。ローカルでは `supabase/config.toml` の `[storage.buckets.project-images]` から `supabase start` が作る。staging・本番では、それぞれ **1 回だけ** Supabase のダッシュボード（Storage → New bucket）か CLI で作る（[`docs/guides/deploy.md`](../../docs/guides/deploy.md) §2.3）。
 
 - 名前: `project-images`、**Public bucket: ON**（画像は URL でそのまま表示する）
 - 二重防御として、Allowed MIME types を `image/jpeg, image/png, image/webp`、File size limit を `4 MB` にしておく（アプリ側の検査と同じ値。`packages/application/src/project/storyImage.ts`）

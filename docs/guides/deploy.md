@@ -47,7 +47,8 @@ bun run db:migrate:deploy         # 未適用をすべて当てる
 SEED_ADMIN_EMAIL="you@example.com" bun run db:seed   # admin にログインするとき。何度実行してもよい
 ```
 
-`db:*` は `apps/web/.env.local`（なければ `.env`）の `DATABASE_URL` を読む。
+`db:*` は `apps/web/.env.local`（なければ `apps/web/.env`）の `DATABASE_URL` を読む。
+ただし、リポジトリのルートに `.env` がある（`make env-setup` が作る）と、Bun がそれを先に読み、そちらが効く。
 
 ### 1.4 アプリ
 
@@ -66,7 +67,15 @@ bun run dev:all                   # web と admin（http://localhost:3001）
 ## 2. ステージングの DB と Storage
 
 main にマージしても、CI はステージングの DB にマイグレーションを当てない。
-一方、Vercel は main から自動でデプロイする。**スキーマを変える PR をマージしたら、すぐに手元からステージングの DB に当てる**（新しいコードが古い DB で動く時間を短くする）。
+一方、Vercel は main から自動でデプロイする。**マイグレーションを足した PR をマージしたら、すぐに手元からステージングの DB に当てる**（新しいコードが古い DB で動く時間を短くする）。
+表の形を変えないマイグレーション（データの修正・権限の変更）も同じ。
+
+ふつうはこの順番でよいが、**古いコードと新しいコードの片方でしか動かないマイグレーション**は、この順番だと壊れることがある。
+例: `20261027233716_story_document.sql` は、新しいコードが本文を書く前に流す必要がある（ファイルの先頭のコメント）。
+こういうマイグレーションを足す PR は、出す順番（マージの前に当てるか、書き込みを止めてから当てるか）を PR 本文に書き、その順番で出す。
+
+- 列や表を足すだけなど、古いコードでも動くものは、マージの前に当ててよい
+- 列を消す・名前を変えるときは、PR を 2 回に分ける（先にコードがその列を使わないようにし、次の PR で消す）
 
 ### 2.1 マイグレーション
 
@@ -78,19 +87,25 @@ main にマージしても、CI はステージングの DB にマイグレー�
 **同じターミナルで** 続けて実行する。
 
 ```bash
-export DATABASE_URL="postgresql://postgres:<パスワード>@db.<project-ref>.supabase.co:5432/postgres"
+git switch main && git pull       # 1. マージしたマイグレーションのファイルを手元に持ってくる
 
-bun run db:migrate:status         # 1. 接続先がステージングかを確かめる（下の注意）
-bun run db:migrate:deploy         # 2. 当てる
-bun run db:migrate:status         # 3. 「Migration Status: OK」になったかを確かめる
-SEED_ADMIN_EMAIL="you@example.com" bun run db:seed   # 4. 運営アカウントがまだ無いときだけ
+read -rs DATABASE_URL             # 2. URL を貼り付けて Enter（画面と履歴に残らない）
+export DATABASE_URL
+echo "${DATABASE_URL#*@}"         # 3. 接続先のホストを表示する（パスワードは出ない）。db.<project-ref>.supabase.co などか
 
-unset DATABASE_URL                # 5. 戻す（このあとローカルに向けたコマンドを打っても、ステージングに流れないように）
+bun run db:migrate:status         # 4. 未適用（Pending Files）を確かめる
+bun run db:migrate:deploy         # 5. 当てる
+bun run db:migrate:status         # 6. 「Migration Status: OK」になったかを確かめる
+SEED_ADMIN_EMAIL="you@example.com" bun run db:seed   # 7. 運営アカウントがまだ無いときだけ
+
+unset DATABASE_URL                # 8. 戻す（このあとローカルに向けたコマンドを打っても、ステージングに流れないように）
 ```
 
+- URL の形は `postgresql://postgres:<パスワード>@db.<project-ref>.supabase.co:5432/postgres`。パスワードに `@`・`:`・`/`・`#` などの記号があれば、URL エンコード（`@` → `%40` など）する
+- 手順 1 を飛ばすと、手元に無いマイグレーションは当たらない。Atlas は手元の `atlas/migrations/` と比べるので、それでも「OK」と出る
 - `scripts/atlas.ts` と `scripts/seed.ts` は `apps/web/.env.local` を読むが、**すでに設定された環境変数は上書きしない**。`export` した値が使われる
-- 逆に、`export` が効いていないと黙ってローカルの DB に流れる。手順 1 の未適用の件数（`Pending Files`）が、ローカルではなくステージングの状態になっていることを確かめてから手順 2 に進む
-- **Claude Code の `!` 入力は、1 行ごとに新しいシェルで動く**。`! export DATABASE_URL=...` は次の行に引き継がれず、ローカルに流れる。ステージングに当てるときは自分のターミナルで実行するか、1 行にまとめる（`DATABASE_URL="..." bun run db:migrate:deploy`）
+- 逆に、`export` が効いていないと黙ってローカルの DB に流れる。手順 3 でホストがステージングになっていることを確かめてから手順 4 に進む
+- **Claude Code の `!` 入力は、1 行ごとに新しいシェルで動く**。`! export DATABASE_URL=...` は次の行に引き継がれず、ローカルに流れる。ステージングに当てるときは自分のターミナルで実行する
 - Prisma の時代に作った DB を初めて Atlas に切り替えるときは [`db-migration.md`](./db-migration.md) §5.5
 
 ### 2.2 マイグレーションのあとの確認
@@ -140,9 +155,10 @@ main にマージしたら、各プロジェクトで次を見る。
 3. **Settings → Build and Deployment**:
    - Production Branch が `main` か
    - Ignored Build Step にコマンドが入っていないか（入っていると、条件に当たったコミットのビルドが Canceled になる）
-   - Root Directory の「Skip deployment」が有効なら、そのアプリと、それが使う workspace のパッケージが変わらないコミットではデプロイされない（Bun workspaces を見て Vercel が判定する）。文書だけの PR ではデプロイされないのが正しい
+   - Root Directory の「Skip deployment」が有効なら、そのアプリと、それが使う workspace のパッケージ（`packages/*` など）が変わらないコミットではデプロイされない（Bun workspaces を見て Vercel が判定する）。
+     ただし workspace の外（`docs/`・ルートのファイル）が変わったコミットは、全アプリをデプロイする扱いになる。たとえば `apps/admin/` だけを変えた PR では、web はデプロイされないのが正しい
 
-Deployments に新しいデプロイが 1 件も出ていなければ、Git の連携が切れている。
+workspace の外を変えたコミットでも新しいデプロイが 1 件も出ていなければ、Git の連携が切れている（Settings → Git を見直す）。
 
 ### 3.3 手でデプロイする（ダッシュボード）
 
@@ -162,6 +178,7 @@ vercel login
 # 作業ツリーを main の最新にする。未コミットの変更・未追跡のファイルがあれば片づける
 git switch main && git pull
 git status                        # 「nothing to commit, working tree clean」になるまで出さない
+git status --ignored              # .gitignore で隠れたファイルも見る（下の注意）
 
 # リポジトリのルートで 1 回だけ。web と admin の 2 プロジェクトをまとめて紐づける
 vercel link --repo                # .vercel/repo.json ができる（.gitignore 済み）
@@ -174,6 +191,7 @@ vercel link --repo                # .vercel/repo.json ができる（.gitignore 
 - `vercel link --repo` は、Vercel のプロジェクトが Git 連携していることが前提（Vercel の文書では Alpha 扱い）
 - `--prod` を付けると Production（= 今はステージングの URL）に出る。付けなければ Preview の URL になる。まず Preview で確かめてもよい
 - デプロイには、ダッシュボードに登録した環境変数が使われる（手元の `.env.local` は使われない）
+- `vercel deploy` が既定で上げないのは `.env.local` などで、ルートの `.env`（`make env-setup` が作る）は上がってしまう。`git status --ignored` に `.env` が出たら、退避してから出す
 - この節は Vercel の公式文書（`vercel link`・`vercel deploy`・Monorepos）と Vercel CLI のソースで確かめて書いた（2026-11-03）。まだこのリポジトリで実行していないので、動きが違ったら直す
 
 ---
@@ -181,6 +199,6 @@ vercel link --repo                # .vercel/repo.json ができる（.gitignore 
 ## 4. ステージングに出すときの順番（まとめ）
 
 1. PR を main にマージする（Vercel が自動でデプロイを始める）
-2. スキーマを変える PR なら、§2.1 でステージングの DB に当て、§2.2 を確かめる
+2. マイグレーションを足した PR なら、§2.1 でステージングの DB に当て、§2.2 を確かめる（古いコードと新しいコードの片方でしか動かないものは、PR に書いた順番で）
 3. §3.2 で、web・admin の両方に新しいデプロイが出て Ready になったかを確かめる。出ていなければ §3.3 か §3.4
 4. 画面で動きを確かめる

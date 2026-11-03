@@ -58,7 +58,7 @@ DB（Supabase PostgreSQL）は web / admin で **同一インスタンスを共�
 - [Bun](https://bun.sh/) (v1.x)
 - [Node.js](https://nodejs.org/) 22 以上（バージョンは `.nvmrc` を参照。Next.js / Playwright / kysely の実行に使う）
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started)
+- [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) v3 以上（`apps/web/supabase/config.toml` が v3 の書き方のため）
 - [Atlas CLI](https://atlasgo.io/getting-started)（DB マイグレーション。`curl -sSf https://atlasgo.sh | sh` または `brew install ariga/tap/atlas`）
 - [Resend](https://resend.com/) の API キー（admin の Magic Link ログインで使用）
 
