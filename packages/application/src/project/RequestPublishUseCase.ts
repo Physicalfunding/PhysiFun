@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import {
   type Result,
   err,
+  generateUuidV7,
   ok,
   AccountId,
   ProjectId,
@@ -102,7 +102,7 @@ export class RequestPublishUseCase {
     await this.port.executeInTransaction({
       project,
       outboxMessage: {
-        id: randomUUID(),
+        id: generateUuidV7(),
         type: ADMIN_PUBLISH_REQUEST_NOTIFY_TYPE,
         payload: {
           projectId: project.id.toString(),

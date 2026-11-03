@@ -6,26 +6,13 @@ import { randomBytes } from "node:crypto";
  * ドメイン層の各 ID 値オブジェクトおよびアプリケーション層の
  * 入力バリデーションで共通利用する。
  *
- * ID は UUID v4（既存）と UUID v7（#358 で移行中）が混ざるため、
- * 形式チェックは `isUuid()` で両方を通す。
+ * 新しく作る ID は UUID v7（`generateUuidV7()`）。#358 より前に作った行の ID は
+ * UUID v4 のまま残るため、形式チェックは `isUuid()` で両方を通す。
  */
-
-/** @deprecated ID の形式チェックには `isUuid()` を使う（ID の生成を v7 に変えるとき（#369）に消す） */
-export const UUID_V4_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** version の桁（3 つ目の区切りの先頭）が 4 か 7、variant が `10`（8・9・a・b）の UUID */
 const UUID_V4_OR_V7_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[47][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-/**
- * 文字列が UUID v4 形式かどうかを判定する
- *
- * @deprecated ID の形式チェックには `isUuid()` を使う（ID の生成を v7 に変えるとき（#369）に消す）
- */
-export function isUuidV4(value: string): boolean {
-  return UUID_V4_REGEX.test(value);
-}
 
 /**
  * 文字列が UUID v4 か v7 の形式かどうかを判定する

@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
-import { isUuid } from "../../shared/uuid";
+import { generateUuidV7, isUuid } from "../../shared/uuid";
 
 /**
  * RecruitmentScheduleId 値オブジェクト
@@ -11,7 +10,7 @@ export class RecruitmentScheduleId {
   private constructor(private readonly value: string) {}
 
   static generate(): RecruitmentScheduleId {
-    return new RecruitmentScheduleId(randomUUID());
+    return new RecruitmentScheduleId(generateUuidV7());
   }
 
   static from(value: string): Result<RecruitmentScheduleId, InvalidRecruitmentScheduleIdError> {

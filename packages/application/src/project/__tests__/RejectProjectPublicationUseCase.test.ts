@@ -191,6 +191,10 @@ describe("RejectProjectPublicationUseCase", () => {
 
     expect(result.ok).toBe(true);
     const fb = port.createdFeedbacks[0];
+    // 審査履歴の id は UUID v7
+    expect(fb.id.toString()).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
     expect(fb.action).toBe(ReviewAction.REJECTED);
     expect(fb.note).toBe(note);
     expect(fb.reviewerId.toString()).toBe(REVIEWER_ACCOUNT_ID_STR);
@@ -223,9 +227,9 @@ describe("RejectProjectPublicationUseCase", () => {
     expect(result.ok).toBe(true);
     const outbox = port.createdOutboxMessages[0];
 
-    // id は UUID v4
+    // id は UUID v7
     expect(outbox.id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
     expect(outbox.type).toBe(LEADER_PUBLISH_REJECTED_NOTIFY_TYPE);
     expect(outbox.type).toBe("project_publish_rejected.notify");

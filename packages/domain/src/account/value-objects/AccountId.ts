@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
-import { isUuid } from "../../shared/uuid";
+import { generateUuidV7, isUuid } from "../../shared/uuid";
 
 /**
  * AccountId 値オブジェクト
@@ -9,19 +8,22 @@ import { isUuid } from "../../shared/uuid";
  *
  * - 生成は `generate()` でドメイン層内部でも可能（永続化を待たない）
  * - DB からの復元は `from()` でバリデーション付きで復元する
- * - v4 を採用する理由:
+ * - 連番ではなく UUID を採用する理由:
  *   - セキュリティ（連番推測・総数露呈の防止）
  *   - 分散耐性（将来のシャーディング・マイクロサービス分離）
- *   - Prisma schema が `@default(uuid())`（v4）で統一
+ * - 新しく作る ID を v7 にする理由（#358）:
+ *   - 先頭が作成時刻なので、主キーのインデックスへの書き込みが時刻順に並び、散らばらない
+ *   - 引き換えに、ID から作成時刻（ミリ秒）が読める。乱数は 74 bit あるので推測はできない
+ *   - #358 より前に作った ID は v4 のまま残るため、`from()` は v4 も通す
  */
 export class AccountId {
   private constructor(private readonly value: string) {}
 
   /**
-   * 新規 AccountId を生成する（UUID v4）
+   * 新規 AccountId を生成する（UUID v7）
    */
   static generate(): AccountId {
-    return new AccountId(randomUUID());
+    return new AccountId(generateUuidV7());
   }
 
   /**

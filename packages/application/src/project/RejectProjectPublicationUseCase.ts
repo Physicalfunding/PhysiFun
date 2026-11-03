@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import {
   type Result,
   err,
+  generateUuidV7,
   ok,
   AccountId,
   ProjectId,
@@ -184,7 +184,7 @@ export class RejectProjectPublicationUseCase {
 
     // 7. Outbox メッセージ生成（差戻通知メール）
     const outboxMessage = {
-      id: randomUUID(),
+      id: generateUuidV7(),
       type: LEADER_PUBLISH_REJECTED_NOTIFY_TYPE,
       payload: {
         projectId: project.id.toString(),

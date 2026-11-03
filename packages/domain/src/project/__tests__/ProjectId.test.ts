@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ProjectId } from "../value-objects/ProjectId";
 
 describe("ProjectId", () => {
-  it("generate() で UUID v4 形式の ID が生成される", () => {
+  it("generate() で UUID v7 形式の ID が生成される", () => {
     const id = ProjectId.generate();
     expect(id.toString()).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
   });
 

@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
-import { isUuid } from "../../shared/uuid";
+import { generateUuidV7, isUuid } from "../../shared/uuid";
 
 /**
  * AdminAccountId 値オブジェクト (#140 / #144)
@@ -15,7 +14,7 @@ export class AdminAccountId {
   private constructor(private readonly value: string) {}
 
   static generate(): AdminAccountId {
-    return new AdminAccountId(randomUUID());
+    return new AdminAccountId(generateUuidV7());
   }
 
   static from(value: string): Result<AdminAccountId, InvalidAdminAccountIdError> {

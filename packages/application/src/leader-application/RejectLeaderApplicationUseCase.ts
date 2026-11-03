@@ -1,5 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { type Result, err, ok } from "@physifun/domain";
+import { type Result, err, generateUuidV7, ok } from "@physifun/domain";
 import type { RejectLeaderApplicationPort } from "./ports/RejectLeaderApplicationPort";
 
 // ==================== 定数 ====================
@@ -113,7 +112,7 @@ export class RejectLeaderApplicationUseCase {
     }
 
     // 4. 却下実行（Outbox メッセージ作成 + 却下処理をトランザクションで実行）
-    const outboxMessageId = randomUUID();
+    const outboxMessageId = generateUuidV7();
 
     await this.port.executeRejectionInTransaction({
       application,

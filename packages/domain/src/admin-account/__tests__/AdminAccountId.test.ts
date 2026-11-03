@@ -2,6 +2,19 @@ import { describe, expect, it } from "vitest";
 import { AdminAccountId } from "../value-objects/AdminAccountId";
 
 describe("AdminAccountId", () => {
+  it("generate() で UUID v7 形式の ID が生成される", () => {
+    const id = AdminAccountId.generate();
+    expect(id.toString()).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
+  });
+
+  it("generate() は呼び出しごとに違う ID を返す", () => {
+    const a = AdminAccountId.generate();
+    const b = AdminAccountId.generate();
+    expect(a.equals(b)).toBe(false);
+  });
+
   it("from() で有効な UUID v4 を復元できる", () => {
     const raw = "550e8400-e29b-41d4-a716-446655440000";
     const result = AdminAccountId.from(raw);

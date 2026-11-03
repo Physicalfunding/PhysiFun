@@ -1,7 +1,8 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import {
   type Result,
   err,
+  generateUuidV7,
   ok,
   CATEGORY_MASTER,
   LEADER_APPLICATION_LIMITS,
@@ -509,9 +510,9 @@ export class SubmitLeaderApplicationUseCase {
     }
 
     // 6〜9. ID 生成 → トランザクション実行
-    const accountId = randomUUID();
-    const applicationId = randomUUID();
-    const outboxMessageId = randomUUID();
+    const accountId = generateUuidV7();
+    const applicationId = generateUuidV7();
+    const outboxMessageId = generateUuidV7();
     const activationToken = generateActivationToken();
     const now = new Date();
     const activationTokenExp = new Date(now.getTime() + ACTIVATION_TOKEN_EXPIRY_MS);

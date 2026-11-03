@@ -16,8 +16,8 @@
  * - 既に同一 email の AdminAccount が存在する場合は何もしない (冪等)。
  * - email は trim + toLowerCase で正規化して保存する (NextAuth 側と一致させる)。
  */
-import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { generateUuidV7 } from "@physifun/domain";
 import { config as loadEnv } from "dotenv";
 
 // DATABASE_URL は apps/web/.env.local と共有している。
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   // id / updatedAt は DB 側に DEFAULT が無いため明示的に渡す。
   const created = await db
     .insertInto("admin_accounts")
-    .values({ id: randomUUID(), email, status: "ACTIVE", updatedAt: new Date() })
+    .values({ id: generateUuidV7(), email, status: "ACTIVE", updatedAt: new Date() })
     .returning(["id", "email"])
     .executeTakeFirstOrThrow();
 

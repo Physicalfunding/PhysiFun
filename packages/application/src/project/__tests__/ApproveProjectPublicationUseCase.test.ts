@@ -193,6 +193,10 @@ describe("ApproveProjectPublicationUseCase", () => {
 
     expect(port.savedFeedbacks).toHaveLength(1);
     const feedback = port.savedFeedbacks[0];
+    // 審査履歴の id は UUID v7
+    expect(feedback.id.toString()).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
     expect(feedback.action).toBe(ReviewAction.APPROVED);
     expect(feedback.reviewerId.toString()).toBe(REVIEWER_ACCOUNT_ID_STR);
     expect(feedback.projectId.toString()).toBe(PROJECT_ID_STR);
@@ -227,7 +231,7 @@ describe("ApproveProjectPublicationUseCase", () => {
     const outbox = port.createdOutboxMessages[0];
 
     expect(outbox.id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
     expect(outbox.type).toBe(PROJECT_PUBLISH_APPROVED_NOTIFY_TYPE);
 

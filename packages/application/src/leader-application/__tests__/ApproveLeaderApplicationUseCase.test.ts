@@ -164,7 +164,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(result.value.applicationId).toBe(APP_ID_STR);
     expect(result.value.accountId).toBe(ACCOUNT_ID_STR);
     expect(result.value.projectId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
   });
 
@@ -326,7 +326,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(payload.projectId).toBe(port.approvalParams[0].project.id.toString());
   });
 
-  it("Outbox メッセージの id が UUID 形式", async () => {
+  it("Outbox メッセージの id が UUID v7 形式である", async () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
@@ -334,7 +334,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
 
     const outbox = port.approvalParams[0].outboxMessage;
     expect(outbox.id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
   });
 
