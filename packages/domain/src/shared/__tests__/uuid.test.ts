@@ -14,9 +14,12 @@ describe("generateUuidV7", () => {
   });
 
   it("version が 7、variant が 10（RFC 9562）の UUID を小文字で返す", () => {
-    expect(generateUuidV7()).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
-    );
+    // 乱数しだいでビットの立て忘れが見逃されないよう、1,000 個すべてを確かめる
+    const ids = Array.from({ length: 1000 }, () => generateUuidV7());
+
+    for (const id of ids) {
+      expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    }
   });
 
   it.each([

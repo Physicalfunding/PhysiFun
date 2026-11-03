@@ -10,6 +10,7 @@ import { randomBytes } from "node:crypto";
  * 形式チェックは `isUuid()` で両方を通す。
  */
 
+/** @deprecated ID の形式チェックには `isUuid()` を使う（ID の生成を v7 に変えるとき（#369）に消す） */
 export const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
