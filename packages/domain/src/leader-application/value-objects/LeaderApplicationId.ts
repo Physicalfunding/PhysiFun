@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
-import { isUuid } from "../../shared/uuid";
+import { generateUuidV7, isUuid } from "../../shared/uuid";
 
 /**
  * LeaderApplicationId 値オブジェクト
@@ -10,9 +9,9 @@ import { isUuid } from "../../shared/uuid";
 export class LeaderApplicationId {
   private constructor(private readonly value: string) {}
 
-  /** 新規 ID を生成（UUID v4） */
+  /** 新規 ID を生成（UUID v7） */
   static generate(): LeaderApplicationId {
-    return new LeaderApplicationId(randomUUID());
+    return new LeaderApplicationId(generateUuidV7());
   }
 
   /** 既存文字列から復元 */

@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
-import { isUuid } from "../../shared/uuid";
+import { generateUuidV7, isUuid } from "../../shared/uuid";
 
 /**
  * ProjectId 値オブジェクト
@@ -11,7 +10,7 @@ export class ProjectId {
   private constructor(private readonly value: string) {}
 
   static generate(): ProjectId {
-    return new ProjectId(randomUUID());
+    return new ProjectId(generateUuidV7());
   }
 
   static from(value: string): Result<ProjectId, InvalidProjectIdError> {
