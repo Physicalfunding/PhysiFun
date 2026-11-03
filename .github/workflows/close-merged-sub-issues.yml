@@ -1,0 +1,68 @@
+name: Close merged sub-issues
+
+# 開発ブランチ（main 以外）への PR がマージされたら、PR 本文の `Closes #番号` などの Issue を閉じる（#385）。
+# GitHub は、デフォルトブランチ以外へのマージでは閉じるキーワードを無視するため、ここで代わりに閉じる。
+#
+# - main（デフォルトブランチ）への PR は GitHub 標準の自動クローズに任せる（ジョブは動かない）
+# - マージせずに閉じた PR、fork からの PR では動かない
+# - 閉じるのは PR 本文に書かれた番号だけ（タイトルやコミットメッセージは見ない）
+
+on:
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  issues: write
+
+jobs:
+  close:
+    name: Close issues referenced by the merged PR
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref != github.event.repository.default_branch &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Close issues
+        uses: actions/github-script@v9
+        with:
+          # PR 本文は ${{ }} でスクリプトに埋め込まず、payload から読む（スクリプトインジェクション対策）
+          script: |
+            const pr = context.payload.pull_request;
+            // GitHub と同じ閉じるキーワード（close / fix / resolve の活用形。コロン付きも可）＋ #番号
+            const pattern = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):?\s+#(\d+)\b/gi;
+            const numbers = [...new Set([...(pr.body ?? '').matchAll(pattern)].map((m) => Number(m[1])))];
+            if (numbers.length === 0) {
+              core.info('PR 本文に閉じるキーワードがありません');
+              return;
+            }
+
+            let failed = false;
+            for (const issue_number of numbers) {
+              try {
+                const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number });
+                if (issue.pull_request) {
+                  core.info(`#${issue_number} は PR なので飛ばします`);
+                  continue;
+                }
+                if (issue.state === 'closed') {
+                  core.info(`#${issue_number} はすでに閉じています`);
+                  continue;
+                }
+                await github.rest.issues.createComment({
+                  ...context.repo,
+                  issue_number,
+                  body: `#${pr.number} が \`${pr.base.ref}\` にマージされたので閉じます。`,
+                });
+                await github.rest.issues.update({ ...context.repo, issue_number, state: 'closed', state_reason: 'completed' });
+                core.info(`#${issue_number} を閉じました`);
+              } catch (error) {
+                failed = true;
+                core.warning(`#${issue_number} を閉じられませんでした: ${error.message}`);
+              }
+            }
+            if (failed) {
+              core.setFailed('閉じられなかった Issue があります');
+            }
