@@ -73,6 +73,13 @@ export {
 // RejectLeaderApplicationPort
 export type { RejectLeaderApplicationPort } from "./leader-application/ports/RejectLeaderApplicationPort";
 
+// MyLeaderApplicationQueryPort（本人の応募の状態。#373）
+export type {
+  MyLeaderApplicationQueryPort,
+  MyLeaderApplicationStatusDTO,
+  MyLatestLeaderApplication,
+} from "./leader-application/ports/MyLeaderApplicationQueryPort";
+
 // CreateProjectDraftUseCase
 export {
   CreateProjectDraftUseCase,
