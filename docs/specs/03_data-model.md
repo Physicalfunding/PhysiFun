@@ -175,7 +175,7 @@ stateDiagram-v2
 
 | 観点 | 方針 |
 |---|---|
-| 主キー | `id text`（UUID v7。#358 より前に作った行は v4）。DB 側に DEFAULT は無く、アプリ側で生成して渡す |
+| 主キー | `id text`（UUID v7。#358 より前に作った行と、手作業の SQL（`gen_random_uuid()`）で作った行は v4）。DB 側に DEFAULT は無く、アプリ側で生成して渡す。作るときは各値オブジェクトの `generate()` か `generateUuidV7()` を使う（`randomUUID()`（v4）は、トークンやファイル名など ID ではない値にだけ使う） |
 | 外部キー | `<entityName>Id` という命名（例: `accountId` / `projectId`） |
 | 監査の作者 FK | `<role>By` という命名（例: `reviewedBy` / `forcedUnpublishedBy`） |
 | 文字列 | 長さに関係なく `text`（長さ制限はアプリ側の Zod / 値オブジェクトで行う） |

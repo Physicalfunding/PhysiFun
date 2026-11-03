@@ -110,7 +110,10 @@ describe("Kysely AdminKyselyAdapter integration（#225）", () => {
         .where("sessionToken", "=", "tok-1")
         .executeTakeFirstOrThrow();
       expect(persisted.adminAccountId).toBe(admin.id);
-      expect(persisted.id).toMatch(/^[0-9a-f-]{36}$/);
+      // id は UUID v7（sessionToken は Auth.js が作る値で、ここでは作らない）
+      expect(persisted.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      );
       expect(persisted.updatedAt).toBeInstanceOf(Date);
 
       const result = await adapter.getSessionAndUser!("tok-1");

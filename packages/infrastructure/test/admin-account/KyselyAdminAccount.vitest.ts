@@ -212,6 +212,12 @@ describe("Kysely admin-account 実装 integration", () => {
 
       expect(result.totalCount).toBe(4);
       expect(result.items[0].action).toBe("project.force_unpublish");
+      // writeAdminAuditLog が付ける id は UUID v7
+      for (const item of result.items) {
+        expect(item.id).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+        );
+      }
       for (let i = 1; i < result.items.length; i++) {
         expect(result.items[i - 1].createdAt.getTime()).toBeGreaterThanOrEqual(
           result.items[i].createdAt.getTime()

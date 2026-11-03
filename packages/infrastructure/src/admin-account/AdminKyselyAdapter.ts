@@ -19,9 +19,10 @@ import { db } from "../database/kysely/client";
  * - `deleteSession` は監査上の強制 revoke 経路として維持する。
  * - OAuth 系 (linkAccount / getUserByAccount) は EmailProvider 専用なので未サポートで throw / null。
  *
- * ## Prisma 版との実装差分（挙動は同一・永続化都合のみ）
- * - `id` は Prisma の `@default(uuid())`（アプリ側生成）相当として UUID v7（`generateUuidV7`）で付与する
- *   （admin_sessions.id に DB DEFAULT は無い）。`sessionToken` は Auth.js が作る秘密の値で、ここでは作らない。
+ * ## Prisma 版との実装差分（ID の version 以外は挙動は同一・永続化都合のみ）
+ * - `id` はアプリ側で UUID v7（`generateUuidV7`）を付ける（admin_sessions.id に DB DEFAULT が無いため。
+ *   旧 Prisma 版は `@default(uuid())` で v4。#369 で v7 にした）。
+ *   `sessionToken` は Auth.js が作る秘密の値で、ここでは作らない。
  * - `createdAt` は DB DEFAULT（now()）に委ね、`updatedAt` は Prisma `@updatedAt` 相当として明示設定する。
  * - `updateSession` は対象不在時に Prisma `update` が P2025 を throw していたのに対し、RETURNING の
  *   0 件で null を返す（NextAuth の `AdapterSession | null` 契約に沿い、並行 revoke 時の 500 化を避ける。

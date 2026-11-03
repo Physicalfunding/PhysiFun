@@ -326,7 +326,7 @@ describe("ApproveLeaderApplicationUseCase", () => {
     expect(payload.projectId).toBe(port.approvalParams[0].project.id.toString());
   });
 
-  it("Outbox メッセージの id が UUID 形式", async () => {
+  it("Outbox メッセージの id が UUID v7 形式である", async () => {
     port.applications.push(pendingApplication());
     port.accounts.push(supporterAccount());
 
