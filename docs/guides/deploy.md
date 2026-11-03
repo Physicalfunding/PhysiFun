@@ -142,7 +142,7 @@ web と admin は**別の Vercel プロジェクト**（Cookie・環境変数を
 | Cron（Hobby プランなので 1 日 1 回） | `/api/cron/cleanup-expired-accounts`・`/api/cron/process-outbox` | `/api/cron/gc-admin-auth` |
 
 - どちらも `installCommand` は `cd ../.. && bun install`（monorepo のルートで入れる）
-- 環境変数は各プロジェクトの Settings → Environment Variables。アプリの `DATABASE_URL` は Transaction Pooler（6543）
+- 環境変数は各プロジェクトの Settings → Environment Variables。アプリの `DATABASE_URL` は Transaction Pooler（6543）。足し方・落とし穴は §3.5
 - 環境変数を変えたら、再デプロイするまで反映されない（§3.3）
 - 新しいプロジェクトを作るとき（初回セットアップ・ドメイン）は [`apps/admin/README.md`](../../apps/admin/README.md#vercel-デプロイ手順-初回セットアップ)
 
@@ -194,11 +194,93 @@ vercel link --repo                # .vercel/repo.json ができる（.gitignore 
 - `vercel deploy` が既定で上げないのは `.env.local` などで、ルートの `.env`（`make env-setup` が作る）は上がってしまう。`git status --ignored` に `.env` が出たら、退避してから出す
 - この節は Vercel の公式文書（`vercel link`・`vercel deploy`・Monorepos）と Vercel CLI のソースで確かめて書いた（2026-11-03）。まだこのリポジトリで実行していないので、動きが違ったら直す
 
+### 3.5 環境変数
+
+しばらくステージングに出していなかったときや、必須の環境変数を足す PR を出すときは、`apps/web/.env.example`・`apps/admin/.env.example` と、Vercel の各プロジェクトの環境変数を 1 つずつ突き合わせる。
+
+- **Production に入れる**。ステージングは main からのビルドなので、Vercel は Production として扱う。Preview だけに入れても届かない
+- 値を貼るときは、**末尾に改行が入らないように**する（§5 の「画像のアップロードは通るのに表示が 400」）
+- 入れたら Redeploy する（§3.3）。`NEXT_PUBLIC_*` はビルドのときに JS に埋め込まれるので、入れる前のビルドには入っていない
+
+2026-11-03 にステージングへ出したとき（前回のビルドは 2026-05-10 の `a4e5aa3`）に、足りずに止まったものを次に書く。
+
+#### Upstash Redis（web・admin。必須）
+
+レート制限のカウンタを置く（2026-10-16 の `ca37b80` から必須）。`VERCEL_ENV=production` で接続情報が無いと、`packages/infrastructure/src/rate-limit/createRateLimiter.ts` が throw し、応募 API などが 500 になる。
+
+- Vercel の Storage → **Upstash for Redis** で DB を作り、web と admin の両方のプロジェクトに **Production で**つなぐ。`KV_REST_API_URL` / `KV_REST_API_TOKEN` が自動で入る（コードは `UPSTASH_REDIS_REST_*` が無ければこの名前を読む）
+- web と admin は同じ DB でよい（キーの接頭辞で分けている）
+- リージョンは東京にする（Vercel の関数が `hnd1` で動くため）
+
+#### Cloudflare Turnstile（web。必須）
+
+リーダー応募フォームの CAPTCHA。
+
+- Cloudflare でウィジェットを作る。Hostname に `physical-funding-staging.vercel.app`、Mode は Managed
+- Site Key → `NEXT_PUBLIC_TURNSTILE_SITE_KEY`、Secret Key → `TURNSTILE_SECRET_KEY`。どちらも Production に入れ、ビルドし直す
+- サイトキーだけ入ってシークレットが無いと、`apps/web/src/lib/captcha.ts` の起動時のチェックで throw し、応募 API が 500 になる。2 つは同時に入れる
+
+#### メール（web・admin）
+
+メールまわりの変数は、**無くても画面はエラーにならない**ので気づきにくい。応募・承認などの API は、レスポンスを返したあと（`after()`）に Outbox を 1 回まわしてメールを送るが、その失敗は try/catch でログに出すだけだから。API は成功し、メールだけ届かない。
+
+| 変数 | web | admin | 無いとどうなるか |
+|---|---|---|---|
+| `APP_URL` | web の origin | **web の** origin（承認メールのリンク） | Outbox が `APP_URL is not set` で止まり、メールは送信待ちのまま残る |
+| `RESEND_API_KEY` | 要る | 要る | **送ったことになって消える**（下） |
+| `MAIL_FROM` | 要る | 要る | `noreply@physifun.com` になる。そのドメインが Resend で確認済みでなければ送れない |
+| `ADMIN_EMAIL_LIST` | 要る | 要る | 運営あての通知（公開申請など）が `ADMIN_EMAIL_LIST is not set` で止まる |
+| `CRON_SECRET` | 要る | 要る | cron が 500 になる（`packages/server-shared/src/cronAuth.ts`。設定漏れで誰でも叩けるようにならないよう、止める作り） |
+
+- **落とし穴**: `RESEND_API_KEY` が無いと、メールの送り手は何もしない `NoopMailSender` になり、送信は成功として返る。`APP_URL` だけ入れて `RESEND_API_KEY` を入れ忘れると、送信待ちのメールが届かないまま送信済みになって消える。web には `APP_URL`・`RESEND_API_KEY`・`MAIL_FROM` を**同時に**入れる
+- 送信待ちのメールを今すぐ送るには §5 の「送信待ちのメールを今すぐ送る」
+
 ---
 
 ## 4. ステージングに出すときの順番（まとめ）
 
-1. PR を main にマージする（Vercel が自動でデプロイを始める）
-2. マイグレーションを足した PR なら、§2.1 でステージングの DB に当て、§2.2 を確かめる（古いコードと新しいコードの片方でしか動かないものは、PR に書いた順番で）
-3. §3.2 で、web・admin の両方に新しいデプロイが出て Ready になったかを確かめる。出ていなければ §3.3 か §3.4
-4. 画面で動きを確かめる
+1. 必須の環境変数を足す PR なら、マージの前に §3.5 で Vercel の Production に入れておく
+2. PR を main にマージする（Vercel が自動でデプロイを始める）
+3. マイグレーションを足した PR なら、§2.1 でステージングの DB に当て、§2.2 を確かめる（古いコードと新しいコードの片方でしか動かないものは、PR に書いた順番で）
+4. §3.2 で、web・admin の両方に新しいデプロイが出て Ready になったかを確かめる。出ていなければ §3.3 か §3.4
+5. 画面で動きを確かめる。メールが届くかも見る（届かなければ §5）
+
+---
+
+## 5. うまく動かないとき
+
+### 調べ方
+
+- **ランタイムのログ**: Vercel のダッシュボードの Logs（または Vercel の MCP）。Hobby プランでは **1 時間しか残らない**ので、再現させてすぐに見る
+- **`NEXT_PUBLIC_*` がビルドに入ったか**: ブラウザでページの JS を開き、値が埋め込まれているかを見る。
+  たとえば Turnstile なら、`sitekey:` に渡す値が `env.NEXT_PUBLIC_TURNSTILE_SITE_KEY` のまま残っていれば、ビルドのときに値が無かった（入れてからビルドし直す）
+- **Storage**: Supabase のダッシュボードの Logs の `storage_logs`
+
+### 応募・承認などの API が 500
+
+ログに出たメッセージで見分ける。
+
+- `[rateLimit] Upstash Redis の接続情報が設定されていません` → §3.5 の Upstash
+- `[captcha] Misconfiguration: NEXT_PUBLIC_TURNSTILE_SITE_KEY is set but TURNSTILE_SECRET_KEY is missing` → §3.5 の Turnstile
+
+### メールが届かない
+
+画面は成功するので、ログで見る（§3.5 のメール）。
+
+- `[after] … outbox tick failed: APP_URL is not set` → `APP_URL` を入れる
+- `ADMIN_EMAIL_LIST is not set` → `ADMIN_EMAIL_LIST` を入れる（web と admin の両方）
+- ログに何も出ないのに届かない → `RESEND_API_KEY` が無く、送ったことになっている。消えたメールは戻らないので、もう一度その操作をする
+
+### 送信待ちのメールを今すぐ送る
+
+- admin の Outbox 監視（`/outbox`）の「リトライ」は、送信待ちに戻すだけで、その場では送らない
+- web の Vercel プロジェクト → Settings → Cron Jobs で `/api/cron/process-outbox` を **Run** する（web に `CRON_SECRET` が要る）。何もしなくても毎日 0 時（UTC）に動く
+
+### 画像のアップロードは通るのに表示が 400
+
+環境変数の値の末尾に改行が入っている。2026-11-03 には `SUPABASE_STORAGE_BUCKET` で起きた。
+
+- アップロードは、リクエストの URL を解析するときに改行が取り除かれるので通る
+- 表示の URL は supabase-js の `getPublicUrl` が作り、改行を `%0A` にして残す（`/object/public/project-images%0A/projects/...`）
+- Supabase の `storage_logs` に `%0A` が出ていれば、これ。Vercel で値を貼り直し、Redeploy する。
+  直す前に上げた画像は、`%0A` の入った URL のまま本文に保存されているので、上げ直す
