@@ -3,14 +3,16 @@ name: Close merged sub-issues
 # 開発ブランチ（main 以外）への PR がマージされたら、PR 本文の `Closes #番号` などの Issue を閉じる（#385）。
 # GitHub は、デフォルトブランチ以外へのマージでは閉じるキーワードを無視するため、ここで代わりに閉じる。
 #
-# - main（デフォルトブランチ）への PR は GitHub 標準の自動クローズに任せる（ジョブは動かない）
-# - マージせずに閉じた PR、fork からの PR では動かない
+# - main への PR は GitHub 標準の自動クローズに任せる（この workflow は動かない）
+# - マージせずに閉じた PR、fork からの PR ではジョブを動かさない
 # - 閉じるのは PR 本文に書かれた番号だけ（タイトルやコミットメッセージは見ない）
 
 on:
   pull_request:
     types:
       - closed
+    branches-ignore:
+      - main
 
 permissions:
   issues: write
@@ -20,7 +22,6 @@ jobs:
     name: Close issues referenced by the merged PR
     if: >-
       github.event.pull_request.merged == true &&
-      github.event.pull_request.base.ref != github.event.repository.default_branch &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -31,9 +32,14 @@ jobs:
           # PR 本文は ${{ }} でスクリプトに埋め込まず、payload から読む（スクリプトインジェクション対策）
           script: |
             const pr = context.payload.pull_request;
+            // GitHub と同じく、HTML コメント・コードブロック・インラインコードの中のキーワードは数えない
+            const body = (pr.body ?? '')
+              .replace(/<!--[\s\S]*?-->/g, '')
+              .replace(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[^\n]*$/gm, '')
+              .replace(/(`+)[\s\S]*?\1/g, '');
             // GitHub と同じ閉じるキーワード（close / fix / resolve の活用形。コロン付きも可）＋ #番号
             const pattern = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):?\s+#(\d+)\b/gi;
-            const numbers = [...new Set([...(pr.body ?? '').matchAll(pattern)].map((m) => Number(m[1])))];
+            const numbers = [...new Set([...body.matchAll(pattern)].map((m) => Number(m[1])))];
             if (numbers.length === 0) {
               core.info('PR 本文に閉じるキーワードがありません');
               return;
