@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { generateUuidV7 } from "@physifun/domain";
 import { db } from "../database/kysely/client";
 import type { Json } from "../database/kysely/types";
 
@@ -26,14 +26,14 @@ export interface WriteAdminAuditLogParams {
  * 旧 Prisma 版（#230 で削除）と同一 API。
  *
  * NOTE: `id` は Prisma の `@default(uuid())`（クライアント側生成・DB DEFAULT 無し）相当のため、
- * ここで明示的に UUID を採番する。`createdAt` は DB DEFAULT(now()) があるため省略する。
+ * ここで明示的に UUID（v7）を採番する。`createdAt` は DB DEFAULT(now()) があるため省略する。
  * エラーは throw する（呼び出し側が swallow するか判断できるように）。
  */
 export async function writeAdminAuditLog(params: WriteAdminAuditLogParams): Promise<void> {
   await db
     .insertInto("admin_audit_logs")
     .values({
-      id: randomUUID(),
+      id: generateUuidV7(),
       adminAccountId: params.adminAccountId,
       adminSessionId: params.adminSessionId ?? null,
       action: params.action,

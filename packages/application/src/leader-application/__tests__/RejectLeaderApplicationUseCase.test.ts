@@ -184,7 +184,7 @@ describe("RejectLeaderApplicationUseCase", () => {
     expect(payload.reviewerNote).toBe("提出された企画書の内容が不十分です。再度ご検討ください。");
   });
 
-  it("Outbox メッセージの id が UUID v4 形式である", async () => {
+  it("Outbox メッセージの id が UUID v7 形式である", async () => {
     port.applications.push(pendingApplication());
 
     const result = await useCase.execute(validInput());
@@ -193,7 +193,7 @@ describe("RejectLeaderApplicationUseCase", () => {
     if (!result.ok) return;
 
     expect(port.rejectionParams[0].outboxMessage.id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
   });
 

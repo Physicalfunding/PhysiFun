@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import {
   type Result,
   err,
+  generateUuidV7,
   ok,
   AccountId,
   ProjectId,
@@ -170,7 +170,7 @@ export class ForceUnpublishProjectUseCase {
         unpublishedAt: string;
       };
     } = {
-      id: randomUUID(),
+      id: generateUuidV7(),
       type: PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE,
       payload: {
         projectId: project.id.toString(),

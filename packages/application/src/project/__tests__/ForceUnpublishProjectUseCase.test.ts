@@ -163,6 +163,10 @@ describe("ForceUnpublishProjectUseCase", () => {
     expect(port.savedFeedbacks).toHaveLength(1);
 
     const fb = port.savedFeedbacks[0];
+    // 審査履歴の id は UUID v7
+    expect(fb.id.toString()).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
     expect(fb.action).toBe(ReviewAction.FORCE_UNPUBLISHED);
     expect(fb.projectId.toString()).toBe(PROJECT_ID_STR);
     expect(fb.reviewerId.toString()).toBe(REVIEWER_ACCOUNT_ID_STR);
@@ -182,9 +186,9 @@ describe("ForceUnpublishProjectUseCase", () => {
     expect(port.createdOutboxMessages).toHaveLength(1);
 
     const outbox = port.createdOutboxMessages[0];
-    // id は UUID v4
+    // id は UUID v7
     expect(outbox.id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
     expect(outbox.type).toBe(PROJECT_FORCE_UNPUBLISHED_NOTIFY_TYPE);
 

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import {
   AccountId,
   type LeaderApplication,
@@ -8,6 +7,7 @@ import {
   ProjectStory,
   type Result,
   err,
+  generateUuidV7,
   ok,
 } from "@physifun/domain";
 import type { ApproveLeaderApplicationPort } from "./ports/ApproveLeaderApplicationPort";
@@ -149,7 +149,7 @@ export class ApproveLeaderApplicationUseCase {
     const project = projectResult.value;
 
     // 5-7. 承認処理をトランザクションで実行
-    const outboxMessageId = randomUUID();
+    const outboxMessageId = generateUuidV7();
     const projectIdStr = project.id.toString();
 
     try {

@@ -158,12 +158,12 @@ describe("SubmitLeaderApplicationUseCase", () => {
 
     expect(result.value.applicationId).toBeDefined();
     expect(result.value.accountId).toBeDefined();
-    // UUID v4 形式
+    // UUID v7 形式
     expect(result.value.applicationId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
     expect(result.value.accountId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
   });
 
@@ -202,6 +202,10 @@ describe("SubmitLeaderApplicationUseCase", () => {
     // OutboxMessage
     expect(port.createdOutboxMessages).toHaveLength(1);
     const outbox = port.createdOutboxMessages[0];
+    // id は UUID v7
+    expect(outbox.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
     expect(outbox.type).toBe("ACTIVATION_EMAIL");
     const payload = outbox.payload as {
       accountId: string;
