@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - main
+  # main 向けに限らず、すべての PR で動かす。親 Issue の開発ブランチ向けの PR でも CI を通すため（#385）。
+  # 時間のかかる E2E（e2e.yml）は main 向けの PR だけ。
   pull_request:
-    branches:
-      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
