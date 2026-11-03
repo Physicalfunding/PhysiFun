@@ -140,7 +140,10 @@ apps/*/public/*
    - 位置づけ：**うっかりを防ぐガードであり、悪意ある回避を防ぐセキュリティ境界ではない**。最終防衛線はマージ前のユーザー確認。
 2. **`.claude/git-hooks/pre-commit`・`pre-push`（git hook）** — `cloud-setup.sh` がクラウドのときだけ PhysiFun に `core.hooksPath=.claude/git-hooks` を設定して有効にする（docs-repository には設定しないので、そちらへの push は止めない）。
    - pre-commit：stage されたファイルが緑でなければ commit を止める
-   - pre-push：git が渡す「実際に push される ref とコミット」で判定する。既存のリモートブランチなら新しく送るコミットだけ、新しいブランチなら `origin/main` との共通の祖先からの差分を見る（判定の前に `origin/main` を fetch する。クラウドの clone ではローカルの `origin/main` が古いまま残っていて、main で進んだ変更まで数えてしまう誤検知があった）
+   - pre-push：git が渡す「実際に push される ref とコミット」で判定する。既存のリモートブランチなら新しく送るコミットのうちこのブランチ自身の変更だけ、新しいブランチなら「基準」との共通の祖先からの差分を見る
+     - 基準は、リモートのブランチ（push 先のブランチ自身は除く）のうち、push するコミットにあってそのブランチに無いコミットが一番少ないもの。ふつうは切った元（main か親 Issue の開発ブランチ）になる。同数なら main。開発ブランチに先に入った別のサブ Issue の変更（ローカルで入れた🔴など）を今回の push に数えないため（#386）
+     - リモートのブランチの中身は「ガードを通ったもの」か「ローカルで入れたもの」なので、基準にしてよい。自分で🔴のファイルを変えたコミットは、どの基準でも止まる（開発ブランチの🔴のファイルを、取り込まずに書き写した場合も止まる）
+     - 判定の前にリモートのブランチをすべて fetch する（クラウドの clone ではローカルの `origin/main` が古いまま残っていて、main で進んだ変更まで数えてしまう誤検知があった）
    - **PreToolUse で判定しない理由**：PreToolUse はコマンド実行前に走るため、1 コマンドにまとめた書き込み＋commit を見られず、今いるブランチ以外の push も判定できなかった（P1 のクラウド確認で判明）
 3. **`.claude/hooks/__tests__/cloud-scope-guard.test.sh`・`git-hooks.test.sh`** — 許可・拒否の代表パターンを JSON 入力で流して判定を確かめる。
 4. **SessionStart hook（クラウドのみ）** — PhysiFun に `core.hooksPath=.claude/git-hooks` を設定し、依存パッケージをインストールし、docs-repository がセッションに付いているかを知らせる。docs-repository の clone はしない（下記「スパイクの結果」）。
