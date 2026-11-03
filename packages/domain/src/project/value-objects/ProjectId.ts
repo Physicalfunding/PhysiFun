@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
-import { isUuidV4 } from "../../shared/uuid";
+import { isUuid } from "../../shared/uuid";
 
 /**
  * ProjectId 値オブジェクト
  *
- * プロジェクトを一意に識別する ID。UUID v4 形式。
+ * プロジェクトを一意に識別する ID。UUID（v4 か v7）の形式。
  */
 export class ProjectId {
   private constructor(private readonly value: string) {}
@@ -15,7 +15,7 @@ export class ProjectId {
   }
 
   static from(value: string): Result<ProjectId, InvalidProjectIdError> {
-    if (!isUuidV4(value)) {
+    if (!isUuid(value)) {
       return err({ type: "INVALID_PROJECT_ID_FORMAT", value });
     }
     return ok(new ProjectId(value));

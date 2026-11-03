@@ -27,8 +27,8 @@ export interface ForceUnpublishProjectOutput {
 /**
  * ユースケースのエラー型（判別共用体）
  *
- * - `INVALID_REVIEWER_ID`   : reviewerId が UUID v4 でない
- * - `INVALID_PROJECT_ID`    : projectId が UUID v4 でない
+ * - `INVALID_REVIEWER_ID`   : reviewerId が UUID の形式でない
+ * - `INVALID_PROJECT_ID`    : projectId が UUID の形式でない
  * - `REVIEWER_NOTE_REQUIRED`: reviewerNote 未入力（trim 後に空）
  * - `REVIEWER_NOTE_TOO_LONG`: reviewerNote が上限超過（trim 後）
  * - `REVIEWER_NOT_FOUND`    : reviewer (AdminAccount) が存在しない、または無効化済み

@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
-import { isUuidV4 } from "../../shared/uuid";
+import { isUuid } from "../../shared/uuid";
 
 /**
  * AccountId 値オブジェクト
  *
- * Account を一意に識別する ID。UUID v4 形式で表現する。
+ * Account を一意に識別する ID。UUID（v4 か v7）の形式で表現する。
  *
  * - 生成は `generate()` でドメイン層内部でも可能（永続化を待たない）
  * - DB からの復元は `from()` でバリデーション付きで復元する
@@ -27,10 +27,10 @@ export class AccountId {
   /**
    * 既存の文字列から AccountId を復元する（DB / API 入力経由）
    *
-   * UUID v4 形式でない場合は `InvalidAccountIdError` を返す。
+   * UUID（v4 か v7）の形式でない場合は `InvalidAccountIdError` を返す。
    */
   static from(value: string): Result<AccountId, InvalidAccountIdError> {
-    if (!isUuidV4(value)) {
+    if (!isUuid(value)) {
       return err({ type: "INVALID_ACCOUNT_ID_FORMAT", value });
     }
     return ok(new AccountId(value));

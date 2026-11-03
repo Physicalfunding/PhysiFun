@@ -18,6 +18,15 @@ describe("ReviewFeedbackId", () => {
     }
   });
 
+  it("from() で有効な UUID v7 を復元できる", () => {
+    const raw = "019a4b2e-7c41-7d3a-9f12-3b4c5d6e7f80";
+    const result = ReviewFeedbackId.from(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.toString()).toBe(raw);
+    }
+  });
+
   it("from() で無効な文字列はエラー", () => {
     const result = ReviewFeedbackId.from("invalid");
     expect(result.ok).toBe(false);

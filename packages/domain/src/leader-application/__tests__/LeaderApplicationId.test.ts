@@ -27,6 +27,15 @@ describe("LeaderApplicationId", () => {
       }
     });
 
+    it("有効な UUID v7 から復元できる", () => {
+      const valid = "019a4b2e-7c41-7d3a-9f12-3b4c5d6e7f80";
+      const result = LeaderApplicationId.from(valid);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.toString()).toBe(valid);
+      }
+    });
+
     it("UUID でない文字列はエラー", () => {
       const result = LeaderApplicationId.from("not-a-uuid");
       expect(result.ok).toBe(false);
