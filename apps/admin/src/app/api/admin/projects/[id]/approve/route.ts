@@ -5,7 +5,7 @@ import {
 } from "@physifun/application";
 import { getApproveProjectPublicationPort } from "@/lib/di/project";
 import { getProjectOutboxWorker } from "@/lib/di/outbox";
-import { isUuidV4 } from "@physifun/domain";
+import { isUuid } from "@physifun/domain";
 import {
   successResponse,
   unauthorizedResponse,
@@ -40,9 +40,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const { id } = await params;
 
-    if (!isUuidV4(id)) {
+    if (!isUuid(id)) {
       return validationErrorResponse("無効なプロジェクト ID です", {
-        id: ["UUID v4 形式で指定してください"],
+        id: ["UUID 形式で指定してください"],
       });
     }
 
@@ -108,11 +108,11 @@ function mapApproveError(error: ApproveProjectPublicationError) {
   switch (error.type) {
     case "INVALID_PROJECT_ID":
       return validationErrorResponse("無効なプロジェクト ID です", {
-        id: ["UUID v4 形式で指定してください"],
+        id: ["UUID 形式で指定してください"],
       });
     case "INVALID_REVIEWER_ID":
       return validationErrorResponse("無効な審査者 ID です", {
-        reviewerId: ["UUID v4 形式で指定してください"],
+        reviewerId: ["UUID 形式で指定してください"],
       });
     case "PROJECT_NOT_FOUND":
       return notFoundResponse("プロジェクト");

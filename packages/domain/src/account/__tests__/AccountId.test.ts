@@ -27,6 +27,15 @@ describe("AccountId", () => {
       }
     });
 
+    it("有効な UUID v7 文字列から復元できる", () => {
+      const valid = "019a4b2e-7c41-7d3a-9f12-3b4c5d6e7f80";
+      const result = AccountId.from(valid);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.toString()).toBe(valid);
+      }
+    });
+
     it("空文字はエラー", () => {
       const result = AccountId.from("");
       expect(result.ok).toBe(false);
@@ -37,7 +46,7 @@ describe("AccountId", () => {
       expect(result.ok).toBe(false);
     });
 
-    it("UUID v1（version bit が 4 ではない）はエラー", () => {
+    it("UUID v1（version bit が 4 でも 7 でもない）はエラー", () => {
       // v1 UUID: 3 桁目の先頭が 1
       const v1 = "550e8400-e29b-11d4-a716-446655440000";
       const result = AccountId.from(v1);

@@ -4,7 +4,7 @@ import {
   type ApproveLeaderApplicationError,
 } from "@physifun/application";
 import { KyselyApproveLeaderApplicationAdapter } from "@physifun/infrastructure";
-import { isUuidV4 } from "@physifun/domain";
+import { isUuid } from "@physifun/domain";
 import {
   successResponse,
   unauthorizedResponse,
@@ -42,9 +42,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
 
     // UUID 形式バリデーション
-    if (!isUuidV4(id)) {
+    if (!isUuid(id)) {
       return validationErrorResponse("無効な応募 ID です", {
-        id: ["UUID v4 形式で指定してください"],
+        id: ["UUID 形式で指定してください"],
       });
     }
 
@@ -99,7 +99,7 @@ function mapApproveError(error: ApproveLeaderApplicationError) {
       return unprocessableEntityResponse("この応募は審査待ち状態ではありません");
     case "INVALID_REVIEWER_ID":
       return validationErrorResponse("無効な審査者 ID です", {
-        reviewerId: ["UUID v4 形式で指定してください"],
+        reviewerId: ["UUID 形式で指定してください"],
       });
     case "REVIEWER_NOT_FOUND":
       // #157 M3: reviewer が DISABLED に落ちた稀ケース。401 を返して再ログインを促す。

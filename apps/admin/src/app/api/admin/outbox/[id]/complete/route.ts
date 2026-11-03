@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { isUuidV4 } from "@physifun/domain";
+import { isUuid } from "@physifun/domain";
 import {
   KyselyOutboxCommandAdapter,
   isValidOutboxSource,
@@ -42,9 +42,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const { id } = await params;
 
-    if (!isUuidV4(id)) {
+    if (!isUuid(id)) {
       return validationErrorResponse("無効な ID です", {
-        id: ["UUID v4 形式で指定してください"],
+        id: ["UUID 形式で指定してください"],
       });
     }
 

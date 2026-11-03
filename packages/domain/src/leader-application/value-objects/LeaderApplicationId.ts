@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
-import { isUuidV4 } from "../../shared/uuid";
+import { isUuid } from "../../shared/uuid";
 
 /**
  * LeaderApplicationId 値オブジェクト
  *
- * リーダー応募を一意に識別する ID。UUID v4 形式。
+ * リーダー応募を一意に識別する ID。UUID（v4 か v7）の形式。
  */
 export class LeaderApplicationId {
   private constructor(private readonly value: string) {}
@@ -17,7 +17,7 @@ export class LeaderApplicationId {
 
   /** 既存文字列から復元 */
   static from(value: string): Result<LeaderApplicationId, InvalidLeaderApplicationIdError> {
-    if (!isUuidV4(value)) {
+    if (!isUuid(value)) {
       return err({ type: "INVALID_LEADER_APPLICATION_ID_FORMAT", value });
     }
     return ok(new LeaderApplicationId(value));

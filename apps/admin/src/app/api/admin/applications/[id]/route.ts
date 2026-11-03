@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { isUuidV4 } from "@physifun/domain";
+import { isUuid } from "@physifun/domain";
 import {
   successResponse,
   unauthorizedResponse,
@@ -33,9 +33,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
 
     // UUID 形式バリデーション
-    if (!isUuidV4(id)) {
+    if (!isUuid(id)) {
       return validationErrorResponse("無効な応募 ID です", {
-        id: ["UUID v4 形式で指定してください"],
+        id: ["UUID 形式で指定してください"],
       });
     }
 

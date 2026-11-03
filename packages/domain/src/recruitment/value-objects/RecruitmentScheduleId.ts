@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { type Result, err, ok } from "../../shared/result";
-import { isUuidV4 } from "../../shared/uuid";
+import { isUuid } from "../../shared/uuid";
 
 /**
  * RecruitmentScheduleId 値オブジェクト
  *
- * 募集スケジュール（サポート募集の日程）を一意に識別する ID。UUID v4 形式。
+ * 募集スケジュール（サポート募集の日程）を一意に識別する ID。UUID（v4 か v7）の形式。
  */
 export class RecruitmentScheduleId {
   private constructor(private readonly value: string) {}
@@ -15,7 +15,7 @@ export class RecruitmentScheduleId {
   }
 
   static from(value: string): Result<RecruitmentScheduleId, InvalidRecruitmentScheduleIdError> {
-    if (!isUuidV4(value)) {
+    if (!isUuid(value)) {
       return err({ type: "INVALID_RECRUITMENT_SCHEDULE_ID_FORMAT", value });
     }
     return ok(new RecruitmentScheduleId(value));

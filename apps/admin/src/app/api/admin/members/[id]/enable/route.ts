@@ -36,7 +36,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const idResult = AdminAccountId.from(id);
     if (!idResult.ok) {
       return validationErrorResponse("無効なメンバー ID です", {
-        id: ["UUID v4 形式で指定してください"],
+        id: ["UUID 形式で指定してください"],
       });
     }
 
