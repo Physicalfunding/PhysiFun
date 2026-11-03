@@ -87,16 +87,23 @@ describe("KyselyLeaderApplicationQueryService (my) integration", () => {
 
   it("応募が複数あるアカウントでは、submittedAt が一番新しい応募を返す", async () => {
     const accountId = await seedAccount({ email: "reapply@example.com", roles: ["SUPPORTER"] });
-    // 新しい応募を先に入れ、挿入順ではなく submittedAt で選んでいることを確かめる
+    // 一番新しい応募を真ん中に入れる。ORDER BY が無いと最初か最後に入れた行が返りがちなので、
+    // 挿入順ではなく submittedAt で選んでいることを確かめられる
+    await seedApplication(accountId, {
+      projectTitle: "最初のプロジェクト",
+      submittedAt: new Date("2026-09-01T00:00:00Z"),
+      status: "REJECTED",
+      reviewerNote: "活動内容をもう少し具体的に",
+    });
     const latestId = await seedApplication(accountId, {
       projectTitle: "再応募のプロジェクト",
       submittedAt: new Date("2026-11-02T00:00:00Z"),
     });
     await seedApplication(accountId, {
-      projectTitle: "最初のプロジェクト",
+      projectTitle: "2 回目のプロジェクト",
       submittedAt: new Date("2026-10-01T00:00:00Z"),
       status: "REJECTED",
-      reviewerNote: "活動内容をもう少し具体的に",
+      reviewerNote: "活動場所を具体的に",
     });
 
     const result = await service.findStatusByAccountId(accountId);
@@ -115,14 +122,15 @@ describe("KyselyLeaderApplicationQueryService (my) integration", () => {
   it("submittedAt が同じ応募が複数あるときは、id の大きいほうを毎回返す", async () => {
     const accountId = await seedAccount({ email: "same-time@example.com", roles: ["SUPPORTER"] });
     const submittedAt = new Date("2026-11-01T00:00:00Z");
-    await seedApplication(accountId, {
-      id: "00000000-0000-4000-8000-000000000002",
-      projectTitle: "id が大きい応募",
-      submittedAt,
-    });
+    // id が小さいほうを先に入れ、挿入順ではなく id で選んでいることを確かめる
     await seedApplication(accountId, {
       id: "00000000-0000-4000-8000-000000000001",
       projectTitle: "id が小さい応募",
+      submittedAt,
+    });
+    await seedApplication(accountId, {
+      id: "00000000-0000-4000-8000-000000000002",
+      projectTitle: "id が大きい応募",
       submittedAt,
     });
 
