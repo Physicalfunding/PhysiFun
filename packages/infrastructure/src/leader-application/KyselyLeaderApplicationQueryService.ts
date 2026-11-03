@@ -169,39 +169,72 @@ export class KyselyLeaderApplicationQueryService
    * 本人以外の応募を返さないよう、アカウントも応募も引数の accountId だけで絞る。
    * 応募は再応募で複数ありうるので、`submittedAt` が一番新しいものを返す
    * （同じ時刻なら id で並べて、結果を毎回同じにする）。
+   * アカウントと応募は 1 本の SQL（LEFT JOIN LATERAL）で同じ時点のものを読む。
+   * 承認（応募の APPROVED 化と LEADER の付与は 1 トランザクション）と重なっても、
+   * 「リーダーではないのに最新の応募が APPROVED」のような食い違いを返さないため。
    */
   async findStatusByAccountId(accountId: string): Promise<MyLeaderApplicationStatusDTO | null> {
-    const [account, latest] = await Promise.all([
-      db
-        .selectFrom("accounts")
-        .select(["email", "roles"])
-        .where("id", "=", accountId)
-        .executeTakeFirst(),
-      db
-        .selectFrom("leader_applications")
-        .select([
-          "id",
-          "status",
-          "projectTitle",
-          "projectSummary",
-          "projectCategory",
-          "submittedAt",
-          "reviewerNote",
-        ])
-        .where("accountId", "=", accountId)
-        .orderBy("submittedAt", "desc")
-        .orderBy("id", "desc")
-        .limit(1)
-        .executeTakeFirst(),
-    ]);
+    const row = await db
+      .selectFrom("accounts")
+      .leftJoinLateral(
+        (eb) =>
+          eb
+            .selectFrom("leader_applications")
+            // 外側の accounts と同じ名前の列（id・status）があるので、列はテーブル名付きで書く
+            .select([
+              "leader_applications.id",
+              "leader_applications.status",
+              "leader_applications.projectTitle",
+              "leader_applications.projectSummary",
+              "leader_applications.projectCategory",
+              "leader_applications.submittedAt",
+              "leader_applications.reviewerNote",
+            ])
+            .whereRef("leader_applications.accountId", "=", "accounts.id")
+            .orderBy("leader_applications.submittedAt", "desc")
+            .orderBy("leader_applications.id", "desc")
+            .limit(1)
+            .as("latest"),
+        (join) => join.onTrue()
+      )
+      .select([
+        "accounts.email",
+        "accounts.roles",
+        "latest.id as applicationId",
+        "latest.status",
+        "latest.projectTitle",
+        "latest.projectSummary",
+        "latest.projectCategory",
+        "latest.submittedAt",
+        "latest.reviewerNote",
+      ])
+      .where("accounts.id", "=", accountId)
+      .executeTakeFirst();
 
-    if (!account) return null;
+    if (!row) return null;
 
     return {
       // pg はネイティブ enum 配列（roles）を文字列で返すため配列化する。
-      isLeader: parsePgEnumArray(account.roles).includes("LEADER"),
-      email: account.email,
-      latestApplication: latest ?? null,
+      isLeader: parsePgEnumArray(row.roles).includes("LEADER"),
+      email: row.email,
+      // LEFT JOIN なので、応募が無いと応募の列はすべて NULL になる（応募の NOT NULL 列で判定する）
+      latestApplication:
+        row.applicationId !== null &&
+        row.status !== null &&
+        row.projectTitle !== null &&
+        row.projectSummary !== null &&
+        row.projectCategory !== null &&
+        row.submittedAt !== null
+          ? {
+              id: row.applicationId,
+              status: row.status,
+              projectTitle: row.projectTitle,
+              projectSummary: row.projectSummary,
+              projectCategory: row.projectCategory,
+              submittedAt: row.submittedAt,
+              reviewerNote: row.reviewerNote,
+            }
+          : null,
     };
   }
 

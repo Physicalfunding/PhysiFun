@@ -22,7 +22,7 @@ describe("KyselyLeaderApplicationQueryService (my) integration", () => {
 
   async function seedAccount(opts: {
     email: string;
-    roles: ("SUPPORTER" | "LEADER")[];
+    roles: ("SUPPORTER" | "LEADER")[] | null;
   }): Promise<string> {
     const account = await insertRow("accounts", {
       email: opts.email,
@@ -36,6 +36,7 @@ describe("KyselyLeaderApplicationQueryService (my) integration", () => {
   async function seedApplication(
     accountId: string,
     opts: {
+      id?: string;
       projectTitle: string;
       submittedAt: Date;
       status?: "PENDING" | "APPROVED" | "REJECTED";
@@ -43,6 +44,7 @@ describe("KyselyLeaderApplicationQueryService (my) integration", () => {
     }
   ): Promise<string> {
     const application = await insertRow("leader_applications", {
+      ...(opts.id ? { id: opts.id } : {}),
       accountId,
       status: opts.status ?? "PENDING",
       projectTitle: opts.projectTitle,
@@ -75,6 +77,14 @@ describe("KyselyLeaderApplicationQueryService (my) integration", () => {
     expect(leader).toMatchObject({ isLeader: true, email: "leader@example.com" });
   });
 
+  it("roles が NULL のアカウントはリーダーではない", async () => {
+    const accountId = await seedAccount({ email: "no-roles@example.com", roles: null });
+
+    const result = await service.findStatusByAccountId(accountId);
+
+    expect(result).toMatchObject({ isLeader: false, email: "no-roles@example.com" });
+  });
+
   it("応募が複数あるアカウントでは、submittedAt が一番新しい応募を返す", async () => {
     const accountId = await seedAccount({ email: "reapply@example.com", roles: ["SUPPORTER"] });
     // 新しい応募を先に入れ、挿入順ではなく submittedAt で選んでいることを確かめる
@@ -100,6 +110,25 @@ describe("KyselyLeaderApplicationQueryService (my) integration", () => {
       submittedAt: new Date("2026-11-02T00:00:00Z"),
       reviewerNote: null,
     });
+  });
+
+  it("submittedAt が同じ応募が複数あるときは、id の大きいほうを毎回返す", async () => {
+    const accountId = await seedAccount({ email: "same-time@example.com", roles: ["SUPPORTER"] });
+    const submittedAt = new Date("2026-11-01T00:00:00Z");
+    await seedApplication(accountId, {
+      id: "00000000-0000-4000-8000-000000000002",
+      projectTitle: "id が大きい応募",
+      submittedAt,
+    });
+    await seedApplication(accountId, {
+      id: "00000000-0000-4000-8000-000000000001",
+      projectTitle: "id が小さい応募",
+      submittedAt,
+    });
+
+    const result = await service.findStatusByAccountId(accountId);
+
+    expect(result?.latestApplication?.id).toBe("00000000-0000-4000-8000-000000000002");
   });
 
   it("他人の応募は返さない", async () => {
