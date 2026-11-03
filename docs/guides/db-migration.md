@@ -152,8 +152,17 @@ bun run db:kysely:codegen
 
 ### 5.5 Prisma で作った既存 DB を Atlas 管理に切り替える（DB ごとに 1 回だけ）
 
-ステージングなど、`prisma migrate` で作った DB は、baseline（`20261016081927`）を「適用済み」として記録する。
-実際の DDL は流さない。
+`prisma migrate` で作った DB は、baseline（`20261016081927`）を「適用済み」として記録する。
+baseline の DDL は流さない（baseline のあとのマイグレーションは、続けて当たる）。
+ステージングは 2026-11-03 に切り替え済み（下の「作り直す」で）。
+
+> ⚠️ **手順 1 の `db:schema:drift` は、いまはそのままでは使えない。** 比べる相手が最新の `schema.sql` なので、
+> baseline のあとのマイグレーション（`20261017073537` 以降）がある今は、Prisma の最後まで当たった DB でも必ず「ずれあり」と出る。
+> ずれが baseline のあとのマイグレーションの中身だけかを、出力を見て自分で判断する必要がある。
+>
+> Prisma のマイグレーションが**途中までしか当たっていない** DB は、baseline と一致しないので、この手順は使えない。
+> データを捨ててよいなら、`public` を空にしてから、Atlas のマイグレーションを空の DB に全部当てる（下の「作り直す」）。
+> ステージングは 2026-11-03 にこの方法で作り直した（Prisma が 2026-04 で止まっていて、テスト用のデータしかなかった）。
 
 ```bash
 cd packages/infrastructure
@@ -161,9 +170,9 @@ export DATABASE_URL="<対象 DB の URL>"
 
 # 1. ズレが無いことを確認する。「Schemas are synced」以外が出たら、ここで止めて原因を調べる
 bun run db:schema:drift
-# 2. baseline を適用済みとして記録する
+# 2. baseline を適用済みとして記録する（そのあとのマイグレーションも続けて当たる）
 bun run db:migrate:deploy --baseline 20261016081927
-# 3. 「Migration Status: OK / Current Version: 20261016081927」になっていることを確認する
+# 3. 「Migration Status: OK」で、Current Version が最新（atlas/migrations/ の最後のファイル）になっていることを確認する
 bun run db:migrate:status
 ```
 
@@ -172,6 +181,34 @@ bun run db:migrate:status
   Direct 接続は IPv6 のみのため、手元のネットワークが IPv6 に対応していなければ Session Pooler を使う
 - `_prisma_migrations` テーブルは残しておいて問題ない（Atlas は無視する）。不要になったら手動で削除してよい
 - ローカルの開発 DB は、作り直すほうが簡単（`make db-reset` = `supabase db reset` → `bun run db:migrate:deploy`）
+
+**作り直す（リモートの DB でデータを捨ててよいとき）**
+
+**本番では行わない。** 本番の DB は、データを残したまま切り替える方法をその都度考える。
+
+1. 残したいデータが少しでもあれば、先にバックアップを取る（ダッシュボードの Database → Backups か、`pg_dump`）
+2. 対象のプロジェクト（ダッシュボードの左上のプロジェクト名と ref）を確かめてから、SQL Editor で `public` の表と enum 型を消す。
+   `_prisma_migrations` も消える。以前に Atlas を試した DB なら、適用履歴（`atlas_schema_revisions`）も消す。**元に戻せない**
+
+   ```sql
+   DO $$
+   DECLARE r record;
+   BEGIN
+     FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' LOOP
+       EXECUTE format('DROP TABLE IF EXISTS public.%I CASCADE', r.tablename);
+     END LOOP;
+     FOR r IN SELECT t.typname FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+              WHERE n.nspname = 'public' AND t.typtype = 'e' LOOP
+       EXECUTE format('DROP TYPE IF EXISTS public.%I CASCADE', r.typname);
+     END LOOP;
+   END $$;
+   DROP SCHEMA IF EXISTS atlas_schema_revisions CASCADE;
+   ```
+
+   表と enum 型のほかに `public` にビュー・関数・シーケンスなどが残っていると、Atlas は「空ではない DB」として適用を止める。
+   そのときは、残ったものを確かめて（Database → Tables / Functions など）、同じように消す
+3. [`deploy.md`](./deploy.md) §2.1 の手順でマイグレーションを当てる。`db:migrate:status` の `Pending Files` が全件（`atlas/migrations/` の SQL の数）になっていることを確かめてから `db:migrate:deploy` する
+4. 運営アカウントを `db:seed` で作り直し、[`deploy.md`](./deploy.md) §2.2 の確認をする
 
 ### 5.6 テスト / CI
 
@@ -275,5 +312,5 @@ DB 関連のドキュメントを、[VitePress](https://vitepress.dev/) でメ�
 - [x] admin QueryService を application 層の Port 化（#231）。
 - [x] Outbox の email ルックアップを Kysely 化し、旧 `Prisma*` 実装・Prisma 版テストヘルパーを削除。統合テスト・E2E・seed も Kysely 化（#230 前半）。
 - [x] `atlas/schema.sql` と baseline を作成し、`prisma migrate` を撤去。テスト・CI のスキーマ適用を Atlas に切り替え（#228 / #229）。
-- [ ] ステージング DB に baseline を記録（5.5 の手順。PR マージ後に 1 回）。
+- [x] ステージング DB を Atlas の管理にする（2026-11-03。Prisma のマイグレーションが途中までしか当たっていなかったので、baseline の記録ではなく、`public` を空にして全件を当て直した。5.5）。
 - [x] `@prisma/client` / `prisma` / `schema.prisma` / `prisma.config.ts` を削除し、`types.ts` を kysely-codegen 生成物へ一本化（#230 後半）。

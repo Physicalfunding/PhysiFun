@@ -155,6 +155,7 @@ const { error } = await supabase.storage.from(bucket).upload(path, file);
 | 開発フロー・PR ルール・コーディング規約の変更 | `docs/guides/dev-rule.md` |
 | 運営アカウント（AdminAccount）のセットアップ・運用手順の変更 | `docs/guides/admin-setup.md` |
 | DB の運用手順・移行の進捗 | `docs/guides/db-migration.md` |
+| デプロイの手順・環境（ステージング・Vercel の設定）の変更 | `docs/guides/deploy.md` |
 | Claude 向け基本ルールの変更 | `CLAUDE.md` |
 | ローカル開発環境・環境変数の変更 | ルート `README.md` / `apps/web/README.md` / `apps/admin/README.md` |
 

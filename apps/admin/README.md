@@ -36,7 +36,7 @@ src/app/
 - **Cookie / セッション分離**: 運営セッションが一般ユーザドメインに流出しないようにする
 - **環境変数の分離**: `NEXTAUTH_SECRET` / `CRON_SECRET` / `ADMIN_MAGIC_LINK_HMAC_SECRET` などを web 側と混ぜずに管理
 - **デプロイ独立性**: `apps/web` のリリースで運営 UI が落ちないようにする
-- **Cron 分離**: Vercel Cron (`0 * * * *`) は admin プロジェクト側でのみ実行する（`/api/cron/gc-admin-auth`）
+- **Cron 分離**: Vercel Cron（`/api/cron/gc-admin-auth`。Hobby プランなので 1 日 1 回 `0 0 * * *`）は admin プロジェクト側でのみ実行する
 
 ---
 
@@ -168,6 +168,8 @@ bun run build:admin        # ビルド
 
 ## Vercel デプロイ手順 (初回セットアップ)
 
+ここはプロジェクトを新しく作るときの手順。日々のデプロイ（自動デプロイの確かめ方・手でのデプロイ・ステージングの DB へのマイグレーション）は [`docs/guides/deploy.md`](../../docs/guides/deploy.md) を参照。
+
 ### 1. Vercel プロジェクト作成
 
 Vercel ダッシュボードで **新規プロジェクト** を作成:
@@ -176,7 +178,7 @@ Vercel ダッシュボードで **新規プロジェクト** を作成:
 - Root Directory: `apps/admin`
 - Framework Preset: Next.js (自動検出)
 - Build Command: 既定 (`next build`)
-- Install Command: `bun install` (monorepo なのでルートから実行される)
+- Install Command: `cd ../.. && bun install`（`apps/admin/vercel.json` で指定済み。monorepo のルートで入れる）
 - Production Branch: `main`
 
 Preview デプロイも同プロジェクトで自動生成されるため、`apps/web` 側の Vercel プロジェクト
@@ -204,7 +206,7 @@ Vercel プロジェクトの **Settings → Environment Variables** に [`apps/a
 
 ### 4. Cron の動作確認
 
-デプロイ後、Vercel ダッシュボード → **Crons** タブで `/api/cron/gc-admin-auth` が毎時 0 分に実行されることを確認する。
+デプロイ後、Vercel ダッシュボード → **Crons** タブで `/api/cron/gc-admin-auth` が 1 日 1 回（`0 0 * * *`。`apps/admin/vercel.json`）実行されることを確認する。
 
 ローカル / E2E では cron は走らないため、テスト側から以下を直接叩いて検証する:
 
@@ -215,8 +217,8 @@ curl -H "authorization: Bearer ${CRON_SECRET}" \
 
 ### 5. CI/CD パイプライン分離
 
-- GitHub リポジトリ側で `apps/admin/**` 変更時だけ admin Vercel プロジェクトがビルド対象になる設定（Vercel の **Ignored Build Step** で `git diff ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD --quiet -- apps/admin packages` の判定を入れる。`HEAD^` 単体だと初回デプロイや shallow clone / 浅い履歴で `unknown revision` になるため、Vercel が前回成功 SHA を渡す環境変数 `VERCEL_GIT_PREVIOUS_SHA` を優先し、無ければ `HEAD^` にフォールバックする）を推奨
-- `apps/web` 側でも同様に `apps/web/**` のみビルドするよう設定する
+- Ignored Build Step は設定しない。Bun workspaces の monorepo では、`apps/admin` とそれが使う `packages/*` が変わらないコミットのデプロイを Vercel が自動で飛ばす（Root Directory の「Skip deployment」。[`docs/guides/deploy.md`](../../docs/guides/deploy.md) §3.2）
+- `apps/web` 側も同じ（設定は要らない）
 - GitHub Actions (`.github/workflows/ci.yml`) はモノレポ全体に対してそのまま走らせる（lint / typecheck / test は両アプリをまとめてチェックする）
 
 ---

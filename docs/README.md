@@ -19,6 +19,7 @@ PhysiFun リポジトリのドキュメントの地図。**迷ったらここか
 | [`guides/dev-rule.md`](./guides/dev-rule.md) | 開発フロー・PR ルール・コーディング規約・テスト方針 | 実装・PR を作るとき |
 | [`guides/admin-setup.md`](./guides/admin-setup.md) | 運営アカウント（AdminAccount）のセットアップ・運用手順 | 運営メンバーを追加・無効化するとき |
 | [`guides/db-migration.md`](./guides/db-migration.md) | DB スキーマ・マイグレーション運用ガイド（Kysely + Atlas）、DB ドキュメントの自動生成（tbls）、残作業 | DB スキーマやクエリを触るとき |
+| [`guides/deploy.md`](./guides/deploy.md) | デプロイ手順（ローカルの起動・ステージングの DB へのマイグレーション・Storage バケット・Vercel） | 手元で動かすとき・ステージングに出すとき |
 | [`guides/ai-harness.md`](./guides/ai-harness.md) | AI 開発ハーネス設計（実行環境ごとの自律範囲・hooks・段階計画） | Claude の skills / hooks / 設定を触るとき |
 
 ### specs の中身
