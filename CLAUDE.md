@@ -151,6 +151,7 @@ bun run check        # CI と同じ検証（lint → format:check → typecheck 
 | `docs/specs/` | ドメイン・データ・セキュリティ・主要フローの設計仕様 |
 | `docs/guides/dev-rule.md` | 開発フロー・PR ルール・コーディング規約 |
 | `docs/guides/db-migration.md` | DB スキーマ・マイグレーション運用ガイド（Kysely + Atlas。スキーマの正本は `atlas/schema.sql`） |
+| `docs/guides/deploy.md` | デプロイ手順（ローカル・ステージングの DB と Storage・Vercel） |
 | `docs/db/` | テーブル定義書・領域別 ER 図（tbls の**自動生成**。手で編集しない。テーブル・列の説明は `schema.sql` の `COMMENT ON` に書く） |
 | `docs/guides/ai-harness.md` | AI 開発ハーネス設計（実行環境ごとの自律範囲・hooks・段階計画） |
 

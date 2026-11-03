@@ -223,3 +223,4 @@ SEED_ADMIN_EMAIL="you@example.com" \
 | [`docs/guides/dev-rule.md`](./docs/guides/dev-rule.md) | 開発フロー・PR ルール・コーディング規約 |
 | [`docs/guides/admin-setup.md`](./docs/guides/admin-setup.md) | 運営アカウント（AdminAccount）のセットアップ・運用手順 |
 | [`docs/guides/db-migration.md`](./docs/guides/db-migration.md) | DB スキーマ・マイグレーション運用ガイド（Kysely + Atlas） |
+| [`docs/guides/deploy.md`](./docs/guides/deploy.md) | デプロイ手順（ローカル・ステージングの DB と Storage・Vercel） |

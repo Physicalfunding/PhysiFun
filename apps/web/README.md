@@ -132,7 +132,7 @@ bunx vitest run --project web    # リポジトリルートで実行
 
 ## デプロイ
 
-Vercel プロジェクト（`apps/web`）。詳細は別途インフラドキュメント参照。本 README ではローカル開発の説明に留める。
+Vercel プロジェクト（Root Directory は `apps/web`）。ステージングへの出し方（DB のマイグレーション・Storage バケット・Vercel の自動デプロイの確かめ方・手でのデプロイ）は [`docs/guides/deploy.md`](../../docs/guides/deploy.md) を参照。
 
 ---
 
