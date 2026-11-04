@@ -1,12 +1,25 @@
 import type { MyLatestLeaderApplication } from "@physifun/application";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-import { ApplicationStatus } from "../ApplicationStatus";
+import { afterAll, describe, expect, it, vi } from "vitest";
 
 /**
  * Issue #374: 応募状況の表示のテスト。
  * HTML にして、審査中・却下・応募なしのそれぞれで出るもの・出ないものを確かめる。
  */
+
+// 実行環境のタイムゾーンを UTC に固定する。応募日の表示で JST の指定が抜けたら、JST の開発機でも落ちるように。
+// 表示部品は読み込み時に日付のフォーマッタを作るので、import より前（vi.hoisted）に設定する
+const originalTz = vi.hoisted(() => {
+  const tz = process.env.TZ;
+  process.env.TZ = "UTC";
+  return tz;
+});
+afterAll(() => {
+  if (originalTz === undefined) delete process.env.TZ;
+  else process.env.TZ = originalTz;
+});
+
+import { ApplicationStatus } from "../ApplicationStatus";
 const EMAIL = "leader@example.com";
 
 const application: MyLatestLeaderApplication = {

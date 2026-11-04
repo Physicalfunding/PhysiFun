@@ -5,7 +5,7 @@ import { loginAsLeader } from "../helpers/auth";
  * 03. リーダー応募の審査中の人が「マイプロジェクト」を開くと、応募状況（審査中）が出る（#374）
  *
  * - 応募者のアカウントでログインする（この時点ではまだリーダーではない）
- * - ヘッダーの「マイプロジェクト」のリンク先（/my/projects）を開くと、/my/application へ移る
+ * - /my/projects（ヘッダーの「マイプロジェクト」のリンク先）を直接開くと、/my/application へ移る
  * - 「リーダー応募を審査中です」が出る
  *
  * 事前状態: 02-activate により Account(ACTIVE) が存在、LeaderApplication.status は PENDING のまま

@@ -114,6 +114,18 @@ describe("/my/projects", () => {
     expect((await open(MyProjectsPage)).redirectedTo).toBe("/my/application");
   });
 
+  it("リーダーなら、最新の応募が承認済みでなくても一覧を出す（ロールで決める）", async () => {
+    state.status = { ...rejectedStatus, isLeader: true };
+    const { html, redirectedTo } = await open(MyProjectsPage);
+    expect(redirectedTo).toBeNull();
+    expect(html).toContain('data-testid="project-list"');
+  });
+
+  it("リーダーでなければ、最新の応募が承認済み（起きないはず）でも /my/application へ移す", async () => {
+    state.status = { ...leaderStatus, isLeader: false };
+    expect((await open(MyProjectsPage)).redirectedTo).toBe("/my/application");
+  });
+
   it("応募が無い人・アカウントが見つからない人も /my/application へ移す", async () => {
     state.status = { isLeader: false, email: "x@example.com", latestApplication: null };
     expect((await open(MyProjectsPage)).redirectedTo).toBe("/my/application");
@@ -153,6 +165,18 @@ describe("/my/application", () => {
     const { html } = await open(MyApplicationPage);
     expect(html).toContain("リーダー応募は承認されませんでした");
     expect(html).toContain("活動の場所を具体的に書いてください。");
+  });
+
+  it("リーダーなら、最新の応募が却下でも /my/projects へ移す（ロールで決める）", async () => {
+    state.status = { ...rejectedStatus, isLeader: true };
+    expect((await open(MyApplicationPage)).redirectedTo).toBe("/my/projects");
+  });
+
+  it("リーダーでないのに最新の応募が承認済み（起きないはず）なら、移さずに「応募なし」を出す（移し合いにならない）", async () => {
+    state.status = { ...leaderStatus, isLeader: false };
+    const { html, redirectedTo } = await open(MyApplicationPage);
+    expect(redirectedTo).toBeNull();
+    expect(html).toContain("応募はまだありません");
   });
 
   it("アカウントが見つからないときは「応募なし」を出す", async () => {
