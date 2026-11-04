@@ -2,25 +2,24 @@ import { test, expect, TEST_LEADER, WEB_BASE_URL } from "../fixtures";
 import { loginAsLeader } from "../helpers/auth";
 
 /**
- * 03. /my/application で PENDING ステータスが表示される
+ * 03. リーダー応募の審査中の人が「マイプロジェクト」を開くと、応募状況（審査中）が出る（#374）
  *
- * - リーダーアカウントでログインする
- * - /my/application を開く
- * - ApplicationStatus コンポーネントで「審査中」が表示されていることを確認する
+ * - 応募者のアカウントでログインする（この時点ではまだリーダーではない）
+ * - ヘッダーの「マイプロジェクト」のリンク先（/my/projects）を開くと、/my/application へ移る
+ * - 「リーダー応募を審査中です」が出る
  *
  * 事前状態: 02-activate により Account(ACTIVE) が存在、LeaderApplication.status は PENDING のまま
  */
-// TODO(#84-followup): `/api/my/application` が現状スタブ実装（常に null 返却）のため原理的に通らない。
-// apps/web/src/app/api/my/application/route.ts に応募取得アダプター（Kysely 実装）を接続後、skip を外す。
-test.skip("有効化済みリーダーが /my/application で PENDING ステータスを確認できる", async ({
+test("審査中の応募者は /my/projects から /my/application へ移り、審査中の表示を確認できる", async ({
   page,
 }) => {
   await loginAsLeader(page, TEST_LEADER.email, TEST_LEADER.password);
 
-  await page.goto(`${WEB_BASE_URL}/my/application`);
+  await page.goto(`${WEB_BASE_URL}/my/projects`);
+  await page.waitForURL(/\/my\/application$/);
 
   const status = page.getByTestId("application-status");
   await expect(status).toBeVisible();
   await expect(status).toHaveAttribute("data-status", "PENDING");
-  await expect(status.getByRole("heading", { name: "審査中" })).toBeVisible();
+  await expect(status.getByRole("heading", { name: "リーダー応募を審査中です" })).toBeVisible();
 });
