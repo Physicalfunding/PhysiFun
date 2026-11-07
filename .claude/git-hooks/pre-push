@@ -15,44 +15,38 @@ REMOTE="${1:-origin}"
 ZERO=0000000000000000000000000000000000000000
 FILES=""
 
-# 判定の基準は「リモートのブランチとの共通の祖先」。ローカルの $REMOTE/* が古いと、リモートで進んだ変更
+# リモートのブランチにすでにあるコミットは数えない。ローカルの $REMOTE/* が古いと、リモートで進んだコミット
 # まで今回の push に数えてしまうため、判定の前に最新にする（失敗しても手元の ref で続ける）
 git fetch -q "$REMOTE" "+refs/heads/*:refs/remotes/$REMOTE/*" 2>/dev/null || true
+HAS_REMOTE_BRANCHES=$(git for-each-ref --count=1 "refs/remotes/$REMOTE/")
 
-# stdin: <local ref> <local sha> <remote ref> <remote sha>
-names() { git -c core.quotePath=false diff --name-only --no-renames "$1" "$2" | sort -u; }
-
-# base <local sha> <remote ref> → 判定の基準（共通の祖先）を出す。リモートのブランチ（push 先そのものは除く）
-# のうち、push するコミットにあってそのブランチに無いコミットが一番少ないもの（= 切った元。main か親 Issue の
-# 開発ブランチ。同数なら main）との共通の祖先にする。リモートのブランチの中身は、ガードを通ったものか
-# ローカルで入れたものなので数えない（#386。開発ブランチに先に入った🔴の変更で止めないため）
-base() {
-  local ref n best="" min=""
-  while read -r ref; do
-    [[ "$ref" == "refs/remotes/$REMOTE/${2#refs/heads/}" ]] && continue
-    n=$(git rev-list --count "$ref..$1" 2>/dev/null) || continue
-    if [[ -z "$min" ]] || ((n < min)); then best=$ref min=$n; fi
-  done < <(echo "refs/remotes/$REMOTE/main" && git for-each-ref --format='%(refname)' "refs/remotes/$REMOTE/")
-  [[ -n "$best" ]] && git merge-base "$best" "$1" 2>/dev/null
+# new_files <local sha> [<remote sha>] → 新しく送るコミット（どのリモートのブランチにも無いもの）が変えたファイル。
+# main や親 Issue の開発ブランチから取り込んだコミットは、リモートにあるので数えない（#386）。
+# マージのコミットは、どの親とも中身が違うファイルだけを出す（-c）。取り込んだ側の変更は数えず、
+# 衝突を新しい中身で解決したものは数える
+new_files() {
+  local lsha="$1"
+  shift
+  git -c core.quotePath=false -c log.showRoot=true log --format= --name-only --no-renames -c \
+    "$lsha" --not "$@" --remotes="$REMOTE"
 }
 
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
 while read -r _lref lsha rref rsha; do
   [[ "$lsha" == "$ZERO" ]] && continue # ブランチの削除
-  # 基準からの差分 = このブランチ自身の変更（main や開発ブランチをマージして取り込んだ変更は含まない）
-  mb=$(base "$lsha" "$rref")
   if [[ "$rsha" != "$ZERO" ]] && git cat-file -e "$rsha^{commit}" 2>/dev/null; then
-    # 既存のリモートブランチ: 新しく送るコミットの変更のうち、このブランチ自身の変更だけを判定する
-    if [[ -n "$mb" ]]; then
-      FILES+=$(comm -12 <(names "$rsha" "$lsha") <(names "$mb" "$lsha"))$'\n'
+    if [[ "$rref" == refs/heads/main ]]; then
+      # main への push: ほかのリモートのブランチから取り込んだ変更も、PR を通さずに main に入るので、差分をすべて数える
+      FILES+=$(git -c core.quotePath=false diff --name-only --no-renames "$rsha" "$lsha")$'\n'
     else
-      FILES+=$(names "$rsha" "$lsha")$'\n'
+      FILES+=$(new_files "$lsha" "$rsha")$'\n'
     fi
   else
-    [[ -n "$mb" ]] || {
-      echo "$REMOTE のブランチとの共通の祖先が分からないため push を止めました。git fetch $REMOTE を実行してから再試行してください。" >&2
+    [[ -n "$HAS_REMOTE_BRANCHES" ]] || {
+      echo "$REMOTE のブランチが分からないため push を止めました。git fetch $REMOTE を実行してから再試行してください。" >&2
       exit 1
     }
-    FILES+=$(names "$mb" "$lsha")$'\n'
+    FILES+=$(new_files "$lsha")$'\n'
   fi
 done
 
