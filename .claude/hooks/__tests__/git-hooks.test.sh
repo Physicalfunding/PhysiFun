@@ -107,6 +107,70 @@ try merge_main_into_green_branch_allowed 0 git push -q origin green2
 echo r2 >packages/infrastructure/atlas/r2.sql && git add -A && git commit -qm red2 --no-verify
 try red_after_merge_still_blocked 1 git push -q origin green2
 
+# 親 Issue の開発ブランチから切ったブランチ: 開発ブランチに先に入った🔴（ローカルで入れた別のサブ Issue）は数えない（#386）
+git switch -q -c feat/1-dev origin/main
+echo d >packages/infrastructure/atlas/d.sql && git add -A && git commit -qm "ローカルで入れた🔴" --no-verify
+env CLAUDE_CODE_REMOTE= git push -q origin feat/1-dev
+git switch -q -c sub-green
+mkdir -p docs && echo s >docs/sub.md && git add -A && git commit -qm docs5
+echo t >docs/sub2.md && git add -A && git commit -qm docs6
+try dev_branch_child_push_allowed 0 git push -q -u origin sub-green
+
+git switch -q -c sub-red feat/1-dev
+echo s >packages/infrastructure/atlas/s.sql && git add -A && git commit -qm red3 --no-verify
+try dev_branch_child_red_push_blocked 1 git push -q -u origin sub-red
+assert_eq dev_branch_child_red_names_only_own_file packages/infrastructure/atlas/s.sql "$(grep 'atlas/' <<<"$ERR" | xargs)"
+
+# 開発ブランチがさらに進んだ（別のサブ Issue の🔴をローカルで入れた）あと、それを取り込んで push する。
+# 手元の origin/feat/1-dev が古くても通る（判定の前に fetch する）
+OLD_DEV=$(git rev-parse feat/1-dev)
+git switch -q feat/1-dev
+echo e >packages/infrastructure/atlas/e.sql && git add -A && git commit -qm "ローカルで入れた🔴 その 2" --no-verify
+env CLAUDE_CODE_REMOTE= git push -q origin feat/1-dev
+git update-ref refs/remotes/origin/feat/1-dev "$OLD_DEV"
+git switch -q sub-green && git merge -q --no-edit feat/1-dev
+try merge_dev_branch_into_child_allowed 0 git push -q origin sub-green
+echo r3 >packages/infrastructure/atlas/r3.sql && git add -A && git commit -qm red4 --no-verify
+try red_after_dev_branch_merge_still_blocked 1 git push -q origin sub-green
+
+# 開発ブランチの🔴のファイルを、main から切ったブランチに自分で写したものは止まる（取り込んでいなければ、中身が同じでも数える）
+git switch -q -c copy-red origin/main
+git checkout -q feat/1-dev -- packages/infrastructure/atlas/d.sql && git commit -qm copy --no-verify
+try copied_red_from_dev_branch_blocked 1 git push -q -u origin copy-red
+
+# 開発ブランチの子に、main で進んだ🔴を取り込む（取り込み元が 2 つ。開発ブランチより main のほうが遠くても通る）
+git switch -q sub-green && git reset -q --hard origin/sub-green
+(cd "$T/other" && git pull -q origin main && echo k >packages/infrastructure/atlas/k.sql && git add -A &&
+  git commit -qm "main でさらに進んだ🔴" && git push -q origin main)
+git fetch -q origin && git merge -q --no-edit origin/main
+try merge_main_into_dev_branch_child_allowed 0 git push -q origin sub-green
+git switch -q feat/1-dev && git merge -q --no-edit origin/main
+try merge_main_into_dev_branch_allowed 0 git push -q origin feat/1-dev
+
+# 子のブランチで、ローカルで入れた🔴を開発ブランチと同じ中身に戻すコミットは止まる（自分のコミットで変えたら、中身が基準と同じでも数える）
+git switch -q -c sub-local feat/1-dev
+echo v2 >packages/infrastructure/atlas/d.sql && git commit -qam "ローカルで入れた🔴 その 3" --no-verify
+env CLAUDE_CODE_REMOTE= git push -q origin sub-local
+git checkout -q feat/1-dev -- packages/infrastructure/atlas/d.sql && git commit -qm back --no-verify
+try restore_red_to_dev_branch_content_blocked 1 git push -q origin sub-local
+
+# 開発ブランチの🔴のコミットを git revert したものは止まる（revert は pre-commit を通らない）
+git switch -q -c sub-revert feat/1-dev
+git revert --no-edit "$OLD_DEV" >/dev/null
+try revert_dev_branch_red_blocked 1 git push -q origin sub-revert
+
+# マージの中で🔴を新しい中身にしたもの（どの親とも違う）は止まる
+git switch -q -c evil origin/sub-green && git merge -q --no-ff --no-commit origin/sub-local >/dev/null 2>&1
+echo x >packages/infrastructure/atlas/e.sql && git add -A && git commit -qm evil --no-verify
+try red_in_merge_commit_blocked 1 git push -q origin evil
+
+# main への push: 🟢だけなら通る。ほかのリモートのブランチから取り込んだ🔴は数える（PR を通さずに main に入るため）
+git switch -q -C main origin/main
+mkdir -p docs && echo m2 >docs/main2.md && git add -A && git commit -qm docs7
+try green_push_to_main_allowed 0 git push -q origin main
+git merge -q --no-ff --no-edit origin/sub-local
+try merge_branch_into_main_counts_its_red 1 git push -q origin main
+
 # ローカル（CLAUDE_CODE_REMOTE なし）では何もしない
 git switch -q main
 echo l >packages/infrastructure/atlas/l.sql && git add -A

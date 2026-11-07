@@ -15,30 +15,38 @@ REMOTE="${1:-origin}"
 ZERO=0000000000000000000000000000000000000000
 FILES=""
 
-# 新しいブランチは「リモートの main との共通の祖先」から判定する。ローカルの $REMOTE/main が古いと
-# main で進んだ変更まで今回の push に数えてしまうため、判定の前に最新にする（失敗しても手元の ref で続ける）
-git fetch -q "$REMOTE" "+refs/heads/main:refs/remotes/$REMOTE/main" 2>/dev/null || true
+# リモートのブランチにすでにあるコミットは数えない。ローカルの $REMOTE/* が古いと、リモートで進んだコミット
+# まで今回の push に数えてしまうため、判定の前に最新にする（失敗しても手元の ref で続ける）
+git fetch -q "$REMOTE" "+refs/heads/*:refs/remotes/$REMOTE/*" 2>/dev/null || true
+HAS_REMOTE_BRANCHES=$(git for-each-ref --count=1 "refs/remotes/$REMOTE/")
+
+# new_files <local sha> [<remote sha>] → 新しく送るコミット（どのリモートのブランチにも無いもの）が変えたファイル。
+# main や親 Issue の開発ブランチから取り込んだコミットは、リモートにあるので数えない（#386）。
+# マージのコミットは、どの親とも中身が違うファイルだけを出す（-c）。取り込んだ側の変更は数えず、
+# 衝突を新しい中身で解決したものは数える
+new_files() {
+  local lsha="$1"
+  shift
+  git -c core.quotePath=false -c log.showRoot=true log --format= --name-only --no-renames -c \
+    "$lsha" --not "$@" --remotes="$REMOTE"
+}
 
 # stdin: <local ref> <local sha> <remote ref> <remote sha>
-names() { git -c core.quotePath=false diff --name-only --no-renames "$1" "$2" | sort -u; }
-
-while read -r _lref lsha _rref rsha; do
+while read -r _lref lsha rref rsha; do
   [[ "$lsha" == "$ZERO" ]] && continue # ブランチの削除
-  # main との共通の祖先からの差分 = このブランチ自身の変更（main をマージして取り込んだ変更は含まない）
-  mb=$(git merge-base "$REMOTE/main" "$lsha" 2>/dev/null)
   if [[ "$rsha" != "$ZERO" ]] && git cat-file -e "$rsha^{commit}" 2>/dev/null; then
-    # 既存のリモートブランチ: 新しく送るコミットの変更のうち、このブランチ自身の変更だけを判定する
-    if [[ -n "$mb" ]]; then
-      FILES+=$(comm -12 <(names "$rsha" "$lsha") <(names "$mb" "$lsha"))$'\n'
+    if [[ "$rref" == refs/heads/main ]]; then
+      # main への push: ほかのリモートのブランチから取り込んだ変更も、PR を通さずに main に入るので、差分をすべて数える
+      FILES+=$(git -c core.quotePath=false diff --name-only --no-renames "$rsha" "$lsha")$'\n'
     else
-      FILES+=$(names "$rsha" "$lsha")$'\n'
+      FILES+=$(new_files "$lsha" "$rsha")$'\n'
     fi
   else
-    [[ -n "$mb" ]] || {
-      echo "$REMOTE/main との共通の祖先が分からないため push を止めました。git fetch $REMOTE main を実行してから再試行してください。" >&2
+    [[ -n "$HAS_REMOTE_BRANCHES" ]] || {
+      echo "$REMOTE のブランチが分からないため push を止めました。git fetch $REMOTE を実行してから再試行してください。" >&2
       exit 1
     }
-    FILES+=$(names "$mb" "$lsha")$'\n'
+    FILES+=$(new_files "$lsha")$'\n'
   fi
 done
 
